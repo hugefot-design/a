@@ -4,7 +4,7 @@ import { log } from '@/lib/logger';
 import { audit } from '@/lib/audit';
 import { enqueueJob } from '@/lib/jobs';
 import { finishImportRun, ingestNotices, recordImportError, startImportRun, type IngestStats } from '@/domain/tenders/ingest';
-import type { SourceId } from '@/domain/tenders/normalize';
+import { regionCodesFor, type NormalizedNotice, type SourceId } from '@/domain/tenders/normalize';
 import { doffinConnector } from './doffin';
 import { tedConnector } from './ted';
 import type { SourceConnector } from './types';
@@ -31,6 +31,57 @@ export interface RunResult {
   error?: string;
   runId?: string;
   sample?: unknown[];
+  errorSample?: string[];
+  quality?: DataQuality;
+}
+
+export interface DataQuality {
+  notices: number;
+  byLifecycle: Record<string, number>;
+  /** Andel (0–100 %) av kunngjøringene som har feltet. */
+  coverage: Record<string, number>;
+  languages: Record<string, number>;
+  /** Konkurranser med frist som allerede er passert ved publisering (tegn på feil frist). */
+  deadlineBeforePublication: number;
+}
+
+/** Oppsummerer datakvaliteten i en henting – brukes i dry-run for å se at feltene faktisk fylles. */
+export function dataQuality(notices: NormalizedNotice[]): DataQuality {
+  const n = notices.length || 1;
+  const pct = (count: number) => Math.round((count / n) * 1000) / 10;
+  const count = (fn: (x: NormalizedNotice) => boolean) => pct(notices.filter(fn).length);
+  const competitions = notices.filter((x) => x.lifecycle === 'competition');
+  const byLifecycle: Record<string, number> = {};
+  const languages: Record<string, number> = {};
+  for (const x of notices) {
+    byLifecycle[x.lifecycle] = (byLifecycle[x.lifecycle] ?? 0) + 1;
+    const lang = x.details?.language ?? 'ukjent';
+    languages[lang] = (languages[lang] ?? 0) + 1;
+  }
+  const compPct = (fn: (x: NormalizedNotice) => boolean) =>
+    competitions.length ? Math.round((competitions.filter(fn).length / competitions.length) * 1000) / 10 : 0;
+  return {
+    notices: notices.length,
+    byLifecycle,
+    coverage: {
+      title: count((x) => x.title.length > 3),
+      description: count((x) => Boolean(x.description)),
+      buyerName: count((x) => Boolean(x.buyerName)),
+      buyerOrgNumber: count((x) => Boolean(x.buyerOrgNumber)),
+      cpv: count((x) => x.cpvCodes.length > 0),
+      region: count((x) => regionCodesFor(x).length > 0),
+      estimatedValue: count((x) => x.estimatedValue !== null),
+      publishedAt: count((x) => Boolean(x.publishedAt)),
+      deadlineOfCompetitions: compPct((x) => Boolean(x.deadlineAt)),
+      documentsUrlOfCompetitions: compPct((x) => Boolean(x.documentsUrl)),
+      durationOfCompetitions: compPct((x) => Boolean(x.details?.durationText)),
+      selectionCriteriaOfCompetitions: compPct((x) => (x.details?.selectionCriteria?.length ?? 0) > 0),
+    },
+    languages,
+    deadlineBeforePublication: competitions.filter(
+      (x) => x.deadlineAt && x.publishedAt && new Date(x.deadlineAt).getTime() < new Date(x.publishedAt).getTime() - 86_400_000,
+    ).length,
+  };
 }
 
 /** Kjører én datakilde: henting → validering → dedup → lagring → matching og varsler i kø. */
@@ -59,14 +110,17 @@ export async function runConnector(sourceId: 'ted' | 'doffin', opts: RunOptions)
   try {
     const fetchErrors: string[] = [];
     const notices = await connector.fetch({ since, until: opts.until, limit: opts.limit }, async (id, error, raw) => {
-      fetchErrors.push(error);
-      await recordImportError(run, 'mapping', error, id, raw);
+      fetchErrors.push(id ? `${id}: ${error}` : error);
+      // Dry-run skal aldri lagre eller endre noe – feil vises bare i resultatet.
+      if (!opts.dryRun) await recordImportError(run, 'mapping', error, id, raw);
     });
     if (opts.dryRun) {
       return {
         ok: true,
         stats: { fetched: notices.length, created: 0, updated: 0, unchanged: 0, duplicates: 0, errors: fetchErrors.length, tenderIds: [] },
         sample: notices.slice(0, 3).map(({ raw: _raw, ...rest }) => rest),
+        errorSample: fetchErrors.slice(0, 10),
+        quality: dataQuality(notices),
       };
     }
     const stats = await ingestNotices(notices, run);

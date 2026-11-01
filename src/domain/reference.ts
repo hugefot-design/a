@@ -9,22 +9,29 @@ export interface Region {
   nuts: string[];
 }
 
+/**
+ * Fylker fra 2024 med NUTS-koder. Første kode er NUTS 2024 (brukes av TED og Doffin nå –
+ * verifisert mot bynavn i ekte TED-kunngjøringer 1.11.2026: NO083 Fredrikstad/Sarpsborg/Moss,
+ * NO084 Sandvika/Asker/Ski, NO085 Drammen/Hønefoss, NO093 Sandefjord/Larvik, NO094 Skien,
+ * NO072 Tromsø/Harstad, NO073 Vadsø/Alta/Hammerfest). Eldre NUTS 2021-koder (NO082 Viken,
+ * NO091 Vestfold og Telemark, NO074 Troms og Finnmark) dekket flere fylker og står på alle.
+ */
 export const REGIONS: Region[] = [
   { code: '03', name: 'Oslo', nuts: ['NO081'] },
-  { code: '32', name: 'Akershus', nuts: ['NO082'] },
-  { code: '31', name: 'Østfold', nuts: ['NO082'] },
-  { code: '33', name: 'Buskerud', nuts: ['NO082'] },
+  { code: '32', name: 'Akershus', nuts: ['NO084', 'NO082'] },
+  { code: '31', name: 'Østfold', nuts: ['NO083', 'NO082'] },
+  { code: '33', name: 'Buskerud', nuts: ['NO085', 'NO082'] },
   { code: '34', name: 'Innlandet', nuts: ['NO020'] },
-  { code: '39', name: 'Vestfold', nuts: ['NO091'] },
-  { code: '40', name: 'Telemark', nuts: ['NO091'] },
+  { code: '39', name: 'Vestfold', nuts: ['NO093', 'NO091'] },
+  { code: '40', name: 'Telemark', nuts: ['NO094', 'NO091'] },
   { code: '42', name: 'Agder', nuts: ['NO092'] },
   { code: '11', name: 'Rogaland', nuts: ['NO0A1'] },
   { code: '46', name: 'Vestland', nuts: ['NO0A2'] },
   { code: '15', name: 'Møre og Romsdal', nuts: ['NO0A3'] },
   { code: '50', name: 'Trøndelag', nuts: ['NO060'] },
   { code: '18', name: 'Nordland', nuts: ['NO071'] },
-  { code: '55', name: 'Troms', nuts: ['NO074'] },
-  { code: '56', name: 'Finnmark', nuts: ['NO074'] },
+  { code: '55', name: 'Troms', nuts: ['NO072', 'NO074'] },
+  { code: '56', name: 'Finnmark', nuts: ['NO073', 'NO074'] },
 ];
 
 export const REGION_BY_CODE = new Map(REGIONS.map((r) => [r.code, r]));

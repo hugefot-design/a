@@ -5,6 +5,7 @@ import {
   cpvPrefixes,
   deriveIndustries,
   laterLifecycle,
+  NORMALIZE_VERSION,
   normalizedNoticeSchema,
   normalizeName,
   noticeHash,
@@ -113,6 +114,20 @@ interface ExistingTender {
   buyerOrgNumber: string | null;
   sourceUrl: string | null;
   receivedTenders: number | null;
+  textLanguage: string | null;
+  questionsDeadlineAt: Date | null;
+  participationDeadlineAt: Date | null;
+  deadlineKind: string | null;
+  lotDeadlinesDiffer: boolean;
+  durationMonths: number | null;
+  durationText: string | null;
+  contractStart: Date | null;
+  contractEnd: Date | null;
+  submissionUrl: string | null;
+  lots: unknown[];
+  selectionCriteria: unknown[];
+  awardCriteria: unknown[];
+  isFramework: boolean | null;
 }
 
 async function upsertAuthority(tx: Tx, n: NormalizedNotice, orgNumber: string | null): Promise<string | null> {
@@ -161,10 +176,20 @@ async function upsertSupplier(tx: Tx, name: string, orgNumberRaw: string | null,
   return rows[0]!.id;
 }
 
-/** Finn samme anskaffelse fra en annen kilde (f.eks. Doffin-kunngjøring som også ligger på TED). */
+/**
+ * Finn samme anskaffelse fra en annen kilde (f.eks. Doffin-kunngjøring som også ligger på TED).
+ *
+ * TED har engelsk tekst og Doffin norsk, så tittellikhet alene virker ikke på tvers av kildene.
+ * Kravene: samme oppdragsgiver (org.nr. eller svært likt navn), publisert innen 45 dager, og ett av:
+ *  - samme interne referanse hos oppdragsgiver
+ *  - lik tittel (samme språk)
+ *  - samme tilbudsfrist (±2 min) og overlappende CPV-gruppe, uten motstridende verdi (>5 % forskjell)
+ */
 async function findDuplicate(tx: Tx, n: NormalizedNotice, orgNumber: string | null): Promise<string | null> {
   if (!n.buyerName && !orgNumber) return null;
   const published = n.publishedAt ? new Date(n.publishedAt) : null;
+  const deadline = n.deadlineAt ? new Date(n.deadlineAt) : null;
+  const groups = [...new Set(n.cpvCodes.map((c) => c.slice(0, 3)))];
   const rows = (await tx`
     select t.id
     from tenders t
@@ -177,11 +202,18 @@ async function findDuplicate(tx: Tx, n: NormalizedNotice, orgNumber: string | nu
       and (
         (${n.buyerReference}::text is not null and t.buyer_reference = ${n.buyerReference})
         or similarity(t.title, ${n.title}) > 0.55
+        or (
+          ${deadline}::timestamptz is not null and t.deadline_at is not null
+          and abs(extract(epoch from (t.deadline_at - ${deadline}::timestamptz))) <= 120
+          and exists (select 1 from unnest(t.cpv_codes) c where left(c, 3) = any(${groups}::text[]))
+          and (t.estimated_value is null or ${n.estimatedValue}::numeric is null
+               or abs(t.estimated_value - ${n.estimatedValue}::numeric) <= greatest(t.estimated_value, ${n.estimatedValue}::numeric) * 0.05)
+        )
       )
       and (${published}::timestamptz is null or t.published_at is null
            or abs(extract(epoch from (t.published_at - ${published}::timestamptz))) < 45 * 86400)
       and not exists (select 1 from tender_sources s where s.tender_id = t.id and s.source = ${n.source})
-    order by similarity(t.title, ${n.title}) desc
+    order by (t.deadline_at is not distinct from ${deadline}::timestamptz) desc, similarity(t.title, ${n.title}) desc
     limit 1
   `) as unknown as { id: string }[];
   return rows[0]?.id ?? null;
@@ -241,6 +273,25 @@ export function detectChanges(existing: ExistingTender, n: NormalizedNotice, isN
   return events;
 }
 
+function dateOrNull(iso: string | null | undefined): Date | null {
+  return iso ? new Date(iso) : null;
+}
+
+/** Nyeste ikke-tomme verdi vinner; ellers beholdes det vi har. */
+function pick<T>(isNewer: boolean, incoming: T | null | undefined, existing: T | null | undefined): T | null {
+  const inc = incoming ?? null;
+  const ex = existing ?? null;
+  return isNewer ? (inc ?? ex) : (ex ?? inc);
+}
+
+function pickList<T>(isNewer: boolean, incoming: T[] | undefined, existing: T[] | null | undefined): T[] {
+  const inc = incoming ?? [];
+  const ex = existing ?? [];
+  if (!inc.length) return ex;
+  if (!ex.length) return inc;
+  return isNewer ? inc : ex;
+}
+
 async function processNotice(n: NormalizedNotice, stats: IngestStats, runStartedAt: Date): Promise<void> {
   const sql = systemSql();
   const hash = noticeHash(n);
@@ -248,12 +299,13 @@ async function processNotice(n: NormalizedNotice, stats: IngestStats, runStarted
   const prefixes = cpvPrefixes(n.cpvCodes);
   const industries = deriveIndustries(prefixes, n.title, n.description);
   const regions = regionCodesFor(n);
+  const d = n.details ?? {};
 
   await sql.begin(async (rawTx) => {
     const tx = rawTx as unknown as Tx;
     const existingSource = (await tx`
-      select id, tender_id, content_hash from tender_sources where source = ${n.source} and source_notice_id = ${n.sourceNoticeId}
-    `) as unknown as { id: string; tenderId: string; contentHash: string }[];
+      select id, tender_id, content_hash, normalize_version from tender_sources where source = ${n.source} and source_notice_id = ${n.sourceNoticeId}
+    `) as unknown as { id: string; tenderId: string; contentHash: string; normalizeVersion: number }[];
 
     if (existingSource[0] && existingSource[0].contentHash === hash) {
       await tx`update tender_sources set fetched_at = now(), removed_at = null where id = ${existingSource[0].id}`;
@@ -261,14 +313,27 @@ async function processNotice(n: NormalizedNotice, stats: IngestStats, runStarted
       stats.unchanged++;
       return;
     }
+    // Samme kunngjøring på nytt, men oversatt med en nyere versjon av koden: rett dataene uten
+    // å lage endringsvarsler (det er ikke oppdragsgiver som har endret noe).
+    const isRemap = Boolean(existingSource[0] && existingSource[0].normalizeVersion !== NORMALIZE_VERSION);
 
     let tenderId: string | null = existingSource[0]?.tenderId ?? null;
     let duplicate = false;
+    if (!tenderId && d.noticeIdentifier) {
+      const byNotice = (await tx`
+        select tender_id from tender_sources where notice_identifier = ${d.noticeIdentifier} limit 1
+      `) as unknown as { tenderId: string }[];
+      tenderId = byNotice[0]?.tenderId ?? null;
+      if (tenderId) {
+        const otherSource = await tx`select 1 from tender_sources where tender_id = ${tenderId} and source <> ${n.source} limit 1`;
+        duplicate = otherSource.length > 0;
+      }
+    }
     if (!tenderId && n.procedureId) {
       const byProc = (await tx`select id from tenders where procedure_id = ${n.procedureId}`) as unknown as { id: string }[];
       tenderId = byProc[0]?.id ?? null;
       if (tenderId) {
-        const otherSource = (await tx`select 1 from tender_sources where tender_id = ${tenderId} and source <> ${n.source} limit 1`);
+        const otherSource = await tx`select 1 from tender_sources where tender_id = ${tenderId} and source <> ${n.source} limit 1`;
         duplicate = otherSource.length > 0;
       }
     }
@@ -288,14 +353,21 @@ async function processNotice(n: NormalizedNotice, stats: IngestStats, runStarted
           country_code, nuts_codes, region_codes, place_text, cpv_codes, cpv_prefixes, main_cpv, industry_ids,
           contract_nature, procedure_type, notice_type, lifecycle, estimated_value, currency, published_at,
           deadline_at, deadline_time_known, source_url, documents_url, received_tenders, is_sample,
-          source_updated_at, content_hash
+          source_updated_at, content_hash,
+          questions_deadline_at, participation_deadline_at, deadline_kind, lot_deadlines_differ, duration_months, duration_text,
+          contract_start, contract_end, submission_url, lots, selection_criteria, award_criteria, is_framework, text_language
         ) values (
           ${canonicalKey}, ${n.procedureId}, ${n.buyerReference}, ${n.title}, ${n.description}, ${authorityId}, ${n.buyerName}, ${orgNumber},
           ${n.countryCode}, ${n.nutsCodes}::text[], ${regions}::text[], ${n.placeText ?? n.buyerCity}, ${n.cpvCodes}::text[],
           ${prefixes}::text[], ${n.mainCpv ?? n.cpvCodes[0] ?? null}, ${industries}::text[],
           ${n.contractNature}, ${n.procedureType}, ${n.noticeType}, ${n.lifecycle}, ${n.estimatedValue}, ${n.currency}, ${published},
-          ${n.deadlineAt ? new Date(n.deadlineAt) : null}, ${n.deadlineTimeKnown}, ${n.sourceUrl}, ${n.documentsUrl}, ${n.receivedTenders},
-          ${n.source === 'sample'}, ${published}, ${hash}
+          ${dateOrNull(n.deadlineAt)}, ${n.deadlineTimeKnown}, ${n.sourceUrl}, ${n.documentsUrl}, ${n.receivedTenders},
+          ${n.source === 'sample'}, ${published}, ${hash},
+          ${dateOrNull(d.questionsDeadlineAt)}, ${dateOrNull(d.participationDeadlineAt)}, ${d.deadlineKind ?? (n.deadlineAt ? 'tender' : null)},
+          ${d.lotDeadlinesDiffer ?? false}, ${d.durationMonths ?? null}, ${d.durationText ?? null},
+          ${dateOrNull(d.contractStart)}, ${dateOrNull(d.contractEnd)}, ${d.submissionUrl ?? null},
+          ${toJson(d.lots ?? [])}::text::jsonb, ${toJson(d.selectionCriteria ?? [])}::text::jsonb, ${toJson(d.awardCriteria ?? [])}::text::jsonb,
+          ${d.isFramework ?? null}, ${d.language ?? null}
         )
         on conflict (canonical_key) do update set last_checked_at = now()
         returning id
@@ -306,22 +378,32 @@ async function processNotice(n: NormalizedNotice, stats: IngestStats, runStarted
       const current = (await tx`
         select id, title, description, lifecycle, deadline_at, deadline_time_known, estimated_value, currency, documents_url,
                source_updated_at, published_at, first_seen_at, cpv_codes, nuts_codes, buyer_name, buyer_org_number, source_url,
-               received_tenders
+               received_tenders, text_language, questions_deadline_at, participation_deadline_at, deadline_kind, lot_deadlines_differ,
+               duration_months, duration_text, contract_start, contract_end, submission_url, lots, selection_criteria, award_criteria,
+               is_framework
         from tenders where id = ${tenderId} for update
       `) as unknown as ExistingTender[];
       const existing = current[0]!;
       const isNewer = !existing.sourceUpdatedAt || !published || published.getTime() >= existing.sourceUpdatedAt.getTime();
-      const events = existing.firstSeenAt < runStartedAt ? detectChanges(existing, n, isNewer, !existingSource[0]) : [];
+      const events =
+        existing.firstSeenAt < runStartedAt && !isRemap ? detectChanges(existing, n, isNewer, !existingSource[0]) : [];
+
+      // Norsk tekst (Doffin) foretrekkes framfor engelsk (TED) uansett rekkefølge; ellers vinner nyeste.
+      const incomingLang = d.language ?? null;
+      const preferIncomingText =
+        incomingLang === 'nb' && existing.textLanguage !== 'nb' ? true : incomingLang !== 'nb' && existing.textLanguage === 'nb' ? false : isNewer;
 
       const cpvUnion = [...new Set([...existing.cpvCodes, ...n.cpvCodes])].sort();
       const nutsUnion = [...new Set([...existing.nutsCodes, ...n.nutsCodes])].sort();
       const mergedPrefixes = cpvPrefixes(cpvUnion);
       const mergedRegions = regionCodesFor({ nutsCodes: nutsUnion, countryCode: n.countryCode });
       const lifecycle = laterLifecycle(existing.lifecycle, n.lifecycle);
-      const title = isNewer && n.source !== 'ted' ? n.title : existing.title || n.title;
-      const description = (isNewer && n.description) || existing.description || n.description;
-      const deadline = isNewer && n.deadlineAt ? new Date(n.deadlineAt) : (existing.deadlineAt ?? (n.deadlineAt ? new Date(n.deadlineAt) : null));
+      const title = preferIncomingText ? n.title : existing.title || n.title;
+      const description = preferIncomingText ? (n.description ?? existing.description) : (existing.description ?? n.description);
+      const textLanguage = preferIncomingText ? (incomingLang ?? existing.textLanguage) : (existing.textLanguage ?? incomingLang);
+      const deadline = isNewer && n.deadlineAt ? new Date(n.deadlineAt) : (existing.deadlineAt ?? dateOrNull(n.deadlineAt));
       const deadlineTimeKnown = isNewer && n.deadlineAt ? n.deadlineTimeKnown : existing.deadlineTimeKnown;
+      const deadlineKind = isNewer && n.deadlineAt ? (d.deadlineKind ?? 'tender') : (existing.deadlineKind ?? d.deadlineKind ?? null);
       const value = isNewer && n.estimatedValue !== null ? n.estimatedValue : (existing.estimatedValue ?? n.estimatedValue);
       const currency = isNewer && n.estimatedValue !== null ? n.currency : (existing.currency ?? n.currency);
       const sourceUrl = n.source === 'doffin' && n.sourceUrl ? n.sourceUrl : (existing.sourceUrl ?? n.sourceUrl);
@@ -333,8 +415,8 @@ async function processNotice(n: NormalizedNotice, stats: IngestStats, runStarted
 
       await tx`
         update tenders set
-          title = ${title}, description = ${description}, lifecycle = ${lifecycle},
-          deadline_at = ${deadline}, deadline_time_known = ${deadlineTimeKnown},
+          title = ${title}, description = ${description}, text_language = ${textLanguage}, lifecycle = ${lifecycle},
+          deadline_at = ${deadline}, deadline_time_known = ${deadlineTimeKnown}, deadline_kind = ${deadline ? deadlineKind : null},
           estimated_value = ${value}, currency = ${currency},
           cpv_codes = ${cpvUnion}::text[], cpv_prefixes = ${mergedPrefixes}::text[],
           industry_ids = ${deriveIndustries(mergedPrefixes, title, description)}::text[],
@@ -348,10 +430,22 @@ async function processNotice(n: NormalizedNotice, stats: IngestStats, runStarted
           contract_nature = coalesce(contract_nature, ${n.contractNature}),
           procedure_type = coalesce(procedure_type, ${n.procedureType}),
           notice_type = coalesce(${isNewer ? n.noticeType : null}, notice_type),
-          documents_url = coalesce(${isNewer ? n.documentsUrl : null}, documents_url, ${n.documentsUrl}),
+          documents_url = ${pick(isNewer, n.documentsUrl, existing.documentsUrl)},
           source_url = ${sourceUrl},
           received_tenders = ${received >= 0 ? received : null},
           published_at = ${firstPublished}, source_updated_at = ${sourceUpdatedAt},
+          questions_deadline_at = ${pick(isNewer, dateOrNull(d.questionsDeadlineAt), existing.questionsDeadlineAt)},
+          participation_deadline_at = ${pick(isNewer, dateOrNull(d.participationDeadlineAt), existing.participationDeadlineAt)},
+          lot_deadlines_differ = ${isNewer && n.deadlineAt ? (d.lotDeadlinesDiffer ?? false) : existing.lotDeadlinesDiffer},
+          duration_months = ${pick(isNewer, d.durationMonths, existing.durationMonths)},
+          duration_text = ${pick(isNewer, d.durationText, existing.durationText)},
+          contract_start = ${pick(isNewer, dateOrNull(d.contractStart), existing.contractStart)},
+          contract_end = ${pick(isNewer, dateOrNull(d.contractEnd), existing.contractEnd)},
+          submission_url = ${pick(isNewer, d.submissionUrl, existing.submissionUrl)},
+          lots = ${toJson(pickList(isNewer, d.lots, existing.lots))}::text::jsonb,
+          selection_criteria = ${toJson(pickList(isNewer, d.selectionCriteria, existing.selectionCriteria))}::text::jsonb,
+          award_criteria = ${toJson(pickList(isNewer, d.awardCriteria, existing.awardCriteria))}::text::jsonb,
+          is_framework = ${pick(isNewer, d.isFramework, existing.isFramework)},
           last_checked_at = now(), content_hash = ${hash}
         where id = ${tenderId}
       `;
@@ -366,12 +460,16 @@ async function processNotice(n: NormalizedNotice, stats: IngestStats, runStarted
     }
 
     await tx`
-      insert into tender_sources (tender_id, source, source_notice_id, notice_type, source_url, published_at, raw, content_hash)
+      insert into tender_sources (tender_id, source, source_notice_id, notice_type, source_url, published_at, raw, content_hash,
+                                  notice_identifier, notice_version, normalize_version, change_description)
       values (${tenderId}, ${n.source}, ${n.sourceNoticeId}, ${n.noticeType}, ${n.sourceUrl}, ${published},
-              ${toJson(n.raw ?? null)}::text::jsonb, ${hash})
+              ${toJson(n.raw ?? null)}::text::jsonb, ${hash}, ${d.noticeIdentifier ?? null}, ${d.noticeVersion ?? null},
+              ${NORMALIZE_VERSION}, ${d.changeDescription ?? null})
       on conflict (source, source_notice_id) do update set
         tender_id = excluded.tender_id, notice_type = excluded.notice_type, source_url = excluded.source_url,
         published_at = excluded.published_at, raw = excluded.raw, content_hash = excluded.content_hash,
+        notice_identifier = excluded.notice_identifier, notice_version = excluded.notice_version,
+        normalize_version = excluded.normalize_version, change_description = excluded.change_description,
         fetched_at = now(), removed_at = null
     `;
 

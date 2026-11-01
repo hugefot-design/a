@@ -5,6 +5,58 @@ import { INDUSTRIES, regionsFromNuts } from '@/domain/reference';
 export type Lifecycle = 'planned' | 'competition' | 'awarded' | 'cancelled' | 'direct_award' | 'withdrawn' | 'other';
 export type SourceId = 'ted' | 'doffin' | 'manual' | 'sample';
 
+/**
+ * Versjon av oversettelsen fra kildeformat til felles format. Økes når oversettelsen endres,
+ * slik at en ny kjøring som retter gamle data IKKE tolkes som endringer hos oppdragsgiver
+ * (og dermed ikke gir falske varsler om «fristen er endret»).
+ */
+export const NORMALIZE_VERSION = 2;
+
+export interface NoticeLot {
+  id: string | null;
+  title: string | null;
+  estimatedValue: number | null;
+  durationText: string | null;
+}
+
+export interface NoticeAwardCriterion {
+  name: string;
+  type: string | null;
+  weight: string | null;
+}
+
+/**
+ * Tilleggsopplysninger som ikke alle kilder har. Manglende verdier er null/tomme – de gjettes aldri.
+ */
+export interface NoticeDetails {
+  /** eForms-kunngjøringens UUID (samme ID i TED og Doffin for samme kunngjøring). */
+  noticeIdentifier?: string | null;
+  noticeVersion?: number | null;
+  /** Frist for spørsmål til oppdragsgiver (eForms BT-13). */
+  questionsDeadlineAt?: string | null;
+  /** Frist for forespørsel om å delta (begrenset konkurranse, eForms BT-1311). */
+  participationDeadlineAt?: string | null;
+  /** Hva `deadlineAt` er: tilbudsfrist, eller frist for å be om å delta (begrenset konkurranse). */
+  deadlineKind?: 'tender' | 'participation' | null;
+  /** Delkontraktene har ulike frister; `deadlineAt` er da den tidligste. */
+  lotDeadlinesDiffer?: boolean;
+  durationMonths?: number | null;
+  durationText?: string | null;
+  contractStart?: string | null;
+  contractEnd?: string | null;
+  /** Hvor tilbudet leveres (konkurransegjennomføringsverktøy). */
+  submissionUrl?: string | null;
+  lots?: NoticeLot[];
+  /** Kvalifikasjonskrav slik de står i kunngjøringen. */
+  selectionCriteria?: string[];
+  awardCriteria?: NoticeAwardCriterion[];
+  isFramework?: boolean | null;
+  /** Beskrivelse av endringen når kunngjøringen er en rettelse. */
+  changeDescription?: string | null;
+  /** Språket tittel og beskrivelse er skrevet på ('nb', 'en', …). */
+  language?: string | null;
+}
+
 export interface NoticeAward {
   lotTitle: string | null;
   supplierName: string;
@@ -43,6 +95,7 @@ export interface NormalizedNotice {
   documentsUrl: string | null;
   receivedTenders: number | null;
   awards: NoticeAward[];
+  details?: NoticeDetails;
   raw: unknown;
 }
 
@@ -65,6 +118,41 @@ const url = z
   .nullable();
 
 const money = z.number().finite().nonnegative().max(1e13).nullable();
+
+const shortText = (max: number) => z.string().trim().max(max).nullable().optional();
+
+export const noticeDetailsSchema = z.object({
+  noticeIdentifier: z.string().max(100).nullable().optional(),
+  noticeVersion: z.number().int().min(0).max(1000).nullable().optional(),
+  questionsDeadlineAt: isoDate.optional(),
+  participationDeadlineAt: isoDate.optional(),
+  deadlineKind: z.enum(['tender', 'participation']).nullable().optional(),
+  lotDeadlinesDiffer: z.boolean().optional(),
+  durationMonths: z.number().finite().nonnegative().max(1200).nullable().optional(),
+  durationText: shortText(300),
+  contractStart: isoDate.optional(),
+  contractEnd: isoDate.optional(),
+  submissionUrl: url.optional(),
+  lots: z
+    .array(
+      z.object({
+        id: z.string().max(100).nullable(),
+        title: z.string().max(1000).nullable(),
+        estimatedValue: money,
+        durationText: z.string().max(300).nullable(),
+      }),
+    )
+    .max(300)
+    .optional(),
+  selectionCriteria: z.array(z.string().max(4000)).max(60).optional(),
+  awardCriteria: z
+    .array(z.object({ name: z.string().max(500), type: z.string().max(50).nullable(), weight: z.string().max(50).nullable() }))
+    .max(60)
+    .optional(),
+  isFramework: z.boolean().nullable().optional(),
+  changeDescription: shortText(4000),
+  language: z.string().max(10).nullable().optional(),
+});
 
 export const normalizedNoticeSchema = z.object({
   source: z.enum(['ted', 'doffin', 'manual', 'sample']),
@@ -105,6 +193,7 @@ export const normalizedNoticeSchema = z.object({
       }),
     )
     .max(500),
+  details: noticeDetailsSchema.optional(),
   raw: z.unknown(),
 });
 
@@ -181,6 +270,56 @@ export function cleanOrgNumber(value: unknown, countryCode: string): string | nu
   const digits = raw.replace(/\D/g, '');
   if (countryCode === 'NO') return isValidNorwegianOrgNumber(digits) ? digits : null;
   return digits.length >= 6 && digits.length <= 20 ? digits : null;
+}
+
+/**
+ * Renser NUTS-koder fra en kilde: store bokstaver, uten duplikater, uten landkoder (ISO3, f.eks.
+ * «NOR»), uten «ANYW» (hele landet/ikke angitt) og uten «extra-regio»-koder (…ZZ/…ZZZ).
+ */
+export function cleanNutsCodes(codes: unknown[]): string[] {
+  const out = new Set<string>();
+  for (const raw of codes) {
+    if (typeof raw !== 'string') continue;
+    const c = raw.trim().toUpperCase();
+    if (!/^[A-Z]{2}[0-9A-Z]{1,3}$/.test(c)) continue;
+    if (/^[A-Z]{3}$/.test(c) || c.startsWith('ANYW') || /ZZZ?$/.test(c)) continue;
+    out.add(c);
+  }
+  return [...out].sort();
+}
+
+/** Den mest spesifikke CPV-koden (flest signifikante sifre). Kilder legger ofte til overordnede koder. */
+export function mostSpecificCpv(codes: string[]): string | null {
+  let best: string | null = null;
+  let bestLen = -1;
+  for (const code of codes) {
+    const len = code.replace(/0+$/, '').length;
+    if (len > bestLen) {
+      best = code;
+      bestLen = len;
+    }
+  }
+  return best;
+}
+
+const UNIT_MONTHS: Record<string, number> = { DAY: 1 / 30.44, WEEK: 1 / 4.345, MONTH: 1, YEAR: 12 };
+const UNIT_LABEL: Record<string, [string, string]> = {
+  DAY: ['dag', 'dager'],
+  WEEK: ['uke', 'uker'],
+  MONTH: ['måned', 'måneder'],
+  YEAR: ['år', 'år'],
+};
+
+/** «48» + «MONTH» → { months: 48, text: '48 måneder' }. Ukjente enheter gir null. */
+export function durationFrom(value: unknown, unit: unknown): { months: number; text: string } | null {
+  const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value.replace(',', '.')) : NaN;
+  const u = typeof unit === 'string' ? unit.trim().toUpperCase() : '';
+  if (!Number.isFinite(n) || n <= 0 || !(u in UNIT_MONTHS)) return null;
+  const months = Math.round(n * UNIT_MONTHS[u]! * 100) / 100;
+  // Over 50 år er nesten alltid en feil hos kilden (f.eks. årstallet «2026» skrevet som varighet).
+  if (months > 600) return null;
+  const [one, many] = UNIT_LABEL[u]!;
+  return { months, text: `${n.toLocaleString('nb-NO')} ${n === 1 ? one : many}` };
 }
 
 export function regionCodesFor(notice: Pick<NormalizedNotice, 'nutsCodes' | 'countryCode'>): string[] {

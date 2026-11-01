@@ -1,0 +1,1414 @@
+{
+ "_kilde": "Ekte svar fra POST https://api.ted.europa.eu/v3/notices/search, hentet 1.11.2026. © Den europeiske union, https://ted.europa.eu – gjenbruk tillatt med kildehenvisning.",
+ "notices": [
+  {
+   "award-criterion-number-lot": [
+    "100",
+    "0"
+   ],
+   "award-criterion-number-weight-lot": [
+    "per-exa",
+    "per-exa"
+   ],
+   "award-criterion-type-lot": [
+    "price",
+    "quality"
+   ],
+   "buyer-city": {
+    "mul": [
+     "Oslo"
+    ]
+   },
+   "buyer-country": [
+    "NOR"
+   ],
+   "buyer-name": {
+    "eng": [
+     "."
+    ]
+   },
+   "classification-cpv": [
+    "42513000",
+    "50730000",
+    "42000000",
+    "42500000",
+    "42511110",
+    "42513100",
+    "42530000",
+    "42532000",
+    "42533000",
+    "92000000",
+    "92610000",
+    "45331230",
+    "42513000",
+    "50730000",
+    "42000000",
+    "42500000",
+    "42511110",
+    "42513100",
+    "42530000",
+    "42532000",
+    "42533000",
+    "92000000",
+    "92610000",
+    "45331230"
+   ],
+   "contract-nature": [
+    "supplies",
+    "supplies"
+   ],
+   "deadline-receipt-tender-date-lot": [
+    "2026-10-20Z"
+   ],
+   "deadline-receipt-tender-time-lot": [
+    "10:00:00Z"
+   ],
+   "description-proc": {
+    "eng": "."
+   },
+   "duration-period-unit-lot": [
+    "MONTH"
+   ],
+   "duration-period-value-lot": [
+    "48"
+   ],
+   "estimated-value-cur-proc": "NOK",
+   "estimated-value-proc": "40000000",
+   "framework-agreement-lot": [
+    "fa-wo-rc"
+   ],
+   "identifier-lot": [
+    "LOT-0001"
+   ],
+   "internal-identifier-proc": "5777",
+   "links": {
+    "xml": {
+     "MUL": "https://ted.europa.eu/en/notice/676431-2026/xml"
+    },
+    "pdf": {
+     "BUL": "https://ted.europa.eu/bg/notice/676431-2026/pdf",
+     "SPA": "https://ted.europa.eu/es/notice/676431-2026/pdf",
+     "CES": "https://ted.europa.eu/cs/notice/676431-2026/pdf",
+     "DAN": "https://ted.europa.eu/da/notice/676431-2026/pdf",
+     "DEU": "https://ted.europa.eu/de/notice/676431-2026/pdf",
+     "EST": "https://ted.europa.eu/et/notice/676431-2026/pdf",
+     "ELL": "https://ted.europa.eu/el/notice/676431-2026/pdf",
+     "ENG": "https://ted.europa.eu/en/notice/676431-2026/pdf",
+     "FRA": "https://ted.europa.eu/fr/notice/676431-2026/pdf",
+     "GLE": "https://ted.europa.eu/ga/notice/676431-2026/pdf",
+     "HRV": "https://ted.europa.eu/hr/notice/676431-2026/pdf",
+     "ITA": "https://ted.europa.eu/it/notice/676431-2026/pdf",
+     "LAV": "https://ted.europa.eu/lv/notice/676431-2026/pdf",
+     "LIT": "https://ted.europa.eu/lt/notice/676431-2026/pdf",
+     "HUN": "https://ted.europa.eu/hu/notice/676431-2026/pdf",
+     "MLT": "https://ted.europa.eu/mt/notice/676431-2026/pdf",
+     "NLD": "https://ted.europa.eu/nl/notice/676431-2026/pdf",
+     "POL": "https://ted.europa.eu/pl/notice/676431-2026/pdf",
+     "POR": "https://ted.europa.eu/pt/notice/676431-2026/pdf",
+     "RON": "https://ted.europa.eu/ro/notice/676431-2026/pdf",
+     "SLK": "https://ted.europa.eu/sk/notice/676431-2026/pdf",
+     "SLV": "https://ted.europa.eu/sl/notice/676431-2026/pdf",
+     "FIN": "https://ted.europa.eu/fi/notice/676431-2026/pdf",
+     "SWE": "https://ted.europa.eu/sv/notice/676431-2026/pdf"
+    },
+    "pdfs": {
+     "ENG": "https://ted.europa.eu/en/notice/676431-2026/pdfs"
+    },
+    "html": {
+     "BUL": "https://ted.europa.eu/bg/notice/-/detail/676431-2026",
+     "SPA": "https://ted.europa.eu/es/notice/-/detail/676431-2026",
+     "CES": "https://ted.europa.eu/cs/notice/-/detail/676431-2026",
+     "DAN": "https://ted.europa.eu/da/notice/-/detail/676431-2026",
+     "DEU": "https://ted.europa.eu/de/notice/-/detail/676431-2026",
+     "EST": "https://ted.europa.eu/et/notice/-/detail/676431-2026",
+     "ELL": "https://ted.europa.eu/el/notice/-/detail/676431-2026",
+     "ENG": "https://ted.europa.eu/en/notice/-/detail/676431-2026",
+     "FRA": "https://ted.europa.eu/fr/notice/-/detail/676431-2026",
+     "GLE": "https://ted.europa.eu/ga/notice/-/detail/676431-2026",
+     "HRV": "https://ted.europa.eu/hr/notice/-/detail/676431-2026",
+     "ITA": "https://ted.europa.eu/it/notice/-/detail/676431-2026",
+     "LAV": "https://ted.europa.eu/lv/notice/-/detail/676431-2026",
+     "LIT": "https://ted.europa.eu/lt/notice/-/detail/676431-2026",
+     "HUN": "https://ted.europa.eu/hu/notice/-/detail/676431-2026",
+     "MLT": "https://ted.europa.eu/mt/notice/-/detail/676431-2026",
+     "NLD": "https://ted.europa.eu/nl/notice/-/detail/676431-2026",
+     "POL": "https://ted.europa.eu/pl/notice/-/detail/676431-2026",
+     "POR": "https://ted.europa.eu/pt/notice/-/detail/676431-2026",
+     "RON": "https://ted.europa.eu/ro/notice/-/detail/676431-2026",
+     "SLK": "https://ted.europa.eu/sk/notice/-/detail/676431-2026",
+     "SLV": "https://ted.europa.eu/sl/notice/-/detail/676431-2026",
+     "FIN": "https://ted.europa.eu/fi/notice/-/detail/676431-2026",
+     "SWE": "https://ted.europa.eu/sv/notice/-/detail/676431-2026"
+    },
+    "htmlDirect": {
+     "BUL": "https://ted.europa.eu/bg/notice/676431-2026/html",
+     "SPA": "https://ted.europa.eu/es/notice/676431-2026/html",
+     "CES": "https://ted.europa.eu/cs/notice/676431-2026/html",
+     "DAN": "https://ted.europa.eu/da/notice/676431-2026/html",
+     "DEU": "https://ted.europa.eu/de/notice/676431-2026/html",
+     "EST": "https://ted.europa.eu/et/notice/676431-2026/html",
+     "ELL": "https://ted.europa.eu/el/notice/676431-2026/html",
+     "ENG": "https://ted.europa.eu/en/notice/676431-2026/html",
+     "FRA": "https://ted.europa.eu/fr/notice/676431-2026/html",
+     "GLE": "https://ted.europa.eu/ga/notice/676431-2026/html",
+     "HRV": "https://ted.europa.eu/hr/notice/676431-2026/html",
+     "ITA": "https://ted.europa.eu/it/notice/676431-2026/html",
+     "LAV": "https://ted.europa.eu/lv/notice/676431-2026/html",
+     "LIT": "https://ted.europa.eu/lt/notice/676431-2026/html",
+     "HUN": "https://ted.europa.eu/hu/notice/676431-2026/html",
+     "MLT": "https://ted.europa.eu/mt/notice/676431-2026/html",
+     "NLD": "https://ted.europa.eu/nl/notice/676431-2026/html",
+     "POL": "https://ted.europa.eu/pl/notice/676431-2026/html",
+     "POR": "https://ted.europa.eu/pt/notice/676431-2026/html",
+     "RON": "https://ted.europa.eu/ro/notice/676431-2026/html",
+     "SLK": "https://ted.europa.eu/sk/notice/676431-2026/html",
+     "SLV": "https://ted.europa.eu/sl/notice/676431-2026/html",
+     "FIN": "https://ted.europa.eu/fi/notice/676431-2026/html",
+     "SWE": "https://ted.europa.eu/sv/notice/676431-2026/html"
+    }
+   },
+   "notice-identifier": "662905a3-d396-4284-b78d-d4e9ab092135",
+   "notice-title": {
+    "hun": "Norvégia – Hűtő- és fagyasztóberendezés – .",
+    "lav": "Norvēģija – Dzesēšanas un saldēšanas iekārtas – .",
+    "swe": "Norge – Kyl- och frysutrustning – .",
+    "gle": "An Iorua – Refrigerating and freezing equipment – .",
+    "ell": "Νορβηγία – Εξοπλισμός ψύξης και κατάψυξης – .",
+    "spa": "Noruega – Equipos de refrigeración y congelación – .",
+    "est": "Norra – Jahutus- ja külmutusseadmed – .",
+    "nld": "Noorwegen – Koel- en diepvriesuitrusting – .",
+    "fin": "Norja – Jäähdytys- ja pakastuslaitteet – .",
+    "pol": "Norwegia – Urządzenia chłodnicze i mrożące – .",
+    "hrv": "Norveška – Rashladna oprema i oprema za zamrzavanje – .",
+    "ces": "Norsko – Chladící a mrazící zařízení – .",
+    "dan": "Norge – Køle- og fryseapparatur – .",
+    "ron": "Norvegia – Echipamente de refrigerare şi de congelare – .",
+    "por": "Noruega – Equipamento de refrigeração e congelação – .",
+    "slk": "Nórsko – Chladiace a mraziace zariadenia – .",
+    "fra": "Norvège – Matériel de réfrigération et de congélation – .",
+    "mlt": "In-Norveġja – Apparat tar-refriġerazzjoni u ta' l-iffriżar – .",
+    "deu": "Norwegen – Kühl- und Tiefkühlvorrichtungen – .",
+    "lit": "Norvegija – Šaldymo ir užšaldymo įrenginiai – .",
+    "ita": "Norvegia – Apparecchi di refrigerazione e congelazione – .",
+    "bul": "Норвегия – Оборудване за охлаждане и замразяване – .",
+    "slv": "Norveška – Naprave za hlajenje in zamrzovanje – .",
+    "eng": "Norway – Refrigerating and freezing equipment – ."
+   },
+   "notice-type": "cn-standard",
+   "notice-version": 1,
+   "organisation-identifier-buyer": [
+    "924599545"
+   ],
+   "place-of-performance": [
+    "NO081",
+    "NOR",
+    "NO081",
+    "NOR"
+   ],
+   "procedure-identifier": "a0ab6257-ce10-4e74-a933-6a029f593d42",
+   "procedure-type": "open",
+   "publication-date": "2026-10-01+02:00",
+   "publication-number": "676431-2026",
+   "selection-criterion-description-lot": {
+    "eng": [
+     ".",
+     ".",
+     ".",
+     ".",
+     ".",
+     "."
+    ]
+   },
+   "submission-url-lot": [
+    "https://app.artifik.no/procurements/5777"
+   ],
+   "title-lot": {
+    "eng": [
+     "."
+    ]
+   },
+   "title-proc": {
+    "eng": "."
+   },
+   "total-value": 40000000,
+   "total-value-cur": [
+    "NOK"
+   ]
+  },
+  {
+   "award-criterion-name-lot": {
+    "eng": [
+     "Quality",
+     "Cost",
+     "Quality",
+     "Cost of work"
+    ]
+   },
+   "award-criterion-number-lot": [
+    "60",
+    "40",
+    "50",
+    "50"
+   ],
+   "award-criterion-number-weight-lot": [
+    "per-exa",
+    "per-exa",
+    "per-exa",
+    "per-exa"
+   ],
+   "award-criterion-type-lot": [
+    "quality",
+    "cost",
+    "quality",
+    "cost"
+   ],
+   "buyer-city": {
+    "mul": [
+     "JAREN",
+     "oslo",
+     "Longyearbyen",
+     "Lillestrøm",
+     "Oslo",
+     "Oslo",
+     "Stockholm",
+     "Karlskrona",
+     "Stockholm",
+     "Stockholm"
+    ]
+   },
+   "buyer-country": [
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "SWE",
+    "SWE",
+    "SWE",
+    "SWE"
+   ],
+   "buyer-name": {
+    "eng": [
+     "Politiets fellestjenester",
+     "Politiets sikkerhetstjeneste",
+     "Sysselmesteren på Svalbard",
+     "Kriminalomsorgen",
+     "Politi- og lensmannsetaten",
+     "Forsvarsmateriell",
+     "Polismyndigheten",
+     "Kustbevakningen",
+     "Tullverket",
+     "Försvarets materielverk"
+    ]
+   },
+   "classification-cpv": [
+    "35200000",
+    "18143000",
+    "35200000",
+    "35200000",
+    "18143000",
+    "18143000"
+   ],
+   "contract-duration-start-date-lot": [
+    "2026-09-07Z",
+    "2026-08-26Z"
+   ],
+   "contract-nature": [
+    "supplies",
+    "supplies",
+    "supplies"
+   ],
+   "description-proc": {
+    "eng": "The procurement of Batong, Batong holders, protective suits includes batons, baton holders, training batpon, stroke pad and protective suits. Participants are the Norwegian Police Service, the National Police Security Service, the District Governor of Svalbard, the Norwegian Correctional Service, the Norwegian Armed Forces, the Policy Authority (Sv.), Kustbevakningen (Sv.), Tullverket (Sv.) and Försvaret ́s material works (Sv.). The procurement is divided into two sub-contracts: 1. Batong and baton holder, 2. Protective suits."
+   },
+   "duration-period-unit-lot": [
+    "MONTH",
+    "MONTH"
+   ],
+   "duration-period-value-lot": [
+    "48",
+    "48"
+   ],
+   "estimated-value-cur-lot": [
+    "NOK"
+   ],
+   "estimated-value-cur-proc": "NOK",
+   "estimated-value-lot": [
+    "67500000",
+    "7500000"
+   ],
+   "estimated-value-proc": "75000000",
+   "framework-agreement-lot": [
+    "fa-wo-rc",
+    "fa-wo-rc"
+   ],
+   "identifier-lot": [
+    "LOT-0001",
+    "LOT-0002"
+   ],
+   "internal-identifier-proc": "25/240545",
+   "links": {
+    "xml": {
+     "MUL": "https://ted.europa.eu/en/notice/711382-2026/xml"
+    },
+    "pdf": {
+     "BUL": "https://ted.europa.eu/bg/notice/711382-2026/pdf",
+     "SPA": "https://ted.europa.eu/es/notice/711382-2026/pdf",
+     "CES": "https://ted.europa.eu/cs/notice/711382-2026/pdf",
+     "DAN": "https://ted.europa.eu/da/notice/711382-2026/pdf",
+     "DEU": "https://ted.europa.eu/de/notice/711382-2026/pdf",
+     "EST": "https://ted.europa.eu/et/notice/711382-2026/pdf",
+     "ELL": "https://ted.europa.eu/el/notice/711382-2026/pdf",
+     "ENG": "https://ted.europa.eu/en/notice/711382-2026/pdf",
+     "FRA": "https://ted.europa.eu/fr/notice/711382-2026/pdf",
+     "GLE": "https://ted.europa.eu/ga/notice/711382-2026/pdf",
+     "HRV": "https://ted.europa.eu/hr/notice/711382-2026/pdf",
+     "ITA": "https://ted.europa.eu/it/notice/711382-2026/pdf",
+     "LAV": "https://ted.europa.eu/lv/notice/711382-2026/pdf",
+     "LIT": "https://ted.europa.eu/lt/notice/711382-2026/pdf",
+     "HUN": "https://ted.europa.eu/hu/notice/711382-2026/pdf",
+     "MLT": "https://ted.europa.eu/mt/notice/711382-2026/pdf",
+     "NLD": "https://ted.europa.eu/nl/notice/711382-2026/pdf",
+     "POL": "https://ted.europa.eu/pl/notice/711382-2026/pdf",
+     "POR": "https://ted.europa.eu/pt/notice/711382-2026/pdf",
+     "RON": "https://ted.europa.eu/ro/notice/711382-2026/pdf",
+     "SLK": "https://ted.europa.eu/sk/notice/711382-2026/pdf",
+     "SLV": "https://ted.europa.eu/sl/notice/711382-2026/pdf",
+     "FIN": "https://ted.europa.eu/fi/notice/711382-2026/pdf",
+     "SWE": "https://ted.europa.eu/sv/notice/711382-2026/pdf"
+    },
+    "pdfs": {
+     "ENG": "https://ted.europa.eu/en/notice/711382-2026/pdfs"
+    },
+    "html": {
+     "BUL": "https://ted.europa.eu/bg/notice/-/detail/711382-2026",
+     "SPA": "https://ted.europa.eu/es/notice/-/detail/711382-2026",
+     "CES": "https://ted.europa.eu/cs/notice/-/detail/711382-2026",
+     "DAN": "https://ted.europa.eu/da/notice/-/detail/711382-2026",
+     "DEU": "https://ted.europa.eu/de/notice/-/detail/711382-2026",
+     "EST": "https://ted.europa.eu/et/notice/-/detail/711382-2026",
+     "ELL": "https://ted.europa.eu/el/notice/-/detail/711382-2026",
+     "ENG": "https://ted.europa.eu/en/notice/-/detail/711382-2026",
+     "FRA": "https://ted.europa.eu/fr/notice/-/detail/711382-2026",
+     "GLE": "https://ted.europa.eu/ga/notice/-/detail/711382-2026",
+     "HRV": "https://ted.europa.eu/hr/notice/-/detail/711382-2026",
+     "ITA": "https://ted.europa.eu/it/notice/-/detail/711382-2026",
+     "LAV": "https://ted.europa.eu/lv/notice/-/detail/711382-2026",
+     "LIT": "https://ted.europa.eu/lt/notice/-/detail/711382-2026",
+     "HUN": "https://ted.europa.eu/hu/notice/-/detail/711382-2026",
+     "MLT": "https://ted.europa.eu/mt/notice/-/detail/711382-2026",
+     "NLD": "https://ted.europa.eu/nl/notice/-/detail/711382-2026",
+     "POL": "https://ted.europa.eu/pl/notice/-/detail/711382-2026",
+     "POR": "https://ted.europa.eu/pt/notice/-/detail/711382-2026",
+     "RON": "https://ted.europa.eu/ro/notice/-/detail/711382-2026",
+     "SLK": "https://ted.europa.eu/sk/notice/-/detail/711382-2026",
+     "SLV": "https://ted.europa.eu/sl/notice/-/detail/711382-2026",
+     "FIN": "https://ted.europa.eu/fi/notice/-/detail/711382-2026",
+     "SWE": "https://ted.europa.eu/sv/notice/-/detail/711382-2026"
+    },
+    "htmlDirect": {
+     "BUL": "https://ted.europa.eu/bg/notice/711382-2026/html",
+     "SPA": "https://ted.europa.eu/es/notice/711382-2026/html",
+     "CES": "https://ted.europa.eu/cs/notice/711382-2026/html",
+     "DAN": "https://ted.europa.eu/da/notice/711382-2026/html",
+     "DEU": "https://ted.europa.eu/de/notice/711382-2026/html",
+     "EST": "https://ted.europa.eu/et/notice/711382-2026/html",
+     "ELL": "https://ted.europa.eu/el/notice/711382-2026/html",
+     "ENG": "https://ted.europa.eu/en/notice/711382-2026/html",
+     "FRA": "https://ted.europa.eu/fr/notice/711382-2026/html",
+     "GLE": "https://ted.europa.eu/ga/notice/711382-2026/html",
+     "HRV": "https://ted.europa.eu/hr/notice/711382-2026/html",
+     "ITA": "https://ted.europa.eu/it/notice/711382-2026/html",
+     "LAV": "https://ted.europa.eu/lv/notice/711382-2026/html",
+     "LIT": "https://ted.europa.eu/lt/notice/711382-2026/html",
+     "HUN": "https://ted.europa.eu/hu/notice/711382-2026/html",
+     "MLT": "https://ted.europa.eu/mt/notice/711382-2026/html",
+     "NLD": "https://ted.europa.eu/nl/notice/711382-2026/html",
+     "POL": "https://ted.europa.eu/pl/notice/711382-2026/html",
+     "POR": "https://ted.europa.eu/pt/notice/711382-2026/html",
+     "RON": "https://ted.europa.eu/ro/notice/711382-2026/html",
+     "SLK": "https://ted.europa.eu/sk/notice/711382-2026/html",
+     "SLV": "https://ted.europa.eu/sl/notice/711382-2026/html",
+     "FIN": "https://ted.europa.eu/fi/notice/711382-2026/html",
+     "SWE": "https://ted.europa.eu/sv/notice/711382-2026/html"
+    }
+   },
+   "notice-identifier": "17b72654-d5d2-4e05-a89a-5a92d694851b",
+   "notice-title": {
+    "hun": "Norvégia, Svédország – Rendőrségi felszerelések – Baton and Baton Holder, Protective Suits",
+    "lav": "Norvēģija, Zviedrija – Policijas aprīkojums – Baton and Baton Holder, Protective Suits",
+    "swe": "Norge, Sverige – Polisutrustning – Baton and Baton Holder, Protective Suits",
+    "gle": "An Iorua, An tSualainn – Police equipment – Baton and Baton Holder, Protective Suits",
+    "ell": "Νορβηγία, Σουηδία – Αστυνομικός εξοπλισμός – Baton and Baton Holder, Protective Suits",
+    "spa": "Noruega, Suecia – Equipo para policía – Baton and Baton Holder, Protective Suits",
+    "est": "Norra, Rootsi – Politseivarustus – Baton and Baton Holder, Protective Suits",
+    "nld": "Noorwegen, Zweden – Uitrusting voor de politie – Baton and Baton Holder, Protective Suits",
+    "fin": "Norja, Ruotsi – Poliisin varusteet – Baton and Baton Holder, Protective Suits",
+    "pol": "Norwegia, Szwecja – Sprzęt policyjny – Baton and Baton Holder, Protective Suits",
+    "hrv": "Norveška, Švedska – Policijska oprema – Baton and Baton Holder, Protective Suits",
+    "ces": "Norsko, Švédsko – Policejní vybavení – Baton and Baton Holder, Protective Suits",
+    "dan": "Norge, Sverige – Udstyr til politiet – Baton and Baton Holder, Protective Suits",
+    "ron": "Norvegia, Suedia – Echipament de poliţie – Baton and Baton Holder, Protective Suits",
+    "por": "Noruega, Suécia – Equipamento para a polícia – Baton and Baton Holder, Protective Suits",
+    "slk": "Nórsko, Švédsko – Policajný výstroj – Baton and Baton Holder, Protective Suits",
+    "fra": "Norvège, Suède – Équipement de police – Baton and Baton Holder, Protective Suits",
+    "mlt": "In-Norveġja, L-Iżvezja – Apparat tal-pulizija – Baton and Baton Holder, Protective Suits",
+    "deu": "Norwegen, Schweden – Polizeiausrüstung – Baton and Baton Holder, Protective Suits",
+    "lit": "Norvegija, Švedija – Policijos įranga – Baton and Baton Holder, Protective Suits",
+    "ita": "Norvegia, Svezia – Attrezzatura per polizia – Baton and Baton Holder, Protective Suits",
+    "bul": "Норвегия, Швeция – Полицейско оборудване – Baton and Baton Holder, Protective Suits",
+    "slv": "Norveška, Švedska – Policijska oprema – Baton and Baton Holder, Protective Suits",
+    "eng": "Norway, Sweden – Police equipment – Baton and Baton Holder, Protective Suits"
+   },
+   "notice-type": "can-standard",
+   "notice-version": 1,
+   "organisation-identifier-buyer": [
+    "974761157",
+    "974769484",
+    "971456523",
+    "911830868",
+    "982531950",
+    "988517860",
+    "202100-0076",
+    "202100-3997",
+    "202100-0969",
+    "202100-0340"
+   ],
+   "place-of-performance": [
+    "NO020",
+    "NOR",
+    "NO020",
+    "NO020",
+    "NO020",
+    "NOR",
+    "NOR",
+    "NOR"
+   ],
+   "procedure-identifier": "aeb7b7ca-0d32-4b80-9e7a-031f31493b02",
+   "procedure-type": "open",
+   "publication-date": "2026-10-15+02:00",
+   "publication-number": "711382-2026",
+   "title-lot": {
+    "eng": [
+     "Baton and baton holder",
+     "Protective Suits"
+    ]
+   },
+   "title-proc": {
+    "eng": "Baton and Baton Holder, Protective Suits"
+   },
+   "total-value": 75000000,
+   "total-value-cur": [
+    "NOK"
+   ],
+   "winner-identifier": [
+    "985991359",
+    "985699135"
+   ],
+   "winner-name": {
+    "eng": [
+     "Lilltech AS",
+     "Defendo AS"
+    ]
+   }
+  },
+  {
+   "buyer-city": {
+    "mul": [
+     "TØNSBERG"
+    ]
+   },
+   "buyer-country": [
+    "NOR"
+   ],
+   "buyer-name": {
+    "eng": [
+     "Direktoratet for samfunnssikkerhet og beredskap (DSB)"
+    ]
+   },
+   "change-description": {
+    "eng": [
+     "The tender deadline has been extended to 26.10.2026 (12:00). The deadline for questions is changed to 19.10.2026"
+    ]
+   },
+   "classification-cpv": [
+    "64212100",
+    "64216100",
+    "64212100",
+    "64216100"
+   ],
+   "contract-nature": [
+    "services",
+    "services"
+   ],
+   "deadline-date-lot": [
+    "2026-10-18Z"
+   ],
+   "deadline-receipt-tender-date-lot": [
+    "2026-10-26Z"
+   ],
+   "deadline-receipt-tender-time-lot": [
+    "11:00:58Z"
+   ],
+   "deadline-time-lot": [
+    "22:00:00Z"
+   ],
+   "description-proc": {
+    "eng": "The aim is to enter into a framework agreement for a notification system for sending SMS and calls from the stand-by and crisis support tool RAYVN. The contract only includes a notification system for DSB ́s activities, and not other municipal or government and other entities that are affiliated to the contract, and who have made call-offs on DSB ́s contract with RAYVN AS/Proactima AS. See the attached procurement documents for further details and requirements for the delivery."
+   },
+   "document-url-lot": [
+    "https://tendsign.com/doc.aspx?MeFormsNoticeId=99972"
+   ],
+   "framework-agreement-lot": [
+    "none"
+   ],
+   "identifier-lot": [
+    "LOT-0000"
+   ],
+   "internal-identifier-proc": "2026/11087",
+   "links": {
+    "xml": {
+     "MUL": "https://ted.europa.eu/en/notice/718790-2026/xml"
+    },
+    "pdf": {
+     "BUL": "https://ted.europa.eu/bg/notice/718790-2026/pdf",
+     "SPA": "https://ted.europa.eu/es/notice/718790-2026/pdf",
+     "CES": "https://ted.europa.eu/cs/notice/718790-2026/pdf",
+     "DAN": "https://ted.europa.eu/da/notice/718790-2026/pdf",
+     "DEU": "https://ted.europa.eu/de/notice/718790-2026/pdf",
+     "EST": "https://ted.europa.eu/et/notice/718790-2026/pdf",
+     "ELL": "https://ted.europa.eu/el/notice/718790-2026/pdf",
+     "ENG": "https://ted.europa.eu/en/notice/718790-2026/pdf",
+     "FRA": "https://ted.europa.eu/fr/notice/718790-2026/pdf",
+     "GLE": "https://ted.europa.eu/ga/notice/718790-2026/pdf",
+     "HRV": "https://ted.europa.eu/hr/notice/718790-2026/pdf",
+     "ITA": "https://ted.europa.eu/it/notice/718790-2026/pdf",
+     "LAV": "https://ted.europa.eu/lv/notice/718790-2026/pdf",
+     "LIT": "https://ted.europa.eu/lt/notice/718790-2026/pdf",
+     "HUN": "https://ted.europa.eu/hu/notice/718790-2026/pdf",
+     "MLT": "https://ted.europa.eu/mt/notice/718790-2026/pdf",
+     "NLD": "https://ted.europa.eu/nl/notice/718790-2026/pdf",
+     "POL": "https://ted.europa.eu/pl/notice/718790-2026/pdf",
+     "POR": "https://ted.europa.eu/pt/notice/718790-2026/pdf",
+     "RON": "https://ted.europa.eu/ro/notice/718790-2026/pdf",
+     "SLK": "https://ted.europa.eu/sk/notice/718790-2026/pdf",
+     "SLV": "https://ted.europa.eu/sl/notice/718790-2026/pdf",
+     "FIN": "https://ted.europa.eu/fi/notice/718790-2026/pdf",
+     "SWE": "https://ted.europa.eu/sv/notice/718790-2026/pdf"
+    },
+    "pdfs": {
+     "ENG": "https://ted.europa.eu/en/notice/718790-2026/pdfs"
+    },
+    "html": {
+     "BUL": "https://ted.europa.eu/bg/notice/-/detail/718790-2026",
+     "SPA": "https://ted.europa.eu/es/notice/-/detail/718790-2026",
+     "CES": "https://ted.europa.eu/cs/notice/-/detail/718790-2026",
+     "DAN": "https://ted.europa.eu/da/notice/-/detail/718790-2026",
+     "DEU": "https://ted.europa.eu/de/notice/-/detail/718790-2026",
+     "EST": "https://ted.europa.eu/et/notice/-/detail/718790-2026",
+     "ELL": "https://ted.europa.eu/el/notice/-/detail/718790-2026",
+     "ENG": "https://ted.europa.eu/en/notice/-/detail/718790-2026",
+     "FRA": "https://ted.europa.eu/fr/notice/-/detail/718790-2026",
+     "GLE": "https://ted.europa.eu/ga/notice/-/detail/718790-2026",
+     "HRV": "https://ted.europa.eu/hr/notice/-/detail/718790-2026",
+     "ITA": "https://ted.europa.eu/it/notice/-/detail/718790-2026",
+     "LAV": "https://ted.europa.eu/lv/notice/-/detail/718790-2026",
+     "LIT": "https://ted.europa.eu/lt/notice/-/detail/718790-2026",
+     "HUN": "https://ted.europa.eu/hu/notice/-/detail/718790-2026",
+     "MLT": "https://ted.europa.eu/mt/notice/-/detail/718790-2026",
+     "NLD": "https://ted.europa.eu/nl/notice/-/detail/718790-2026",
+     "POL": "https://ted.europa.eu/pl/notice/-/detail/718790-2026",
+     "POR": "https://ted.europa.eu/pt/notice/-/detail/718790-2026",
+     "RON": "https://ted.europa.eu/ro/notice/-/detail/718790-2026",
+     "SLK": "https://ted.europa.eu/sk/notice/-/detail/718790-2026",
+     "SLV": "https://ted.europa.eu/sl/notice/-/detail/718790-2026",
+     "FIN": "https://ted.europa.eu/fi/notice/-/detail/718790-2026",
+     "SWE": "https://ted.europa.eu/sv/notice/-/detail/718790-2026"
+    },
+    "htmlDirect": {
+     "BUL": "https://ted.europa.eu/bg/notice/718790-2026/html",
+     "SPA": "https://ted.europa.eu/es/notice/718790-2026/html",
+     "CES": "https://ted.europa.eu/cs/notice/718790-2026/html",
+     "DAN": "https://ted.europa.eu/da/notice/718790-2026/html",
+     "DEU": "https://ted.europa.eu/de/notice/718790-2026/html",
+     "EST": "https://ted.europa.eu/et/notice/718790-2026/html",
+     "ELL": "https://ted.europa.eu/el/notice/718790-2026/html",
+     "ENG": "https://ted.europa.eu/en/notice/718790-2026/html",
+     "FRA": "https://ted.europa.eu/fr/notice/718790-2026/html",
+     "GLE": "https://ted.europa.eu/ga/notice/718790-2026/html",
+     "HRV": "https://ted.europa.eu/hr/notice/718790-2026/html",
+     "ITA": "https://ted.europa.eu/it/notice/718790-2026/html",
+     "LAV": "https://ted.europa.eu/lv/notice/718790-2026/html",
+     "LIT": "https://ted.europa.eu/lt/notice/718790-2026/html",
+     "HUN": "https://ted.europa.eu/hu/notice/718790-2026/html",
+     "MLT": "https://ted.europa.eu/mt/notice/718790-2026/html",
+     "NLD": "https://ted.europa.eu/nl/notice/718790-2026/html",
+     "POL": "https://ted.europa.eu/pl/notice/718790-2026/html",
+     "POR": "https://ted.europa.eu/pt/notice/718790-2026/html",
+     "RON": "https://ted.europa.eu/ro/notice/718790-2026/html",
+     "SLK": "https://ted.europa.eu/sk/notice/718790-2026/html",
+     "SLV": "https://ted.europa.eu/sl/notice/718790-2026/html",
+     "FIN": "https://ted.europa.eu/fi/notice/718790-2026/html",
+     "SWE": "https://ted.europa.eu/sv/notice/718790-2026/html"
+    }
+   },
+   "notice-identifier": "7b89e37d-e5a2-404f-9fb8-073221d2a071",
+   "notice-title": {
+    "hun": "Norvégia – Rövid szöveges üzenet szolgáltatás (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "lav": "Norvēģija – Īsziņu (SMS) pakalpojumi – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "swe": "Norge – SMS-tjänster – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "gle": "An Iorua – Short Message Service (SMS) services – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "ell": "Νορβηγία – Υπηρεσίες αποστολής σύντομων γραπτών μηνυμάτων (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "spa": "Noruega – Servicios del Servicio de Mensajes Cortos (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "est": "Norra – Tekstisõnumi- (SMS-) teenused – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "nld": "Noorwegen – Sms-diensten – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "fin": "Norja – Tekstiviestipalvelut (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "pol": "Norwegia – Usługi przesyłania krótkich komunikatów tekstowych (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "hrv": "Norveška – Usluge kratkih poruka (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "ces": "Norsko – Služby krátkých textových zpráv (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "dan": "Norge – Sms-tjenester (Short Message Service) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "ron": "Norvegia – Servicii SMS (Short Message Service – Serviciu de mesaje scurte) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "por": "Noruega – Serviço de Mensagens Curtas (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "slk": "Nórsko – Služby krátkych textových správ (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "fra": "Norvège – Services de messages courts (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "mlt": "In-Norveġja – Servizzi ta' Short Message Service (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "deu": "Norwegen – Kurznachrichtendienste (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "lit": "Norvegija – Trumpųjų žinučių (SMS) paslaugos – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "ita": "Norvegia – Servizi del servizio di brevi messaggi di testo (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "bul": "Норвегия – SMS услуги – изпращане и получаване на кратки текстови съобщения (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "slv": "Norveška – Storitve sistema za pošiljanje sporočil do 160 znakov po mobilniku (SMS) – A notification system for sending SMS and voice messages in the stand-by and crisis support tool.",
+    "eng": "Norway – Short Message Service (SMS) services – A notification system for sending SMS and voice messages in the stand-by and crisis support tool."
+   },
+   "notice-type": "cn-standard",
+   "notice-version": 1,
+   "organisation-identifier-buyer": [
+    "974760983"
+   ],
+   "place-of-performance": [
+    "anyw",
+    "anyw"
+   ],
+   "procedure-identifier": "b1e152fd-80b0-492a-bb02-d51631553960",
+   "procedure-type": "open",
+   "publication-date": "2026-10-19+02:00",
+   "publication-number": "718790-2026",
+   "submission-url-lot": [
+    "https://tendsign.com/doc.aspx?MeFormsNoticeId=99972&GoTo=Tender"
+   ],
+   "title-lot": {
+    "eng": [
+     "A notification system for sending SMS and voice messages in the stand-by and crisis support tool."
+    ]
+   },
+   "title-proc": {
+    "eng": "A notification system for sending SMS and voice messages in the stand-by and crisis support tool."
+   }
+  },
+  {
+   "award-criterion-name-lot": {
+    "eng": [
+     "Quality",
+     "Price",
+     "Climate and environment"
+    ]
+   },
+   "award-criterion-number-lot": [
+    "50",
+    "50",
+    "0"
+   ],
+   "award-criterion-number-weight-lot": [
+    "per-exa",
+    "per-exa",
+    "per-exa"
+   ],
+   "award-criterion-type-lot": [
+    "quality",
+    "price",
+    "quality"
+   ],
+   "buyer-city": {
+    "mul": [
+     "Nøtterøy"
+    ]
+   },
+   "buyer-country": [
+    "NOR"
+   ],
+   "buyer-name": {
+    "eng": [
+     "Færder kommune"
+    ]
+   },
+   "change-description": {
+    "eng": [
+     "Changes in the tender documentation"
+    ]
+   },
+   "classification-cpv": [
+    "45231300",
+    "45232453",
+    "45232440",
+    "45232130",
+    "45232100",
+    "45232411",
+    "45232420",
+    "45232410",
+    "45231100",
+    "45232400",
+    "45232450",
+    "45231300",
+    "45232453",
+    "45232440",
+    "45232130",
+    "45232100",
+    "45232411",
+    "45232420",
+    "45232410",
+    "45231100",
+    "45232400",
+    "45232450"
+   ],
+   "contract-nature": [
+    "works",
+    "works"
+   ],
+   "deadline-receipt-request-date-lot": [
+    "2026-10-07+02:00"
+   ],
+   "deadline-receipt-request-time-lot": [
+    "12:00:00+02:00"
+   ],
+   "description-proc": {
+    "eng": "Background and purpose Færder municipality plans to separate the old AF system to waste water and surface water as well as lay new water pipelines in the centre of Tjøme, stage 3. The work will include excavation work, rock drilling and renovation of the hose. The contract work is divided into two phases; an interaction phase first and then the execution phase. This contract includes all works with new water and sewage installations as shown on the attached drawings, as well as the re-establishment of affected roads. There shall be continual operation of the existing pipeline installations all days throughout the entire construction period. The pipeline route and manhole placement are in the plans that have been prepared. It is anticipated that the ditches will consist of both uncompacted trenches and rock trenches. The trench depth varies from 2.0 to 3.0 metres, with specific locations up to 5.5 metres. The works mainly comprise: approx. 2,170 m complete main trenches of varying width and height. delivery/laying of approx. 1,730 m surface water pipelines delivery/laying of approx. 1,750 m sewage sewage delivery/laying of approx. 2,170 m water pipelines salvage drilling for surface water of approx. 95 m renovating the hose of approx. 480 m 28 complete wastewater manholes 27 complete surface water manholes 23 complete water manholes re-establishment of roads facilitating space for temporary stores. The work will be carried out as a general contract/main contract. Building form 8405 A \"Form for contract for the execution of building and construction work\" shall be used."
+   },
+   "document-url-lot": [
+    "https://hyyr.no/procurement/cmtin6r60000004jg9etn48o0"
+   ],
+   "estimated-value-cur-lot": [
+    "NOK"
+   ],
+   "estimated-value-cur-proc": "NOK",
+   "estimated-value-lot": [
+    "66000000"
+   ],
+   "estimated-value-proc": "66000000",
+   "framework-agreement-lot": [
+    "none"
+   ],
+   "identifier-lot": [
+    "LOT-0001"
+   ],
+   "internal-identifier-proc": "cmtin6r60000004jg9etn48o0",
+   "links": {
+    "xml": {
+     "MUL": "https://ted.europa.eu/en/notice/718825-2026/xml"
+    },
+    "pdf": {
+     "BUL": "https://ted.europa.eu/bg/notice/718825-2026/pdf",
+     "SPA": "https://ted.europa.eu/es/notice/718825-2026/pdf",
+     "CES": "https://ted.europa.eu/cs/notice/718825-2026/pdf",
+     "DAN": "https://ted.europa.eu/da/notice/718825-2026/pdf",
+     "DEU": "https://ted.europa.eu/de/notice/718825-2026/pdf",
+     "EST": "https://ted.europa.eu/et/notice/718825-2026/pdf",
+     "ELL": "https://ted.europa.eu/el/notice/718825-2026/pdf",
+     "ENG": "https://ted.europa.eu/en/notice/718825-2026/pdf",
+     "FRA": "https://ted.europa.eu/fr/notice/718825-2026/pdf",
+     "GLE": "https://ted.europa.eu/ga/notice/718825-2026/pdf",
+     "HRV": "https://ted.europa.eu/hr/notice/718825-2026/pdf",
+     "ITA": "https://ted.europa.eu/it/notice/718825-2026/pdf",
+     "LAV": "https://ted.europa.eu/lv/notice/718825-2026/pdf",
+     "LIT": "https://ted.europa.eu/lt/notice/718825-2026/pdf",
+     "HUN": "https://ted.europa.eu/hu/notice/718825-2026/pdf",
+     "MLT": "https://ted.europa.eu/mt/notice/718825-2026/pdf",
+     "NLD": "https://ted.europa.eu/nl/notice/718825-2026/pdf",
+     "POL": "https://ted.europa.eu/pl/notice/718825-2026/pdf",
+     "POR": "https://ted.europa.eu/pt/notice/718825-2026/pdf",
+     "RON": "https://ted.europa.eu/ro/notice/718825-2026/pdf",
+     "SLK": "https://ted.europa.eu/sk/notice/718825-2026/pdf",
+     "SLV": "https://ted.europa.eu/sl/notice/718825-2026/pdf",
+     "FIN": "https://ted.europa.eu/fi/notice/718825-2026/pdf",
+     "SWE": "https://ted.europa.eu/sv/notice/718825-2026/pdf"
+    },
+    "pdfs": {
+     "ENG": "https://ted.europa.eu/en/notice/718825-2026/pdfs"
+    },
+    "html": {
+     "BUL": "https://ted.europa.eu/bg/notice/-/detail/718825-2026",
+     "SPA": "https://ted.europa.eu/es/notice/-/detail/718825-2026",
+     "CES": "https://ted.europa.eu/cs/notice/-/detail/718825-2026",
+     "DAN": "https://ted.europa.eu/da/notice/-/detail/718825-2026",
+     "DEU": "https://ted.europa.eu/de/notice/-/detail/718825-2026",
+     "EST": "https://ted.europa.eu/et/notice/-/detail/718825-2026",
+     "ELL": "https://ted.europa.eu/el/notice/-/detail/718825-2026",
+     "ENG": "https://ted.europa.eu/en/notice/-/detail/718825-2026",
+     "FRA": "https://ted.europa.eu/fr/notice/-/detail/718825-2026",
+     "GLE": "https://ted.europa.eu/ga/notice/-/detail/718825-2026",
+     "HRV": "https://ted.europa.eu/hr/notice/-/detail/718825-2026",
+     "ITA": "https://ted.europa.eu/it/notice/-/detail/718825-2026",
+     "LAV": "https://ted.europa.eu/lv/notice/-/detail/718825-2026",
+     "LIT": "https://ted.europa.eu/lt/notice/-/detail/718825-2026",
+     "HUN": "https://ted.europa.eu/hu/notice/-/detail/718825-2026",
+     "MLT": "https://ted.europa.eu/mt/notice/-/detail/718825-2026",
+     "NLD": "https://ted.europa.eu/nl/notice/-/detail/718825-2026",
+     "POL": "https://ted.europa.eu/pl/notice/-/detail/718825-2026",
+     "POR": "https://ted.europa.eu/pt/notice/-/detail/718825-2026",
+     "RON": "https://ted.europa.eu/ro/notice/-/detail/718825-2026",
+     "SLK": "https://ted.europa.eu/sk/notice/-/detail/718825-2026",
+     "SLV": "https://ted.europa.eu/sl/notice/-/detail/718825-2026",
+     "FIN": "https://ted.europa.eu/fi/notice/-/detail/718825-2026",
+     "SWE": "https://ted.europa.eu/sv/notice/-/detail/718825-2026"
+    },
+    "htmlDirect": {
+     "BUL": "https://ted.europa.eu/bg/notice/718825-2026/html",
+     "SPA": "https://ted.europa.eu/es/notice/718825-2026/html",
+     "CES": "https://ted.europa.eu/cs/notice/718825-2026/html",
+     "DAN": "https://ted.europa.eu/da/notice/718825-2026/html",
+     "DEU": "https://ted.europa.eu/de/notice/718825-2026/html",
+     "EST": "https://ted.europa.eu/et/notice/718825-2026/html",
+     "ELL": "https://ted.europa.eu/el/notice/718825-2026/html",
+     "ENG": "https://ted.europa.eu/en/notice/718825-2026/html",
+     "FRA": "https://ted.europa.eu/fr/notice/718825-2026/html",
+     "GLE": "https://ted.europa.eu/ga/notice/718825-2026/html",
+     "HRV": "https://ted.europa.eu/hr/notice/718825-2026/html",
+     "ITA": "https://ted.europa.eu/it/notice/718825-2026/html",
+     "LAV": "https://ted.europa.eu/lv/notice/718825-2026/html",
+     "LIT": "https://ted.europa.eu/lt/notice/718825-2026/html",
+     "HUN": "https://ted.europa.eu/hu/notice/718825-2026/html",
+     "MLT": "https://ted.europa.eu/mt/notice/718825-2026/html",
+     "NLD": "https://ted.europa.eu/nl/notice/718825-2026/html",
+     "POL": "https://ted.europa.eu/pl/notice/718825-2026/html",
+     "POR": "https://ted.europa.eu/pt/notice/718825-2026/html",
+     "RON": "https://ted.europa.eu/ro/notice/718825-2026/html",
+     "SLK": "https://ted.europa.eu/sk/notice/718825-2026/html",
+     "SLV": "https://ted.europa.eu/sl/notice/718825-2026/html",
+     "FIN": "https://ted.europa.eu/fi/notice/718825-2026/html",
+     "SWE": "https://ted.europa.eu/sv/notice/718825-2026/html"
+    }
+   },
+   "notice-identifier": "b5ec4d02-b785-437d-b0d2-6f53c6192f06",
+   "notice-title": {
+    "hun": "Norvégia – Víz- és szennyvízvezetékek építése – The centre of Tjøme - stage 3",
+    "lav": "Norvēģija – Ūdens un notekūdeņu cauruļvadu būvdarbi – The centre of Tjøme - stage 3",
+    "swe": "Norge – Anläggningsarbete för vatten- och avloppsledningar – The centre of Tjøme - stage 3",
+    "gle": "An Iorua – Construction work for water and sewage pipelines – The centre of Tjøme - stage 3",
+    "ell": "Νορβηγία – Κατασκευαστικές εργασίες για αγωγούς ύδρευσης και αποχέτευσης – The centre of Tjøme - stage 3",
+    "spa": "Noruega – Trabajos de construcción de tuberías para agua y aguas residuales – The centre of Tjøme - stage 3",
+    "est": "Norra – Vee- ja kanalisatsioonitorustike ehitustööd – The centre of Tjøme - stage 3",
+    "nld": "Noorwegen – Bouwen van pijpleidingen voor water en afvalwater – The centre of Tjøme - stage 3",
+    "fin": "Norja – Vesi- ja viemäriputkien rakennustyöt – The centre of Tjøme - stage 3",
+    "pol": "Norwegia – Roboty budowlane w zakresie budowy wodociągów i rurociągów do odprowadzania ścieków – The centre of Tjøme - stage 3",
+    "hrv": "Norveška – Građevinski radovi na cjevovodu za vodu i kanalizaciju – The centre of Tjøme - stage 3",
+    "ces": "Norsko – Stavební práce pro vodovodní a kanalizační potrubí – The centre of Tjøme - stage 3",
+    "dan": "Norge – Arbejder i forbindelse med vand- og kloakrørledninger – The centre of Tjøme - stage 3",
+    "ron": "Norvegia – Lucrări de construcţii de conducte de apă şi de canalizare a apelor reziduale la mare distanţă – The centre of Tjøme - stage 3",
+    "por": "Noruega – Construção de condutas para água e águas residuais – The centre of Tjøme - stage 3",
+    "slk": "Nórsko – Stavebné práce na stavbe potrubných vedení vody a kanalizácie – The centre of Tjøme - stage 3",
+    "fra": "Norvège – Travaux de construction de conduites d'eau et de canalisations d'eaux usées à grande distance – The centre of Tjøme - stage 3",
+    "mlt": "In-Norveġja – Xogħol tal-kostruzzjoni tal-linji tal-pajpijiet ta’ l-ilma u tad-drenaġġ – The centre of Tjøme - stage 3",
+    "deu": "Norwegen – Bauarbeiten für Wasser- und Abwasserrohrleitungen – The centre of Tjøme - stage 3",
+    "lit": "Norvegija – Vandentiekio ir kanalizacijos vamzdynų tiesimo darbai – The centre of Tjøme - stage 3",
+    "ita": "Norvegia – Lavori di costruzione di condotte idriche e fognarie – The centre of Tjøme - stage 3",
+    "bul": "Норвегия – Строителни и монтажни работи по общо изграждане на преносни водопроводи и канализация – The centre of Tjøme - stage 3",
+    "slv": "Norveška – Gradbena dela na cevovodih za vodo in odplake – The centre of Tjøme - stage 3",
+    "eng": "Norway – Construction work for water and sewage pipelines – The centre of Tjøme - stage 3"
+   },
+   "notice-type": "cn-standard",
+   "notice-version": 1,
+   "organisation-identifier-buyer": [
+    "817263992"
+   ],
+   "place-of-performance": [
+    "NO093",
+    "NOR",
+    "NO093",
+    "NOR"
+   ],
+   "procedure-identifier": "550a5058-c332-4775-8387-81c58dcf37de",
+   "procedure-type": "neg-w-call",
+   "publication-date": "2026-10-19+02:00",
+   "publication-number": "718825-2026",
+   "submission-url-lot": [
+    "https://hyyr.no/procurement/cmtin6r60000004jg9etn48o0"
+   ],
+   "title-lot": {
+    "eng": [
+     "Tjøme municipality , stage 3"
+    ]
+   },
+   "title-proc": {
+    "eng": "The centre of Tjøme - stage 3"
+   },
+   "total-value": 66000000,
+   "total-value-cur": [
+    "NOK"
+   ]
+  },
+  {
+   "buyer-city": {
+    "mul": [
+     "Vadsø"
+    ]
+   },
+   "buyer-country": [
+    "NOR"
+   ],
+   "buyer-name": {
+    "eng": [
+     "SYKEHUSINNKJØP HF"
+    ]
+   },
+   "classification-cpv": [
+    "33140000",
+    "24455000",
+    "33191000",
+    "39330000",
+    "33140000",
+    "24455000",
+    "33191000",
+    "39330000"
+   ],
+   "contract-nature": [
+    "supplies",
+    "supplies"
+   ],
+   "deadline-receipt-tender-date-lot": [
+    "2026-11-27Z"
+   ],
+   "deadline-receipt-tender-time-lot": [
+    "10:00:00Z"
+   ],
+   "description-proc": {
+    "eng": "Sykehusinnkjøp HF shall procure on behalf of the four regional health authorities for disinfection and cleaning agents for use in clean rooms."
+   },
+   "document-url-lot": [
+    "https://sykehusinnkjop.ivalua.app/page.aspx/nb/rfp/request_browse_public"
+   ],
+   "duration-period-unit-lot": [
+    "MONTH"
+   ],
+   "duration-period-value-lot": [
+    "48"
+   ],
+   "estimated-value-cur-lot": [
+    "NOK"
+   ],
+   "estimated-value-cur-proc": "NOK",
+   "estimated-value-lot": [
+    "40000000.00"
+   ],
+   "estimated-value-proc": "40000000.00",
+   "framework-agreement-lot": [
+    "fa-wo-rc"
+   ],
+   "identifier-lot": [
+    "LOT-0001"
+   ],
+   "links": {
+    "xml": {
+     "MUL": "https://ted.europa.eu/en/notice/722733-2026/xml"
+    },
+    "pdf": {
+     "BUL": "https://ted.europa.eu/bg/notice/722733-2026/pdf",
+     "SPA": "https://ted.europa.eu/es/notice/722733-2026/pdf",
+     "CES": "https://ted.europa.eu/cs/notice/722733-2026/pdf",
+     "DAN": "https://ted.europa.eu/da/notice/722733-2026/pdf",
+     "DEU": "https://ted.europa.eu/de/notice/722733-2026/pdf",
+     "EST": "https://ted.europa.eu/et/notice/722733-2026/pdf",
+     "ELL": "https://ted.europa.eu/el/notice/722733-2026/pdf",
+     "ENG": "https://ted.europa.eu/en/notice/722733-2026/pdf",
+     "FRA": "https://ted.europa.eu/fr/notice/722733-2026/pdf",
+     "GLE": "https://ted.europa.eu/ga/notice/722733-2026/pdf",
+     "HRV": "https://ted.europa.eu/hr/notice/722733-2026/pdf",
+     "ITA": "https://ted.europa.eu/it/notice/722733-2026/pdf",
+     "LAV": "https://ted.europa.eu/lv/notice/722733-2026/pdf",
+     "LIT": "https://ted.europa.eu/lt/notice/722733-2026/pdf",
+     "HUN": "https://ted.europa.eu/hu/notice/722733-2026/pdf",
+     "MLT": "https://ted.europa.eu/mt/notice/722733-2026/pdf",
+     "NLD": "https://ted.europa.eu/nl/notice/722733-2026/pdf",
+     "POL": "https://ted.europa.eu/pl/notice/722733-2026/pdf",
+     "POR": "https://ted.europa.eu/pt/notice/722733-2026/pdf",
+     "RON": "https://ted.europa.eu/ro/notice/722733-2026/pdf",
+     "SLK": "https://ted.europa.eu/sk/notice/722733-2026/pdf",
+     "SLV": "https://ted.europa.eu/sl/notice/722733-2026/pdf",
+     "FIN": "https://ted.europa.eu/fi/notice/722733-2026/pdf",
+     "SWE": "https://ted.europa.eu/sv/notice/722733-2026/pdf"
+    },
+    "pdfs": {
+     "ENG": "https://ted.europa.eu/en/notice/722733-2026/pdfs"
+    },
+    "html": {
+     "BUL": "https://ted.europa.eu/bg/notice/-/detail/722733-2026",
+     "SPA": "https://ted.europa.eu/es/notice/-/detail/722733-2026",
+     "CES": "https://ted.europa.eu/cs/notice/-/detail/722733-2026",
+     "DAN": "https://ted.europa.eu/da/notice/-/detail/722733-2026",
+     "DEU": "https://ted.europa.eu/de/notice/-/detail/722733-2026",
+     "EST": "https://ted.europa.eu/et/notice/-/detail/722733-2026",
+     "ELL": "https://ted.europa.eu/el/notice/-/detail/722733-2026",
+     "ENG": "https://ted.europa.eu/en/notice/-/detail/722733-2026",
+     "FRA": "https://ted.europa.eu/fr/notice/-/detail/722733-2026",
+     "GLE": "https://ted.europa.eu/ga/notice/-/detail/722733-2026",
+     "HRV": "https://ted.europa.eu/hr/notice/-/detail/722733-2026",
+     "ITA": "https://ted.europa.eu/it/notice/-/detail/722733-2026",
+     "LAV": "https://ted.europa.eu/lv/notice/-/detail/722733-2026",
+     "LIT": "https://ted.europa.eu/lt/notice/-/detail/722733-2026",
+     "HUN": "https://ted.europa.eu/hu/notice/-/detail/722733-2026",
+     "MLT": "https://ted.europa.eu/mt/notice/-/detail/722733-2026",
+     "NLD": "https://ted.europa.eu/nl/notice/-/detail/722733-2026",
+     "POL": "https://ted.europa.eu/pl/notice/-/detail/722733-2026",
+     "POR": "https://ted.europa.eu/pt/notice/-/detail/722733-2026",
+     "RON": "https://ted.europa.eu/ro/notice/-/detail/722733-2026",
+     "SLK": "https://ted.europa.eu/sk/notice/-/detail/722733-2026",
+     "SLV": "https://ted.europa.eu/sl/notice/-/detail/722733-2026",
+     "FIN": "https://ted.europa.eu/fi/notice/-/detail/722733-2026",
+     "SWE": "https://ted.europa.eu/sv/notice/-/detail/722733-2026"
+    },
+    "htmlDirect": {
+     "BUL": "https://ted.europa.eu/bg/notice/722733-2026/html",
+     "SPA": "https://ted.europa.eu/es/notice/722733-2026/html",
+     "CES": "https://ted.europa.eu/cs/notice/722733-2026/html",
+     "DAN": "https://ted.europa.eu/da/notice/722733-2026/html",
+     "DEU": "https://ted.europa.eu/de/notice/722733-2026/html",
+     "EST": "https://ted.europa.eu/et/notice/722733-2026/html",
+     "ELL": "https://ted.europa.eu/el/notice/722733-2026/html",
+     "ENG": "https://ted.europa.eu/en/notice/722733-2026/html",
+     "FRA": "https://ted.europa.eu/fr/notice/722733-2026/html",
+     "GLE": "https://ted.europa.eu/ga/notice/722733-2026/html",
+     "HRV": "https://ted.europa.eu/hr/notice/722733-2026/html",
+     "ITA": "https://ted.europa.eu/it/notice/722733-2026/html",
+     "LAV": "https://ted.europa.eu/lv/notice/722733-2026/html",
+     "LIT": "https://ted.europa.eu/lt/notice/722733-2026/html",
+     "HUN": "https://ted.europa.eu/hu/notice/722733-2026/html",
+     "MLT": "https://ted.europa.eu/mt/notice/722733-2026/html",
+     "NLD": "https://ted.europa.eu/nl/notice/722733-2026/html",
+     "POL": "https://ted.europa.eu/pl/notice/722733-2026/html",
+     "POR": "https://ted.europa.eu/pt/notice/722733-2026/html",
+     "RON": "https://ted.europa.eu/ro/notice/722733-2026/html",
+     "SLK": "https://ted.europa.eu/sk/notice/722733-2026/html",
+     "SLV": "https://ted.europa.eu/sl/notice/722733-2026/html",
+     "FIN": "https://ted.europa.eu/fi/notice/722733-2026/html",
+     "SWE": "https://ted.europa.eu/sv/notice/722733-2026/html"
+    }
+   },
+   "notice-identifier": "63409623-69aa-474e-a94b-9f0f842243af",
+   "notice-title": {
+    "hun": "Norvégia – Orvosi fogyóeszközök – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "lav": "Norvēģija – Medicīnas palīgmateriāli – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "swe": "Norge – Medicinska förbrukningsartiklar – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "gle": "An Iorua – Medical consumables – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "ell": "Νορβηγία – Ιατρικά αναλώσιμα – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "spa": "Noruega – Material médico fungible – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "est": "Norra – Meditsiinilised tarbekaubad – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "nld": "Noorwegen – Medische verbruiksartikelen – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "fin": "Norja – Lääketieteelliset kertakäyttötarvikkeet – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "pol": "Norwegia – Materiały medyczne – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "hrv": "Norveška – Medicinski potrošni materijal – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "ces": "Norsko – Zdravotnický spotřební materiál – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "dan": "Norge – Medicinske forbrugsmaterialer – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "ron": "Norvegia – Consumabile medicale – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "por": "Noruega – Material médico de consumo – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "slk": "Nórsko – Zdravotnícky spotrebný materiál – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "fra": "Norvège – Consommables médicaux – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "mlt": "In-Norveġja – Oġġetti ta' konsum mediċi – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "deu": "Norwegen – Medizinische Verbrauchsartikel – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "lit": "Norvegija – Medicinos reikmenys – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "ita": "Norvegia – Materiali medici – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "bul": "Норвегия – Медицински консумативи – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "slv": "Norveška – Proizvodi za medicinsko uporabo – Disinfection and cleaning agents for clean rooms for the health authorities in Norway",
+    "eng": "Norway – Medical consumables – Disinfection and cleaning agents for clean rooms for the health authorities in Norway"
+   },
+   "notice-type": "cn-standard",
+   "notice-version": 1,
+   "organisation-identifier-buyer": [
+    "916879067"
+   ],
+   "place-of-performance": [
+    "NO083",
+    "NO060",
+    "NO073",
+    "NO020",
+    "NO094",
+    "NO072",
+    "NO093",
+    "NO0A2",
+    "NO085",
+    "NO084",
+    "NO092",
+    "NO081",
+    "NO071",
+    "NO0A1",
+    "NO0A3",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NO0A3",
+    "NO071",
+    "NO072",
+    "NO060",
+    "NO081",
+    "NO073",
+    "NO084",
+    "NO093",
+    "NO020",
+    "NO092",
+    "NO094",
+    "NO0A1",
+    "NO0A2",
+    "NO085",
+    "NO083",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR",
+    "NOR"
+   ],
+   "procedure-identifier": "6d01efcc-be83-409f-ac2d-729df4745021",
+   "procedure-type": "open",
+   "publication-date": "2026-10-20+02:00",
+   "publication-number": "722733-2026",
+   "submission-url-lot": [
+    "https://sykehusinnkjop.ivalua.app/page.aspx/nb/bpm/process_manage_extranet/2036"
+   ],
+   "title-lot": {
+    "eng": [
+     "Prior information notice , Disinfection and cleaning agents for clean environments for the health companies in Norway"
+    ]
+   },
+   "title-proc": {
+    "eng": "Disinfection and cleaning agents for clean rooms for the health authorities in Norway"
+   },
+   "total-value": 40000000,
+   "total-value-cur": [
+    "NOK"
+   ]
+  },
+  {
+   "award-criterion-name-lot": {
+    "eng": [
+     "Price"
+    ]
+   },
+   "award-criterion-number-lot": [
+    "100"
+   ],
+   "award-criterion-number-weight-lot": [
+    "per-exa"
+   ],
+   "award-criterion-type-lot": [
+    "cost"
+   ],
+   "buyer-city": {
+    "mul": [
+     "Tromsø"
+    ]
+   },
+   "buyer-country": [
+    "NOR"
+   ],
+   "buyer-name": {
+    "eng": [
+     "UiT Norges arktiske universitet"
+    ]
+   },
+   "classification-cpv": [
+    "44421720",
+    "34913510",
+    "44421700",
+    "44421722",
+    "44521120",
+    "44613000",
+    "45223800",
+    "45233293",
+    "63712400",
+    "44421720",
+    "34913510",
+    "44421700",
+    "44421722",
+    "44521120",
+    "44613000",
+    "45223800",
+    "45233293",
+    "63712400"
+   ],
+   "contract-nature": [
+    "supplies",
+    "supplies"
+   ],
+   "description-proc": {
+    "eng": "Framework agreement for bicycle parking systems"
+   },
+   "duration-period-unit-lot": [
+    "YEAR"
+   ],
+   "duration-period-value-lot": [
+    "2026"
+   ],
+   "framework-agreement-lot": [
+    "fa-wo-rc"
+   ],
+   "identifier-lot": [
+    "LOT-0000"
+   ],
+   "internal-identifier-proc": "ANSK-0027-26",
+   "links": {
+    "xml": {
+     "MUL": "https://ted.europa.eu/en/notice/735170-2026/xml"
+    },
+    "pdf": {
+     "BUL": "https://ted.europa.eu/bg/notice/735170-2026/pdf",
+     "SPA": "https://ted.europa.eu/es/notice/735170-2026/pdf",
+     "CES": "https://ted.europa.eu/cs/notice/735170-2026/pdf",
+     "DAN": "https://ted.europa.eu/da/notice/735170-2026/pdf",
+     "DEU": "https://ted.europa.eu/de/notice/735170-2026/pdf",
+     "EST": "https://ted.europa.eu/et/notice/735170-2026/pdf",
+     "ELL": "https://ted.europa.eu/el/notice/735170-2026/pdf",
+     "ENG": "https://ted.europa.eu/en/notice/735170-2026/pdf",
+     "FRA": "https://ted.europa.eu/fr/notice/735170-2026/pdf",
+     "GLE": "https://ted.europa.eu/ga/notice/735170-2026/pdf",
+     "HRV": "https://ted.europa.eu/hr/notice/735170-2026/pdf",
+     "ITA": "https://ted.europa.eu/it/notice/735170-2026/pdf",
+     "LAV": "https://ted.europa.eu/lv/notice/735170-2026/pdf",
+     "LIT": "https://ted.europa.eu/lt/notice/735170-2026/pdf",
+     "HUN": "https://ted.europa.eu/hu/notice/735170-2026/pdf",
+     "MLT": "https://ted.europa.eu/mt/notice/735170-2026/pdf",
+     "NLD": "https://ted.europa.eu/nl/notice/735170-2026/pdf",
+     "POL": "https://ted.europa.eu/pl/notice/735170-2026/pdf",
+     "POR": "https://ted.europa.eu/pt/notice/735170-2026/pdf",
+     "RON": "https://ted.europa.eu/ro/notice/735170-2026/pdf",
+     "SLK": "https://ted.europa.eu/sk/notice/735170-2026/pdf",
+     "SLV": "https://ted.europa.eu/sl/notice/735170-2026/pdf",
+     "FIN": "https://ted.europa.eu/fi/notice/735170-2026/pdf",
+     "SWE": "https://ted.europa.eu/sv/notice/735170-2026/pdf"
+    },
+    "pdfs": {
+     "ENG": "https://ted.europa.eu/en/notice/735170-2026/pdfs"
+    },
+    "html": {
+     "BUL": "https://ted.europa.eu/bg/notice/-/detail/735170-2026",
+     "SPA": "https://ted.europa.eu/es/notice/-/detail/735170-2026",
+     "CES": "https://ted.europa.eu/cs/notice/-/detail/735170-2026",
+     "DAN": "https://ted.europa.eu/da/notice/-/detail/735170-2026",
+     "DEU": "https://ted.europa.eu/de/notice/-/detail/735170-2026",
+     "EST": "https://ted.europa.eu/et/notice/-/detail/735170-2026",
+     "ELL": "https://ted.europa.eu/el/notice/-/detail/735170-2026",
+     "ENG": "https://ted.europa.eu/en/notice/-/detail/735170-2026",
+     "FRA": "https://ted.europa.eu/fr/notice/-/detail/735170-2026",
+     "GLE": "https://ted.europa.eu/ga/notice/-/detail/735170-2026",
+     "HRV": "https://ted.europa.eu/hr/notice/-/detail/735170-2026",
+     "ITA": "https://ted.europa.eu/it/notice/-/detail/735170-2026",
+     "LAV": "https://ted.europa.eu/lv/notice/-/detail/735170-2026",
+     "LIT": "https://ted.europa.eu/lt/notice/-/detail/735170-2026",
+     "HUN": "https://ted.europa.eu/hu/notice/-/detail/735170-2026",
+     "MLT": "https://ted.europa.eu/mt/notice/-/detail/735170-2026",
+     "NLD": "https://ted.europa.eu/nl/notice/-/detail/735170-2026",
+     "POL": "https://ted.europa.eu/pl/notice/-/detail/735170-2026",
+     "POR": "https://ted.europa.eu/pt/notice/-/detail/735170-2026",
+     "RON": "https://ted.europa.eu/ro/notice/-/detail/735170-2026",
+     "SLK": "https://ted.europa.eu/sk/notice/-/detail/735170-2026",
+     "SLV": "https://ted.europa.eu/sl/notice/-/detail/735170-2026",
+     "FIN": "https://ted.europa.eu/fi/notice/-/detail/735170-2026",
+     "SWE": "https://ted.europa.eu/sv/notice/-/detail/735170-2026"
+    },
+    "htmlDirect": {
+     "BUL": "https://ted.europa.eu/bg/notice/735170-2026/html",
+     "SPA": "https://ted.europa.eu/es/notice/735170-2026/html",
+     "CES": "https://ted.europa.eu/cs/notice/735170-2026/html",
+     "DAN": "https://ted.europa.eu/da/notice/735170-2026/html",
+     "DEU": "https://ted.europa.eu/de/notice/735170-2026/html",
+     "EST": "https://ted.europa.eu/et/notice/735170-2026/html",
+     "ELL": "https://ted.europa.eu/el/notice/735170-2026/html",
+     "ENG": "https://ted.europa.eu/en/notice/735170-2026/html",
+     "FRA": "https://ted.europa.eu/fr/notice/735170-2026/html",
+     "GLE": "https://ted.europa.eu/ga/notice/735170-2026/html",
+     "HRV": "https://ted.europa.eu/hr/notice/735170-2026/html",
+     "ITA": "https://ted.europa.eu/it/notice/735170-2026/html",
+     "LAV": "https://ted.europa.eu/lv/notice/735170-2026/html",
+     "LIT": "https://ted.europa.eu/lt/notice/735170-2026/html",
+     "HUN": "https://ted.europa.eu/hu/notice/735170-2026/html",
+     "MLT": "https://ted.europa.eu/mt/notice/735170-2026/html",
+     "NLD": "https://ted.europa.eu/nl/notice/735170-2026/html",
+     "POL": "https://ted.europa.eu/pl/notice/735170-2026/html",
+     "POR": "https://ted.europa.eu/pt/notice/735170-2026/html",
+     "RON": "https://ted.europa.eu/ro/notice/735170-2026/html",
+     "SLK": "https://ted.europa.eu/sk/notice/735170-2026/html",
+     "SLV": "https://ted.europa.eu/sl/notice/735170-2026/html",
+     "FIN": "https://ted.europa.eu/fi/notice/735170-2026/html",
+     "SWE": "https://ted.europa.eu/sv/notice/735170-2026/html"
+    }
+   },
+   "notice-identifier": "33860cd3-8142-409c-a240-e16d2f9b048f",
+   "notice-title": {
+    "hun": "Norvégia – Tárolószekrények – Framework agreement bicycle parking boxes",
+    "lav": "Norvēģija – Slēdzamie skapīši – Framework agreement bicycle parking boxes",
+    "swe": "Norge – Förvaringsskåp – Framework agreement bicycle parking boxes",
+    "gle": "An Iorua – Lockers – Framework agreement bicycle parking boxes",
+    "ell": "Νορβηγία – Κλειδωτά ερμάρια – Framework agreement bicycle parking boxes",
+    "spa": "Noruega – Taquillas – Framework agreement bicycle parking boxes",
+    "est": "Norra – Hoiukapid – Framework agreement bicycle parking boxes",
+    "nld": "Noorwegen – Opbergkasten – Framework agreement bicycle parking boxes",
+    "fin": "Norja – Lukittavat lokerot – Framework agreement bicycle parking boxes",
+    "pol": "Norwegia – Skrytki – Framework agreement bicycle parking boxes",
+    "hrv": "Norveška – Ormarići s bravom – Framework agreement bicycle parking boxes",
+    "ces": "Norsko – Uzamykatelné skříňky – Framework agreement bicycle parking boxes",
+    "dan": "Norge – Aflåselige skabe – Framework agreement bicycle parking boxes",
+    "ron": "Norvegia – Dulăpioare – Framework agreement bicycle parking boxes",
+    "por": "Noruega – Cacifos – Framework agreement bicycle parking boxes",
+    "slk": "Nórsko – Schránky – Framework agreement bicycle parking boxes",
+    "fra": "Norvège – Coffres – Framework agreement bicycle parking boxes",
+    "mlt": "In-Norveġja – Kaxxarizzi – Framework agreement bicycle parking boxes",
+    "deu": "Norwegen – Schließfächer – Framework agreement bicycle parking boxes",
+    "lit": "Norvegija – Užrakinamos spintelės – Framework agreement bicycle parking boxes",
+    "ita": "Norvegia – Armadietti con serratura – Framework agreement bicycle parking boxes",
+    "bul": "Норвегия – Метални каси – Framework agreement bicycle parking boxes",
+    "slv": "Norveška – Omarice s ključavnico – Framework agreement bicycle parking boxes",
+    "eng": "Norway – Lockers – Framework agreement bicycle parking boxes"
+   },
+   "notice-type": "can-standard",
+   "notice-version": 1,
+   "organisation-identifier-buyer": [
+    "970422528"
+   ],
+   "place-of-performance": [
+    "NO072",
+    "NOR",
+    "NO072",
+    "NOR"
+   ],
+   "procedure-identifier": "f481024a-2fcc-4db0-a62a-824fac5805f9",
+   "procedure-type": "open",
+   "publication-date": "2026-10-23+02:00",
+   "publication-number": "735170-2026",
+   "title-lot": {
+    "eng": [
+     "Framework agreement bicycle parking boxes"
+    ]
+   },
+   "title-proc": {
+    "eng": "Framework agreement bicycle parking boxes"
+   }
+  }
+ ]
+}

@@ -35,24 +35,44 @@ export class ConnectorError extends Error {
   }
 }
 
-/** HTTP-kall med tidsavbrudd og forsøk på nytt ved 429/5xx (eksponentiell ventetid). */
+/** Ventetid fra Retry-After (sekunder eller HTTP-dato), ellers null. */
+export function retryAfterMs(header: string | null, now = Date.now()): number | null {
+  if (!header) return null;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+  const at = Date.parse(header);
+  return Number.isNaN(at) ? null : Math.max(0, at - now);
+}
+
+/** Eksponentiell ventetid med tilfeldig spredning (unngår at mange klienter prøver samtidig). */
+export function backoffMs(attempt: number, baseMs = 1000): number {
+  return Math.round(baseMs * 2 ** attempt * (0.75 + Math.random() * 0.5));
+}
+
+let retryDelayFactor = 1;
+/** Kun for tester: kort ned ventetidene. */
+export function setRetryDelayFactor(factor: number): void {
+  retryDelayFactor = factor;
+}
+
+/** HTTP-kall med tidsavbrudd og nye forsøk ved 408/429/5xx og nettverksfeil (eksponentiell ventetid). */
 export async function fetchWithRetry(url: string, init: RequestInit, opts: { retries?: number; timeoutMs?: number } = {}): Promise<Response> {
   const retries = opts.retries ?? 3;
   let lastErr: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, { ...init, signal: AbortSignal.timeout(opts.timeoutMs ?? 30_000) });
-      if (res.status === 429 || res.status >= 500) {
+      if (res.status === 408 || res.status === 429 || res.status >= 500) {
         lastErr = new ConnectorError(`HTTP ${res.status}`, res.status);
-        const retryAfter = Number(res.headers.get('retry-after'));
-        const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1000 * 2 ** attempt;
-        if (attempt < retries) await new Promise((r) => setTimeout(r, Math.min(waitMs, 30_000)));
+        const waitMs = retryAfterMs(res.headers.get('retry-after')) ?? backoffMs(attempt);
+        await res.body?.cancel().catch(() => {});
+        if (attempt < retries) await sleep(Math.min(waitMs, 60_000) * retryDelayFactor);
         continue;
       }
       return res;
     } catch (err) {
       lastErr = err;
-      if (attempt < retries) await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+      if (attempt < retries) await sleep(backoffMs(attempt) * retryDelayFactor);
     }
   }
   if (lastErr instanceof ConnectorError) throw lastErr;
