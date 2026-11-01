@@ -55,6 +55,7 @@ const schema = z.object({
   EMAIL_PROVIDER: z.enum(['log', 'resend']).default('log'),
   RESEND_API_KEY: optionalString,
   EMAIL_FROM: z.string().default('AnbudRadar <varsler@example.com>'),
+  EMAIL_REPLY_TO: optionalString,
   ADMIN_NOTIFICATION_EMAIL: optionalString,
 
   STRIPE_SECRET_KEY: optionalString,
@@ -62,6 +63,9 @@ const schema = z.object({
   STRIPE_PRICE_STARTER: optionalString,
   STRIPE_PRICE_PROFESSIONAL: optionalString,
   STRIPE_PRICE_BUSINESS: optionalString,
+  /** Valgfri fast avgiftssats (txr_…) for 25 % MVA. Alternativt Stripe Tax (STRIPE_AUTOMATIC_TAX=true, koster ekstra). */
+  STRIPE_TAX_RATE_ID: optionalString,
+  STRIPE_AUTOMATIC_TAX: bool(false),
 
   STORAGE_DRIVER: z.enum(['local', 'supabase']).default('local'),
   STORAGE_LOCAL_DIR: z.string().default('./storage'),

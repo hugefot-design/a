@@ -4,11 +4,13 @@
 import { systemSql } from '@/lib/db';
 import { deliverPendingEmails } from '@/lib/email';
 import { log } from '@/lib/logger';
+import { withTaskLock } from '@/lib/jobs';
 import { runConnector } from '@/connectors';
 import { recomputeMatchesForTenders } from '@/domain/matching/service';
+import { reconcileStripeSubscriptions } from '@/domain/billing/stripe';
 import { generateWeeklySummaries, runNotificationCycle } from '@/domain/notifications/engine';
 
-export const SCHEDULED_TASKS = ['ingest-ted', 'ingest-doffin', 'notifications', 'emails', 'weekly', 'retention', 'refresh-matches'] as const;
+export const SCHEDULED_TASKS = ['ingest-ted', 'ingest-doffin', 'notifications', 'emails', 'weekly', 'retention', 'refresh-matches', 'reconcile-stripe'] as const;
 export type ScheduledTask = (typeof SCHEDULED_TASKS)[number];
 
 /** Oppbevaringsregler (personvern og databasestørrelse). Dokumentert i docs/PERSONVERN.md. */
@@ -32,7 +34,19 @@ export async function applyRetention(): Promise<Record<string, number>> {
   return out;
 }
 
-export async function runScheduledTask(task: ScheduledTask, trigger: 'schedule' | 'manual' | 'cli', triggeredBy?: string | null): Promise<unknown> {
+/** Maks leietid for låsen per oppgave (minutter). Oppgaver som tar lengre tid, frigis ved neste kjøring. */
+const LOCK_TTL_MINUTES: Record<ScheduledTask, number> = {
+  'ingest-ted': 60,
+  'ingest-doffin': 120,
+  notifications: 15,
+  emails: 10,
+  weekly: 30,
+  retention: 30,
+  'refresh-matches': 60,
+  'reconcile-stripe': 30,
+};
+
+async function runUnlocked(task: ScheduledTask, trigger: 'schedule' | 'manual' | 'cli', triggeredBy?: string | null): Promise<unknown> {
   switch (task) {
     case 'ingest-ted':
       return runConnector('ted', { trigger, triggeredBy });
@@ -46,6 +60,8 @@ export async function runScheduledTask(task: ScheduledTask, trigger: 'schedule' 
       return { summaries: await generateWeeklySummaries() };
     case 'retention':
       return applyRetention();
+    case 'reconcile-stripe':
+      return reconcileStripeSubscriptions();
     case 'refresh-matches': {
       // Daglig: frister passerer, så åpne anbud må vurderes på nytt.
       const rows = (await systemSql()`
@@ -54,4 +70,14 @@ export async function runScheduledTask(task: ScheduledTask, trigger: 'schedule' 
       return { stored: await recomputeMatchesForTenders(rows.map((r) => r.id)) };
     }
   }
+}
+
+/**
+ * Kjører en planlagt oppgave. Samme oppgave kjøres aldri i to prosesser samtidig (arbeideren og
+ * /api/cron kan ellers overlappe og f.eks. sende samme varsel-e-post to ganger).
+ */
+export async function runScheduledTask(task: ScheduledTask, trigger: 'schedule' | 'manual' | 'cli', triggeredBy?: string | null): Promise<unknown> {
+  const locked = await withTaskLock(task, LOCK_TTL_MINUTES[task], () => runUnlocked(task, trigger, triggeredBy));
+  if (!locked.ran) log.info('scheduled_task_skipped', { task, reason: locked.reason });
+  return locked.ran ? locked.result : { skipped: locked.reason };
 }

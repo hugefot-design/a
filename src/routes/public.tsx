@@ -7,7 +7,10 @@ import { CERTIFICATIONS } from '@/domain/reference';
 import { coverageStats } from '@/domain/tenders/queries';
 import { contactNotificationTemplate } from '@/domain/email/templates';
 import { zodErrors } from '@/domain/auth/auth';
-import { HttpError, text } from '@/server/http';
+import { HttpError, text, type RequestContext } from '@/server/http';
+import { audit } from '@/lib/audit';
+import { verifyUnsubscribeToken } from '@/domain/email/unsubscribe';
+import { MessagePage, UnsubscribePage } from '@/ui/pages/auth';
 import { render } from '@/server/render';
 import type { Router } from '@/server/router';
 import { AboutPage, ContactPage, FeaturesPage, HomePage, IndustriesPage, PricingPage, PrivacyPage, TermsPage, type Specimen } from '@/ui/pages/public';
@@ -80,6 +83,35 @@ export function registerPublicRoutes(router: Router): void {
     }
     return render(ctx, <ContactPage sent />, { title: 'Kontakt' });
   });
+
+  // Avmelding fra varsel-e-post. POST uten CSRF-token er nødvendig for ettklikks-avmelding fra
+  // e-postklienter (RFC 8058); den signerte lenken er autorisasjonen.
+  const unsubscribe = async (ctx: RequestContext, apply: boolean) => {
+    const token = ctx.query.get('t') ?? '';
+    const target = verifyUnsubscribeToken(token);
+    if (!target) {
+      return render(ctx, <MessagePage title="Lenken virker ikke" tone="danger" message="Avmeldingslenken er ugyldig. Logg inn og endre varsler under Varsler." action={{ href: '/app/varsler', label: 'Gå til varsler' }} />, {
+        title: 'Avmelding',
+        status: 400,
+        noindex: true,
+      });
+    }
+    const [org] = (await systemSql()`select name from organizations where id = ${target.orgId}`) as unknown as { name: string }[];
+    if (!org) return render(ctx, <MessagePage title="Allerede avsluttet" tone="info" message="Organisasjonen finnes ikke lenger, så du får ingen varsler." />, { title: 'Avmelding', noindex: true });
+    if (apply) {
+      if (!(await rateLimit(`unsubscribe:${ctx.ipHash}`, 30, 3600))) throw new HttpError(429, 'For mange forespørsler. Prøv igjen senere.');
+      await systemSql()`
+        insert into notification_preferences (user_id, org_id, email_frequency, weekly_summary)
+        select ${target.userId}, ${target.orgId}, 'off', false
+        where exists (select 1 from organization_members where user_id = ${target.userId} and org_id = ${target.orgId})
+        on conflict (user_id, org_id) do update set email_frequency = 'off', weekly_summary = false
+      `;
+      await audit({ action: 'notifications.unsubscribed', orgId: target.orgId, actorUserId: target.userId, ipHash: ctx.ipHash });
+    }
+    return render(ctx, <UnsubscribePage token={token} orgName={org.name} done={apply} />, { title: 'Avmelding', noindex: true });
+  };
+  router.get('/avmeld', 'public', (ctx) => unsubscribe(ctx, false));
+  router.post('/avmeld', 'public', (ctx) => unsubscribe(ctx, true), { csrf: false });
 
   router.get('/sitemap.xml', 'public', async () => {
     const urls = ['/', '/funksjoner', '/priser', '/bransjer', '/om', '/kontakt', '/personvern', '/vilkar'];

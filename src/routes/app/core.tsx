@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { first } from '@/lib/db';
-import { integrationStatus } from '@/lib/env';
+import { env, integrationStatus } from '@/lib/env';
 import { rateLimit } from '@/lib/rate-limit';
 import { createOrganization, orgNumberSchema, switchOrganization } from '@/domain/org/org';
 import { afterProfileSaved, getProfile, profileFormFromData, profileFormSchema, saveProfile } from '@/domain/profile/profile';
@@ -29,6 +29,17 @@ import { AnalysisPage, TenderPage } from '@/ui/pages/app/tender';
 import { NotificationsPage, SavedSearchesPage, SavedTendersPage, type NotificationRow, type Prefs } from '@/ui/pages/app/lists';
 import { OnboardingOrgPage, OnboardingProfilePage, ProfilePage, profileToValues } from '@/ui/pages/app/profile';
 import { formBool, formStr, param, requireOrg, wantsJsonResponse } from '../helpers';
+
+/** Sti fra Referer-headeren, bare hvis den peker til vår egen side. Ugyldige verdier gir null. */
+export function refererPath(referer: string | undefined): string | null {
+  if (!referer) return null;
+  try {
+    const u = new URL(referer);
+    return u.origin === new URL(env.APP_URL).origin ? u.pathname + u.search : null;
+  } catch {
+    return null;
+  }
+}
 
 export function registerCoreAppRoutes(router: Router): void {
   // ------------------------------------------------------------------ Oversikt
@@ -98,6 +109,7 @@ export function registerCoreAppRoutes(router: Router): void {
     'org',
     async (ctx) => {
       const { org, user } = requireOrg(ctx);
+      if (org.role === 'member') throw new HttpError(403, 'Bare eier eller administrator kan fylle ut bedriftsprofilen. Be dem fullføre den.');
       const form = await ctx.form();
       const raw = profileFormFromData(form);
       const parsed = profileFormSchema.safeParse(raw);
@@ -200,7 +212,7 @@ export function registerCoreAppRoutes(router: Router): void {
     const id = param(ctx, 'id');
     const result = await ctx.tenant((tx) => toggleBookmark(tx, org, user.id, id));
     if (wantsJsonResponse(ctx)) return result.ok ? json({ bookmarked: result.bookmarked }) : json({ error: result.error }, { status: 400 });
-    const back = safeRedirectPath(ctx.req.headers.referer ? new URL(ctx.req.headers.referer).pathname : null, `/app/anbud/${id}`);
+    const back = safeRedirectPath(refererPath(ctx.req.headers.referer), `/app/anbud/${id}`);
     if (!result.ok) return redirectWith(ctx, back, 'error', result.error);
     return redirectWith(ctx, back, 'success', result.bookmarked ? 'Anbudet er lagret.' : 'Anbudet er fjernet fra lagrede.');
   });

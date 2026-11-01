@@ -71,3 +71,72 @@ test('webhook-signatur verifiseres, og forfalskninger avvises', () => {
   const tampered = Buffer.from(payload.toString().replace('evt_1', 'evt_2'));
   assert.throws(() => verifyStripeSignature(tampered, `t=${t},v1=${sig}`, secret, 300, t), /Ugyldig signatur/);
 });
+
+test('planene har riktige navn og priser (Start 199, Profesjonell 499, Bedrift 999 kr/mnd)', async () => {
+  const { PLANS } = await import('../../src/domain/billing/plans');
+  assert.deepEqual(
+    (['starter', 'professional', 'business'] as const).map((p) => [PLANS[p].name, PLANS[p].priceNok]),
+    [
+      ['Start', 199],
+      ['Profesjonell', 499],
+      ['Bedrift', 999],
+    ],
+  );
+});
+
+test('sikkerhetsnett: utløpt periode uten bekreftet fornyelse gir ikke evig tilgang', async () => {
+  const { STRIPE_RENEWAL_GRACE_DAYS } = await import('../../src/domain/billing/plans');
+  const overdue = (days: number) => new Date(NOW.getTime() - days * 86_400_000);
+  // Litt forsinket webhook: fortsatt tilgang.
+  assert.equal(resolveBilling({ ...base, currentPeriodEnd: overdue(2) }, NOW).effectivePlan, 'professional');
+  // Uker uten bekreftelse: tilgangen stopper.
+  const stale = resolveBilling({ ...base, currentPeriodEnd: overdue(STRIPE_RENEWAL_GRACE_DAYS + 1) }, NOW);
+  assert.equal(stale.effectivePlan, 'free');
+  assert.equal(stale.status, 'expired');
+  // Oppsagt ved periodeslutt og perioden er over (slettehendelsen kom aldri): ingen tilgang.
+  assert.equal(resolveBilling({ ...base, cancelAtPeriodEnd: true, currentPeriodEnd: overdue(2) }, NOW).effectivePlan, 'free');
+  assert.equal(resolveBilling({ ...base, cancelAtPeriodEnd: true }, NOW).effectivePlan, 'professional', 'tilgang ut betalt periode');
+});
+
+test('prisene i Stripe kontrolleres mot planene (beløp, valuta, intervall)', async () => {
+  const { verifyStripePrices } = await import('../../src/domain/billing/stripe');
+  const { env } = await import('../../src/lib/env');
+  const realFetch = globalThis.fetch;
+  const prices: Record<string, Record<string, unknown>> = {
+    [env.STRIPE_PRICE_STARTER!]: { active: true, currency: 'nok', unit_amount: 19900, type: 'recurring', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } },
+    [env.STRIPE_PRICE_PROFESSIONAL!]: { active: true, currency: 'nok', unit_amount: 49000, type: 'recurring', recurring: { interval: 'month', interval_count: 1 } },
+    [env.STRIPE_PRICE_BUSINESS!]: { active: true, currency: 'eur', unit_amount: 99900, type: 'recurring', recurring: { interval: 'year', interval_count: 1 } },
+  };
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const id = decodeURIComponent(String(input).split('/prices/')[1] ?? '');
+    return new Response(JSON.stringify(prices[id] ?? { error: { message: 'No such price' } }), { status: prices[id] ? 200 : 404 });
+  }) as typeof fetch;
+  try {
+    const checks = await verifyStripePrices();
+    assert.deepEqual(checks.map((c) => [c.plan, c.ok]), [
+      ['starter', true],
+      ['professional', false],
+      ['business', false],
+    ]);
+    assert.match(checks[1]!.problems.join(' '), /490 kr, forventet 499 kr/);
+    assert.match(checks[2]!.problems.join(' '), /EUR|eur/);
+    assert.match(checks[2]!.problems.join(' '), /månedlig/);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('avmeldingslenken er signert og kan ikke forfalskes', async () => {
+  const { unsubscribeToken, verifyUnsubscribeToken, listUnsubscribeHeaders } = await import('../../src/domain/email/unsubscribe');
+  const userId = '11111111-1111-4111-8111-111111111111';
+  const orgId = '22222222-2222-4222-8222-222222222222';
+  const token = unsubscribeToken(userId, orgId);
+  assert.deepEqual(verifyUnsubscribeToken(token), { userId, orgId });
+  const otherOrg = Buffer.from(`${userId}:33333333-3333-4333-8333-333333333333`).toString('base64url');
+  assert.equal(verifyUnsubscribeToken(`${otherOrg}.${token.split('.')[1]}`), null, 'signaturen gjelder bare én bruker og organisasjon');
+  assert.equal(verifyUnsubscribeToken('tull'), null);
+  assert.equal(verifyUnsubscribeToken(null), null);
+  const headers = listUnsubscribeHeaders(userId, orgId);
+  assert.equal(headers['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click');
+  assert.match(headers['List-Unsubscribe']!, /^<https?:\/\/.+\/avmeld\?t=/);
+});

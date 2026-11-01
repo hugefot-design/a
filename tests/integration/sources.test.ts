@@ -167,7 +167,14 @@ test('samme oppdragsgiver og frist, men annen bransje eller verdi, slås IKKE sa
 });
 
 test('ny versjon av oversettelsen retter data uten falske «fristen er endret»-varsler', async () => {
-  const n = makeNotice({ source: 'ted', sourceNoticeId: `${Math.floor(Math.random() * 9e5) + 1e5}-2026`, procedureId: randomUUID() });
+  const token = randomUUID().slice(0, 8);
+  const n = makeNotice({
+    source: 'ted',
+    sourceNoticeId: `${Math.floor(Math.random() * 9e5) + 1e5}-2026`,
+    procedureId: randomUUID(),
+    title: `Brøyting og strøing ${token} (test)`,
+    buyerName: `Remapkommune ${token}`,
+  });
   await ingest([n]);
   const id = await tenderIdFor('ted', n.sourceNoticeId);
   // Simuler at kunngjøringen ble lagret av en eldre versjon av koden (med feil frist).

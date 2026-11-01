@@ -1,5 +1,5 @@
 import { env } from './env';
-import { systemSql } from './db';
+import { systemSql, toJson, type Db } from './db';
 import { log } from './logger';
 
 export interface EmailMessage {
@@ -10,16 +10,29 @@ export interface EmailMessage {
   kind: string;
   userId?: string | null;
   orgId?: string | null;
+  /**
+   * Samme nøkkel gir bare én e-post, uansett hvor mange ganger hendelsen behandles
+   * (f.eks. `payment_failed:<faktura>:<forsøk>:<bruker>`). Utelates for e-post brukeren selv ber om.
+   */
+  dedupeKey?: string;
+  /** Ekstra e-postheadere, f.eks. List-Unsubscribe. */
+  headers?: Record<string, string>;
 }
 
-/** Legger e-post i utboksen. Sendes av arbeideren (eller straks via deliverEmail). */
-export async function queueEmail(msg: EmailMessage): Promise<string> {
-  const rows = (await systemSql()`
-    insert into email_outbox (to_email, subject, html, text_body, kind, user_id, org_id)
-    values (${msg.to}, ${msg.subject}, ${msg.html}, ${msg.text}, ${msg.kind}, ${msg.userId ?? null}, ${msg.orgId ?? null})
+/**
+ * Legger e-post i utboksen. Sendes av arbeideren (eller straks via sendEmailSoon).
+ * Returnerer null hvis en e-post med samme dedupeKey allerede finnes.
+ * `db` kan være en transaksjon, slik at e-posten bare legges i kø hvis resten lykkes.
+ */
+export async function queueEmail(msg: EmailMessage, db: Db = systemSql()): Promise<string | null> {
+  const rows = (await db`
+    insert into email_outbox (to_email, subject, html, text_body, kind, user_id, org_id, dedupe_key, headers)
+    values (${msg.to}, ${msg.subject.slice(0, 300)}, ${msg.html}, ${msg.text}, ${msg.kind}, ${msg.userId ?? null}, ${msg.orgId ?? null},
+            ${msg.dedupeKey ?? null}, ${toJson(msg.headers ?? {})}::text::jsonb)
+    on conflict (dedupe_key) where dedupe_key is not null do nothing
     returning id
   `) as unknown as { id: string }[];
-  return rows[0]!.id;
+  return rows[0]?.id ?? null;
 }
 
 interface SendResult {
@@ -28,26 +41,49 @@ interface SendResult {
   messageId?: string;
   error?: string;
   logged?: boolean;
+  /** Varig feil (f.eks. ugyldig adresse): ingen nye forsøk. */
+  permanent?: boolean;
 }
 
-async function sendViaProvider(row: { toEmail: string; subject: string; html: string; textBody: string }): Promise<SendResult> {
+interface OutboxRow {
+  id: string;
+  toEmail: string;
+  subject: string;
+  html: string;
+  textBody: string;
+  headers: Record<string, string> | null;
+}
+
+async function sendViaProvider(row: OutboxRow): Promise<SendResult> {
   if (env.EMAIL_PROVIDER === 'resend') {
     if (!env.RESEND_API_KEY) return { ok: false, provider: 'resend', error: 'RESEND_API_KEY mangler' };
     try {
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+          // Resend sender ikke samme e-post to ganger innen 24 timer med samme nøkkel – vern mot
+          // dobbel sending hvis vi krasjer etter at Resend har tatt imot, men før vi har lagret svaret.
+          'Idempotency-Key': `outbox-${row.id}`,
+        },
         body: JSON.stringify({
           from: env.EMAIL_FROM,
           to: [row.toEmail],
           subject: row.subject,
           html: row.html,
           text: row.textBody,
+          ...(env.EMAIL_REPLY_TO ? { reply_to: env.EMAIL_REPLY_TO } : {}),
+          ...(row.headers && Object.keys(row.headers).length ? { headers: row.headers } : {}),
         }),
         signal: AbortSignal.timeout(15_000),
       });
-      const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
-      if (!res.ok) return { ok: false, provider: 'resend', error: `HTTP ${res.status}: ${body.message ?? 'ukjent feil'}` };
+      const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string; name?: string };
+      if (!res.ok) {
+        // 4xx (unntatt 408/429) prøves ikke på nytt i det uendelige – f.eks. ugyldig mottaker.
+        const permanent = res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429;
+        return { ok: false, provider: 'resend', error: `HTTP ${res.status}: ${body.message ?? body.name ?? 'ukjent feil'}`, permanent };
+      }
       return { ok: true, provider: 'resend', messageId: body.id };
     } catch (err) {
       return { ok: false, provider: 'resend', error: err instanceof Error ? err.message : String(err) };
@@ -58,14 +94,14 @@ async function sendViaProvider(row: { toEmail: string; subject: string; html: st
   return { ok: true, provider: 'log', logged: true };
 }
 
-/** Sender én e-post fra utboksen. Trygt å kalle flere ganger (låser raden). */
+/** Sender én e-post fra utboksen. Trygt å kalle flere ganger og fra flere prosesser (låser raden). */
 export async function deliverEmail(id: string): Promise<void> {
   const sql = systemSql();
   const rows = (await sql`
     update email_outbox set attempts = attempts + 1, next_attempt_at = now() + interval '10 minutes'
     where id = ${id} and status = 'pending' and next_attempt_at <= now()
-    returning id, to_email, subject, html, text_body, attempts
-  `) as unknown as { id: string; toEmail: string; subject: string; html: string; textBody: string; attempts: number }[];
+    returning id, to_email, subject, html, text_body, attempts, headers
+  `) as unknown as (OutboxRow & { attempts: number })[];
   const row = rows[0];
   if (!row) return;
   const result = await sendViaProvider(row);
@@ -76,14 +112,14 @@ export async function deliverEmail(id: string): Promise<void> {
       where id = ${id}
     `;
   } else {
-    const failed = row.attempts >= 5;
+    const failed = result.permanent || row.attempts >= 5;
     await sql`
       update email_outbox set status = ${failed ? 'failed' : 'pending'}, provider = ${result.provider},
         last_error = ${result.error ?? null},
         next_attempt_at = now() + make_interval(mins => ${Math.min(60, 2 ** row.attempts)})
       where id = ${id}
     `;
-    log.warn('email_send_failed', { id, error: result.error, attempts: row.attempts });
+    (failed ? log.error : log.warn)('email_send_failed', { id, error: result.error, attempts: row.attempts, permanent: Boolean(result.permanent) });
   }
 }
 
@@ -98,10 +134,12 @@ export async function deliverPendingEmails(limit = 50): Promise<number> {
 }
 
 /** Legg i kø og prøv å sende med en gang uten å blokkere forespørselen. */
-export async function sendEmailSoon(msg: EmailMessage): Promise<string> {
+export async function sendEmailSoon(msg: EmailMessage): Promise<string | null> {
   const id = await queueEmail(msg);
-  setImmediate(() => {
-    deliverEmail(id).catch((err) => log.error('email_immediate_failed', { id, err }));
-  });
+  if (id) {
+    setImmediate(() => {
+      deliverEmail(id).catch((err) => log.error('email_immediate_failed', { id, err }));
+    });
+  }
   return id;
 }

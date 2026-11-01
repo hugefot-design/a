@@ -5,7 +5,7 @@ import { log } from '@/lib/logger';
 import { changePassword, deleteOtherSessions, nameSchema, SESSION_COOKIE } from '@/domain/auth/auth';
 import { changeMemberRole, inviteMember, listMembers, removeMember, revokeInvitation } from '@/domain/org/org';
 import { deleteAccount, deleteOrganization, exportData } from '@/domain/account/privacy';
-import { PAID_PLANS, type PaidPlanId } from '@/domain/billing/plans';
+import { PAID_PLANS, PLANS, type PaidPlanId } from '@/domain/billing/plans';
 import {
   changeSubscriptionPlan,
   createCheckoutSession,
@@ -209,6 +209,20 @@ export function registerAccountRoutes(router: Router): void {
           }[],
         ),
       );
+      // Nedgradering: planen må ha plass til alle brukerne (ellers ville planen ikke styrt tilgangen).
+      const memberCount = await ctx.tenant(async (tx) => {
+        const [row] = (await tx`select count(*)::int as n from organization_members where org_id = ${org.id}`) as unknown as { n: number }[];
+        return row?.n ?? 0;
+      });
+      const maxMembers = PLANS[plan].entitlements.maxMembers;
+      if (memberCount > maxMembers) {
+        return redirectWith(
+          ctx,
+          '/app/abonnement',
+          'error',
+          `${PLANS[plan].name} har plass til ${maxMembers} ${maxMembers === 1 ? 'bruker' : 'brukere'}, men organisasjonen har ${memberCount}. Fjern brukere under Innstillinger → Team først.`,
+        );
+      }
       try {
         if (sub?.source === 'stripe' && sub.stripeSubscriptionId && ['active', 'trialing', 'past_due'].includes(sub.status)) {
           await changeSubscriptionPlan(sub.stripeSubscriptionId, plan);

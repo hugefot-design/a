@@ -2,13 +2,15 @@
  * Varselmotor. Kjøres av arbeideren (worker) med systemrollen fordi den går på tvers
  * av organisasjoner. Duplikater hindres av unik nøkkel (user_id, dedupe_key).
  */
-import { systemSql } from '@/lib/db';
+import { systemSql, type Tx } from '@/lib/db';
 import { log } from '@/lib/logger';
+import { sha256Hex } from '@/lib/crypto';
 import { queueEmail } from '@/lib/email';
+import { listUnsubscribeHeaders, unsubscribeUrl } from '@/domain/email/unsubscribe';
 import { entitlementsFor, resolveBilling, type Entitlements, type SubscriptionRow } from '@/domain/billing/plans';
 import { buildConditions } from '@/domain/tenders/queries';
 import { sanitizeQuery, type TenderQuery } from '@/domain/search/filters';
-import { absoluteUrl, digestTemplate, type DigestItem } from '@/domain/email/templates';
+import { absoluteUrl, digestTemplate, trialEndingTemplate, type DigestItem } from '@/domain/email/templates';
 import { isoWeek } from '@/domain/dashboard';
 
 type NotificationType = 'new_match' | 'saved_search' | 'deadline' | 'tender_update' | 'cancellation' | 'weekly_summary' | 'payment_failed' | 'competitor_award' | 'system';
@@ -74,6 +76,12 @@ interface MemberPref {
   emailFrequency: string;
 }
 
+function prefsByOrg(prefs: MemberPref[]): Map<string, MemberPref[]> {
+  const map = new Map<string, MemberPref[]>();
+  for (const p of prefs) map.set(p.orgId, [...(map.get(p.orgId) ?? []), p]);
+  return map;
+}
+
 async function memberPrefs(): Promise<MemberPref[]> {
   return (await systemSql()`
     select m.org_id, m.user_id,
@@ -99,11 +107,18 @@ export async function generateSavedSearchAlerts(ents: Map<string, Entitlements>,
     )
   `) as unknown as { id: string; orgId: string; userId: string; name: string; filters: TenderQuery; lastAlertedAt: Date | null; createdAt: Date }[];
   const prefByKey = new Map(prefs.map((p) => [`${p.orgId}:${p.userId}`, p]));
+  // Etter nedgradering kan en organisasjon ha flere lagrede søk enn planen tillater. Da varsles
+  // bare de eldste innenfor grensen – planen styrer faktisk hva kunden får.
+  const rank = new Map<string, number>();
+  for (const r of (await sql`
+    select id, row_number() over (partition by org_id order by created_at, id)::int as n from saved_searches
+  `) as unknown as { id: string; n: number }[]) rank.set(r.id, r.n);
   const items: NewNotification[] = [];
   for (const s of searches) {
     const ent = ents.get(s.orgId);
     const pref = prefByKey.get(`${s.orgId}:${s.userId}`);
     if (!ent || ent.alerts === 'none' || !pref || !pref.savedSearchAlerts) continue;
+    if ((rank.get(s.id) ?? Infinity) > ent.maxSavedSearches) continue;
     const since = s.lastAlertedAt ?? s.createdAt;
     const filters = sanitizeQuery({ ...s.filters, page: 1, sort: null });
     const tenders = (await sql`
@@ -140,11 +155,12 @@ export async function generateMatchAlerts(ents: Map<string, Entitlements>, prefs
       and (t.deadline_at is null or t.deadline_at > now())
   `) as unknown as { orgId: string; tenderId: string; score: number; title: string; buyerName: string | null }[];
   const items: NewNotification[] = [];
+  const byOrg = prefsByOrg(prefs);
   for (const r of rows) {
     const ent = ents.get(r.orgId);
     if (!ent?.matching || ent.alerts !== 'full') continue;
-    for (const p of prefs) {
-      if (p.orgId !== r.orgId || !p.newMatches || r.score < p.matchThreshold) continue;
+    for (const p of byOrg.get(r.orgId) ?? []) {
+      if (!p.newMatches || r.score < p.matchThreshold) continue;
       items.push({
         orgId: r.orgId,
         userId: p.userId,
@@ -172,10 +188,13 @@ export async function generateDeadlineReminders(ents: Map<string, Entitlements>,
   `) as unknown as { orgId: string; tenderId: string; title: string; deadlineAt: Date; window: '1d' | '3d' | '7d' }[];
   const label = { '1d': 'mindre enn 1 døgn', '3d': '3 dager eller mindre', '7d': '7 dager eller mindre' };
   const items: NewNotification[] = [];
+  const byOrg = prefsByOrg(prefs);
   for (const r of rows) {
-    if (ents.get(r.orgId)?.alerts !== 'full') continue;
-    for (const p of prefs) {
-      if (p.orgId !== r.orgId || !p.deadlineReminders) continue;
+    // Fristpåminnelser for lagrede anbud er med i alle betalte planer (også Start).
+    const alerts = ents.get(r.orgId)?.alerts;
+    if (alerts !== 'full' && alerts !== 'basic') continue;
+    for (const p of byOrg.get(r.orgId) ?? []) {
+      if (!p.deadlineReminders) continue;
       items.push({
         orgId: r.orgId,
         userId: p.userId,
@@ -204,11 +223,12 @@ export async function generateUpdateAlerts(ents: Map<string, Entitlements>, pref
     tenderId: string;
   }[];
   const items: NewNotification[] = [];
+  const byOrg = prefsByOrg(prefs);
   for (const u of updates) {
     for (const b of bookmarks.filter((x) => x.tenderId === u.tenderId)) {
       if (ents.get(b.orgId)?.alerts !== 'full') continue;
-      for (const p of prefs) {
-        if (p.orgId !== b.orgId || !p.tenderChanges) continue;
+      for (const p of byOrg.get(b.orgId) ?? []) {
+        if (!p.tenderChanges) continue;
         items.push({
           orgId: b.orgId,
           userId: p.userId,
@@ -265,7 +285,22 @@ function osloParts(now = new Date()) {
   };
 }
 
-/** Sender samlede e-postvarsler etter hver brukers valgte frekvens. */
+const TYPE_TAG: Record<string, string> = {
+  new_match: 'Nytt treff',
+  saved_search: 'Lagret søk',
+  deadline: 'Frist nærmer seg',
+  tender_update: 'Endring',
+  cancellation: 'Avlyst',
+  competitor_award: 'Konkurrent',
+  payment_failed: 'Betaling',
+  system: 'Melding',
+};
+
+/**
+ * Sender samlede e-postvarsler etter hver brukers valgte frekvens. E-posten legges i kø i samme
+ * transaksjon som varslene merkes som sendt, med en nøkkel avledet av varslene – en krasj eller
+ * samtidig kjøring kan derfor aldri gi samme e-post to ganger.
+ */
 export async function dispatchNotificationEmails(now = new Date()): Promise<number> {
   const sql = systemSql();
   const { hour, weekday } = osloParts(now);
@@ -313,23 +348,75 @@ export async function dispatchNotificationEmails(now = new Date()): Promise<numb
       (first.frequency === 'weekly' && weekday === 'Mon' && hour >= 7 && now.getTime() - last > 6 * 86_400_000);
     if (!due) continue;
     const shown = items.slice(0, 20);
-    const digestItems: DigestItem[] = shown.map((i) => ({ title: i.title, body: i.body, url: i.url ? absoluteUrl(i.url) : null }));
-    const heading =
-      items.length === 1 ? `Nytt varsel fra AnbudRadar: ${first.title}` : `${items.length} nye varsler fra AnbudRadar`;
+    const digestItems: DigestItem[] = shown.map((i) => ({
+      title: i.title,
+      body: i.body,
+      url: i.url ? absoluteUrl(i.url) : null,
+      tag: TYPE_TAG[i.type] ?? null,
+    }));
+    const heading = items.length === 1 ? `Nytt varsel fra AnbudRadar: ${first.title}` : `${items.length} nye varsler fra AnbudRadar`;
     const intro =
       items.length > shown.length
         ? `Her er de ${shown.length} nyeste av ${items.length} varsler for ${first.orgName}. Se resten i appen.`
         : `Her er nye varsler for ${first.orgName}.`;
-    const tpl = digestTemplate(heading.slice(0, 150), intro, digestItems, absoluteUrl('/app/varsler'));
-    await queueEmail({ to: first.email, ...tpl, kind: 'notification_digest', userId: first.userId, orgId: first.orgId });
-    await sql`update notifications set emailed_at = now() where id = any(${items.map((i) => i.id)}::uuid[])`;
-    await sql`
-      insert into notification_preferences (user_id, org_id, last_digest_at) values (${first.userId}, ${first.orgId}, now())
-      on conflict (user_id, org_id) do update set last_digest_at = now()
-    `;
+    const unsubscribe = unsubscribeUrl(first.userId, first.orgId);
+    const tpl = digestTemplate(heading.slice(0, 150), intro, digestItems, absoluteUrl('/app/varsler'), unsubscribe);
+    const ids = items.map((i) => i.id).sort();
+    await sql.begin(async (rawTx) => {
+      const tx = rawTx as unknown as Tx;
+      await queueEmail(
+        {
+          to: first.email,
+          ...tpl,
+          kind: 'notification_digest',
+          userId: first.userId,
+          orgId: first.orgId,
+          dedupeKey: `digest:${sha256Hex(ids.join(','))}`,
+          headers: listUnsubscribeHeaders(first.userId, first.orgId),
+        },
+        tx,
+      );
+      await tx`update notifications set emailed_at = now() where id = any(${ids}::uuid[]) and emailed_at is null`;
+      await tx`
+        insert into notification_preferences (user_id, org_id, last_digest_at) values (${first.userId}, ${first.orgId}, now())
+        on conflict (user_id, org_id) do update set last_digest_at = now()
+      `;
+    });
     sent++;
   }
   return sent;
+}
+
+/**
+ * Påminnelse 3 dager og 1 dag før prøveperioden slutter, til eiere og administratorer.
+ * Nøkkelen per organisasjon, bruker og terskel hindrer duplikater.
+ */
+export async function generateTrialReminders(now = new Date()): Promise<number> {
+  const sql = systemSql();
+  const rows = (await sql`
+    select s.org_id, s.trial_ends_at, o.name as org_name, u.id as user_id, u.email
+    from subscriptions s
+    join organizations o on o.id = s.org_id
+    join organization_members m on m.org_id = s.org_id and m.role in ('owner', 'admin')
+    join users u on u.id = m.user_id and u.email_verified_at is not null
+    where s.source = 'trial' and s.trial_ends_at > ${now} and s.trial_ends_at <= ${now}::timestamptz + interval '3 days'
+  `) as unknown as { orgId: string; trialEndsAt: Date; orgName: string; userId: string; email: string }[];
+  let queued = 0;
+  for (const r of rows) {
+    const daysLeft = Math.max(1, Math.ceil((r.trialEndsAt.getTime() - now.getTime()) / 86_400_000));
+    const threshold = daysLeft <= 1 ? '1d' : '3d';
+    const tpl = trialEndingTemplate(r.orgName, daysLeft, absoluteUrl('/app/abonnement'));
+    const id = await queueEmail({
+      to: r.email,
+      ...tpl,
+      kind: 'trial_ending',
+      userId: r.userId,
+      orgId: r.orgId,
+      dedupeKey: `trial_ending:${r.orgId}:${r.userId}:${threshold}`,
+    });
+    if (id) queued++;
+  }
+  return queued;
 }
 
 /** Ukentlig sammendrag (mandag morgen). Egen e-post, uavhengig av varselfrekvens (men ikke ved "av"). */
@@ -364,10 +451,11 @@ export async function generateWeeklySummaries(now = new Date(), force = false): 
     `) as unknown as { id: string; title: string; deadlineAt: Date }[];
     if (!matches.length && !deadlines.length) continue;
     const items: DigestItem[] = [
-      ...matches.map((m) => ({ title: m.title, body: `Nytt denne uken – relevans ${m.score} %`, url: absoluteUrl(`/app/anbud/${m.id}`) })),
+      ...matches.map((m) => ({ title: m.title, body: 'Nytt denne uken', tag: `Relevans ${m.score}`, url: absoluteUrl(`/app/anbud/${m.id}`) })),
       ...deadlines.map((d) => ({
         title: d.title,
-        body: `Frist ${new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short', timeZone: 'Europe/Oslo' }).format(d.deadlineAt)}`,
+        body: null,
+        tag: `Frist ${new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short', timeZone: 'Europe/Oslo' }).format(d.deadlineAt)}`,
         url: absoluteUrl(`/app/anbud/${d.id}`),
       })),
     ];
@@ -384,8 +472,17 @@ export async function generateWeeklySummaries(now = new Date(), force = false): 
       },
     ]);
     if (u.emailVerifiedAt && u.frequency !== 'off') {
-      const tpl = digestTemplate(`Ukesoversikt for ${u.orgName}`, 'Dette er ukens viktigste anbud og frister.', items, absoluteUrl('/app/varsler'));
-      await queueEmail({ to: u.email, ...tpl, kind: 'weekly_summary', userId: u.userId, orgId: u.orgId });
+      const unsubscribe = unsubscribeUrl(u.userId, u.orgId);
+      const tpl = digestTemplate(`Ukesoversikt for ${u.orgName}`, 'Dette er ukens viktigste anbud og frister.', items, absoluteUrl('/app/varsler'), unsubscribe);
+      await queueEmail({
+        to: u.email,
+        ...tpl,
+        kind: 'weekly_summary',
+        userId: u.userId,
+        orgId: u.orgId,
+        dedupeKey: `weekly:${week}:${u.orgId}:${u.userId}`,
+        headers: listUnsubscribeHeaders(u.userId, u.orgId),
+      });
     }
     await sql`update notifications set email_skipped = true where user_id = ${u.userId} and dedupe_key = ${`weekly:${week}:${u.orgId}`}`;
     count++;
@@ -403,6 +500,7 @@ export async function runNotificationCycle(): Promise<Record<string, number>> {
     deadlines: await generateDeadlineReminders(ents, prefs),
     updates: await generateUpdateAlerts(ents, prefs),
     competitors: await generateCompetitorAlerts(ents, prefs),
+    trialReminders: await generateTrialReminders(),
     emails: 0,
   };
   result.emails = await dispatchNotificationEmails();

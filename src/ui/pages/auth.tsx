@@ -163,3 +163,29 @@ export function InvitationPage({
     </AuthLayout>
   );
 }
+
+/** Avmelding fra varsel-e-post. Knappen sender et vanlig skjema (ettklikks-avmelding fra e-postklienter går direkte). */
+export function UnsubscribePage({ token, orgName, done }: { token: string; orgName: string; done: boolean }) {
+  if (done) {
+    return (
+      <AuthLayout title="Du er meldt av">
+        <Alert tone="ok">
+          Du får ikke lenger varsel-e-post eller ukesoversikt fra AnbudRadar for {orgName}. Varslene vises fortsatt i appen.
+        </Alert>
+        <p className="mt-4 text-sm text-muted">
+          Vil du ha e-post igjen? Logg inn og velg hyppighet under <a href="/app/varsler" className="underline">Varsler</a>.
+          E-post om konto, sikkerhet og betaling sendes uansett, fordi den er nødvendig for avtalen.
+        </p>
+      </AuthLayout>
+    );
+  }
+  return (
+    <AuthLayout title="Meld av varsel-e-post" intro={`Gjelder varsler og ukesoversikt for ${orgName}.`}>
+      <form method="post" action={`/avmeld?t=${encodeURIComponent(token)}`}>
+        <button type="submit" className={buttonVariants({ variant: 'primary' })}>
+          Meld meg av
+        </button>
+      </form>
+    </AuthLayout>
+  );
+}

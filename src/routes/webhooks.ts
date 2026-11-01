@@ -28,6 +28,8 @@ export function registerWebhookRoutes(router: Router): void {
       }
       try {
         const result = await handleStripeEvent(event);
+        // En annen prosess behandler samme hendelse akkurat nå – Stripe prøver igjen senere.
+        if (result === 'in_progress') return json({ received: true, result }, { status: 409 });
         return json({ received: true, result });
       } catch (err) {
         log.error('stripe_webhook_failed', { type: event.type, id: event.id, err: err instanceof StripeError ? err.message : err });

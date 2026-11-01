@@ -89,3 +89,30 @@ export async function claimScheduledTask(task: string, intervalMinutes: number):
   `;
   return rows.length > 0;
 }
+
+/**
+ * Kjører `fn` bare hvis ingen annen prosess kjører samme oppgave nå (lås med leietid i Postgres).
+ * Brukes for planlagte oppgaver som kan startes både av arbeideren og av /api/cron, slik at f.eks.
+ * varsel-e-post aldri sendes to ganger fordi to prosesser kjørte samtidig. Låsen utløper av seg selv
+ * hvis prosessen krasjer.
+ */
+export async function withTaskLock<T>(
+  name: string,
+  ttlMinutes: number,
+  fn: () => Promise<T>,
+): Promise<{ ran: true; result: T } | { ran: false; reason: string }> {
+  const sql = systemSql();
+  const owner = `${WORKER_ID}:${Math.random().toString(36).slice(2, 10)}`;
+  const rows = await sql`
+    insert into task_locks (name, locked_by, locked_until) values (${name}, ${owner}, now() + make_interval(mins => ${ttlMinutes}))
+    on conflict (name) do update set locked_by = excluded.locked_by, locked_until = excluded.locked_until
+      where task_locks.locked_until < now()
+    returning name
+  `;
+  if (!rows.length) return { ran: false, reason: `Oppgaven «${name}» kjører allerede i en annen prosess.` };
+  try {
+    return { ran: true, result: await fn() };
+  } finally {
+    await sql`delete from task_locks where name = ${name} and locked_by = ${owner}`.catch((err) => log.warn('task_lock_release_failed', { name, err }));
+  }
+}

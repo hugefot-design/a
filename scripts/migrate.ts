@@ -52,8 +52,36 @@ export async function migrate(options: { reset?: boolean; quiet?: boolean } = {}
     });
     ran.push(version);
   }
+  await enforceBaselineSecurity(sql);
   log(ran.length ? `Ferdig: ${ran.length} migrering(er) kjørt.` : 'Databasen er allerede oppdatert.');
   return ran;
+}
+
+/**
+ * Kjøres etter hver migrering (idempotent): radnivåsikkerhet på ALLE tabeller, også tabeller som
+ * legges til senere, og ingen tilgang for Supabase sine API-roller (anon/authenticated). Da kan
+ * databasen aldri leses via Supabase sitt automatiske REST-API, selv om en ny tabell glemmes.
+ */
+async function enforceBaselineSecurity(sql: ReturnType<typeof systemSql>): Promise<void> {
+  await sql.unsafe(`
+    do $$
+    declare t text; r text;
+    begin
+      for t in select tablename from pg_tables where schemaname = 'public' loop
+        execute format('alter table public.%I enable row level security', t);
+      end loop;
+      foreach r in array array['anon', 'authenticated'] loop
+        if exists (select 1 from pg_roles where rolname = r) then
+          execute format('revoke all on all tables in schema public from %I', r);
+          execute format('revoke all on all sequences in schema public from %I', r);
+          execute format('revoke all on all functions in schema public from %I', r);
+          execute format('alter default privileges in schema public revoke all on tables from %I', r);
+          execute format('alter default privileges in schema public revoke all on sequences from %I', r);
+          execute format('alter default privileges in schema public revoke all on functions from %I', r);
+        end if;
+      end loop;
+    end $$;
+  `);
 }
 
 const isMain = process.argv[1]?.endsWith('migrate.ts') || process.argv[1]?.endsWith('migrate.js');

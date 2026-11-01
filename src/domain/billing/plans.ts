@@ -59,7 +59,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
   },
   starter: {
     id: 'starter',
-    name: 'Starter',
+    name: 'Start',
     priceNok: 199,
     tagline: 'For deg som vil følge med på egne bransjer.',
     features: [
@@ -194,6 +194,9 @@ export interface BillingState {
   cancelAtPeriodEnd: boolean;
 }
 
+/** Dager etter periodeslutt uten bekreftet fornyelse før tilgangen stoppes (webhooks + avstemming har feilet). */
+export const STRIPE_RENEWAL_GRACE_DAYS = 14;
+
 /** Avgjør hvilken plan som faktisk gjelder nå. Ren funksjon – testes isolert. */
 export function resolveBilling(sub: SubscriptionRow | null, now = new Date()): BillingState {
   const base = { trialEndsAt: null, renewsAt: null, cancelAtPeriodEnd: false };
@@ -229,6 +232,15 @@ export function resolveBilling(sub: SubscriptionRow | null, now = new Date()): B
   }
   // Stripe
   const renewsAt = sub.currentPeriodEnd;
+  // Sikkerhetsnett hvis både webhooks og avstemming har feilet: en periode som er utløpt for lenge
+  // siden uten bekreftet fornyelse gir ikke evig tilgang.
+  const overdueDays = renewsAt ? (now.getTime() - renewsAt.getTime()) / 86_400_000 : 0;
+  if ((sub.status === 'active' || sub.status === 'trialing' || sub.status === 'past_due') && overdueDays > STRIPE_RENEWAL_GRACE_DAYS) {
+    return { ...base, effectivePlan: 'free', label: PLANS.free.name, status: 'expired', notice: 'Vi har ikke fått bekreftet fornyelsen av abonnementet. Åpne betalingsportalen eller kontakt oss.' };
+  }
+  if ((sub.status === 'active' || sub.status === 'trialing') && sub.cancelAtPeriodEnd && overdueDays > 1) {
+    return { ...base, effectivePlan: 'free', label: PLANS.free.name, status: 'canceled', notice: 'Abonnementet er avsluttet.' };
+  }
   switch (sub.status) {
     case 'active':
     case 'trialing':

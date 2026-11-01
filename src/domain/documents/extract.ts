@@ -4,6 +4,9 @@
  */
 export type DetectedType = 'pdf' | 'docx' | 'txt' | null;
 
+/** Maks utpakket størrelse på teksten i en Word-fil (60 MB). */
+export const MAX_DOCX_XML_BYTES = 60 * 1024 * 1024;
+
 /** Avgjør filtype fra innholdet (ikke fra filnavnet alene). */
 export function detectFileType(buf: Buffer, filename: string): DetectedType {
   if (buf.subarray(0, 5).toString('latin1') === '%PDF-') return 'pdf';
@@ -27,9 +30,10 @@ export async function extractPdfPages(data: Buffer, maxPages = 300): Promise<{ p
     data: new Uint8Array(data),
     disableFontFace: true,
     useSystemFonts: false,
+    isEvalSupported: false,
     stopAtErrors: false,
     verbosity: 0,
-  });
+  } as Parameters<typeof pdfjs.getDocument>[0]);
   const doc = await task.promise;
   const pages: ExtractedPage[] = [];
   const total = doc.numPages;
@@ -55,10 +59,19 @@ export async function extractPdfPages(data: Buffer, maxPages = 300): Promise<{ p
 
 /** DOCX: henter tekst fra word/document.xml. Word-filer har ikke faste sider, så teksten deles i avsnitt. */
 export async function extractDocxSections(data: Buffer): Promise<{ pages: ExtractedPage[]; totalPages: number }> {
-  const { default: JSZip } = (await import('jszip')) as unknown as { default: { loadAsync(d: Buffer): Promise<{ file(n: string): { async(t: 'string'): Promise<string> } | null }> } };
+  const { default: JSZip } = (await import('jszip')) as unknown as {
+    default: { loadAsync(d: Buffer): Promise<{ file(n: string): { async(t: 'string'): Promise<string>; _data?: { uncompressedSize?: number } } | null }> };
+  };
   const zip = await JSZip.loadAsync(data);
-  const xml = await zip.file('word/document.xml')?.async('string');
-  if (!xml) throw new Error('Fant ikke dokumentinnhold i Word-filen.');
+  const entry = zip.file('word/document.xml');
+  if (!entry) throw new Error('Fant ikke dokumentinnhold i Word-filen.');
+  // Vern mot «zip-bomber»: en liten fil som pakkes ut til enorme mengder data.
+  const declared = entry._data?.uncompressedSize;
+  if (typeof declared !== 'number' || declared > MAX_DOCX_XML_BYTES) {
+    throw new Error('Word-filen er for stor eller har ukjent størrelse når den pakkes ut.');
+  }
+  const xml = await entry.async('string');
+  if (xml.length > MAX_DOCX_XML_BYTES) throw new Error('Word-filen er for stor når den pakkes ut.');
   const text = xml
     .replace(/<w:p[ >][\s\S]*?<\/w:p>/g, (p) => p.replace(/<w:tab\/>/g, '\t').replace(/<[^>]+>/g, '') + '\n')
     .replace(/<[^>]+>/g, '')
