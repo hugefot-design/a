@@ -1,0 +1,15 @@
+node_modules/
+dist/
+storage/
+storage-test/
+public/assets/app*.css
+public/assets/app*.js
+public/assets/manifest.json
+.env
+.env.*
+!.env.example
+!.env.test
+*.log
+.DS_Store
+test-results/
+playwright-report/
