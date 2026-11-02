@@ -117,11 +117,24 @@ const schema = z.object({
 
 export type Env = z.infer<typeof schema>;
 
+/**
+ * Hjelp ved feilsøking av deploy: hvilke av appens variabler som faktisk er satt, og navn som nesten
+ * stemmer (feil store/små bokstaver, mellomrom). Skriver BARE navn – aldri verdier.
+ */
+function envDiagnosis(): string {
+  const known = Object.keys(schema.shape);
+  const set = known.filter((k) => (process.env[k] ?? '') !== '');
+  const lookAlikes = Object.keys(process.env).filter((k) => !known.includes(k) && known.some((n) => n.toLowerCase() === k.trim().toLowerCase()));
+  const lines = [`Appens variabler som er satt (bare navn): ${set.length ? set.join(', ') : 'ingen'}`];
+  if (lookAlikes.length) lines.push(`Navn som nesten stemmer (sjekk skrivemåten): ${lookAlikes.map((k) => JSON.stringify(k)).join(', ')}`);
+  return lines.join('\n');
+}
+
 function parseEnv(): Env {
   const result = schema.safeParse(process.env);
   if (!result.success) {
     const issues = result.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
-    throw new Error(`Ugyldig konfigurasjon (se .env.example):\n${issues}`);
+    throw new Error(`Ugyldig konfigurasjon (se .env.example):\n${issues}\n${envDiagnosis()}`);
   }
   const env = result.data;
   if (env.NODE_ENV === 'production') {
