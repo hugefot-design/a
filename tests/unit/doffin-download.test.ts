@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import JSZip from 'jszip';
 import { env } from '../../src/lib/env';
 import { memorySlots } from '../../src/lib/api-slots';
-import { EformsError, eformsLifecycle, eformsToNotice, parseEformsXml } from '../../src/connectors/eforms';
+import { durationFromPeriod, EformsError, eformsLifecycle, eformsToNotice, parseEformsXml } from '../../src/connectors/eforms';
 import {
   DOFFIN_DOWNLOAD_INTERVAL_MS,
   downloadDoffinNotice,
@@ -314,4 +314,27 @@ test('XML-berikelse: nye forsøk med økende pause, og 429/ugyldig nøkkel telle
     ['not_attempted', 0, null],
   ];
   for (const [outcome, previous, expected] of steps) assert.deepEqual(nextEnrichmentState(outcome, previous), expected, `${outcome} etter ${previous} forsøk`);
+});
+
+test('EU-kunngjøring fra Doffin: rettsgrunnlag i RegulatoryDomain og varighet fra kontraktsdatoer (som i ekte data)', () => {
+  // Slik ser ekte EU-kunngjøringer fra Doffin ut (kontrollert mot en live nedlasting 2.11.2026).
+  const xml = readFileSync(new URL('../fixtures/eforms/n16-konkurranse-v1.xml', import.meta.url), 'utf8')
+    .replace(':2023:eforms:national</cbc:CustomizationID>', ':2023:eforms:eu</cbc:CustomizationID>\n  <cbc:RegulatoryDomain>32014L0024</cbc:RegulatoryDomain>')
+    .replaceAll(/<cbc:DurationMeasure unitCode="MONTH">\d+<\/cbc:DurationMeasure>/g, '<cbc:StartDate>2027-02-01Z</cbc:StartDate><cbc:EndDate>2028-12-31Z</cbc:EndDate>');
+  const parsed = parseEformsXml(xml);
+  assert.equal(parsed.variant, 'eu');
+  assert.deepEqual(parsed.legalBasis[0], { id: '32014L0024', description: null });
+  assert.deepEqual(parsed.lots[0]!.duration, { months: 23, text: 'ca. 23 måneder (01.02.2027–31.12.2028)' });
+  const notice = eformsToNotice(parsed, { sourceNoticeId: '2026-1', sourceUrl: 'https://doffin.no/notices/2026-1', sha256: 'x', bytes: 1 });
+  assert.equal(notice.details?.durationMonths, 23);
+  assert.equal(notice.details?.contractStart?.slice(0, 10), '2027-02-01');
+});
+
+test('varighet fra datoer: hele måneder, og ingen gjetning ved manglende eller ugyldige datoer', () => {
+  assert.equal(durationFromPeriod('2027-01-01', '2027-12-31')?.months, 12);
+  assert.equal(durationFromPeriod('2027-01-01Z', '2027-01-31Z')?.months, 1);
+  assert.equal(durationFromPeriod('2027-01-01', null), null);
+  assert.equal(durationFromPeriod(null, '2027-12-31'), null);
+  assert.equal(durationFromPeriod('2028-01-01', '2027-01-01'), null, 'slutt før start');
+  assert.equal(durationFromPeriod('ugyldig', '2027-01-01'), null);
 });

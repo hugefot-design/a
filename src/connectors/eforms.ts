@@ -211,6 +211,21 @@ export function variantOf(customizationId: string | null): EformsVariant {
 
 const ISO3_TO_ISO2: Record<string, string> = { NOR: 'NO', SWE: 'SE', DNK: 'DK', FIN: 'FI', DEU: 'DE', ISL: 'IS' };
 
+/**
+ * Varighet regnet ut fra kontraktens start- og sluttdato når kunngjøringen ikke oppgir varighet
+ * direkte (vanlig i Doffin: «1.2.2027–31.12.2028»). Avrundet til hele måneder og merket «ca.».
+ */
+export function durationFromPeriod(start: string | null, end: string | null): { months: number; text: string } | null {
+  const day = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}/.test(v) ? Date.UTC(+v.slice(0, 4), +v.slice(5, 7) - 1, +v.slice(8, 10)) : null);
+  const a = day(start);
+  const b = day(end);
+  if (a === null || b === null || b <= a) return null;
+  const months = Math.round(((b - a) / 86_400_000 + 1) / 30.4375);
+  if (months < 1 || months > 600) return null;
+  const nb = (t: number) => new Date(t).toISOString().slice(0, 10).split('-').reverse().join('.');
+  return { months, text: `ca. ${months} måneder (${nb(a)}–${nb(b)})` };
+}
+
 function amountOf(el: Element | null): { amount: number; currency: string | null } | null {
   const amount = num(txt(el));
   if (amount === null || amount < 0) return null;
@@ -261,7 +276,9 @@ function parseLot(lot: Element): EformsLot {
     documentsRestricted: txt(one(docRefs[0] ?? null, 'cbc:DocumentType')),
     submissionUrls: httpUrls(texts(terms, 'cac:TenderRecipientParty/cbc:EndpointID')),
     eSubmission: txt(esub ?? null),
-    duration: duration ? durationFrom(txt(duration), attr(duration, 'unitCode')) : null,
+    duration: duration
+      ? durationFrom(txt(duration), attr(duration, 'unitCode'))
+      : durationFromPeriod(txt(one(project, 'cac:PlannedPeriod/cbc:StartDate')), txt(one(project, 'cac:PlannedPeriod/cbc:EndDate'))),
     start: combineDateTime(txt(one(project, 'cac:PlannedPeriod/cbc:StartDate')), null).iso,
     end: combineDateTime(txt(one(project, 'cac:PlannedPeriod/cbc:EndDate')), null).iso,
     framework: txt(framework ?? null),
@@ -365,9 +382,15 @@ export function parseEformsXml(xml: string): EformsNotice {
   const customizationId = txt(one(root, 'cbc:CustomizationID'));
   const title = localized(project, 'cbc:Name');
   const buyerRef = txt(one(root, 'cac:ContractingParty/cac:Party/cac:PartyIdentification/cbc:ID'));
-  const legalBasis = all(root, 'cac:TenderingTerms/cac:ProcurementLegislationDocumentReference')
-    .filter((d) => !['CrossBorderLaw'].includes(txt(one(d, 'cbc:ID')) ?? ''))
-    .map((d) => ({ id: txt(one(d, 'cbc:ID')), description: localized(d, 'cbc:DocumentDescription').text }));
+  // BT-01: EU-kunngjøringer oppgir regelverket som cbc:RegulatoryDomain (f.eks. 32014L0024);
+  // nasjonale og «annet rettsgrunnlag» som ProcurementLegislationDocumentReference (Lovdata-ELI).
+  const regulatoryDomain = txt(one(root, 'cbc:RegulatoryDomain'));
+  const legalBasis = [
+    ...(regulatoryDomain ? [{ id: regulatoryDomain, description: null as string | null }] : []),
+    ...all(root, 'cac:TenderingTerms/cac:ProcurementLegislationDocumentReference')
+      .filter((d) => !['CrossBorderLaw'].includes(txt(one(d, 'cbc:ID')) ?? ''))
+      .map((d) => ({ id: txt(one(d, 'cbc:ID')), description: localized(d, 'cbc:DocumentDescription').text })),
+  ];
   const internalId = all(project, 'cbc:ID').find((e) => attr(e, 'schemeName') === 'InternalID') ?? one(project, 'cbc:ID');
   return {
     rootType: root.localName ?? '',

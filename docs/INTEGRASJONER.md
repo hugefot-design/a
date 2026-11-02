@@ -5,7 +5,7 @@ Sist oppdatert 2. november 2026. **VERIFISERT** betyr kjørt mot den ekte tjenes
 | Integrasjon | Status | Trenger fra deg | Kostnad |
 | --- | --- | --- | --- |
 | TED (EU) | **VERIFISERT** mot live API 1.11.2026: 1 194 norske kunngjøringer hentet, ekte import 1 110 nye + 82 slått sammen, ny kjøring ga 0 duplikater og 0 falske endringer | Ingenting (åpent API) | Gratis |
-| Doffin | **IKKE VERIFISERT** med nøkkel – søk og nedlasting er bygget etter API-portalen. Nedlastingsadressen er kontrollert live 2.11.2026 (svarer 401 uten nøkkel, og klienten håndterer det) | Abonnementsnøkkel fra Doffins API-portal | Gratis |
+| Doffin | **VERIFISERT live 2.11.2026** – søk og nedlasting med ekte nøkkel (9 av 9 nedlastede kunngjøringer lest riktig; nasjonale skjema ikke sett live ennå) | Abonnementsnøkkel fra Doffins API-portal ([dof-notices-prod-api.developer.azure-api.net](https://dof-notices-prod-api.developer.azure-api.net/), produktet «Public Api») | Gratis |
 | Stripe | **IKKE VERIFISERT** – Checkout, kundeportal, webhooks, refusjon/tvist og avstemming testet med simulert Stripe-API og signerte testhendelser | Konto i testmodus, 3 priser, webhook-hemmelighet | 2,4 % + 2 kr per kortbetaling + 0,7 % Billing |
 | E-post (Resend) | **IKKE VERIFISERT** – kø, nye forsøk, idempotensnøkkel og avmelding testet lokalt | Konto, API-nøkkel, verifisert avsenderdomene | Gratis til 3 000/mnd (100/dag), deretter 20 USD |
 | AI (Anthropic) | **IKKE VERIFISERT** – offisiell SDK, strukturerte svar og kildekontroll testet med simulert leverandør | API-nøkkel, valgt modell, utgiftsgrense | Etter forbruk (se under) |
@@ -24,7 +24,7 @@ Hemmeligheter (API-nøkler, webhook-hemmeligheter, databasepassord) legges **bar
 
 ## Doffin
 
-1. Registrer deg i Doffins API-portal (lenke fra doffin.no / DFØ) og abonner på det offentlige API-et.
+1. Registrer deg i Doffins API-portal (https://dof-notices-prod-api.developer.azure-api.net/) og abonner på produktet **Public Api** (ikke «Doffin Notices API», som er for publisering). Nøkkelen står under Profile → Primary key.
 2. Sett `DOFFIN_API_KEY`. Sjekk at `DOFFIN_API_BASE_URL` stemmer med portalen (standard: `https://api.doffin.no/public/v2`).
 3. Kjør `npm run ingest -- --source doffin --dry-run --limit 20` og sammenlign med de samme kunngjøringene på doffin.no.
 4. Slik er hentingen bygget (etter API-portalens dokumentasjon): `GET /public/v2/search` med `Ocp-Apim-Subscription-Key`, sider fra 1, høyst 10 sider à 100 treff per søk – derfor hentes én dag om gangen, delt på kunngjøringstyper. Tempoet holdes under grensen på 30 søk per minutt, og `Retry-After` respekteres. Bekreft ved første kjøring: typeverdiene for livssyklus, datoformatet på frister og at antall treff per dag stemmer med doffin.no. Alt ligger i `src/connectors/doffin.ts`.
