@@ -20,6 +20,8 @@ begin
   if not exists (select 1 from pg_roles where rolname = 'anbudradar_owner') then
     create role anbudradar_owner login password '${OWNER_PASSWORD}';
   end if;
+  -- Som postgres-rollen i Supabase: kan opprette app-rollen selv (se scripts/migrate.ts).
+  alter role anbudradar_owner createrole;
   if not exists (select 1 from pg_roles where rolname = 'anbudradar_app') then
     create role anbudradar_app login password '${APP_PASSWORD}' nobypassrls;
   end if;

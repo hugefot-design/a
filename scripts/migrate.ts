@@ -7,7 +7,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { env, isProd } from '../src/lib/env';
-import { closeDb, systemSql } from '../src/lib/db';
+import { appSql, closeDb, systemSql } from '../src/lib/db';
+import { APP_ROLE, credentialsOf } from '../src/lib/db-url';
 
 const MIGRATIONS_DIR = join(process.cwd(), 'db', 'migrations');
 
@@ -25,6 +26,8 @@ export async function migrate(options: { reset?: boolean; quiet?: boolean } = {}
     log(`Nullstiller databasen ${db} …`);
     await sql.unsafe('drop schema if exists public cascade; create schema public;');
   }
+
+  await ensureAppRole(sql, { log });
 
   await sql.unsafe(`
     create table if not exists schema_migrations (
@@ -57,6 +60,54 @@ export async function migrate(options: { reset?: boolean; quiet?: boolean } = {}
   return ran;
 }
 
+const quoteLiteral = (v: string) => `'${v.replace(/'/g, "''")}'`;
+const quoteIdent = (v: string) => `"${v.replace(/"/g, '""')}"`;
+
+/**
+ * Oppretter app-rollen (anbudradar_app) med passordet fra DATABASE_URL hvis den mangler, så man
+ * slipper et eget SQL-steg i Supabase. Når passordet styres av DATABASE_APP_PASSWORD, holdes rollens
+ * passord likt konfigurasjonen. Gjør ingenting hvis DATABASE_URL bruker en annen rolle.
+ * Passordet skrives aldri ut.
+ */
+export async function ensureAppRole(
+  sql: ReturnType<typeof systemSql>,
+  opts: { log?: (msg: string) => void; role?: string; password?: string; managePassword?: boolean } = {},
+): Promise<'created' | 'updated' | 'unchanged' | 'skipped'> {
+  const creds = opts.role && opts.password ? { role: opts.role, password: opts.password } : credentialsOf(env.DATABASE_URL);
+  const role = creds?.role;
+  if (!creds || !role || (!opts.role && role !== APP_ROLE)) return 'skipped';
+  const exists = ((await sql`select 1 from pg_roles where rolname = ${role}`) as unknown as unknown[]).length > 0;
+  if (!exists) {
+    await sql.unsafe(`create role ${quoteIdent(role)} login password ${quoteLiteral(creds.password)} nobypassrls`);
+    const [{ db }] = (await sql`select current_database() as db`) as unknown as [{ db: string }];
+    await sql.unsafe(`grant connect on database ${quoteIdent(db)} to ${quoteIdent(role)}`);
+    opts.log?.(`Opprettet databaserollen ${role}.`);
+    return 'created';
+  }
+  if (opts.managePassword ?? Boolean(env.DATABASE_APP_PASSWORD)) {
+    try {
+      await sql.unsafe(`alter role ${quoteIdent(role)} with login password ${quoteLiteral(creds.password)}`);
+      return 'updated';
+    } catch {
+      // Rollen er laget av en annen bruker (f.eks. superbruker). Innloggingstesten etter migreringen
+      // sier fra hvis passordet faktisk ikke stemmer.
+      opts.log?.(`Kunne ikke oppdatere passordet for ${role} (mangler rettighet) – beholder det som er.`);
+    }
+  }
+  return 'unchanged';
+}
+
+/** Sjekker at appen faktisk kan logge inn med DATABASE_URL (gir tydelig feil i byggeloggen). */
+async function verifyAppLogin(): Promise<void> {
+  try {
+    await appSql()`select 1`;
+    console.log('App-brukeren kan logge inn i databasen.');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Appen kan ikke logge inn med DATABASE_URL: ${msg}`);
+  }
+}
+
 /**
  * Kjøres etter hver migrering (idempotent): radnivåsikkerhet på ALLE tabeller, også tabeller som
  * legges til senere, og ingen tilgang for Supabase sine API-roller (anon/authenticated). Da kan
@@ -87,6 +138,7 @@ async function enforceBaselineSecurity(sql: ReturnType<typeof systemSql>): Promi
 const isMain = process.argv[1]?.endsWith('migrate.ts') || process.argv[1]?.endsWith('migrate.js');
 if (isMain) {
   migrate({ reset: process.argv.includes('--reset') })
+    .then(() => verifyAppLogin())
     .then(() => closeDb())
     .catch(async (err) => {
       console.error(`Migrering feilet: ${err instanceof Error ? err.message : String(err)}`);

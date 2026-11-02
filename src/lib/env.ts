@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { z } from 'zod';
+import { deriveAppDatabaseUrl, isPostgresUrl } from './db-url';
 
 // Norske standardmeldinger for validering (zod 4). Skjemaene våre har egne meldinger der brukere
 // ser dem; dette gjelder resten (f.eks. manipulerte skjemaer og konfigurasjon).
@@ -45,8 +46,10 @@ const schema = z.object({
   APP_URL: z.string().url().default('http://localhost:3000'),
   TRUST_PROXY: bool(false),
 
-  DATABASE_URL: required('DATABASE_URL').min(1, 'DATABASE_URL er tom'),
-  DATABASE_ADMIN_URL: required('DATABASE_ADMIN_URL').min(1, 'DATABASE_ADMIN_URL er tom'),
+  DATABASE_URL: required('DATABASE_URL').refine(isPostgresUrl, 'DATABASE_URL er ikke en databaseadresse (postgresql://…). Står plassholderen fortsatt der?'),
+  DATABASE_ADMIN_URL: required('DATABASE_ADMIN_URL').refine(isPostgresUrl, 'DATABASE_ADMIN_URL er ikke en databaseadresse (postgresql://…). Står plassholderen fortsatt der?'),
+  /** Passord for app-rollen. Med dette kan DATABASE_URL utelates – den lages fra DATABASE_ADMIN_URL. */
+  DATABASE_APP_PASSWORD: optionalString,
   DATABASE_SSL: z.enum(['disable', 'require']).default('disable'),
   DATABASE_POOL_SIZE: z.coerce.number().int().positive().default(10),
 
@@ -130,7 +133,16 @@ function envDiagnosis(): string {
   return lines.join('\n');
 }
 
+/** DATABASE_URL lages fra DATABASE_ADMIN_URL + DATABASE_APP_PASSWORD når den ikke er satt selv. */
+function applyDerivedDatabaseUrl(): void {
+  const e = process.env;
+  if (e.DATABASE_URL?.trim() || !e.DATABASE_ADMIN_URL?.trim() || !e.DATABASE_APP_PASSWORD?.trim()) return;
+  const derived = deriveAppDatabaseUrl(e.DATABASE_ADMIN_URL, e.DATABASE_APP_PASSWORD.trim());
+  if (derived) e.DATABASE_URL = derived;
+}
+
 function parseEnv(): Env {
+  applyDerivedDatabaseUrl();
   const result = schema.safeParse(process.env);
   if (!result.success) {
     const issues = result.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');

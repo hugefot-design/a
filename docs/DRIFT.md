@@ -24,14 +24,16 @@ Render Free + Supabase Free, 0 kr per måned. Én webtjeneste, ingen egen arbeid
 | Start Command | `npm start` |
 | Health Check Path | `/api/health` |
 
-Miljøvariabler: `NODE_ENV=production`, `NODE_VERSION=22.12.0`, `APP_URL=https://<navn>.onrender.com`, `TRUST_PROXY=true`, `DATABASE_URL`, `DATABASE_ADMIN_URL`, `DATABASE_SSL=require`, `SESSION_SECRET` og `CRON_SECRET` (bruk «Generate»), og **`RUN_WORKER_IN_WEB=true`** så nettsiden selv henter anbud, beregner treff og sender varsler.
+Miljøvariabler (legges direkte på tjenesten, eller i en miljøgruppe som **kobles** til tjenesten): `NODE_ENV=production`, `APP_URL=https://<navn>.onrender.com` (nøyaktig adressen Render viser), `TRUST_PROXY=true`, `DATABASE_SSL=require`, `DATABASE_ADMIN_URL` (Supabase → Connect → **Session pooler**, med databasepassordet), `DATABASE_APP_PASSWORD`, `SESSION_SECRET` og `CRON_SECRET` (de tre siste med «Generate»), og **`RUN_WORKER_IN_WEB=true`** så nettsiden selv henter anbud, beregner treff og sender varsler.
+
+`DATABASE_URL` trengs ikke i dette oppsettet: den lages fra `DATABASE_ADMIN_URL` og `DATABASE_APP_PASSWORD`, og migreringen oppretter rollen `anbudradar_app` selv første gang (SQL-steget i avsnitt 1 kan hoppes over). Byggeloggen bekrefter med «App-brukeren kan logge inn i databasen». Node-versjonen er låst til 22 i `package.json`.
 
 Begrensninger: tjenesten sover etter en stund uten besøk (første besøk tar 30–60 s, og jobbene står stille mens den sover), 0,1 CPU, Supabase Free pauser etter en uke uten bruk og har ingen sikkerhetskopi. Ingen e-post uten Resend (`EMAIL_PROVIDER=log` skriver dem til loggen). Bytt til oppsettet under før første betalende kunde, og fjern da `RUN_WORKER_IN_WEB`.
 
 ## 1. Database (Supabase)
 
 1. Opprett prosjekt i EU-region. Noter databasepassordet.
-2. Åpne **SQL Editor** og kjør `db/supabase-app-role.sql` – bytt passordet i filen med et langt tilfeldig passord først.
+2. Åpne **SQL Editor** og kjør `db/supabase-app-role.sql` – bytt passordet i filen med et langt tilfeldig passord først. (Alternativ: sett `DATABASE_APP_PASSWORD` i stedet for `DATABASE_URL`, så oppretter migreringen rollen selv.)
 3. Koblingsstrenger (Project Settings → Database):
    - `DATABASE_ADMIN_URL` = rollen `postgres` (direkte tilkobling eller *Session pooler*, port 5432).
    - `DATABASE_URL` = samme vert og port, men brukeren `anbudradar_app` og passordet fra steg 2.
