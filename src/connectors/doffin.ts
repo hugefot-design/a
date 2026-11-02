@@ -16,8 +16,20 @@
  * Dette er IKKE verifisert av oss mot live API (krever nøkkel). Kjør
  *   npm run ingest -- --source doffin --dry-run --limit 20
  * med nøkkel før første ekte henting (se docs/INTEGRASJONER.md).
+ *
+ * Nedlasting av én kunngjøring (eForms-XML) per Doffin-ID:
+ *   GET {DOFFIN_API_BASE_URL}/download/{doffinId}     header: Ocp-Apim-Subscription-Key
+ * API-portalen (lest 2.11.2026): maks 10 kall per minutt per abonnement, HTTP 429 med Retry-After,
+ * 200 = «The downloaded notice» (application/octet-stream), 404 = ikke funnet. Formatet på svaret er
+ * IKKE verifisert mot live API – vi gjenkjenner XML, ZIP med XML og JSON og sier fra om noe annet.
+ *   npm run ingest -- --source doffin --id 2026-123456 --dry-run
  */
+import { createHash } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import JSZip from 'jszip';
 import { env } from '@/lib/env';
+import { dbSlots, type SlotProvider } from '@/lib/api-slots';
 import {
   cleanCpv,
   cleanNutsCodes,
@@ -30,7 +42,8 @@ import {
   type NoticeAward,
   type NoticeLot,
 } from '@/domain/tenders/normalize';
-import { ConnectorError, fetchWithRetry, sleep, type FetchWindow, type SourceConnector } from './types';
+import { backoffMs, ConnectorError, fetchWithRetry, retryAfterMs, sleep, type FetchWindow, type SourceConnector } from './types';
+import { EformsError, eformsToNotice, parseEformsXml } from './eforms';
 
 interface DoffinOrg {
   id?: string;
@@ -326,6 +339,247 @@ export async function fetchDoffin(
     }
   }
   return out.slice(0, limit);
+}
+
+// ---------------------------------------------------------------------------
+// Nedlasting av enkeltkunngjøringer (eForms-XML) via Doffin-ID
+// ---------------------------------------------------------------------------
+export const DOFFIN_DOWNLOAD_PER_MINUTE = 10;
+/** 6,5 s mellom kall gir høyst 10 kall i ethvert 60-sekundersvindu, med margin for klokkeavvik. */
+export const DOFFIN_DOWNLOAD_INTERVAL_MS = 6_500;
+/** Felles luke i databasen: gjelder alle prosesser som bruker samme abonnement. */
+export const DOFFIN_DOWNLOAD_SLOT = 'doffin:download';
+export const DOFFIN_MAX_DOWNLOAD_BYTES = 15 * 1024 * 1024;
+/** Doffin-ID har formatet ÅÅÅÅ-NNNNNN (DFØ, eForms SDK NOR: notice-identifiers). */
+export const DOFFIN_ID_RE = /^\d{4}-\d{1,12}$/;
+/** Ventetid når 429 mangler Retry-After: grensen gjelder per minutt. */
+export const DOFFIN_DEFAULT_RETRY_AFTER_MS = 60_000;
+/** Lengre Retry-After enn dette venter vi ikke på i samme kjøring – kunngjøringen prøves igjen senere. */
+export const DOFFIN_MAX_INLINE_WAIT_MS = 5 * 60_000;
+/** Høyst så mange ID-er per kjøring (ca. 20 minutter ved 10 per minutt). */
+export const DOFFIN_MAX_IDS_PER_RUN = 200;
+
+interface DownloadDeps {
+  slots: SlotProvider;
+  intervalMs: number;
+  sleep: (ms: number) => Promise<void>;
+}
+const defaultDownloadDeps: DownloadDeps = { slots: dbSlots, intervalMs: DOFFIN_DOWNLOAD_INTERVAL_MS, sleep };
+let downloadDeps: DownloadDeps = defaultDownloadDeps;
+/** Kun for tester: bytt tempo-lager, intervall og ventefunksjon (null = standard). */
+export function setDoffinDownloadDeps(next: Partial<DownloadDeps> | null): void {
+  downloadDeps = next ? { ...defaultDownloadDeps, ...next } : defaultDownloadDeps;
+}
+
+export type DownloadFormat = 'eforms-xml' | 'xml' | 'zip' | 'json' | 'unknown';
+
+export type DoffinDownload =
+  | {
+      ok: true;
+      doffinId: string;
+      status: 200;
+      contentType: string | null;
+      format: DownloadFormat;
+      body: Buffer;
+      bytes: number;
+      sha256: string;
+      attempts: number;
+    }
+  | {
+      ok: false;
+      doffinId: string;
+      reason: 'invalid_id' | 'not_found' | 'rate_limited' | 'unauthorized' | 'too_large' | 'error';
+      status: number | null;
+      message: string;
+      retryAfterMs?: number;
+      attempts: number;
+    };
+
+/** Gjenkjenner formatet fra innholdet (Content-Type fra Doffin er bare «octet-stream»). */
+export function sniffFormat(body: Buffer, contentType: string | null): DownloadFormat {
+  if (body.length >= 4 && body[0] === 0x50 && body[1] === 0x4b && body[2] === 0x03 && body[3] === 0x04) return 'zip';
+  const head = body.subarray(0, 16_384).toString('utf8').replace(/^\uFEFF/, '').trimStart();
+  if (head.startsWith('<')) {
+    return /<(\w+:)?(ContractNotice|ContractAwardNotice|PriorInformationNotice)\b/.test(head) ? 'eforms-xml' : 'xml';
+  }
+  if (head.startsWith('{') || head.startsWith('[') || (contentType ?? '').toLowerCase().includes('json')) return 'json';
+  return 'unknown';
+}
+
+/**
+ * Laster ned én kunngjøring. Holder seg under 10 kall per minutt (felles luke for alle prosesser),
+ * venter så lenge Retry-After sier ved 429, og gir tydelig svar ved 404 og ugyldig nøkkel.
+ * Nøkkelen leses bare fra miljøvariabelen DOFFIN_API_KEY og logges aldri.
+ */
+export async function downloadDoffinNotice(doffinId: string, opts: { maxAttempts?: number } = {}): Promise<DoffinDownload> {
+  const id = doffinId.trim();
+  if (!DOFFIN_ID_RE.test(id)) {
+    return { ok: false, doffinId: id, reason: 'invalid_id', status: null, message: `Ugyldig Doffin-ID «${id.slice(0, 40)}» (forventet ÅÅÅÅ-NNNNNN).`, attempts: 0 };
+  }
+  if (!env.DOFFIN_API_KEY) throw new ConnectorError('DOFFIN_API_KEY er ikke satt.');
+  const url = `${env.DOFFIN_API_BASE_URL.replace(/\/$/, '')}/download/${encodeURIComponent(id)}`;
+  const maxAttempts = Math.max(1, opts.maxAttempts ?? 4);
+  let lastProblem = '';
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    // Vent på vår luke. Etter en 429 er luken skjøvet til Retry-After, så ventetiden kommer her.
+    const wait = await downloadDeps.slots.reserve(DOFFIN_DOWNLOAD_SLOT, downloadDeps.intervalMs);
+    if (wait > 0) await downloadDeps.sleep(wait);
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        headers: {
+          'Ocp-Apim-Subscription-Key': env.DOFFIN_API_KEY,
+          Accept: 'application/xml, application/octet-stream;q=0.9, */*;q=0.5',
+          'User-Agent': `AnbudRadar/1.0 (+${env.APP_URL})`,
+        },
+        signal: AbortSignal.timeout(60_000),
+      });
+    } catch (err) {
+      const cause = err instanceof Error ? ((err.cause as { code?: string } | undefined)?.code ?? err.message) : String(err);
+      lastProblem = `nettverksfeil (${cause})`;
+      if (attempt < maxAttempts) await downloadDeps.sleep(backoffMs(attempt - 1, 2000));
+      continue;
+    }
+    if (res.status === 200) {
+      const declared = Number(res.headers.get('content-length') ?? 0);
+      if (declared > DOFFIN_MAX_DOWNLOAD_BYTES) {
+        await res.body?.cancel().catch(() => {});
+        return { ok: false, doffinId: id, reason: 'too_large', status: 200, message: `Kunngjøringen er for stor (${declared} byte).`, attempts: attempt };
+      }
+      const body = Buffer.from(await res.arrayBuffer());
+      if (body.length > DOFFIN_MAX_DOWNLOAD_BYTES) {
+        return { ok: false, doffinId: id, reason: 'too_large', status: 200, message: `Kunngjøringen er for stor (${body.length} byte).`, attempts: attempt };
+      }
+      const contentType = res.headers.get('content-type');
+      return {
+        ok: true,
+        doffinId: id,
+        status: 200,
+        contentType,
+        format: sniffFormat(body, contentType),
+        body,
+        bytes: body.length,
+        sha256: createHash('sha256').update(body).digest('hex'),
+        attempts: attempt,
+      };
+    }
+    const detail = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300);
+    if (res.status === 404) {
+      return { ok: false, doffinId: id, reason: 'not_found', status: 404, message: `Fant ikke kunngjøringen ${id} i Doffin (404).`, attempts: attempt };
+    }
+    if (res.status === 401 || res.status === 403) {
+      return {
+        ok: false,
+        doffinId: id,
+        reason: 'unauthorized',
+        status: res.status,
+        message: `Doffin avviste nøkkelen (${res.status}). Sjekk DOFFIN_API_KEY og at abonnementet gjelder Public API.`,
+        attempts: attempt,
+      };
+    }
+    if (res.status === 429) {
+      const retryAfter = retryAfterMs(res.headers.get('retry-after')) ?? DOFFIN_DEFAULT_RETRY_AFTER_MS;
+      // Skyv luken for alle prosesser, ikke bare denne.
+      await downloadDeps.slots.defer(DOFFIN_DOWNLOAD_SLOT, retryAfter);
+      if (attempt < maxAttempts && retryAfter <= DOFFIN_MAX_INLINE_WAIT_MS) continue;
+      return {
+        ok: false,
+        doffinId: id,
+        reason: 'rate_limited',
+        status: 429,
+        retryAfterMs: retryAfter,
+        message: `Doffin ber oss vente ${Math.ceil(retryAfter / 1000)} s før neste nedlasting (429).`,
+        attempts: attempt,
+      };
+    }
+    if (res.status === 408 || res.status >= 500) {
+      lastProblem = `HTTP ${res.status}`;
+      if (attempt < maxAttempts) await downloadDeps.sleep(backoffMs(attempt - 1, 2000));
+      continue;
+    }
+    return { ok: false, doffinId: id, reason: 'error', status: res.status, message: `Doffin svarte ${res.status}: ${detail}`, attempts: attempt };
+  }
+  return { ok: false, doffinId: id, reason: 'error', status: null, message: `Fikk ikke lastet ned ${id} etter ${maxAttempts} forsøk (${lastProblem}).`, attempts: maxAttempts };
+}
+
+/** Pakker ut XML hvis Doffin svarer med en ZIP-fil (formatet er ikke dokumentert). */
+async function xmlFromZip(body: Buffer): Promise<Buffer | null> {
+  const zip = await JSZip.loadAsync(body);
+  const entry = Object.values(zip.files).find((f) => !f.dir && /\.xml$/i.test(f.name));
+  if (!entry) return null;
+  const declared = (entry as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize ?? 0;
+  if (declared > DOFFIN_MAX_DOWNLOAD_BYTES) return null;
+  const xml = await entry.async('nodebuffer');
+  return xml.length > DOFFIN_MAX_DOWNLOAD_BYTES ? null : xml;
+}
+
+export interface DoffinByIdOutcome {
+  id: string;
+  outcome: 'ok' | 'invalid_id' | 'not_found' | 'rate_limited' | 'unauthorized' | 'too_large' | 'error' | 'unsupported_format' | 'parse_error' | 'not_attempted';
+  message?: string;
+  status?: number | null;
+  format?: DownloadFormat;
+  bytes?: number;
+  sha256?: string;
+  attempts?: number;
+  variant?: string;
+  noticeSubtype?: string | null;
+  savedTo?: string;
+}
+
+/**
+ * Henter kunngjøringer etter Doffin-ID og oversetter eForms-XML til felles format.
+ * Stopper kjøringen ved ugyldig nøkkel og ved 429 som ikke kan ventes ut, og sier hvilke ID-er som
+ * ikke ble forsøkt. `saveRawDir` lagrer originalfilene lokalt (for kontroll ved første live-test).
+ */
+export async function fetchDoffinByIds(
+  ids: string[],
+  onError: (sourceNoticeId: string | null, error: string, raw: unknown) => Promise<void>,
+  opts: { saveRawDir?: string } = {},
+): Promise<{ notices: NormalizedNotice[]; outcomes: DoffinByIdOutcome[] }> {
+  if (!env.DOFFIN_API_KEY) throw new ConnectorError('DOFFIN_API_KEY er ikke satt.');
+  const unique = [...new Set(ids.map((i) => i.trim()).filter(Boolean))].slice(0, DOFFIN_MAX_IDS_PER_RUN);
+  const notices: NormalizedNotice[] = [];
+  const outcomes: DoffinByIdOutcome[] = [];
+  for (let i = 0; i < unique.length; i++) {
+    const id = unique[i]!;
+    const dl = await downloadDoffinNotice(id);
+    if (!dl.ok) {
+      outcomes.push({ id, outcome: dl.reason, message: dl.message, status: dl.status, attempts: dl.attempts });
+      await onError(id, dl.message, { status: dl.status, reason: dl.reason });
+      if (dl.reason === 'unauthorized' || dl.reason === 'rate_limited') {
+        for (const rest of unique.slice(i + 1)) outcomes.push({ id: rest, outcome: 'not_attempted', message: 'Ikke forsøkt fordi kjøringen ble stoppet.' });
+        if (dl.reason === 'unauthorized') throw new ConnectorError(dl.message, dl.status ?? undefined);
+        break;
+      }
+      continue;
+    }
+    const base: DoffinByIdOutcome = { id, outcome: 'ok', status: 200, format: dl.format, bytes: dl.bytes, sha256: dl.sha256, attempts: dl.attempts };
+    if (opts.saveRawDir) {
+      await mkdir(opts.saveRawDir, { recursive: true });
+      const ext = dl.format === 'zip' ? 'zip' : dl.format === 'json' ? 'json' : dl.format === 'unknown' ? 'bin' : 'xml';
+      base.savedTo = join(opts.saveRawDir, `${id}.${ext}`);
+      await writeFile(base.savedTo, dl.body);
+    }
+    let xml: Buffer | null = dl.format === 'eforms-xml' || dl.format === 'xml' ? dl.body : null;
+    if (dl.format === 'zip') xml = await xmlFromZip(dl.body).catch(() => null);
+    if (!xml) {
+      const message = `Uventet format fra Doffin (${dl.format}, Content-Type ${dl.contentType ?? 'mangler'}). Lagre filen med --save-raw og send den til utvikler.`;
+      outcomes.push({ ...base, outcome: 'unsupported_format', message });
+      await onError(id, message, { format: dl.format, contentType: dl.contentType, bytes: dl.bytes });
+      continue;
+    }
+    try {
+      const parsed = parseEformsXml(xml.toString('utf8'));
+      notices.push(eformsToNotice(parsed, { sourceNoticeId: id, sourceUrl: `https://doffin.no/notices/${encodeURIComponent(id)}`, sha256: dl.sha256, bytes: dl.bytes }));
+      outcomes.push({ ...base, variant: parsed.variant, noticeSubtype: parsed.noticeSubtype });
+    } catch (err) {
+      const message = err instanceof EformsError ? err.message : `Kunne ikke lese kunngjøringen: ${err instanceof Error ? err.message : String(err)}`;
+      outcomes.push({ ...base, outcome: 'parse_error', message });
+      await onError(id, message, { format: dl.format, bytes: dl.bytes, sha256: dl.sha256 });
+    }
+  }
+  return { notices, outcomes };
 }
 
 export const doffinConnector: SourceConnector = {

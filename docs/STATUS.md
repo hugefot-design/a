@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 2. november 2026.
+Sist oppdatert 2. november 2026 (Doffin-nedlasting lagt til samme dag).
 
 ## Testresultater
 
@@ -9,13 +9,21 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 85 av 85 bestått |
-| Integrasjonstester (ekte database, ekte HTTP) | 57 av 57 bestått |
+| Enhetstester | 98 av 98 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) |
+| Integrasjonstester (ekte database, ekte HTTP) | 64 av 64 bestått |
 | Ende-til-ende i nettleser | 2 av 2 bestått |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 
-**Mutasjonssjekker** (testene skal feile når beskyttelsen fjernes – det gjorde de): dry-run som skriver til databasen, konkurranserettslig sperre for partnerforespørsler, tallkontroll av AI-svar.
+**Mutasjonssjekker** (testene skal feile når beskyttelsen fjernes – det gjorde de):
+- dry-run som skriver til databasen,
+- konkurranserettslig sperre for partnerforespørsler,
+- tallkontroll av AI-svar,
+- Doffin-nedlasting som ignorerer `Retry-After`,
+- søketreff som overskriver XML-data,
+- falske varsler ved XML-berikelse.
+
+**Kjent sårbarhet:** `npm audit` melder en høy sårbarhet i `zod` 3.x (minnebruk ved validering av svært store samlinger, GHSA-mrhx-c7xc-m3w5). Retting krever overgang til zod 4, som er en større endring. Skjemaene våre har lengdegrenser, og forespørsler har størrelsesgrense, men oppgraderingen bør planlegges.
 
 Det som dekkes:
 
@@ -34,7 +42,7 @@ Det som dekkes:
 | Tjeneste | Status | Bevis / hva som mangler |
 | --- | --- | --- |
 | TED | **VERIFISERT** 1.11.2026 | 1 194 norske kunngjøringer hentet; frist på 98,4 % av konkurransene og dokumentlenke på 82,9 %; ekte import ga 1 110 nye og 82 sammenslåtte; ny kjøring ga 0 duplikater og 0 falske endringer. Seks ekte kunngjøringer ligger som testdata i `tests/fixtures/`. |
-| Doffin | **IKKE VERIFISERT** | Krever abonnementsnøkkel. Bygget etter API-portalens dokumentasjon. |
+| Doffin | **IKKE VERIFISERT** med nøkkel | Søk og nedlasting (`/v2/download/{doffinId}`) er bygget etter API-portalen. Nedlastingsadressen er kontrollert live 2.11.2026: den svarer 401 uten nøkkel, og klienten gir riktig melding. Formatet på et vellykket svar er ikke sett ennå. eForms-parseren er testet mot DFØs offisielle eksempler (N4/N16/N29, E2/E3/E4, EU). |
 | Stripe | **IKKE VERIFISERT** | Testet med simulert Stripe-API og signerte hendelser. Må kjøres i testmodus med ekte konto. |
 | Resend | **IKKE VERIFISERT** | E-post logges lokalt. Må testes med verifisert domene og testmottakere. |
 | AI (Anthropic) | **IKKE VERIFISERT** | All AI i testene er simulert og merket «Testmodus». Kvaliteten på ekte svar (særlig kontraktsvilkår på norsk) er ikke målt. |

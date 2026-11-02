@@ -51,7 +51,18 @@ export async function startImportRun(
   return { id: rows[0]!.id, source };
 }
 
-export async function finishImportRun(run: ImportRun, stats: IngestStats, fatalError?: string, live = false): Promise<void> {
+/**
+ * Avslutter en importkjøring. `updateSource: false` brukes for kjøringer som ikke sveiper et
+ * tidsvindu (f.eks. henting av enkeltkunngjøringer per Doffin-ID): de skal ikke flytte
+ * `last_success_at`, som styrer hvor langt tilbake neste planlagte henting går.
+ */
+export async function finishImportRun(
+  run: ImportRun,
+  stats: IngestStats,
+  fatalError?: string,
+  live = false,
+  opts: { updateSource?: boolean } = {},
+): Promise<void> {
   const status = fatalError ? 'failed' : stats.errors > 0 ? 'partial' : 'success';
   const sql = systemSql();
   await sql`
@@ -61,6 +72,7 @@ export async function finishImportRun(run: ImportRun, stats: IngestStats, fatalE
       error_summary = ${fatalError ?? null}
     where id = ${run.id}
   `;
+  if (opts.updateSource === false) return;
   if (fatalError) {
     await sql`update data_sources set last_error_at = now(), last_error = ${fatalError.slice(0, 1000)} where id = ${run.source}`;
   } else {
@@ -273,6 +285,10 @@ export function detectChanges(existing: ExistingTender, n: NormalizedNotice, isN
   return events;
 }
 
+function rawFormatOf(raw: unknown): string | null {
+  return raw && typeof raw === 'object' && typeof (raw as { format?: unknown }).format === 'string' ? (raw as { format: string }).format : null;
+}
+
 function dateOrNull(iso: string | null | undefined): Date | null {
   return iso ? new Date(iso) : null;
 }
@@ -304,8 +320,19 @@ async function processNotice(n: NormalizedNotice, stats: IngestStats, runStarted
   await sql.begin(async (rawTx) => {
     const tx = rawTx as unknown as Tx;
     const existingSource = (await tx`
-      select id, tender_id, content_hash, normalize_version from tender_sources where source = ${n.source} and source_notice_id = ${n.sourceNoticeId}
-    `) as unknown as { id: string; tenderId: string; contentHash: string; normalizeVersion: number }[];
+      select s.id, s.tender_id, s.content_hash, s.normalize_version, s.raw->>'format' as raw_format,
+             t.lifecycle as tender_lifecycle, t.first_seen_at as tender_first_seen_at
+      from tender_sources s join tenders t on t.id = s.tender_id
+      where s.source = ${n.source} and s.source_notice_id = ${n.sourceNoticeId}
+    `) as unknown as {
+      id: string;
+      tenderId: string;
+      contentHash: string;
+      normalizeVersion: number;
+      rawFormat: string | null;
+      tenderLifecycle: Lifecycle;
+      tenderFirstSeenAt: Date;
+    }[];
 
     if (existingSource[0] && existingSource[0].contentHash === hash) {
       await tx`update tender_sources set fetched_at = now(), removed_at = null where id = ${existingSource[0].id}`;
@@ -313,9 +340,38 @@ async function processNotice(n: NormalizedNotice, stats: IngestStats, runStarted
       stats.unchanged++;
       return;
     }
-    // Samme kunngjøring på nytt, men oversatt med en nyere versjon av koden: rett dataene uten
-    // å lage endringsvarsler (det er ikke oppdragsgiver som har endret noe).
-    const isRemap = Boolean(existingSource[0] && existingSource[0].normalizeVersion !== NORMALIZE_VERSION);
+
+    // Doffin: en kunngjøring som er hentet som full eForms-XML, er mer komplett enn søketreffet for
+    // samme Doffin-ID. Søket får ikke overskrive den – bare melde at konkurransen senere er avlyst eller tildelt.
+    const incomingFormat = rawFormatOf(n.raw);
+    const existing0 = existingSource[0];
+    if (existing0 && existing0.rawFormat === 'eforms-xml' && incomingFormat !== 'eforms-xml') {
+      await tx`update tender_sources set fetched_at = now(), removed_at = null where id = ${existing0.id}`;
+      const next = laterLifecycle(existing0.tenderLifecycle, n.lifecycle);
+      if (next === existing0.tenderLifecycle || (next !== 'cancelled' && next !== 'awarded')) {
+        await tx`update tenders set last_checked_at = now() where id = ${existing0.tenderId}`;
+        stats.unchanged++;
+        return;
+      }
+      await tx`update tenders set lifecycle = ${next}, last_checked_at = now() where id = ${existing0.tenderId}`;
+      if (existing0.tenderFirstSeenAt < runStartedAt) {
+        const summary = next === 'cancelled' ? 'Konkurransen er avlyst ifølge kilden.' : 'Det er publisert en tildelingskunngjøring.';
+        await tx`
+          insert into tender_updates (tender_id, source, change_type, summary, old_value, new_value)
+          values (${existing0.tenderId}, ${n.source}, ${next}, ${summary}, ${toJson(existing0.tenderLifecycle)}::text::jsonb, ${toJson(next)}::text::jsonb)
+        `;
+      }
+      stats.updated++;
+      stats.tenderIds.push(existing0.tenderId);
+      return;
+    }
+
+    // Samme kunngjøring på nytt, men oversatt med en nyere versjon av koden – eller første gang et
+    // Doffin-søketreff berikes med full eForms-XML: rett dataene uten å lage endringsvarsler
+    // (det er ikke oppdragsgiver som har endret noe).
+    const isRemap = Boolean(
+      existing0 && (existing0.normalizeVersion !== NORMALIZE_VERSION || (incomingFormat === 'eforms-xml' && existing0.rawFormat !== 'eforms-xml')),
+    );
 
     let tenderId: string | null = existingSource[0]?.tenderId ?? null;
     let duplicate = false;

@@ -5,7 +5,7 @@ Sist oppdatert 2. november 2026. **VERIFISERT** betyr kjørt mot den ekte tjenes
 | Integrasjon | Status | Trenger fra deg | Kostnad |
 | --- | --- | --- | --- |
 | TED (EU) | **VERIFISERT** mot live API 1.11.2026: 1 194 norske kunngjøringer hentet, ekte import 1 110 nye + 82 slått sammen, ny kjøring ga 0 duplikater og 0 falske endringer | Ingenting (åpent API) | Gratis |
-| Doffin | **IKKE VERIFISERT** – bygget etter Doffins offentlige API v2 (dokumentasjon i API-portalen) | Abonnementsnøkkel fra Doffins API-portal | Gratis |
+| Doffin | **IKKE VERIFISERT** med nøkkel – søk og nedlasting er bygget etter API-portalen. Nedlastingsadressen er kontrollert live 2.11.2026 (svarer 401 uten nøkkel, og klienten håndterer det) | Abonnementsnøkkel fra Doffins API-portal | Gratis |
 | Stripe | **IKKE VERIFISERT** – Checkout, kundeportal, webhooks, refusjon/tvist og avstemming testet med simulert Stripe-API og signerte testhendelser | Konto i testmodus, 3 priser, webhook-hemmelighet | 2,4 % + 2 kr per kortbetaling + 0,7 % Billing |
 | E-post (Resend) | **IKKE VERIFISERT** – kø, nye forsøk, idempotensnøkkel og avmelding testet lokalt | Konto, API-nøkkel, verifisert avsenderdomene | Gratis til 3 000/mnd (100/dag), deretter 20 USD |
 | AI (Anthropic) | **IKKE VERIFISERT** – offisiell SDK, strukturerte svar og kildekontroll testet med simulert leverandør | API-nøkkel, valgt modell, utgiftsgrense | Etter forbruk (se under) |
@@ -32,6 +32,34 @@ Hemmeligheter (API-nøkler, webhook-hemmeligheter, databasepassord) legges **bar
 6. Vi bruker bare det offentlige API-et – ikke nettsidens interne API-er eller skraping.
 
 En kilde vises først som tilkoblet for brukerne etter en vellykket ekte henting (`data_sources.verified_live`). Inntil da omtaler nettsiden bare «offentlige kilder».
+
+### Nedlasting av én kunngjøring (eForms-XML)
+
+`GET {DOFFIN_API_BASE_URL}/download/{doffinId}` med headeren `Ocp-Apim-Subscription-Key`. Doffin-ID har formatet `ÅÅÅÅ-NNNNNN` (som i adressen `doffin.no/notices/…`). Svaret leses som eForms-XML med feltstiene fra DFØs eForms SDK NOR, og gir det søket mangler:
+- dokument- og innleveringslenke,
+- frister per delkontrakt og spørsmålsfrist,
+- varighet og rammeavtale,
+- tildelingskriterier med vekt, også det norske klima- og miljøkriteriet,
+- kvalifikasjonskrav, rettsgrunnlag og skjematype (N4/N16/N29, E2/E3/E4 eller EU),
+- eForms-ID-ene som kobler rettelser og tildelinger til riktig anbud,
+- vinnere med beløp og avtaledato.
+
+- **Grense:** maks 10 nedlastinger per minutt per abonnement. Appen holder 6,5 s mellom kall gjennom en felles luke i databasen (`api_slots`), så webapp, arbeider og kommandolinje til sammen aldri går over grensen.
+- **429:** venter så lenge `Retry-After` sier (sekunder eller dato; 60 s hvis headeren mangler) og skyver luken for alle prosesser. Over 5 minutter: kjøringen stopper, og resten prøves senere.
+- **404:** registreres som feil på den ene kunngjøringen, og resten fortsetter. **401/403:** kjøringen stopper med beskjed om å sjekke nøkkelen.
+- Svar som er ZIP med XML pakkes ut. Andre formater rapporteres og kan lagres med `--save-raw`.
+- Hentes en kunngjøring som allerede finnes fra søket, berikes den uten endringsvarsler. Senere søketreff overskriver ikke XML-dataene, men kan melde at konkurransen er avlyst eller tildelt.
+- En henting per ID flytter ikke `last_success_at` og markerer ikke kilden som verifisert.
+
+**Test med én ekte kunngjøring** (når nøkkelen er satt i miljøet – aldri i koden eller i chat):
+
+```bash
+npm run ingest -- --source doffin --id 2026-123456 --dry-run --save-raw ./storage/doffin-xml
+```
+
+Dry-run lagrer ingen kunngjøringsdata, men oppdaterer tempo-luken. Kontroller i utskriften at `downloads[0].outcome` er `ok`, at `format` er `eforms-xml`, og at frist, dokumentlenke og kriterier stemmer med kunngjøringen på doffin.no. Filen i `./storage/doffin-xml` (utelatt fra Git) viser hva Doffin faktisk leverte.
+
+Den vanlige, planlagte hentingen bruker fortsatt bare søket. Automatisk XML-berikelse av alle Doffin-treff er neste steg etter at én ekte kunngjøring er kontrollert.
 
 ## Stripe
 
