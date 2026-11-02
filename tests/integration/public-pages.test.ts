@@ -37,7 +37,13 @@ test('forsiden merker produktbildet og eksemplene som fiktive', async () => {
   const page = await get('/');
   assert.match(page.body, /Finn anbudene som passer/);
   assert.match(page.body, /Illustrasjon · fiktive data/);
-  assert.ok((page.body.match(/>Eksempel</g) ?? []).length >= 5, 'hvert eksempel i funksjonsoversikten er merket');
+  // Forsiden skal være lett å lese: korte tekster (detaljene står på undersidene).
+  const text = (page.body.match(/<main[^>]*>([\s\S]*)<\/main>/)?.[1] ?? '')
+    .replace(/<(script|style|svg)[^>]*>[\s\S]*?<\/\1>/g, ' ')
+    .replace(/<details[\s\S]*?<summary[^>]*>([\s\S]*?)<\/summary>[\s\S]*?<\/details>/g, ' $1 ')
+    .replace(/<[^>]+>/g, ' ');
+  const words = text.split(/\s+/).filter((w) => /\p{L}|\d/u.test(w)).length;
+  assert.ok(words < 450, `forsiden har ${words} synlige ord – hold den kort`);
   // Ingen påstander om kunder eller omtaler vi ikke kan dokumentere.
   assert.doesNotMatch(page.body, /fornøyde kunder|kundene våre sier|★/i);
 });

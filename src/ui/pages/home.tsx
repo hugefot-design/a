@@ -4,25 +4,22 @@
  * - «Rett fra databasen» er en ekte kunngjøring (eksempeldata merkes).
  * - Antall kunngjøringer og kilder vises bare når de er ekte og verifisert.
  */
-import type { ReactNode } from 'react';
 import type { IconType } from 'react-icons';
 import {
   LuArrowRight,
   LuBellRing,
   LuBuilding2,
   LuCalculator,
-  LuChartColumn,
   LuFileSearch,
-  LuHandshake,
-  LuListChecks,
   LuRadar,
+  LuShieldCheck,
 } from 'react-icons/lu';
 import { INDUSTRIES } from '@/domain/reference';
 import { useUi } from '../context';
-import { Badge, buttonVariants, cn, SampleBadge } from '../components';
+import { buttonVariants, cn, SampleBadge } from '../components';
 import { PublicLayout } from '../layouts';
 import { daysUntil, formatDateTime, formatInt, formatMoney, relativeTime, sourcesPhrase } from '../format';
-import { CheckList, Container, CtaBand, FaqList, faqItems, INDUSTRY_ICONS, PlanCards, RadarDecor, ScoreRing, SectionHeading } from '../marketing';
+import { CheckList, Container, CtaBand, FaqList, faqItems, IconChip, INDUSTRY_ICONS, PlanCards, RadarDecor, ScoreRing, SectionHeading } from '../marketing';
 
 export interface Specimen {
   id: string;
@@ -51,9 +48,6 @@ const DEMO_TENDERS = [
 ];
 
 
-function ExampleTag({ dark = false }: { dark?: boolean }) {
-  return <span className={cn('text-[11px] font-semibold uppercase tracking-wide', dark ? 'text-navy-300' : 'text-muted')}>Eksempel</span>;
-}
 
 // ---------------------------------------------------------------------------
 // Toppseksjon
@@ -168,9 +162,7 @@ function Hero({ specimen }: { specimen: Specimen | null }) {
           <h1 className="mt-6 max-w-xl font-serif text-[40px] font-semibold leading-[1.06] tracking-[-0.02em] text-white sm:text-[56px] lg:text-[60px]">
             Finn anbudene som passer – <span className="text-marker">før fristen går ut.</span>
           </h1>
-          <p className="mt-6 max-w-lg text-[18px] leading-relaxed text-navy-100">
-            AnbudRadar henter kunngjøringer fra {sourcesPhrase(liveSources)}, rangerer dem etter hva dere leverer, og forklarer kravene – med kilde og sidetall.
-          </p>
+          <p className="mt-6 max-w-lg text-[19px] leading-relaxed text-navy-100">Vi samler offentlige anbud på ett sted og viser dere de som passer best.</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a href={user ? '/app' : '/registrer'} className={buttonVariants({ variant: 'inverse', size: 'lg', className: 'group shadow-[0_10px_30px_-10px_rgba(255,255,255,0.4)]' })}>
               {user ? 'Til appen' : `Prøv gratis i ${trialDays} dager`}
@@ -191,7 +183,8 @@ function Hero({ specimen }: { specimen: Specimen | null }) {
         <div className="relative mx-auto w-full min-w-0 max-w-[560px] lg:max-w-none">
           <RadarDecor className="left-1/2 top-1/2 -z-10 w-[150%] -translate-x-1/2 -translate-y-1/2 sm:w-[125%]" />
           <ProductWindow />
-          <LiveSpecimen s={specimen} className="relative z-10 mx-3 -mt-8 sm:mx-0 sm:-mt-12 sm:ml-[-6%] sm:w-[74%]" />
+          {/* Ekte kunngjøring fra databasen – bare på store skjermer, så mobilen ikke får mer å lese. */}
+          <LiveSpecimen s={specimen} className="relative z-10 -mt-12 ml-[-6%] hidden w-[74%] lg:block" />
         </div>
       </Container>
     </section>
@@ -237,33 +230,31 @@ function SourcesStrip({ coverage }: { coverage: Coverage }) {
 }
 
 // ---------------------------------------------------------------------------
-// Slik virker det
+// Slik virker det – tre korte steg
 // ---------------------------------------------------------------------------
 function HowItWorks() {
   const steps: { icon: IconType; title: string; text: string }[] = [
-    { icon: LuBuilding2, title: 'Fortell hva dere leverer', text: 'Bransje, tjenester, område, kontraktsstørrelse og sertifiseringer. Det tar et par minutter.' },
-    { icon: LuRadar, title: 'Få anbudene rangert og forklart', text: 'Hvert anbud får en relevansscore med begrunnelse: hva som passer, hva som mangler og hva som kan stoppe dere.' },
-    { icon: LuListChecks, title: 'Forbered tilbudet sammen', text: 'Sjekkliste, tekstutkast fra profilen og godkjenning i teamet. Innsendingen gjør dere i oppdragsgivers system.' },
+    { icon: LuBuilding2, title: 'Fortell hva dere gjør', text: 'Bransje, område og størrelse. Tar et par minutter.' },
+    { icon: LuRadar, title: 'Få anbudene som passer', text: 'Vi sorterer anbudene etter hvor godt de passer dere.' },
+    { icon: LuBellRing, title: 'Svar i tide', text: 'Påminnelse før fristen og hjelp med tilbudet.' },
   ];
   return (
-    <section id="slik-virker-det" className="scroll-mt-20 py-20 sm:py-28">
+    <section id="slik-virker-det" className="scroll-mt-20 py-20 sm:py-24">
       <Container>
-        <SectionHeading eyebrow="Slik virker det" lead="Tre steg – så bruker dere tiden på anbudene som faktisk passer.">
-          Fra kunngjøring til tilbud uten å lete
-        </SectionHeading>
-        <ol className="relative mt-12 grid gap-5 md:grid-cols-3">
+        <SectionHeading center>Slik virker det</SectionHeading>
+        <ol className="mt-12 grid gap-5 md:grid-cols-3">
           {steps.map((s, i) => (
-            <li key={s.title} className="lift relative rounded-2xl border border-line bg-white p-6">
-              <div className="flex items-center gap-3">
-                <span className="relative flex size-12 items-center justify-center rounded-xl bg-navy-900 text-white shadow-[0_10px_24px_-12px_rgba(15,35,64,0.8)]">
-                  <s.icon className="size-5" aria-hidden />
-                  <span className="num absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full bg-marker text-[12px] font-semibold text-ink ring-2 ring-white">
-                    {i + 1}
-                  </span>
+            <li key={s.title} className="lift flex items-start gap-5 rounded-2xl border border-line bg-white p-5 md:block md:p-7 md:text-center">
+              <span className="relative flex size-14 shrink-0 items-center justify-center rounded-2xl bg-navy-900 text-white shadow-[0_10px_24px_-12px_rgba(15,35,64,0.8)] md:mx-auto">
+                <s.icon className="size-6" aria-hidden />
+                <span className="num absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-marker text-[13px] font-semibold text-ink ring-2 ring-white">
+                  {i + 1}
                 </span>
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-[19px] font-semibold text-navy-900 md:mt-5 md:text-[20px]">{s.title}</h3>
+                <p className="mt-1 text-[16px] leading-relaxed text-muted md:mt-2">{s.text}</p>
               </div>
-              <h3 className="mt-5 text-[19px] font-semibold text-navy-900">{s.title}</h3>
-              <p className="mt-2 text-[15px] leading-relaxed text-muted">{s.text}</p>
             </li>
           ))}
         </ol>
@@ -273,162 +264,39 @@ function HowItWorks() {
 }
 
 // ---------------------------------------------------------------------------
-// Funksjoner (bento)
+// Det dere får – fire fordeler, én kort setning hver
 // ---------------------------------------------------------------------------
-function FeatureCard({ icon: Icon, title, text, children, className }: { icon: IconType; title: string; text: string; children: ReactNode; className?: string }) {
+function Benefits() {
+  const { liveSources } = useUi();
+  const items: { icon: IconType; title: string; text: string }[] = [
+    { icon: LuRadar, title: 'Alt på ett sted', text: `Anbud fra ${sourcesPhrase(liveSources)}, hentet automatisk.` },
+    { icon: LuFileSearch, title: 'Forstå kravene raskt', text: 'Kort oppsummering – og hvor i dokumentet det står.' },
+    { icon: LuBellRing, title: 'Varsel før fristen', text: 'Påminnelse 7, 3 og 1 dag før det er for sent.' },
+    { icon: LuCalculator, title: 'Se om det lønner seg', text: 'Regn på pris og risiko med deres egne tall.' },
+  ];
   return (
-    <article className={cn('lift flex flex-col rounded-2xl border border-line bg-white p-6', className)}>
-      <span className="flex size-10 items-center justify-center rounded-xl bg-navy-50 text-navy-700">
-        <Icon className="size-5" aria-hidden />
-      </span>
-      <h3 className="mt-4 text-[18px] font-semibold text-navy-900">{title}</h3>
-      <p className="mt-1.5 text-[15px] leading-relaxed text-muted">{text}</p>
-      <div className="mt-5 flex-1 rounded-xl border border-line bg-paper p-4 text-[13px]">{children}</div>
-    </article>
-  );
-}
-
-function Features() {
-  return (
-    <section className="border-y border-line bg-paper py-20 sm:py-28">
+    <section className="border-y border-line bg-paper py-20 sm:py-24">
       <Container>
-        <SectionHeading eyebrow="Funksjoner" lead="Alt fra første treff til ferdig tilbud – og hvert svar viser hvor det kommer fra.">
-          Mindre leting. Bedre beslutninger.
-        </SectionHeading>
-        <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          <FeatureCard
-            icon={LuRadar}
-            className="lg:col-span-2"
-            title="Rangert etter hva dere leverer"
-            text="Hvert anbud får en relevansscore fra 0 til 100 med begrunnelse. Scoren viser samsvar med profilen – ikke sjansen for å vinne."
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <ScoreRing value={88} size={52} />
-                <p className="font-semibold text-navy-900">Renhold av skoler og barnehager</p>
+        <SectionHeading center>Mindre leting – mer tid til tilbudene</SectionHeading>
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {items.map((it) => (
+            <article key={it.title} className="lift flex items-start gap-4 rounded-2xl border border-line bg-white p-5 sm:block sm:p-6">
+              <IconChip icon={it.icon} className="size-12 [&_svg]:size-6" />
+              <div className="min-w-0">
+                <h3 className="text-[19px] font-semibold text-navy-900 sm:mt-4">{it.title}</h3>
+                <p className="mt-1 text-[16px] leading-relaxed text-muted sm:mt-1.5">{it.text}</p>
               </div>
-              <ExampleTag />
-            </div>
-            <ul className="mt-3 grid gap-1.5 sm:grid-cols-2">
-              <li className="flex gap-2">
-                <span className="font-semibold text-ok">✓</span> Tjenesten passer: renhold
-              </li>
-              <li className="flex gap-2">
-                <span className="font-semibold text-ok">✓</span> Innenfor området dere dekker
-              </li>
-              <li className="flex gap-2">
-                <span className="font-semibold text-ok">✓</span> Verdi innenfor ønsket størrelse
-              </li>
-              <li className="flex gap-2">
-                <span className="font-semibold text-urgent">!</span>
-                <span>
-                  Krever <span className="hl">ISO 14001</span> – ikke i profilen
-                </span>
-              </li>
-            </ul>
-          </FeatureCard>
-
-          <FeatureCard icon={LuFileSearch} title="Krav med kilde og sidetall" text="AI leser kunngjøringen og dokumentene dere laster opp. Vi sjekker at sitatene faktisk står der.">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-[14px] text-ink">Leverandøren må dokumentere et kvalitetssystem.</p>
-              <ExampleTag />
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <Badge tone="outline">Konkurransegrunnlag, s. 4</Badge>
-              <Badge tone="ok">Sitat funnet i kilden</Badge>
-            </div>
-          </FeatureCard>
-
-          <FeatureCard icon={LuBellRing} title="Varsler før det er for sent" text="Nye treff, endringer, avlysninger og påminnelser 7, 3 og 1 dag før fristen.">
-            <ul className="space-y-2">
-              <li className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-line">
-                <span className="truncate">Frist om 3 dager: Vinduspuss</span>
-                <span className="num shrink-0 rounded bg-marker px-1.5 text-[11px] font-semibold">3 d</span>
-              </li>
-              <li className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-line">
-                <span className="truncate">Endret: fristen er forlenget</span>
-                <span className="shrink-0 text-[11px] text-faint">Doffin</span>
-              </li>
-            </ul>
-          </FeatureCard>
-
-          <FeatureCard
-            icon={LuCalculator}
-            className="lg:col-span-2"
-            title="Lønner det seg å by?"
-            text="Legg inn timekost og marginer én gang. Se selvkost, minstepris og vilkårene som kan koste dere penger – med side og sitat."
-          >
-            <div className="mb-1 flex justify-end">
-              <ExampleTag />
-            </div>
-            <dl className="divide-y divide-line">
-              {[
-                ['Selvkost', '660 000 kr', 'Beregnet'],
-                ['Minstepris (margin 8 %, risikopåslag 5 %)', '753 261 kr', 'Beregnet'],
-                ['Oppdragsgivers estimerte verdi', '1 000 000 kr', 'Dokument'],
-                ['Dagbot, tak 10 %', 'maks 100 000 kr', 'Dokument, s. 3'],
-              ].map(([label, value, basis]) => (
-                <div key={label} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
-                  <dt className="text-muted">{label}</dt>
-                  <dd className="flex items-center gap-2">
-                    <span className="num font-semibold text-navy-900">{value}</span>
-                    <Badge tone={basis === 'Beregnet' ? 'marker' : 'info'}>{basis}</Badge>
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </FeatureCard>
-
-          <FeatureCard icon={LuChartColumn} title="Konkurrenter og tildelinger" text="Se hvem som vinner kontraktene i bransjen, basert på publiserte tildelinger.">
-            <div className="mb-2 flex justify-end">
-              <ExampleTag />
-            </div>
-            <ul className="space-y-2">
-              {[
-                ['Leverandør A', 12],
-                ['Leverandør B', 8],
-                ['Leverandør C', 5],
-              ].map(([name, n]) => (
-                <li key={name as string} className="grid grid-cols-[88px_minmax(0,1fr)_24px] items-center gap-2">
-                  <span className="truncate">{name}</span>
-                  <span className="h-2 rounded-full bg-navy-600" style={{ width: `${((n as number) / 12) * 100}%` }} aria-hidden />
-                  <span className="num text-right font-semibold text-navy-900">{n}</span>
-                </li>
-              ))}
-            </ul>
-          </FeatureCard>
-
-          <FeatureCard icon={LuListChecks} title="Tilbudsarbeid i team" text="Sjekkliste fra kravene, tekstutkast fra profilen og godkjenning før noe sendes.">
-            <div className="mb-1 flex justify-end">
-              <ExampleTag />
-            </div>
-            <ul className="space-y-1.5">
-              {[
-                ['Skatteattest', true],
-                ['HMS-egenerklæring', true],
-                ['Referanser (2 av 3)', false],
-              ].map(([label, done]) => (
-                <li key={label as string} className="flex items-center gap-2">
-                  <span className={cn('flex size-4 items-center justify-center rounded border text-[10px]', done ? 'border-ok bg-ok text-white' : 'border-line-strong bg-white')} aria-hidden>
-                    {done ? '✓' : ''}
-                  </span>
-                  <span className={done ? 'text-muted line-through' : 'text-ink'}>{label}</span>
-                </li>
-              ))}
-            </ul>
-          </FeatureCard>
-
-          <FeatureCard icon={LuHandshake} title="Anbudspartnere" text="Finn bedrifter som dekker det dere mangler – og bli funnet selv. Alltid med samtykke.">
-            <div className="flex items-center justify-between gap-2">
-              <span className="rounded-lg bg-white px-2.5 py-1.5 font-semibold text-navy-900 ring-1 ring-line">Dere</span>
-              <span className="h-px flex-1 border-t-2 border-dashed border-line-strong" aria-hidden />
-              <span className="rounded-lg bg-white px-2.5 py-1.5 font-semibold text-navy-900 ring-1 ring-line">Partner med ISO 14001</span>
-            </div>
-            <p className="mt-2 text-[12px] text-muted">Kontaktinfo deles først når mottakeren godtar.</p>
-          </FeatureCard>
+            </article>
+          ))}
         </div>
+        <p className="mx-auto mt-10 flex max-w-2xl items-start gap-3 rounded-2xl bg-white px-5 py-4 text-[16px] text-ink ring-1 ring-line">
+          <LuShieldCheck className="mt-0.5 size-6 shrink-0 text-ok" aria-hidden />
+          <span>
+            <strong className="text-navy-900">Vi finner aldri på noe.</strong> Frister og krav vises slik de står i kunngjøringen, og AI-en viser hvor svaret står.
+          </span>
+        </p>
         <p className="mt-8 text-center">
-          <a href="/funksjoner" className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-navy-800 no-underline hover:underline">
+          <a href="/funksjoner" className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-navy-800 no-underline hover:underline">
             Se alle funksjoner <LuArrowRight className="size-4" aria-hidden />
           </a>
         </p>
@@ -438,46 +306,13 @@ function Features() {
 }
 
 // ---------------------------------------------------------------------------
-// Prinsipper
-// ---------------------------------------------------------------------------
-function Principles() {
-  const items: { title: string; text: string }[] = [
-    { title: 'Fakta fra kilden står for seg', text: 'Frist, verdi og krav vises slik de står i kunngjøringen – med lenke til originalen hos Doffin eller TED.' },
-    { title: 'AI viser hvor svaret står', text: 'Hver påstand har dokument og sidetall, og vi sjekker at sitatet finnes. Det som ikke kan kontrolleres, merkes.' },
-    { title: 'Ingen gjetning', text: 'Mangler en opplysning, står den som mangel. Relevansscoren viser samsvar – aldri sjansen for å vinne.' },
-  ];
-  return (
-    <section className="py-20 sm:py-28">
-      <Container className="grid gap-12 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start">
-        <SectionHeading eyebrow="Fakta først. AI etterpå." lead="Når det gjelder kontrakter verdt millioner, må dere kunne stole på det dere leser.">
-          Ærlig om hva vi vet – og hva vi ikke vet
-        </SectionHeading>
-        <ol className="space-y-4">
-          {items.map((it, i) => (
-            <li key={it.title} className="flex gap-4 rounded-2xl border border-line bg-white p-5">
-              <span className="num flex size-9 shrink-0 items-center justify-center rounded-full bg-navy-900 font-serif text-[15px] font-semibold text-white">{i + 1}</span>
-              <div>
-                <h3 className="text-[17px] font-semibold text-navy-900">{it.title}</h3>
-                <p className="mt-1 text-[15px] leading-relaxed text-muted">{it.text}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </Container>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Bransjer
+// Bransjer – bare navn og ikon
 // ---------------------------------------------------------------------------
 function Industries() {
   return (
-    <section className="border-t border-line bg-paper py-20 sm:py-28">
+    <section className="py-20 sm:py-24">
       <Container>
-        <SectionHeading eyebrow="Bransjer" lead="Rangeringen bygger på CPV-kodene oppdragsgiverne selv bruker – fra vakthold og renhold til IT, bygg og helse.">
-          Laget for bransjer som lever av offentlige kontrakter
-        </SectionHeading>
+        <SectionHeading center>For bransjer som selger til det offentlige</SectionHeading>
         <ul className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {INDUSTRIES.map((i) => {
             const Icon = INDUSTRY_ICONS[i.id] ?? LuRadar;
@@ -502,22 +337,22 @@ function Industries() {
 }
 
 // ---------------------------------------------------------------------------
-// Priser (kort) og spørsmål
+// Priser (bare pris og knapp) og spørsmål
 // ---------------------------------------------------------------------------
 function PricingTeaser() {
   const { trialDays } = useUi();
   return (
-    <section className="py-20 sm:py-28">
+    <section className="border-t border-line bg-paper py-20 sm:py-24">
       <Container>
-        <SectionHeading center eyebrow="Priser" lead={`Per organisasjon per måned, eks. mva. ${trialDays} dager gratis med alt i Profesjonell – uten kort.`}>
-          Enkle priser. Ingen binding.
+        <SectionHeading center lead={`${trialDays} dager gratis. Ingen kort. Ingen binding.`}>
+          Enkle priser
         </SectionHeading>
         <div className="mt-12">
-          <PlanCards maxFeatures={4} />
+          <PlanCards showFeatures={false} />
         </div>
         <p className="mt-8 text-center">
-          <a href="/priser" className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-navy-800 no-underline hover:underline">
-            Sammenlign alle planer <LuArrowRight className="size-4" aria-hidden />
+          <a href="/priser" className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-navy-800 no-underline hover:underline">
+            Se hva som er med i hver plan <LuArrowRight className="size-4" aria-hidden />
           </a>
         </p>
       </Container>
@@ -528,12 +363,15 @@ function PricingTeaser() {
 function Faq() {
   const { liveSources, trialDays } = useUi();
   return (
-    <section className="border-t border-line bg-paper py-20 sm:py-28">
-      <Container className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-        <SectionHeading eyebrow="Spørsmål" lead={<>Finner du ikke svaret? <a href="/kontakt">Kontakt oss</a>.</>}>
-          Vanlige spørsmål
-        </SectionHeading>
-        <FaqList items={faqItems({ trialDays, sources: sourcesPhrase(liveSources, true) })} />
+    <section className="py-20 sm:py-24">
+      <Container className="max-w-3xl">
+        <SectionHeading center>Vanlige spørsmål</SectionHeading>
+        <div className="mt-10">
+          <FaqList items={faqItems({ trialDays, sources: sourcesPhrase(liveSources, true) }).slice(0, 4)} />
+        </div>
+        <p className="mt-6 text-center text-[15px] text-muted">
+          Flere spørsmål? <a href="/kontakt">Kontakt oss</a>.
+        </p>
       </Container>
     </section>
   );
@@ -546,14 +384,13 @@ export function HomePage({ specimen, coverage }: { specimen: Specimen | null; co
       <Hero specimen={specimen} />
       <SourcesStrip coverage={coverage} />
       <HowItWorks />
-      <Features />
-      <Principles />
+      <Benefits />
       <Industries />
       <PricingTeaser />
       <Faq />
       <CtaBand
         title="Neste frist venter ikke."
-        lead="Opprett konto, fyll ut profilen og se hvilke anbud som passer dere i dag."
+        lead="Lag en konto og se hvilke anbud som passer dere i dag."
         primary={user ? { href: '/app', label: 'Til appen' } : { href: '/registrer', label: `Prøv gratis i ${trialDays} dager` }}
         secondary={{ href: '/priser', label: 'Se priser' }}
       />

@@ -49,7 +49,7 @@ export function IconChip({ icon: Icon, className }: { icon: IconType; className?
 }
 
 /** Planene med pris. `maxFeatures` korter ned listen (forsiden). */
-export function PlanCards({ maxFeatures, ctaHref = '/registrer' }: { maxFeatures?: number; ctaHref?: string }) {
+export function PlanCards({ maxFeatures, ctaHref = '/registrer', showFeatures = true }: { maxFeatures?: number; ctaHref?: string; showFeatures?: boolean }) {
   return (
     <div className="grid gap-5 md:grid-cols-3">
       {PAID_PLANS.map((id) => {
@@ -70,11 +70,15 @@ export function PlanCards({ maxFeatures, ctaHref = '/registrer' }: { maxFeatures
               <span className={cn('num font-serif text-[44px] font-semibold leading-none', featured ? 'text-white' : 'text-navy-900')}>{p.priceNok}</span>
               <span className={cn('text-[15px]', featured ? 'text-navy-200' : 'text-muted')}> kr/mnd</span>
             </p>
-            <CheckList
-              dark={featured}
-              className={cn('mt-6 flex-1 text-[14px]', featured ? 'text-navy-100' : 'text-ink')}
-              items={maxFeatures ? p.features.slice(0, maxFeatures) : p.features}
-            />
+            {showFeatures ? (
+              <CheckList
+                dark={featured}
+                className={cn('mt-6 flex-1 text-[14px]', featured ? 'text-navy-100' : 'text-ink')}
+                items={maxFeatures ? p.features.slice(0, maxFeatures) : p.features}
+              />
+            ) : (
+              <span className="flex-1" />
+            )}
             <a href={ctaHref} className={buttonVariants({ variant: featured ? 'inverse' : 'secondary', className: 'mt-7 w-full' })}>
               Start prøveperiode
             </a>
