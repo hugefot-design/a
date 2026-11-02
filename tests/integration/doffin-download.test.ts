@@ -18,6 +18,7 @@ import { dbSlots } from '../../src/lib/api-slots';
 import { runConnector } from '../../src/connectors';
 import { mapDoffinHit, setDoffinDownloadDeps, type DoffinHit } from '../../src/connectors/doffin';
 import { finishImportRun, ingestNotices, startImportRun } from '../../src/domain/tenders/ingest';
+import { createAccount, makeNotice } from '../helpers';
 
 // Unike ID-er per kjøring, så testen kan kjøres flere ganger mot samme database.
 const RUN = randomUUID().slice(0, 6);
@@ -254,4 +255,60 @@ test('import per ID: 404 registreres som feil på kunngjøringen, resten av kjø
   }[];
   assert.deepEqual(errors.map((e) => [e.stage, e.sourceNoticeId]), [['fetch', ID_MISSING]]);
   assert.deepEqual(downloads, [ID_MISSING, ID_V1]);
+});
+
+test('full kunngjøring avslører duplikat (samme prosedyre som et TED-anbud): slås sammen – men aldri når brukere har koblet noe til anbudet', async () => {
+  const sql = systemSql();
+  const tedProc = randomUUID();
+  const tedProc2 = randomUUID();
+  // To TED-anbud med kjent prosedyre-ID …
+  const tedRun = await startImportRun('ted', 'cli', { test: RUN });
+  await ingestNotices(
+    [
+      makeNotice({ source: 'ted', sourceNoticeId: `${RUN}-a-2026`, procedureId: tedProc, title: `Helt annen TED-tittel A ${RUN}`, buyerName: 'TED-kjøper A' }),
+      makeNotice({ source: 'ted', sourceNoticeId: `${RUN}-b-2026`, procedureId: tedProc2, title: `Helt annen TED-tittel B ${RUN}`, buyerName: 'TED-kjøper B' }),
+    ],
+    tedRun,
+  );
+  await finishImportRun(tedRun, { fetched: 2, created: 2, updated: 0, unchanged: 0, duplicates: 0, errors: 0, tenderIds: [] }, undefined, false, { updateSource: false });
+  const tedTender = async (id: string) =>
+    ((await sql`select tender_id from tender_sources where source = 'ted' and source_notice_id = ${id}`) as unknown as { tenderId: string }[])[0]!.tenderId;
+
+  // … og to Doffin-søketreff som ikke ble gjenkjent som de samme ved søket.
+  const idMerge = `2026-${RUN}7`.replace(/[a-f]/g, '7');
+  const idKeep = `2026-${RUN}8`.replace(/[a-f]/g, '7');
+  await ingestSearch([
+    searchHit(idMerge, { heading: `Søketreff som er duplikat ${RUN}`, buyer: [{ id: 'y', name: 'Annen kjøper (test)', organizationId: '912000002' }] }),
+    searchHit(idKeep, { heading: `Søketreff med bokmerke ${RUN}`, buyer: [{ id: 'z', name: 'Tredje kjøper (test)', organizationId: '912000003' }] }),
+  ]);
+  const searchTender = async (id: string) => (await tenderFor(id)).id as string;
+  const keepTenderId = await searchTender(idKeep);
+  const mergeTenderId = await searchTender(idMerge);
+  assert.notEqual(mergeTenderId, await tedTender(`${RUN}-a-2026`), 'to anbud før berikelsen');
+
+  // En bruker har lagret det ene søketreffet.
+  const account = await createAccount();
+  await sql`insert into bookmarks (org_id, tender_id, created_by) values (${account.orgId}, ${keepTenderId}, ${account.user.id})`;
+
+  const xmlFor = (proc: string) =>
+    fixture('n16-konkurranse-v1.xml').replaceAll(NOTICE_ID, randomUUID()).replaceAll(PROC_ID, proc);
+  SERVED[idMerge] = () => new Response(xmlFor(tedProc), { status: 200 });
+  SERVED[idKeep] = () => new Response(xmlFor(tedProc2), { status: 200 });
+  const result = await runConnector('doffin', { trigger: 'cli', ids: [idMerge, idKeep], force: true });
+  assert.equal(result.ok, true, JSON.stringify(result.errorSample));
+  assert.equal(result.stats?.errors, 0);
+
+  // Uten brukerdata: Doffin-kilden flyttes til TED-anbudet, og duplikatet forsvinner.
+  const merged = await tenderFor(idMerge);
+  assert.equal(merged.id, await tedTender(`${RUN}-a-2026`));
+  assert.equal(merged.rawFormat, 'eforms-xml');
+  assert.equal(((await sql`select 1 from tenders where id = ${mergeTenderId}`) as unknown as unknown[]).length, 0);
+
+  // Med bokmerke: ingenting slås sammen eller slettes, men den fulle kunngjøringen lagres likevel.
+  const kept = await tenderFor(idKeep);
+  assert.equal(kept.id, keepTenderId, 'anbudet med bokmerke beholdes');
+  assert.equal(kept.rawFormat, 'eforms-xml');
+  assert.equal(kept.procedureId, null, 'prosedyre-ID-en tilhører TED-anbudet og kan ikke brukes to ganger');
+  const [bm] = (await sql`select tender_id from bookmarks where org_id = ${account.orgId}`) as unknown as { tenderId: string }[];
+  assert.equal(bm!.tenderId, keepTenderId, 'bokmerket er urørt');
 });

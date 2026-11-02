@@ -308,6 +308,23 @@ function pickList<T>(isNewer: boolean, incoming: T[] | undefined, existing: T[] 
   return isNewer ? inc : ex;
 }
 
+/** Har noen bruker knyttet noe til anbudet (lagret, dokumenter, tilbud, analyser, varsler …)? */
+async function tenderHasUserData(tx: Tx, tenderId: string): Promise<boolean> {
+  const [row] = (await tx`
+    select (
+      exists (select 1 from bookmarks where tender_id = ${tenderId}) or
+      exists (select 1 from tender_documents where tender_id = ${tenderId}) or
+      exists (select 1 from bid_workspaces where tender_id = ${tenderId}) or
+      exists (select 1 from ai_analyses where tender_id = ${tenderId}) or
+      exists (select 1 from notifications where tender_id = ${tenderId}) or
+      exists (select 1 from reports where tender_id = ${tenderId}) or
+      exists (select 1 from tender_calculations where tender_id = ${tenderId}) or
+      exists (select 1 from partner_requests where tender_id = ${tenderId})
+    ) as used
+  `) as unknown as { used: boolean }[];
+  return Boolean(row?.used);
+}
+
 async function processNotice(n: NormalizedNotice, stats: IngestStats, runStartedAt: Date): Promise<void> {
   const sql = systemSql();
   const hash = noticeHash(n);
@@ -375,6 +392,24 @@ async function processNotice(n: NormalizedNotice, stats: IngestStats, runStarted
 
     let tenderId: string | null = existingSource[0]?.tenderId ?? null;
     let duplicate = false;
+
+    // Den fulle kunngjøringen kan avsløre at et søketreff er samme anskaffelse som et anbud vi
+    // allerede har (samme prosedyre-ID, ofte fra TED). Slå sammen når søketreff-anbudet ikke har
+    // noe brukerdata knyttet til seg; ellers beholdes begge (og prosedyre-ID-en settes ikke her).
+    if (tenderId && n.procedureId) {
+      const owner = (await tx`select id from tenders where procedure_id = ${n.procedureId} and id <> ${tenderId} limit 1`) as unknown as { id: string }[];
+      if (owner[0] && !(await tenderHasUserData(tx, tenderId))) {
+        const from = tenderId;
+        const to = owner[0].id;
+        await tx`update tender_sources set tender_id = ${to} where tender_id = ${from}`;
+        await tx`update tender_updates set tender_id = ${to} where tender_id = ${from}`;
+        await tx`update contract_awards set tender_id = ${to} where tender_id = ${from}`;
+        await tx`delete from tenders where id = ${from}`;
+        tenderId = to;
+        duplicate = true;
+        log.info('tender_merged', { from, to, source: n.source, sourceNoticeId: n.sourceNoticeId });
+      }
+    }
     if (!tenderId && d.noticeIdentifier) {
       const byNotice = (await tx`
         select tender_id from tender_sources where notice_identifier = ${d.noticeIdentifier} limit 1
@@ -481,7 +516,8 @@ async function processNotice(n: NormalizedNotice, stats: IngestStats, runStarted
           buyer_name = coalesce(buyer_name, ${n.buyerName}), buyer_org_number = coalesce(buyer_org_number, ${orgNumber}),
           authority_id = coalesce(authority_id, ${authorityId}),
           buyer_reference = coalesce(buyer_reference, ${n.buyerReference}),
-          procedure_id = coalesce(procedure_id, ${n.procedureId}),
+          procedure_id = coalesce(procedure_id, (select ${n.procedureId}::text where not exists (
+            select 1 from tenders o where o.procedure_id = ${n.procedureId}::text and o.id <> ${tenderId}))),
           place_text = coalesce(place_text, ${n.placeText ?? n.buyerCity}),
           contract_nature = coalesce(contract_nature, ${n.contractNature}),
           procedure_type = coalesce(procedure_type, ${n.procedureType}),
