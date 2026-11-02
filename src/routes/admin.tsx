@@ -1,9 +1,9 @@
 import { systemSql } from '@/lib/db';
-import { integrationStatus } from '@/lib/env';
+import { env, integrationStatus } from '@/lib/env';
 import { audit } from '@/lib/audit';
 import { enqueueJob } from '@/lib/jobs';
 import { listOrganizations, listUsers, organizationDetail, platformMetrics, systemHealth } from '@/domain/admin/admin';
-import { setManualPlan } from '@/domain/billing/stripe';
+import { setManualPlan, verifyStripePrices, type PriceCheck } from '@/domain/billing/stripe';
 import { PLANS, type PlanId } from '@/domain/billing/plans';
 import { CONNECTORS } from '@/connectors';
 import { parseImportFile } from '@/connectors/manual';
@@ -281,5 +281,11 @@ export function registerAdminRoutes(router: Router): void {
     );
   });
 
-  router.get('/admin/helse', 'admin', async (ctx) => render(ctx, <AdminHealthPage h={await systemHealth()} integrations={integrationStatus()} />, { title: 'Systemhelse' }));
+  router.get('/admin/helse', 'admin', async (ctx) => {
+    // Kontroll av pris-ID-ene mot Stripe (bare lesing) kjøres når administratoren ber om det.
+    const prices: PriceCheck[] | null = ctx.query.get('stripe') === '1' && env.STRIPE_SECRET_KEY ? await verifyStripePrices() : null;
+    return render(ctx, <AdminHealthPage h={await systemHealth()} integrations={integrationStatus()} prices={prices} stripeConfigured={Boolean(env.STRIPE_SECRET_KEY)} />, {
+      title: 'Systemhelse',
+    });
+  });
 }

@@ -91,9 +91,15 @@ test('Anthropic: avslag, avkuttet svar og ugyldig JSON gir tydelige feil – ald
   await assert.rejects(anthropicProvider('k', 'claude-sonnet-5-5').generate(request), (e: unknown) => e instanceof AIError && !e.retryable);
 });
 
-test('kostnad regnes med cache-lesing til redusert pris', () => {
-  assert.deepEqual(KNOWN_MODEL_PRICES['claude-sonnet-5-5'], { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 });
+test('kostnad regnes med cache-lesing til redusert pris og langkontekstpris for Haiku', () => {
+  // Listepris 2.11.2026: Sonnet 5.5 $2 inn / $10 ut, cache-lesing 0,05 × inn.
+  assert.deepEqual(KNOWN_MODEL_PRICES['claude-sonnet-5-5'], { input: 2, output: 10, cacheRead: 0.1, cacheWrite: 2.5 });
   const cost = estimateCostUsd('claude-sonnet-5-5', { inputTokens: 1_000_000, outputTokens: 100_000, cacheReadTokens: 1_000_000, cacheWriteTokens: 0 });
-  assert.equal(Math.round(cost * 1000) / 1000, 2 + 1 + 0.2);
+  assert.equal(Math.round(cost * 1000) / 1000, 2 + 1 + 0.1);
+  // Haiku 5.5: $0,10 / $0,50 inntil 100 000 tokens per forespørsel, $0,50 / $2,50 over.
+  const small = estimateCostUsd('claude-haiku-5-5', { inputTokens: 50_000, outputTokens: 10_000 });
+  assert.equal(Math.round(small * 1e6) / 1e6, (50_000 * 0.1 + 10_000 * 0.5) / 1e6);
+  const large = estimateCostUsd('claude-haiku-5-5', { inputTokens: 90_000, outputTokens: 10_000, cacheReadTokens: 20_000 });
+  assert.equal(Math.round(large * 1e6) / 1e6, Math.round(((90_000 * 0.5 + 10_000 * 2.5 + 20_000 * 0.05) / 1e6) * 1e6) / 1e6);
   assert.equal(estimateCostUsd('ukjent-modell', { inputTokens: 1000, outputTokens: 1000 }), 0);
 });

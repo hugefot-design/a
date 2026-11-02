@@ -2,7 +2,7 @@
 
 Finner offentlige anbud som passer bedriften, forklarer kravene med kildehenvisning og hjelper teamet å forberede tilbud. Norge først (Doffin + TED), bygget for å utvides til Sverige, Danmark, Finland og Tyskland.
 
-> **Status:** Fungerende applikasjon lokalt med automatiske tester. Eksterne tjenester (TED, Doffin, Stripe, e-post, AI) er bygget inn, men **ikke testet mot de ekte tjenestene** fra utviklingsmiljøet. Se [docs/STATUS.md](docs/STATUS.md) før lansering.
+> **Status (2. november 2026):** Fungerende applikasjon med 85 enhetstester, 57 integrasjonstester mot ekte PostgreSQL og 2 ende-til-ende-tester i Chromium – alle grønne. TED er **verifisert mot live API**. Doffin, Stripe, Resend, AI-leverandøren, Supabase og Render er bygget inn, men **ikke verifisert mot de ekte tjenestene**. Se [docs/STATUS.md](docs/STATUS.md) før lansering.
 
 ## Innhold
 
@@ -14,8 +14,10 @@ Finner offentlige anbud som passer bedriften, forklarer kravene med kildehenvisn
 | Varsler | Nye treff, lagrede søk, fristpåminnelser (7/3/1 dag), endringer, avlysninger, konkurrenttildelinger, ukesoversikt. E-post samlet etter valgt frekvens, uten duplikater. |
 | Konkurrentinnsikt | Tildelinger fra kunngjøringene, med tydelig dekningsgrad. Ingen anslag. |
 | Tilbudsarbeid | Sjekkliste, tekstseksjoner med AI-utkast (bare fakta fra profilen, ellers `[FYLL INN: …]`), sammenligning mot krav, vedlegg, godkjenningsflyt og eksport (Word, Markdown, utskrift/PDF). |
+| Profit Intelligence | Lønnsomhet per anbud med bedriftens egne kostnader: selvkost, minstepris, prisintervall, følsomhet og formler. Kontraktsrisiko (dagbøter, betalingsfrist, prisregulering, garantier) med side og sitat. Kapasitet, kvalifikasjoner og anbefaling (Vurder å by / Undersøk nærmere / Høy risiko). Se [docs/PROFIT_INTELLIGENCE.md](docs/PROFIT_INTELLIGENCE.md). |
+| Anbudspartnere | Partnerprofil med samtykke, søk og forklarte forslag ut fra manglene, forespørsler med konkurranserettslig sperre og kontaktdeling bare ved godkjenning. |
 | Konto og sikkerhet | Registrering, e-postbekreftelse, glemt passord, organisasjoner, roller, invitasjoner, revisjonslogg, dataeksport, sletting. Radnivåsikkerhet i databasen. |
-| Abonnement | Starter 199 / Profesjonell 499 / Bedrift 999 kr per måned via Stripe. Tilgang styres kun av signerte webhooks. |
+| Abonnement | Start 199 / Profesjonell 499 / Bedrift 999 kr per måned via Stripe. Tilgang styres kun av signerte webhooks; gamle hendelser kan ikke gjenopplive et avsluttet abonnement. |
 | Admin | Brukere, organisasjoner, manuelle avtaler, importkjøringer, kilder, AI-forbruk, e-postlogg, feilrapporter, revisjonslogg, systemhelse. |
 
 ## Kom i gang lokalt
@@ -80,7 +82,10 @@ docs/           drift, integrasjoner, importformat, personvern, status
 
 ## Videre lesing
 
-- [docs/STATUS.md](docs/STATUS.md) – testresultater, kjente begrensninger, kostnadsestimat og neste steg
+- [docs/STATUS.md](docs/STATUS.md) – testresultater, verifiseringsstatus, kjente begrensninger, kostnadsestimat og neste steg
+- [docs/LANSERING.md](docs/LANSERING.md) – lanseringssjekkliste og plan for de første 10/50/100 kundene
+- [docs/PROFIT_INTELLIGENCE.md](docs/PROFIT_INTELLIGENCE.md) – lønnsomhet, kontraktsrisiko, kapasitet og anbudspartnere
+- [docs/GJENNOMGANG.md](docs/GJENNOMGANG.md) – gjennomgangen av utgangspunktet (hva som var simulert, feil og risikoer)
 - [docs/DRIFT.md](docs/DRIFT.md) – produksjonssetting (Supabase + Render eller tilsvarende)
 - [docs/INTEGRASJONER.md](docs/INTEGRASJONER.md) – hva du må skaffe av nøkler og kontoer
 - [docs/PERSONVERN.md](docs/PERSONVERN.md) – hvilke data som lagres og hvor lenge

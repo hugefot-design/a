@@ -335,7 +335,17 @@ export function AdminListPage({ title, description, head, rows, children }: { ti
   );
 }
 
-export function AdminHealthPage({ h, integrations }: { h: Awaited2<ReturnType<typeof systemHealth>>; integrations: Record<string, unknown> }) {
+export function AdminHealthPage({
+  h,
+  integrations,
+  prices = null,
+  stripeConfigured = false,
+}: {
+  h: Awaited2<ReturnType<typeof systemHealth>>;
+  integrations: Record<string, unknown>;
+  prices?: { plan: string; priceId: string | null; ok: boolean; problems: string[] }[] | null;
+  stripeConfigured?: boolean;
+}) {
   const workerOk = h.workers[0] && Date.now() - new Date(h.workers[0].lastSeenAt).getTime() < 5 * 60_000;
   return (
     <AdminShell>
@@ -357,6 +367,26 @@ export function AdminHealthPage({ h, integrations }: { h: Awaited2<ReturnType<ty
           <Table head={['Status', 'Antall']} rows={h.emails.map((e) => [e.status, e.n])} empty="Ingen e-post." />
           <PanelHeader title="Integrasjoner" />
           <Table head={['Integrasjon', 'Status']} rows={integrationRows(integrations)} />
+        </Panel>
+        <Panel>
+          <PanelHeader
+            title="Priser i Stripe"
+            description="Kontrollerer at pris-ID-ene i miljøet er aktive, i NOK, månedlige og har riktig beløp. Leser bare – endrer ingenting i Stripe."
+            action={
+              stripeConfigured ? (
+                <a href="/admin/helse?stripe=1" className="text-[13px] font-semibold">
+                  Kontroller nå
+                </a>
+              ) : null
+            }
+          />
+          {!stripeConfigured ? (
+            <p className="px-5 py-4 text-[14px] text-muted">Stripe er ikke satt opp (STRIPE_SECRET_KEY mangler).</p>
+          ) : prices ? (
+            <Table head={['Plan', 'Pris-ID', 'Resultat']} rows={prices.map((p) => [p.plan, p.priceId ?? '–', p.ok ? 'OK' : p.problems.join(' ')])} />
+          ) : (
+            <p className="px-5 py-4 text-[14px] text-muted">Trykk «Kontroller nå» etter at pris-ID-ene er satt.</p>
+          )}
         </Panel>
       </div>
     </AdminShell>

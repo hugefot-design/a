@@ -115,16 +115,25 @@ export interface ModelPrice {
   output: number;
   cacheRead: number;
   cacheWrite: number;
+  /** Høyere pris når hele forespørselen (inn + bufret) er over en grense (Haiku 5.5: 100 000 tokens). */
+  longContext?: { thresholdTokens: number; price: Omit<ModelPrice, 'longContext'> };
 }
 
 /**
- * Listepriser fra Anthropic (prisliste per 6.10.2026, standard API, inntil 100 000 tokens inn for
- * Haiku 5.5). Cache-skriving er 1,25 × inn-pris (5 min), cache-lesing ca. 0,1 ×. Kontroller prisene
- * før lansering – miljøvariablene AI_*_PRICE_PER_MTOK_USD overstyrer tabellen.
+ * Listepriser fra Anthropic (kontrollert mot platform.claude.com/docs/en/about-claude/pricing 2.11.2026,
+ * standard API). Cache-skriving (5 min) er 1,25 × inn-pris. Cache-lesing er 0,05 × for Sonnet 5.5 og
+ * Opus 5.5, og 0,1 × for Haiku 5.5. Haiku 5.5 har høyere pris over 100 000 tokens per forespørsel.
+ * Kontroller prisene før lansering – miljøvariablene AI_*_PRICE_PER_MTOK_USD overstyrer tabellen.
  */
 export const KNOWN_MODEL_PRICES: Record<string, ModelPrice> = {
-  'claude-haiku-5-5': { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 },
-  'claude-sonnet-5-5': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 },
+  'claude-haiku-5-5': {
+    input: 0.1,
+    output: 0.5,
+    cacheRead: 0.01,
+    cacheWrite: 0.125,
+    longContext: { thresholdTokens: 100_000, price: { input: 0.5, output: 2.5, cacheRead: 0.05, cacheWrite: 0.625 } },
+  },
+  'claude-sonnet-5-5': { input: 2, output: 10, cacheRead: 0.1, cacheWrite: 2.5 },
   'claude-opus-5-5': { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 },
 };
 
@@ -143,7 +152,9 @@ export function estimateCostUsd(
   model: string,
   usage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number },
 ): number {
-  const p = priceFor(model);
+  const base = priceFor(model);
+  const promptTokens = usage.inputTokens + (usage.cacheReadTokens ?? 0) + (usage.cacheWriteTokens ?? 0);
+  const p = base.longContext && promptTokens > base.longContext.thresholdTokens ? base.longContext.price : base;
   return (
     (usage.inputTokens * p.input + usage.outputTokens * p.output + (usage.cacheReadTokens ?? 0) * p.cacheRead + (usage.cacheWriteTokens ?? 0) * p.cacheWrite) /
     1_000_000

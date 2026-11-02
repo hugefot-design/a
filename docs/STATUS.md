@@ -1,94 +1,92 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 1. november 2026.
+Sist oppdatert 2. november 2026.
 
 ## Testresultater
 
-Kjørt med `npm run test:all` mot PostgreSQL 16 og Chromium (Playwright):
+Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme sett kjøres i CI (`.github/workflows/ci.yml`).
 
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 47 av 47 bestått |
-| Integrasjonstester (ekte database, ekte HTTP) | 24 av 24 bestått |
+| Enhetstester | 85 av 85 bestått |
+| Integrasjonstester (ekte database, ekte HTTP) | 57 av 57 bestått |
 | Ende-til-ende i nettleser | 2 av 2 bestått |
+| Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
+| Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
+
+**Mutasjonssjekker** (testene skal feile når beskyttelsen fjernes – det gjorde de): dry-run som skriver til databasen, konkurranserettslig sperre for partnerforespørsler, tallkontroll av AI-svar.
 
 Det som dekkes:
 
-- **Sikkerhet:** registrering, e-postbekreftelse, innlogging/utlogging, glemt passord (gamle sesjoner ugyldige), svake passord, CSRF og fremmed opprinnelse, sikkerhetshoder/CSP, ingen hemmeligheter i HTML, admin skjult for vanlige brukere.
-- **Organisasjonsisolasjon:** to kunder side om side – den ene ser verken lagrede anbud, søk, dokumenter, analyser eller tilbudsarbeid fra den andre, verken via nettsidene eller direkte i databasen. Også med forfalsket organisasjonskontekst. Webapp-rollen kan ikke endre abonnement eller lese e-postkø/Stripe-hendelser.
-- **Betaling:** retur fra Checkout aktiverer ingenting; falske webhooks avvises; signerte webhooks aktiverer plan; samme hendelse to ganger behandles én gang; en forsinket eldre hendelse kan ikke gjenopplive et kansellert abonnement; mislykket betaling registreres og varsler eieren. Checkout-kallet til Stripe kontrolleres med simulert Stripe-API.
-- **Data:** ny/uendret/oppdatert kunngjøring, samme anskaffelse fra to kilder slås sammen, ugyldige data avvises og logges, status går aldri «baklengs», fristendring og avlysning oppdages.
-- **Varsler:** lagret søk, nye treff, avlysning, fristpåminnelse, ingen duplikater, e-post samlet og sendt én gang, gratisplan får ingen varsler.
-- **AI:** kildeblokken kan ikke brytes ut av (testet med skjulte instruksjoner og falske markører i dokumenttekst, og en PDF med innebygd instruksjon), sitater kontrolleres mot kilden, hurtigbuffer gir ingen ny kostnad, kvoter håndheves, funksjoner låses etter plan på serveren.
-- **Personvern:** dataeksport uten passord-hasher eller tokens, sletting av konto med organisasjon og filer.
-- **Nettleser:** hele kundereisen fra forsiden til analyse og låst Bedrift-funksjon, uten JavaScript-feil; alle offentlige sider på mobilbredde uten horisontal rulling.
+- **Datakilder:** TED-hentingen er kjørt mot live API (se under). Paginering, nye forsøk med `Retry-After`, duplikater på tvers av kilder, at `--dry-run` aldri skriver, frister (tilbud, deltakelse, spørsmål), CPV, NUTS/fylke, varighet, dokumentlenker og at manglende verdier aldri fylles inn.
+- **Sikkerhet:** registrering, e-postbekreftelse, innlogging, glemt passord, CSRF og opprinnelse, CSP, ingen hemmeligheter i HTML, ingen kan gjøre seg selv til administrator, medlemmer kan ikke endre roller, fjernede medlemmer mister tilgang straks, RLS på alle tabeller.
+- **Organisasjonsisolasjon:** to kunder side om side – ingen ser eller endrer den andres data, verken via nettsidene eller direkte i databasen, heller ikke med forfalsket organisasjonskontekst. Gjelder også kalkyler, økonomi, bemanning, utstyr, kontrakter og partnerforespørsler.
+- **Betaling:** bare signerte webhooks aktiverer planer; samme hendelse behandles én gang, også ved samtidige kall; eldre hendelser kan ikke gjenopplive et avsluttet abonnement; refusjon, tvist, avstemming mot Stripe, nedgradering med for mange medlemmer.
+- **E-post:** ingen duplikater (nøkkel per hendelse + idempotensnøkkel hos Resend), avmelding med ett klikk (RFC 8058), varige feil prøves ikke på nytt.
+- **AI:** kildeblokken kan ikke brytes ut av, sitater og tall kontrolleres mot kilden, «ukjent» blir aldri et tall, kvoter og kostnadstak håndheves, planer låses på serveren. Alle AI-tester bruker den simulerte leverandøren.
+- **Profit Intelligence:** formler, opphav på hvert tall, valideringsfeil, testpris, AI-import uten priser, kapasitet med overlapp, anbefalingsregler, partnerprofil med samtykke, sperre når begge kan levere alene, kontaktinfo bare ved godkjenning, statusoverganger håndhevet i databasen.
+- **Personvern:** eksport (inkl. Profit-data) uten passord-hasher eller tokens, sletting av konto og organisasjon med filer, automatisk sletting etter faste frister.
+- **Nettleser:** kundereisen fra forsiden til analyse og låst Bedrift-funksjon uten JavaScript-feil; offentlige sider på mobilbredde uten horisontal rulling.
 
-## Ikke testet mot ekte tjenester
+## Verifisering mot ekte tjenester
 
-Utviklingsmiljøet hadde ikke nettverkstilgang til eksterne tjenester. Følgende er bygget og testet med simulerte svar, men **må verifiseres** før lansering (fremgangsmåte i [INTEGRASJONER.md](INTEGRASJONER.md)):
+| Tjeneste | Status | Bevis / hva som mangler |
+| --- | --- | --- |
+| TED | **VERIFISERT** 1.11.2026 | 1 194 norske kunngjøringer hentet; frist på 98,4 % av konkurransene og dokumentlenke på 82,9 %; ekte import ga 1 110 nye og 82 sammenslåtte; ny kjøring ga 0 duplikater og 0 falske endringer. Seks ekte kunngjøringer ligger som testdata i `tests/fixtures/`. |
+| Doffin | **IKKE VERIFISERT** | Krever abonnementsnøkkel. Bygget etter API-portalens dokumentasjon. |
+| Stripe | **IKKE VERIFISERT** | Testet med simulert Stripe-API og signerte hendelser. Må kjøres i testmodus med ekte konto. |
+| Resend | **IKKE VERIFISERT** | E-post logges lokalt. Må testes med verifisert domene og testmottakere. |
+| AI (Anthropic) | **IKKE VERIFISERT** | All AI i testene er simulert og merket «Testmodus». Kvaliteten på ekte svar (særlig kontraktsvilkår på norsk) er ikke målt. |
+| Supabase | **IKKE VERIFISERT** | Migreringer og RLS kjører mot PostgreSQL 16 lokalt; Supabase-roller og pooler er ikke prøvd. |
+| Render | **IKKE VERIFISERT** | `render.yaml` følger Blueprint-spesifikasjonen, men er ikke prøvd. |
 
-- TED-henting (kjørt én gang: feilet på nettverk som forventet, og kilden ble korrekt stående som «ikke verifisert»)
-- Doffin-henting (krever nøkkel; felt og typeverdier er ikke bekreftet)
-- Stripe Checkout, kundeportal og ekte webhooks
-- E-post via Resend
-- AI via Anthropic/OpenAI (all AI i utvikling er simulert og tydelig merket)
-- Supabase Storage
+Fremgangsmåte for hver: [INTEGRASJONER.md](INTEGRASJONER.md).
 
 ## Kjente begrensninger
 
-- **Konkurransedokumenter hentes ikke automatisk.** Kunngjøringen og lenken til kilden importeres; vedlegg må lastes opp av brukeren for full analyse. Automatisk nedlasting bør bare bygges via kildenes egne API-er og etter at vilkårene er sjekket.
+- **Konkurransedokumenter hentes ikke automatisk.** Kunngjøringen og lenken importeres; vedlegg lastes opp av brukeren for full analyse og kontraktsrisiko.
 - **Skannede PDF-er** (bilder uten tekst) kan ikke leses – brukeren får beskjed. OCR er ikke bygget.
-- **Kommune** filtreres på stedstekst i kunngjøringen, ikke på kommunenummer. Fylke utledes fra NUTS-koder (fylkesinndelingen fra 2024).
-- **CPV-listen** inneholder hovedgruppene og et utvalg koder. Full liste lastes inn med `npm run import:cpv`.
-- **Naturlig språk-søket** er regelbasert. Det forstår vanlige formuleringer om bransje, sted, beløp, frist og status; resten blir søkeord. Tolkningen vises alltid.
-- **Konkurrentinnsikt** er bare så god som tildelingskunngjøringene. Mange anskaffelser under terskelverdi publiseres uten tildeling – dette står tydelig i appen.
-- **Relevansscoren** er regelbasert samsvar med profilen, ikke sannsynlighet for å vinne.
-- **Sitatkontrollen** bekrefter at sitatet står i kilden (ordrett, eller de første 60 tegnene for lange sitater) – ikke at tolkningen er riktig.
-- **Kun norsk (bokmål).** Datamodellen har land og regioner for SE/DK/FI/DE, men grensesnitt og søkeord er norske.
+- **Kommune** filtreres på stedstekst, ikke kommunenummer. Fylke utledes fra NUTS 2024-koder.
+- **CPV-listen** har hovedgrupper og et utvalg koder; full liste lastes med `npm run import:cpv`.
+- **Naturlig språk-søket** er regelbasert. Tolkningen vises alltid.
+- **Konkurrentinnsikt** er bare så god som tildelingskunngjøringene.
+- **Relevansscoren** er samsvar med profilen, ikke sannsynlighet for å vinne.
+- **Profit Intelligence:** ordsøket finner ord, ikke betydning («ingen dagbot» gir treff); kapasitet regnes per år, ikke per uke/sesong; sertifiseringer gjenkjennes fra en kjent liste; partnernettverket er tomt ved lansering.
+- **Sitatkontrollen** bekrefter at sitatet står i kilden – ikke at tolkningen er riktig.
+- **Kun norsk (bokmål).**
 - **Ingen tofaktorinnlogging eller SSO** ennå.
-- **Juridiske sider er utkast** og merket slik til `LEGAL_PAGES_REVIEWED=true`.
-- **Priser er eks. mva.** Mva./Stripe Tax er ikke satt opp.
-- `package-lock.json` følger ikke med (pakkene ble satt sammen uten tilgang til npm). Første `npm install` lager den – commit den.
+- **Juridiske tekster er utkast** og merket slik til `LEGAL_PAGES_REVIEWED=true`.
+- **Priser er eks. mva.** MVA i Stripe (fast sats eller Stripe Tax) må avklares med regnskapsfører.
 
 ## Kostnadsestimat per måned
 
-Priser hentet 1. november 2026, omregnet med 9,32 kr per USD (kurs 27.10.2026). Uten mva. Sjekk prisene på nytt før du bestiller.
+**Kontrollerte priser** (hentet 2.11.2026, eks. mva.): Supabase Pro 25 USD inkl. 10 USD databasekapasitet (Micro), Small-kapasitet 15 USD, PITR 100 USD per 7 dager ([Supabase](https://supabase.com/pricing)); Resend gratis til 3 000 e-poster/mnd og 100/dag, Pro 20 USD for 50 000 ([Resend](https://resend.com/pricing)); Stripe 2,4 % + 2 kr per norsk/EØS-kort og Billing 0,7 % ([Stripe Norge](https://stripe.com/en-no/pricing)); Claude Sonnet 5.5 2 USD inn / 10 USD ut per million tokens, bufret 0,10 USD, Haiku 5.5 0,10 / 0,50 USD ([Anthropic](https://platform.claude.com/docs/en/about-claude/pricing)). Kurs 9,25 kr per USD ([USD/NOK 29.10–2.11.2026](https://www.poundsterlinglive.com/history/USD-NOK-2026)).
 
-**Faste kostnader ved lansering (0–50 kunder):**
+**Anslått (ikke kontrollert hos leverandøren):** Render 25 USD for webapp 1 CPU/2 GB og 7 USD for arbeider 0,5 CPU/512 MB, fra tredjepartskilder oktober 2026 ([MakerKit](https://makerkit.dev/pricing-calculator/render), [Activepieces](https://www.activepieces.com/blog/render-pricing-2026-free-tier-workers-total-cost.md)). Render endret planene i 2026, og en arbeidsområdeavgift kan komme i tillegg – Blueprint-forhåndsvisningen viser riktig pris før du bekrefter.
 
-| Tjeneste | Valg | USD | ca. NOK |
-| --- | --- | --- | --- |
-| Supabase | Pro (database, lagring, sikkerhetskopi) | 25 | 233 |
-| Render | Webapp 1 CPU / 2 GB | 25 | 233 |
-| Render | Arbeider 0,5 CPU / 512 MB | 7 | 65 |
-| Render | Hobby-arbeidsområde (5 GB trafikk inkl.) | 0 | 0 |
-| Resend | Gratis (3 000 e-poster/mnd, maks 100/dag) | 0 | 0 |
-| TED / Doffin | Åpne API-er | 0 | 0 |
-| **Sum faste** | | **57** | **ca. 530 kr** |
+**Antakelser (anslag):** kundemiks 30 % Start, 50 % Profesjonell, 20 % Bedrift. AI-analyse med dokumenter ca. 35 000 tokens inn og 4 000 ut (ca. 0,11 USD med Sonnet 5.5), uten dokumenter ca. 0,04 USD, kort sammendrag med Haiku ca. 0,001 USD, tilbudsutkast ca. 0,04 USD. «Vanlig» bruk = 30 % av kvoten; «maks» = hele kvoten med dokumenter. Delte analyser av offentlige kunngjøringer (som koster én gang for alle kunder) er ikke trukket fra – tallene er forsiktige.
 
-Resend Pro (20 USD, ca. 190 kr) trengs når dere passerer ca. 100 e-poster per dag – typisk rundt 50–100 aktive brukere med daglige varsler. Domene kommer i tillegg.
+| | 10 kunder | 50 kunder | 100 kunder | 500 kunder |
+| --- | --- | --- | --- | --- |
+| Inntekt (eks. mva.) | 5 090 kr | 25 450 kr | 50 900 kr | 254 500 kr |
+| Drift: Supabase + Render + Resend | 527 kr (57 USD) | 712 kr (77 USD) | 759 kr (82 USD) | 1 915 kr (207 USD) ¹ |
+| AI, vanlig bruk | 278 kr | 1 391 kr | 2 781 kr | 13 907 kr |
+| AI, maks (hele kvoten) | 927 kr | 4 636 kr | 9 271 kr | 46 356 kr |
+| Stripe-gebyrer ² | 178 kr | 889 kr | 1 778 kr | 8 890 kr |
+| **Sum, vanlig bruk** | **983 kr (19 %)** | **2 992 kr (12 %)** | **5 318 kr (10 %)** | **24 712 kr (10 %)** |
+| **Sum, maks AI** | **1 632 kr (32 %)** | **6 237 kr (25 %)** | **11 808 kr (23 %)** | **57 161 kr (22 %)** |
 
-**Variable kostnader:**
+¹ Ved 500 kunder: Small-kapasitet i Supabase, PITR (100 USD) og to webapp-instanser. ² Per betaling: Start 8,17 kr, Profesjonell 17,47 kr, Bedrift 32,97 kr. Norske selskaper betaler 25 % mva. på Stripe-gebyrer (fradragsberettiget når selskapet er mva.-registrert).
 
-| Hva | Grunnlag | Kostnad |
-| --- | --- | --- |
-| AI-analyse uten dokumenter (Claude Sonnet 5.5) | ca. 6 000 tokens inn, 1 500 ut | ca. 0,25 kr |
-| AI-analyse med dokumenter (Claude Sonnet 5.5) | ca. 40 000 tokens inn, 2 500 ut | ca. 1 kr |
-| Samme analyse med Claude Haiku 5.5 | | under 0,05 kr |
-| Stripe per betaling av 499 kr | 2,4 % + 2 kr (norske/EØS-kort) + 0,7 % Billing | ca. 17,50 kr (3,5 %) |
-
-Eksempel: 50 kunder × 20 analyser = 1 000 analyser per måned ≈ 250–1 000 kr med Sonnet 5.5, avhengig av hvor mange som har dokumenter. Analyser av samme kunngjøring deles mellom kunder (når ingen private dokumenter er med) og koster bare én gang.
-
-**Lønnsomhet:** De faste kostnadene dekkes av to kunder på Profesjonell.
-
-Kilder: [Render](https://render.com/pricing), [Supabase via MakerKit](https://makerkit.dev/blog/saas/supabase-pricing), [Resend](https://resend.com/pricing), [Stripe Norge](https://support.stripe.com/questions/pricing-updates-for-businesses-in-norway), [Stripe Billing](https://stripe.com/no/billing/pricing), [Claude API](https://platform.claude.com/docs/en/about-claude/pricing), [USD/NOK](https://www.poundsterlinglive.com/history/USD-NOK-2026).
+Ikke med: lønn, regnskap, advokat, markedsføring, domene, feilovervåking og eventuell arbeidsområdeavgift hos Render. De faste driftskostnadene dekkes av to kunder på Profesjonell. Kostnadstaket `AI_MONTHLY_COST_LIMIT_USD_PER_ORG` (40 USD i `render.yaml`) hindrer at én kunde gir uventet høy AI-kostnad.
 
 ## Neste steg
 
-1. **Koble til dataene:** Skaff Doffin-nøkkel. Kjør `--dry-run` for TED og Doffin, rett eventuelle feltavvik, la arbeideren gå en uke og sammenlign antall åpne kunngjøringer med doffin.no.
-2. **Sett opp betaling, e-post og AI i testmodus:** Stripe-produkter og webhook, Resend-domene, valgt AI-modell med utgiftsgrense. Kjør gjennom kjøp, oppsigelse og feilende kort.
-3. **Juridisk:** Jurist på personvernerklæring og vilkår, databehandleravtaler (særlig AI-leverandøren, som behandler data i USA), selskapsinfo i `COMPANY_*`.
-4. **Pilot:** 3–5 bedrifter i én bransje i noen uker. Mål: finner de anbud de ellers ville gått glipp av, og stoler de på analysene?
-5. **Produkt etter pilot:** automatisk henting av konkurransedokumenter der kildene tillater det, kommunefilter på kommunenummer, full CPV-liste, tofaktorinnlogging, feilovervåking (f.eks. Sentry).
-6. **Norden:** TED-koblingen tar allerede landkode – Sverige/Danmark/Finland krever i hovedsak oversatte søkeord, regioner og grensesnitt.
+Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
+
+1. **Koble til ekte tjenester i testmodus** – Doffin-nøkkel, Stripe testmodus, Resend med testmottakere, Anthropic med utgiftsgrense – og kjør verifiseringen i [INTEGRASJONER.md](INTEGRASJONER.md).
+2. **Juridisk gjennomgang** av personvernerklæring, vilkår, samtykketekst for partnerprofiler og konkurranserettslig veiledning; databehandleravtaler.
+3. **Staging på Render + Supabase**, gjenopprettingstest av sikkerhetskopi, overvåking.
+4. **Pilot med 3–5 bedrifter i én bransje** (f.eks. vinterdrift/maskin eller renhold) – mål om de finner anbud de ellers ville gått glipp av, og om lønnsomhetskalkylen stemmer med egne tall.
+5. **Etter pilot:** automatisk henting av konkurransedokumenter der kildene tillater det, tofaktorinnlogging, feilovervåking, kapasitet per uke/sesong.

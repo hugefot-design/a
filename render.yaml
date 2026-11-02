@@ -13,7 +13,7 @@ services:
     name: anbudradar-web
     runtime: node
     region: frankfurt
-    plan: starter            # minst 512 MB; 2 GB anbefales når mange laster opp PDF-er
+    plan: 1c-2g              # 1 CPU / 2 GB: PDF-lesing ved opplasting skjer i webappen og bruker minne
     buildCommand: npm ci --include=dev && npm run build
     preDeployCommand: node dist/migrate.js   # kjører nye migreringer før ny versjon tar trafikk
     startCommand: npm start
@@ -47,7 +47,7 @@ services:
       - key: ANTHROPIC_MODEL_FAST
         sync: false
       - key: AI_MONTHLY_COST_LIMIT_USD_PER_ORG
-        value: "20"
+        value: "40"           # vern mot misbruk; full Bedrift-kvote med dokumenter er anslått til ca. 34 USD
       - key: EMAIL_PROVIDER
         value: resend
       - key: RESEND_API_KEY
@@ -91,7 +91,7 @@ services:
     name: anbudradar-worker
     runtime: node
     region: frankfurt
-    plan: starter
+    plan: 0.5c-512mb         # henting, varsler, e-post og opprydding
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run worker
     autoDeploy: false
@@ -129,7 +129,7 @@ services:
       - key: ANTHROPIC_MODEL_FAST
         sync: false
       - key: AI_MONTHLY_COST_LIMIT_USD_PER_ORG
-        value: "20"
+        value: "40"           # vern mot misbruk; full Bedrift-kvote med dokumenter er anslått til ca. 34 USD
       - key: EMAIL_PROVIDER
         value: resend
       - key: RESEND_API_KEY
