@@ -27,6 +27,13 @@ const bool = (def: boolean) =>
     .optional()
     .transform((v) => (v === undefined || v === '' ? def : v === 'true' || v === '1'));
 
+/** Påkrevd verdi med tydelig beskjed når den mangler helt (vanlig feil ved første deploy). */
+const required = (name: string) =>
+  z.string({
+    error: (iss) =>
+      iss.input === undefined ? `${name} mangler. Legg den inn som miljøvariabel (Render: tjenesten → Environment).` : undefined,
+  });
+
 const optionalString = z
   .string()
   .optional()
@@ -38,12 +45,12 @@ const schema = z.object({
   APP_URL: z.string().url().default('http://localhost:3000'),
   TRUST_PROXY: bool(false),
 
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL mangler'),
-  DATABASE_ADMIN_URL: z.string().min(1, 'DATABASE_ADMIN_URL mangler'),
+  DATABASE_URL: required('DATABASE_URL').min(1, 'DATABASE_URL er tom'),
+  DATABASE_ADMIN_URL: required('DATABASE_ADMIN_URL').min(1, 'DATABASE_ADMIN_URL er tom'),
   DATABASE_SSL: z.enum(['disable', 'require']).default('disable'),
   DATABASE_POOL_SIZE: z.coerce.number().int().positive().default(10),
 
-  SESSION_SECRET: z.string().min(32, 'SESSION_SECRET må være minst 32 tegn'),
+  SESSION_SECRET: required('SESSION_SECRET').min(32, 'SESSION_SECRET må være minst 32 tegn'),
   CRON_SECRET: optionalString,
 
   AI_PROVIDER: z.enum(['none', 'openai', 'anthropic', 'mock']).default('none'),

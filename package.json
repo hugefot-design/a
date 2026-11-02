@@ -5,7 +5,7 @@
   "description": "AnbudRadar – AI-støttet innsikt i offentlige anskaffelser for norske bedrifter",
   "type": "module",
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.12 <23"
   },
   "scripts": {
     "dev": "tsx scripts/dev.ts",
