@@ -13,7 +13,18 @@ import { sanitizeQuery, type TenderQuery } from '@/domain/search/filters';
 import { absoluteUrl, digestTemplate, trialEndingTemplate, type DigestItem } from '@/domain/email/templates';
 import { isoWeek } from '@/domain/dashboard';
 
-type NotificationType = 'new_match' | 'saved_search' | 'deadline' | 'tender_update' | 'cancellation' | 'weekly_summary' | 'payment_failed' | 'competitor_award' | 'system';
+type NotificationType =
+  | 'new_match'
+  | 'saved_search'
+  | 'deadline'
+  | 'tender_update'
+  | 'cancellation'
+  | 'weekly_summary'
+  | 'payment_failed'
+  | 'competitor_award'
+  | 'system'
+  | 'partner_request'
+  | 'partner_response';
 
 export interface NewNotification {
   orgId: string;
@@ -294,6 +305,8 @@ const TYPE_TAG: Record<string, string> = {
   competitor_award: 'Konkurrent',
   payment_failed: 'Betaling',
   system: 'Melding',
+  partner_request: 'Partnerforespørsel',
+  partner_response: 'Partnersvar',
 };
 
 /**

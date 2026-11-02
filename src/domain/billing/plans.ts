@@ -20,6 +20,14 @@ export interface Entitlements {
   competitorIntel: boolean;
   advancedAnalytics: boolean;
   maxMembers: number;
+  /** Lønnsomhetskalkulator med egne kostnader (selvkost, minstepris, prisintervall, følsomhet). */
+  profitCalculator: boolean;
+  /** Profit Intelligence med AI: kostnadsdrivere og kontraktsrisiko fra dokumentene, kapasitetsanalyse. */
+  profitAI: boolean;
+  /** Kan publisere partnerprofil og motta forespørsler (bli funnet). */
+  partnerListing: boolean;
+  /** Kan søke etter partnere og sende forespørsler. */
+  partnerSearch: boolean;
 }
 
 export interface PlanInfo {
@@ -55,6 +63,10 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       competitorIntel: false,
       advancedAnalytics: false,
       maxMembers: 1,
+      profitCalculator: false,
+      profitAI: false,
+      partnerListing: false,
+      partnerSearch: false,
     },
   },
   starter: {
@@ -67,6 +79,8 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       'Inntil 25 lagrede anbud',
       '3 lagrede søk med e-postvarsel',
       '10 enkle AI-sammendrag per måned',
+      'Fristpåminnelser for lagrede anbud',
+      'Bli funnet som anbudspartner',
     ],
     entitlements: {
       plan: 'starter',
@@ -83,6 +97,10 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       competitorIntel: false,
       advancedAnalytics: false,
       maxMembers: 1,
+      profitCalculator: false,
+      profitAI: false,
+      partnerListing: true,
+      partnerSearch: false,
     },
   },
   professional: {
@@ -95,6 +113,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       'Full AI-analyse av kunngjøringer og opplastede dokumenter',
       'Personlig rangering mot bedriftsprofilen',
       'Fristvarsler og varsel om endringer',
+      'Lønnsomhetskalkulator: selvkost, minstepris og prisintervall med egne kostnader',
       'Inntil 200 lagrede anbud og 20 lagrede søk',
       '60 AI-analyser per måned',
     ],
@@ -113,6 +132,10 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       competitorIntel: false,
       advancedAnalytics: false,
       maxMembers: 2,
+      profitCalculator: true,
+      profitAI: false,
+      partnerListing: true,
+      partnerSearch: false,
     },
   },
   business: {
@@ -122,6 +145,8 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     tagline: 'For team som jobber med tilbud sammen.',
     features: [
       'Alt i Profesjonell',
+      'Profit Intelligence: AI finner kostnadsdrivere og kontraktsrisiko (dagbøter, betalingsvilkår, prisregulering) med kildehenvisning',
+      'Kapasitetsanalyse og anbudspartnere',
       'Inntil 10 brukere',
       'Tilbudsarbeidsflate med AI-assistent',
       'Innsikt i tildelinger og konkurrenter',
@@ -143,6 +168,10 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       competitorIntel: true,
       advancedAnalytics: true,
       maxMembers: 10,
+      profitCalculator: true,
+      profitAI: true,
+      partnerListing: true,
+      partnerSearch: true,
     },
   },
   enterprise: {
@@ -166,6 +195,10 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       competitorIntel: true,
       advancedAnalytics: true,
       maxMembers: 100,
+      profitCalculator: true,
+      profitAI: true,
+      partnerListing: true,
+      partnerSearch: true,
     },
   },
 };
@@ -284,7 +317,11 @@ export type Feature =
   | 'matching'
   | 'bidAssistant'
   | 'competitorIntel'
-  | 'advancedAnalytics';
+  | 'advancedAnalytics'
+  | 'profitCalculator'
+  | 'profitAI'
+  | 'partnerListing'
+  | 'partnerSearch';
 
 export const FEATURE_LABELS: Record<Feature, { name: string; minPlan: PlanId }> = {
   advancedSearch: { name: 'Avansert søk', minPlan: 'professional' },
@@ -294,4 +331,8 @@ export const FEATURE_LABELS: Record<Feature, { name: string; minPlan: PlanId }> 
   bidAssistant: { name: 'Tilbudsarbeidsflate', minPlan: 'business' },
   competitorIntel: { name: 'Konkurrentinnsikt', minPlan: 'business' },
   advancedAnalytics: { name: 'Utvidet statistikk', minPlan: 'business' },
+  profitCalculator: { name: 'Lønnsomhetskalkulator', minPlan: 'professional' },
+  profitAI: { name: 'Profit Intelligence med AI', minPlan: 'business' },
+  partnerListing: { name: 'Partnerprofil', minPlan: 'starter' },
+  partnerSearch: { name: 'Søk etter anbudspartnere', minPlan: 'business' },
 };

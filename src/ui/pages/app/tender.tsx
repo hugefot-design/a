@@ -25,6 +25,8 @@ import {
 import { AppShell } from '../../layouts';
 import { BookmarkButton, MatchExplanation, StatusBadge } from '../../tender';
 import { daysUntil, formatDate, formatDateTime, formatInt, formatMoney, relativeTime } from '../../format';
+import { TenderProfitTeaser } from './profit';
+import type { Recommendation } from '@/domain/profit/recommendation';
 
 export interface TenderPageProps {
   tender: TenderDetail;
@@ -40,6 +42,7 @@ export interface TenderPageProps {
   fit: StoredFitAssessment | null;
   canAssessFit: boolean;
   aiQuota: { used: number; limit: number };
+  profit?: { recommendation: Recommendation; marginPct: number | null; updatedAt: Date } | null;
 }
 
 const SOURCE_NAMES: Record<string, string> = { ted: 'TED', doffin: 'Doffin', manual: 'Manuell import', sample: 'Eksempeldata' };
@@ -287,6 +290,7 @@ export function TenderPage(p: TenderPageProps) {
             </div>
           </Panel>
           <FitPanel tenderId={t.id} fit={p.fit} canAssess={p.canAssessFit} aiConfigured={aiConfigured} quota={p.aiQuota} />
+          <TenderProfitTeaser tenderId={t.id} badge={p.profit ?? null} enabled={ent.profitCalculator} />
           {p.bookmark ? (
             <Panel>
               <PanelHeader title="Status for dere" />

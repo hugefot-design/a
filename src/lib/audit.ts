@@ -34,7 +34,17 @@ export type AuditAction =
   | 'admin.import_triggered'
   | 'admin.source_updated'
   | 'admin.report_resolved'
-  | 'admin.role_changed';
+  | 'admin.role_changed'
+  | 'profit.economics_updated'
+  | 'profit.capacity_updated'
+  | 'profit.calculation_saved'
+  | 'profit.calculation_deleted'
+  | 'partner.profile_published'
+  | 'partner.profile_hidden'
+  | 'partner.profile_updated'
+  | 'partner.request_sent'
+  | 'partner.request_answered'
+  | 'partner.request_withdrawn';
 
 export interface AuditEntry {
   action: AuditAction;

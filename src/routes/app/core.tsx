@@ -26,6 +26,7 @@ import type { Router } from '@/server/router';
 import { DashboardPage } from '@/ui/pages/app/dashboard';
 import { DiscoverPage } from '@/ui/pages/app/discover';
 import { AnalysisPage, TenderPage } from '@/ui/pages/app/tender';
+import { calculationBadge } from '@/domain/profit/service';
 import { NotificationsPage, SavedSearchesPage, SavedTendersPage, type NotificationRow, type Prefs } from '@/ui/pages/app/lists';
 import { formValues, OnboardingOrgPage, OnboardingProfilePage, ProfilePage, profileToValues } from '@/ui/pages/app/profile';
 import { formBool, formStr, param, requireOrg, wantsJsonResponse } from '../helpers';
@@ -188,7 +189,8 @@ export function registerCoreAppRoutes(router: Router): void {
       const analysis = await getLatestTenderAnalysis(tx, id, org.id);
       const fit = org.entitlements.matching ? await getLatestFitAssessment(tx, id, org.id) : null;
       const usage = await usageSummary(tx, org);
-      return { tender, extras, labels, analysis, fit, usage };
+      const profit = org.entitlements.profitCalculator ? await calculationBadge(tx, org.id, id) : null;
+      return { tender, extras, labels, analysis, fit, usage, profit };
     });
     if (!data) throw new HttpError(404, 'Fant ikke kunngjøringen.');
     return render(
@@ -207,6 +209,7 @@ export function registerCoreAppRoutes(router: Router): void {
         fit={data.fit}
         canAssessFit={org.entitlements.matching}
         aiQuota={{ used: data.usage.analyses, limit: data.usage.analysesLimit }}
+        profit={data.profit}
       />,
       { title: data.tender.title },
     );

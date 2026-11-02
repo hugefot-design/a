@@ -3,7 +3,9 @@ import {
   LuBell,
   LuBookmark,
   LuBuilding2,
+  LuCalculator,
   LuChartBar,
+  LuHandshake,
   LuClipboardList,
   LuCreditCard,
   LuLayoutDashboard,
@@ -13,6 +15,7 @@ import {
   LuSearch,
   LuSettings,
   LuShield,
+  LuUsers,
 } from 'react-icons/lu';
 import { useUi } from './context';
 import { Alert, Button, buttonVariants, cn, CsrfField, FlashMessage, Logo, PostForm } from './components';
@@ -199,12 +202,15 @@ function AppNav() {
     { href: '/app/anbud', label: 'Finn anbud', icon: LuSearch },
     { href: '/app/lagret', label: 'Lagrede anbud', icon: LuBookmark },
     { href: '/app/sok', label: 'Lagrede søk', icon: LuSave },
+    { href: '/app/lonnsomhet', label: 'Lønnsomhet', icon: LuCalculator },
     { href: '/app/tilbud', label: 'Tilbudsarbeid', icon: LuClipboardList },
+    { href: '/app/partnere', label: 'Anbudspartnere', icon: LuHandshake },
     { href: '/app/konkurrenter', label: 'Konkurrenter', icon: LuChartBar },
     { href: '/app/varsler', label: 'Varsler', icon: LuBell, badge: unreadCount },
   ];
   const secondary: NavItem[] = [
     { href: '/app/profil', label: 'Bedriftsprofil', icon: LuBuilding2 },
+    { href: '/app/kapasitet', label: 'Kapasitet og økonomi', icon: LuUsers },
     { href: '/app/abonnement', label: 'Abonnement', icon: LuCreditCard },
     { href: '/app/innstillinger', label: 'Innstillinger', icon: LuSettings },
     ...(user?.isPlatformAdmin ? [{ href: '/admin', label: 'Admin', icon: LuShield }] : []),

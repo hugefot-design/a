@@ -118,7 +118,7 @@ export function detectCertifications(text: string): string[] {
   return CERTIFICATIONS.filter((c) => c.patterns.some((p) => p.test(text))).map((c) => c.id);
 }
 
-const LEGAL_REQUIREMENTS = new Set(['vaktvirksomhet', 'renholdsregister', 'sentral_godkjenning', 'elvirksomhet', 'nsm_klarering']);
+export const LEGAL_REQUIREMENTS = new Set(['vaktvirksomhet', 'renholdsregister', 'sentral_godkjenning', 'elvirksomhet', 'nsm_klarering']);
 const FINANCIAL_RE = /(omsetning|kredittvurdering|kredittverdighet|rating|egenkapital|soliditet|økonomisk(e)? kapasitet|financial (standing|capacity)|turnover|credit rating)/i;
 const REFERENCES_RE = /(referanse|tilsvarende oppdrag|relevant erfaring|relevante oppdrag|comparable (size|assignments|contracts)|relevant experience|references)/i;
 

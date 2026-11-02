@@ -6,6 +6,7 @@ import { registerAccountRoutes } from './app/account';
 import { registerBidRoutes } from './app/bids';
 import { registerCompetitorRoutes } from './app/competitors';
 import { registerCoreAppRoutes } from './app/core';
+import { registerProfitRoutes } from './app/profit';
 import { registerPublicRoutes } from './public';
 import { registerWebhookRoutes } from './webhooks';
 
@@ -19,6 +20,7 @@ export function buildRouter(): Router {
   registerAccountRoutes(router);
   registerBidRoutes(router);
   registerCompetitorRoutes(router);
+  registerProfitRoutes(router);
   registerAdminRoutes(router);
   return router;
 }
