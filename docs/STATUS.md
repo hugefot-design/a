@@ -10,11 +10,12 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
 | Enhetstester | 109 av 109 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) |
-| Integrasjonstester (ekte database, ekte HTTP) | 72 av 72 bestått |
+| Integrasjonstester (ekte database, ekte HTTP) | 75 av 75 bestått |
 | Ende-til-ende i nettleser | 2 av 2 bestått |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av anbudssiden (regelverk/klima) og Admin → Datakilder (XML-berikelse), 1280 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
+| Visuell kontroll av de offentlige sidene etter redesign (forside, funksjoner, priser, bransjer, om, kontakt, personvern), 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 
 **Mutasjonssjekker** (testene skal feile når beskyttelsen fjernes – det gjorde de):
 - dry-run som skriver til databasen,

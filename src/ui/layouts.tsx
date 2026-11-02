@@ -38,7 +38,12 @@ export function PublicLayout({ children, heroDark = false }: { children: ReactNo
       <a href="#innhold" className="sr-only-focusable absolute left-3 top-3 z-50 rounded bg-white px-3 py-2 text-navy-900">
         Hopp til innhold
       </a>
-      <header className={cn('relative z-10', heroDark ? 'bg-navy-900' : 'border-b border-line bg-white')}>
+      <header
+        className={cn(
+          'sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:backdrop-saturate-150',
+          heroDark ? 'border-b border-white/10 bg-navy-950/90' : 'border-b border-line bg-white/90',
+        )}
+      >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6">
           <a href="/" className="no-underline" aria-label="AnbudRadar – til forsiden">
             <Logo inverse={heroDark} />

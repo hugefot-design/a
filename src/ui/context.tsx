@@ -14,6 +14,8 @@ export interface UiContextValue {
   legalReviewed: boolean;
   /** Datakilder som er verifisert mot ekte API ("ted", "doffin"). */
   liveSources: string[];
+  /** Lengden på gratis prøveperiode (TRIAL_DAYS), så markedsteksten alltid stemmer. */
+  trialDays: number;
 }
 
 export const UiContext = createContext<UiContextValue>({
@@ -28,6 +30,7 @@ export const UiContext = createContext<UiContextValue>({
   aiIsMock: false,
   legalReviewed: false,
   liveSources: [],
+  trialDays: 14,
 });
 
 export function useUi(): UiContextValue {

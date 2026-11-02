@@ -1,279 +1,20 @@
 import type { ReactNode } from 'react';
+import type { IconType } from 'react-icons';
+import { LuBellRing, LuCalculator, LuChartColumn, LuFileSearch, LuHandshake, LuListChecks, LuMail, LuRadar, LuSearch, LuX } from 'react-icons/lu';
 import { INDUSTRIES, CPV_DIVISIONS } from '@/domain/reference';
 import { PAID_PLANS, PLANS } from '@/domain/billing/plans';
 import { useUi } from '../context';
-import { Alert, Badge, Button, buttonVariants, cn, Field, Input, PostForm, SampleBadge, Textarea } from '../components';
+import { Alert, Button, buttonVariants, cn, Field, Input, PostForm, Textarea } from '../components';
 import { PublicLayout } from '../layouts';
-import { daysUntil, formatDate, formatDateTime, formatInt, formatMoney, relativeTime, sourcesPhrase } from '../format';
+import { formatDate, formatInt, sourcesPhrase } from '../format';
+import { CheckList, Container, CtaBand, FaqList, faqItems, IconChip, INDUSTRY_ICONS, PageHero, PlanCards, SectionHeading } from '../marketing';
 
-export interface Specimen {
-  id: string;
-  title: string;
-  buyerName: string | null;
-  deadlineAt: Date | null;
-  deadlineTimeKnown: boolean;
-  estimatedValue: number | null;
-  currency: string | null;
-  requirement: string | null;
-  isSample: boolean;
-}
-
-export interface Coverage {
-  openReal: number;
-  totalReal: number;
-  lastIngested: Date | null;
-  sources: { id: string; name: string; enabled: boolean; verifiedLive: boolean; lastSuccessAt: Date | null }[];
-}
-
-function Container({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('mx-auto max-w-6xl px-4 sm:px-6', className)}>{children}</div>;
-}
-
-function SectionTitle({ children, lead }: { children: ReactNode; lead?: ReactNode }) {
-  return (
-    <div className="max-w-2xl">
-      <h2 className="font-serif text-[28px] font-semibold leading-tight text-navy-900 sm:text-[34px]">{children}</h2>
-      {lead ? <p className="mt-3 text-[17px] leading-relaxed text-muted">{lead}</p> : null}
-    </div>
-  );
-}
-
-/** Utsnitt av en ekte kunngjøring fra databasen, med markeringer på det som avgjør. */
-function NoticeSpecimen({ s }: { s: Specimen | null }) {
-  if (!s) {
-    return (
-      <figure className="rounded-lg bg-white p-6 text-ink shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)]">
-        <p className="text-[12px] font-semibold text-muted">Illustrasjon – ikke en ekte kunngjøring</p>
-        <p className="mt-3 font-serif text-[20px] font-semibold leading-snug text-navy-900">Renhold av kommunale bygg</p>
-        <p className="mt-4 text-[15px]">
-          Tilbudsfrist: <span className="hl hl-draw">om 21 dager</span>
-        </p>
-        <p className="mt-2 text-[15px]">
-          Krav: <span className="hl hl-draw">godkjent i renholdsregisteret</span>
-        </p>
-      </figure>
-    );
-  }
-  const days = daysUntil(s.deadlineAt);
-  return (
-    <figure className="rounded-lg bg-white p-6 text-ink shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)] sm:p-7">
-      <figcaption className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-muted">
-        <span>Utsnitt fra en kunngjøring i AnbudRadar nå</span>
-        {s.isSample ? <SampleBadge /> : null}
-      </figcaption>
-      <p className="mt-3 font-serif text-[20px] font-semibold leading-snug text-navy-900">{s.title}</p>
-      {s.buyerName ? <p className="mt-1 text-[14px] text-muted">{s.buyerName}</p> : null}
-      <dl className="mt-5 space-y-2.5 text-[15px]">
-        <div className="flex flex-wrap gap-x-2">
-          <dt className="text-muted">Tilbudsfrist</dt>
-          <dd>
-            <span className="hl hl-draw num">{s.deadlineAt ? formatDateTime(s.deadlineAt, s.deadlineTimeKnown) : 'ikke oppgitt'}</span>
-            {days !== null && days > 0 ? <span className="text-muted"> ({days} dager igjen)</span> : null}
-          </dd>
-        </div>
-        <div className="flex flex-wrap gap-x-2">
-          <dt className="text-muted">Estimert verdi</dt>
-          <dd className="num">{formatMoney(s.estimatedValue, s.currency, false)}</dd>
-        </div>
-        {s.requirement ? (
-          <div className="flex flex-wrap gap-x-2">
-            <dt className="text-muted">Nevner krav om</dt>
-            <dd>
-              <span className="hl hl-draw">{s.requirement}</span>
-            </dd>
-          </div>
-        ) : null}
-      </dl>
-      <p className="mt-5 border-t border-line pt-3 text-[12px] text-muted">Markert av AnbudRadar: fakta som avgjør om dere bør gi tilbud.</p>
-    </figure>
-  );
-}
-
-export function HomePage({ specimen, coverage }: { specimen: Specimen | null; coverage: Coverage }) {
-  const { user, liveSources } = useUi();
-  return (
-    <PublicLayout heroDark>
-      <section className="relative overflow-hidden bg-navy-900 pb-20 pt-10 text-white sm:pb-28 sm:pt-16">
-        <svg aria-hidden className="pointer-events-none absolute -right-40 -top-40 hidden h-[640px] w-[640px] opacity-[0.07] lg:block" viewBox="0 0 100 100">
-          {[48, 38, 28, 18, 8].map((r) => (
-            <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#fff" strokeWidth="0.3" />
-          ))}
-        </svg>
-        <Container className="relative grid items-center gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <div>
-            <h1 className="max-w-xl font-serif text-[38px] font-semibold leading-[1.08] tracking-[-0.015em] text-white sm:text-[54px]">
-              Finn offentlige anbud som passer bedriften – før fristen går ut.
-            </h1>
-            <p className="mt-6 max-w-lg text-[18px] leading-relaxed text-navy-100">
-              AnbudRadar henter kunngjøringer fra {sourcesPhrase(liveSources)}, rangerer dem etter hva dere leverer, og forklarer kravene med kildehenvisning.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a href={user ? '/app' : '/registrer'} className={buttonVariants({ variant: 'inverse', size: 'lg' })}>
-                {user ? 'Til appen' : 'Prøv gratis i 14 dager'}
-              </a>
-              <a href="/funksjoner" className={buttonVariants({ variant: 'ghost', size: 'lg', className: 'text-white hover:bg-white/10' })}>
-                Se hvordan det virker
-              </a>
-            </div>
-            <p className="mt-5 text-[14px] text-navy-200">Ingen kort kreves for prøveperioden. Fra 199 kr per måned etterpå.</p>
-          </div>
-          <NoticeSpecimen s={specimen} />
-        </Container>
-      </section>
-
-      <section className="py-20">
-        <Container>
-          <SectionTitle lead="Tre steg, og dere bruker tiden på anbudene som faktisk passer.">Slik fungerer det</SectionTitle>
-          <ol className="mt-10 grid gap-8 md:grid-cols-3">
-            {[
-              ['Fortell hva dere leverer', 'Bransje, tjenester, område, kontraktsstørrelse og sertifiseringer. Det tar et par minutter.'],
-              ['Få anbud rangert og forklart', 'Hvert anbud får en relevansscore med begrunnelse: hva som passer, hva som mangler og hva som kan stoppe dere.'],
-              ['Forbered tilbudet sammen', 'Sjekkliste, tekstutkast fra profilen og godkjenning i teamet. Innsendingen gjør dere i oppdragsgivers system.'],
-            ].map(([title, text], i) => (
-              <li key={title} className="border-t-2 border-navy-900 pt-5">
-                <p className="num font-serif text-[15px] font-semibold text-muted">Steg {i + 1}</p>
-                <h3 className="mt-2 text-[19px] font-semibold text-navy-900">{title}</h3>
-                <p className="mt-2 text-[15px] leading-relaxed text-muted">{text}</p>
-              </li>
-            ))}
-          </ol>
-        </Container>
-      </section>
-
-      <section className="border-y border-line bg-paper py-20">
-        <Container className="grid gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
-          <SectionTitle lead="Frister, beløp og krav vises slik de står i kunngjøringen. AI-tolkningen står for seg selv, med kilde og sidetall – og vi sjekker at sitatene faktisk står i dokumentet.">
-            Fakta først. AI etterpå.
-          </SectionTitle>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border border-line bg-white p-5">
-              <p className="text-[13px] font-semibold text-navy-900">Fra kunngjøringen</p>
-              <p className="mt-0.5 text-[12px] text-muted">Hentet direkte fra kilden. Ingen AI.</p>
-              <dl className="mt-4 space-y-2 text-[14px]">
-                <div>
-                  <dt className="text-muted">Tilbudsfrist</dt>
-                  <dd className="num font-semibold">
-                    <span className="hl">Dato og klokkeslett fra kilden</span>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted">Estimert verdi</dt>
-                  <dd>Slik oppdragsgiver har oppgitt den</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">Kilde</dt>
-                  <dd>Lenke til Doffin eller TED</dd>
-                </div>
-              </dl>
-            </div>
-            <div className="rounded-lg border border-ai/30 bg-ai-soft p-5">
-              <p className="flex items-center gap-2 text-[13px] font-semibold text-navy-900">
-                AI-tolkning <Badge tone="ai">Ikke verifisert</Badge>
-              </p>
-              <p className="mt-0.5 text-[12px] text-muted">Hver påstand har kilde og sidetall.</p>
-              <div className="mt-4 rounded-md border border-line bg-white p-3 text-[14px]">
-                <p>Leverandøren må dokumentere et kvalitetssystem.</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <Badge tone="outline">Konkurransegrunnlag, s. 4</Badge>
-                  <Badge tone="ok">Sitat funnet i kilden</Badge>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      <section className="py-20">
-        <Container className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
-          <SectionTitle lead="Legg inn timekost og marginer én gang. For hvert anbud regner AnbudRadar ut selvkost og minstepris, viser vilkårene som kan koste dere penger – med side og sitat – og sjekker om dere har folk og utstyr til å levere.">
-            Lønner det seg å by?
-          </SectionTitle>
-          <div className="rounded-lg border border-line bg-white p-5 text-[14px]">
-            <p className="text-[13px] font-semibold text-navy-900">Eksempel på oppsett (fiktive tall)</p>
-            <dl className="mt-3 divide-y divide-line">
-              {[
-                ['Selvkost', '660 000 kr', 'Beregnet'],
-                ['Minstepris (margin 8 %, risikopåslag 5 %)', '753 261 kr', 'Beregnet'],
-                ['Oppdragsgivers estimerte verdi', '1 000 000 kr', 'Dokument'],
-                ['Dagbot, tak 10 % av 1 000 000 kr', 'maks 100 000 kr', 'Dokument, s. 3'],
-              ].map(([label, value, basis]) => (
-                <div key={label} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                  <dt className="text-muted">{label}</dt>
-                  <dd className="flex items-center gap-2">
-                    <span className="num font-semibold text-navy-900">{value}</span>
-                    <Badge tone={basis === 'Beregnet' ? 'marker' : 'info'}>{basis}</Badge>
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <p className="mt-3 text-[12px] text-muted">Økonomisk vurdering med deres egne tall – ikke en prognose for hvilken pris som vinner. Med i Profesjonell og Bedrift.</p>
-          </div>
-        </Container>
-      </section>
-
-      {coverage.openReal > 0 ? (
-        <section className="py-16">
-          <Container className="flex flex-wrap items-end justify-between gap-8">
-            <div>
-              <p className="num font-serif text-[48px] font-semibold leading-none text-navy-900">{formatInt(coverage.openReal)}</p>
-              <p className="mt-2 text-[15px] text-muted">åpne kunngjøringer i databasen akkurat nå</p>
-            </div>
-            <div className="text-[14px] text-muted">
-              <p>Sist hentet {coverage.lastIngested ? relativeTime(coverage.lastIngested) : '–'}.</p>
-              <p>
-                Kilder:{' '}
-                {coverage.sources
-                  .filter((s) => (s.id === 'ted' || s.id === 'doffin') && s.lastSuccessAt)
-                  .map((s) => s.name)
-                  .join(' og ') || 'under oppstart'}
-                .
-              </p>
-            </div>
-          </Container>
-        </section>
-      ) : null}
-
-      <section className={cn('py-20', coverage.openReal > 0 && 'border-t border-line')}>
-        <Container>
-          <SectionTitle lead="Fra vakthold og renhold til IT, bygg og helse. Rangeringen bygger på CPV-kodene oppdragsgiverne selv bruker.">
-            Laget for bransjer som lever av offentlige kontrakter
-          </SectionTitle>
-          <ul className="mt-10 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-            {INDUSTRIES.map((i) => (
-              <li key={i.id} className="border-b border-line pb-3">
-                <a href={`/bransjer#${i.id}`} className="text-[16px] font-semibold text-navy-900 no-underline hover:underline">
-                  {i.name}
-                </a>
-                <p className="mt-0.5 text-[14px] text-muted">{i.description}</p>
-              </li>
-            ))}
-          </ul>
-        </Container>
-      </section>
-
-      <section className="bg-navy-900 py-20 text-white">
-        <Container className="flex flex-wrap items-center justify-between gap-8">
-          <div className="max-w-xl">
-            <h2 className="font-serif text-[30px] font-semibold leading-tight text-white">Neste frist venter ikke.</h2>
-            <p className="mt-3 text-[17px] text-navy-100">Opprett konto, fyll ut profilen og se hvilke anbud som passer dere i dag.</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <a href="/registrer" className={buttonVariants({ variant: 'inverse', size: 'lg' })}>
-              Prøv gratis
-            </a>
-            <a href="/priser" className={buttonVariants({ variant: 'ghost', size: 'lg', className: 'text-white hover:bg-white/10' })}>
-              Se priser
-            </a>
-          </div>
-        </Container>
-      </section>
-    </PublicLayout>
-  );
-}
+export { HomePage, type Coverage, type Specimen } from './home';
 
 // ---------------------------------------------------------------------------
-const FEATURES: { title: string; text: string; points: string[] }[] = [
+const FEATURES: { icon: IconType; title: string; text: string; points: string[] }[] = [
   {
+    icon: LuSearch,
     title: 'Finn anbud',
     text: 'Søk i offentlige kunngjøringer med filtre for bransje, fylke, kommune, verdi, frist, oppdragsgiver, status og CPV-kode.',
     points: [
@@ -284,6 +25,7 @@ const FEATURES: { title: string; text: string; points: string[] }[] = [
     ],
   },
   {
+    icon: LuFileSearch,
     title: 'Forstå anbudet',
     text: 'AI leser kunngjøringen og konkurransegrunnlaget dere laster opp, og lager en strukturert oversikt med kildehenvisning for hver opplysning.',
     points: [
@@ -294,21 +36,25 @@ const FEATURES: { title: string; text: string; points: string[] }[] = [
     ],
   },
   {
+    icon: LuRadar,
     title: 'Rangering mot profilen',
     text: 'Hvert anbud får en relevansscore fra 0 til 100 basert på bedriftsprofilen. Scoren viser samsvar – ikke sjansen for å vinne.',
     points: ['Begrunnelse for scoren', 'Mangler og avvik, f.eks. sertifiseringer dere ikke har registrert', 'Krav som kan stoppe dere', 'Anbefalte neste steg'],
   },
   {
+    icon: LuBellRing,
     title: 'Varsler',
     text: 'Få beskjed om det som betyr noe, så ofte dere vil.',
     points: ['Nye treff og nye anbud i lagrede søk', 'Påminnelser 7, 3 og 1 dag før fristen', 'Endringer og avlysninger i anbud dere følger', 'Ukesoversikt på mandager'],
   },
   {
+    icon: LuChartColumn,
     title: 'Konkurrenter og tildelinger',
     text: 'Se hvem som vinner kontraktene i bransjene deres, og hvem som kjøper mest – basert på publiserte tildelinger.',
     points: ['Leverandører med flest tildelinger', 'Oppdragsgivere og hva de kjøper', 'Følg konkurrenter og få varsel når de vinner', 'Dekningen vises alltid; vi anslår aldri priser'],
   },
   {
+    icon: LuListChecks,
     title: 'Tilbudsarbeid',
     text: 'Et felles arbeidsområde for tilbudet, med godkjenning før noe sendes.',
     points: [
@@ -319,6 +65,7 @@ const FEATURES: { title: string; text: string; points: string[] }[] = [
     ],
   },
   {
+    icon: LuCalculator,
     title: 'Lønner det seg? (Profit Intelligence)',
     text: 'Regn på oppdraget med deres egne kostnader før dere bruker tid på tilbudet. Hvert tall viser om det kommer fra dokumentet, fra dere, fra AI eller fra kalkulatoren.',
     points: [
@@ -329,6 +76,7 @@ const FEATURES: { title: string; text: string; points: string[] }[] = [
     ],
   },
   {
+    icon: LuHandshake,
     title: 'Anbudspartnere',
     text: 'Finn bedrifter som kan dekke det dere mangler – sertifisering, utstyr eller kapasitet – og bli funnet selv.',
     points: [
@@ -341,35 +89,62 @@ const FEATURES: { title: string; text: string; points: string[] }[] = [
 ];
 
 export function FeaturesPage() {
+  const { user, trialDays } = useUi();
   return (
     <PublicLayout>
-      <Container className="py-16">
-        <SectionTitle lead="Alt dere trenger fra kunngjøring til ferdig tilbud. Hver funksjon er laget for å spare tid uten å gjette på noe.">Funksjoner</SectionTitle>
-        <div className="mt-12 grid gap-x-12 gap-y-14 md:grid-cols-2">
-          {FEATURES.map((f) => (
-            <section key={f.title}>
-              <h2 className="text-[21px] font-semibold text-navy-900">{f.title}</h2>
-              <p className="mt-2 text-[16px] leading-relaxed text-muted">{f.text}</p>
-              <ul className="mt-4 space-y-2 text-[15px]">
-                {f.points.map((p) => (
-                  <li key={p} className="flex gap-2.5">
-                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-navy-900" aria-hidden />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+      <PageHero
+        eyebrow="Funksjoner"
+        title="Alt fra kunngjøring til ferdig tilbud"
+        lead="Hver funksjon er laget for å spare tid – uten å gjette på noe. Fakta fra kilden står alltid atskilt fra AI-tolkningen."
+      >
+        <div className="mt-8 flex flex-wrap gap-3">
+          <a href={user ? '/app' : '/registrer'} className={buttonVariants({ size: 'lg' })}>
+            {user ? 'Til appen' : `Prøv gratis i ${trialDays} dager`}
+          </a>
+          <a href="/priser" className={buttonVariants({ variant: 'secondary', size: 'lg' })}>
+            Se priser
+          </a>
         </div>
-        <div className="mt-16 rounded-lg border border-line bg-paper p-6">
-          <h2 className="text-[17px] font-semibold text-navy-900">Det AnbudRadar ikke gjør</h2>
-          <ul className="mt-3 space-y-1.5 text-[15px] text-muted">
-            <li>Vi sender ikke inn tilbud. Det gjør dere selv i oppdragsgivers system.</li>
-            <li>Vi gir ikke juridisk rådgivning. Konkurransegrunnlaget gjelder alltid.</li>
-            <li>Vi dikter ikke opp frister, beløp, krav eller konkurrenter. Mangler vises som mangler.</li>
-          </ul>
-        </div>
-      </Container>
+      </PageHero>
+      <section className="py-16 sm:py-24">
+        <Container>
+          <div className="grid gap-5 md:grid-cols-2">
+            {FEATURES.map((f) => (
+              <article key={f.title} className="lift rounded-2xl border border-line bg-white p-6 sm:p-7">
+                <div className="flex items-center gap-3">
+                  <IconChip icon={f.icon} />
+                  <h2 className="text-[20px] font-semibold text-navy-900">{f.title}</h2>
+                </div>
+                <p className="mt-3 text-[15px] leading-relaxed text-muted">{f.text}</p>
+                <CheckList className="mt-5 text-[15px]" items={f.points} />
+              </article>
+            ))}
+          </div>
+          <section className="mt-10 rounded-2xl border border-dashed border-line-strong bg-paper p-6 sm:p-8">
+            <h2 className="font-serif text-[22px] font-semibold text-navy-900">Det AnbudRadar ikke gjør</h2>
+            <ul className="mt-4 grid gap-4 text-[15px] text-muted md:grid-cols-3">
+              {[
+                'Vi sender ikke inn tilbud. Det gjør dere selv i oppdragsgivers system.',
+                'Vi gir ikke juridisk rådgivning. Konkurransegrunnlaget gjelder alltid.',
+                'Vi dikter ikke opp frister, beløp, krav eller konkurrenter. Mangler vises som mangler.',
+              ].map((t) => (
+                <li key={t} className="flex gap-3">
+                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-muted ring-1 ring-line">
+                    <LuX className="size-3" aria-hidden strokeWidth={3} />
+                  </span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </section>
+        </Container>
+      </section>
+      <CtaBand
+        title="Se hvilke anbud som passer dere."
+        lead="Fyll ut bedriftsprofilen på et par minutter, og få anbudene rangert med begrunnelse."
+        primary={user ? { href: '/app', label: 'Til appen' } : { href: '/registrer', label: `Prøv gratis i ${trialDays} dager` }}
+        secondary={{ href: '/priser', label: 'Se priser' }}
+      />
     </PublicLayout>
   );
 }
@@ -394,121 +169,127 @@ const MATRIX: [string, (p: (typeof PLANS)['starter']['entitlements']) => ReactNo
 ];
 
 export function PricingPage() {
-  const { liveSources } = useUi();
+  const { user, liveSources, trialDays } = useUi();
   return (
     <PublicLayout>
-      <Container className="py-16">
-        <SectionTitle lead="Alle priser er per organisasjon per måned, eks. mva. 14 dagers gratis prøveperiode med Profesjonell – uten kort.">Priser</SectionTitle>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {PAID_PLANS.map((id) => {
-            const p = PLANS[id];
-            return (
-              <section key={id} className={cn('flex flex-col rounded-lg border bg-white p-6', id === 'professional' ? 'border-navy-900' : 'border-line')}>
-                <h2 className="text-[18px] font-semibold text-navy-900">{p.name}</h2>
-                <p className="mt-1 text-[14px] text-muted">{p.tagline}</p>
-                <p className="mt-5">
-                  <span className="num font-serif text-[40px] font-semibold text-navy-900">{p.priceNok}</span>
-                  <span className="text-[15px] text-muted"> kr/mnd</span>
-                </p>
-                <ul className="mt-5 flex-1 space-y-2 text-[15px]">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex gap-2.5">
-                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-navy-900" aria-hidden />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <a href="/registrer" className={buttonVariants({ variant: id === 'professional' ? 'primary' : 'secondary', className: 'mt-6 w-full' })}>
-                  Start prøveperiode
-                </a>
-              </section>
-            );
-          })}
-        </div>
-        <p className="mt-5 text-[14px] text-muted">
-          Større organisasjoner med behov for flere brukere, høyere grenser eller faktura: <a href="/kontakt">kontakt oss om Enterprise</a>.
-        </p>
+      <PageHero
+        eyebrow="Priser"
+        title="Enkle priser. Ingen binding."
+        lead={`Alle priser er per organisasjon per måned, eks. mva. ${trialDays} dagers gratis prøveperiode med Profesjonell – uten kort.`}
+      />
+      <section className="py-16 sm:py-24">
+        <Container>
+          <h2 className="sr-only">Planer</h2>
+          <PlanCards />
+          <p className="mt-6 text-center text-[14px] text-muted">
+            Større organisasjoner med behov for flere brukere, høyere grenser eller faktura: <a href="/kontakt">kontakt oss om Enterprise</a>.
+          </p>
 
-        <h2 className="mt-16 font-serif text-[24px] font-semibold text-navy-900">Sammenlign planer</h2>
-        <div className="scroll-x mt-5 rounded-lg border border-line">
-          <table className="w-full min-w-[560px] text-[14px]">
-            <thead>
-              <tr className="border-b border-line bg-paper text-left">
-                <th className="px-4 py-3 font-semibold">Funksjon</th>
-                {PAID_PLANS.map((id) => (
-                  <th key={id} className="px-4 py-3 text-center font-semibold">
-                    {PLANS[id].name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {MATRIX.map(([label, fn]) => (
-                <tr key={label} className="border-b border-line last:border-0">
-                  <td className="px-4 py-2.5">{label}</td>
+          <div className="mt-20">
+            <SectionHeading eyebrow="Detaljer">Sammenlign planer</SectionHeading>
+          </div>
+          <div className="scroll-x mt-8 rounded-2xl border border-line bg-white">
+            <table className="w-full min-w-[560px] text-[14px]">
+              <thead>
+                <tr className="border-b border-line bg-paper text-left">
+                  <th className="px-4 py-3.5 font-semibold">Funksjon</th>
                   {PAID_PLANS.map((id) => (
-                    <td key={id} className="num px-4 py-2.5 text-center">
-                      {fn(PLANS[id].entitlements)}
-                    </td>
+                    <th key={id} className={cn('px-4 py-3.5 text-center font-semibold', id === 'professional' && 'text-navy-900')}>
+                      {PLANS[id].name}
+                      <span className="num block text-[12px] font-normal text-muted">{PLANS[id].priceNok} kr/mnd</span>
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <h2 className="mt-16 font-serif text-[24px] font-semibold text-navy-900">Vanlige spørsmål</h2>
-        <dl className="mt-5 grid gap-6 md:grid-cols-2">
-          {[
-            ['Hva skjer etter prøveperioden?', 'Kontoen går over til gratisnivået med søk og inntil 5 lagrede anbud. Dere velger selv om dere vil betale – ingenting trekkes automatisk.'],
-            ['Kan vi si opp når som helst?', 'Ja. Abonnementet løper ut perioden dere har betalt for, og fornyes ikke etter det.'],
-            ['Hvordan betaler vi?', 'Med kort via Stripe. Kvittering og faktura finner dere under Abonnement.'],
-            ['Hvor kommer dataene fra?', `Fra ${sourcesPhrase(liveSources, true)}. Hver kunngjøring lenker til originalen.`],
-            ['Er AI-analysen alltid riktig?', 'Nei. Den er et hjelpemiddel. Hver opplysning har kilde, og konkurransegrunnlaget gjelder alltid ved avvik.'],
-            ['Hva teller som en AI-analyse?', 'Hver ny analyse av en kunngjøring. Analyser som allerede finnes for samme innhold, teller ikke.'],
-          ].map(([q, a]) => (
-            <div key={q}>
-              <dt className="font-semibold text-navy-900">{q}</dt>
-              <dd className="mt-1 text-[15px] text-muted">{a}</dd>
-            </div>
-          ))}
-        </dl>
-      </Container>
+              </thead>
+              <tbody>
+                {MATRIX.map(([label, fn]) => (
+                  <tr key={label} className="border-b border-line last:border-0 hover:bg-navy-50/50">
+                    <td className="px-4 py-3">{label}</td>
+                    {PAID_PLANS.map((id) => (
+                      <td key={id} className={cn('num px-4 py-3 text-center', id === 'professional' && 'bg-navy-50/40')}>
+                        {fn(PLANS[id].entitlements)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Container>
+      </section>
+      <section className="border-t border-line bg-paper py-16 sm:py-24">
+        <Container className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+          <SectionHeading eyebrow="Spørsmål" lead={<>Finner du ikke svaret? <a href="/kontakt">Kontakt oss</a>.</>}>
+            Vanlige spørsmål
+          </SectionHeading>
+          <FaqList
+            items={[
+              ...faqItems({ trialDays, sources: sourcesPhrase(liveSources, true) }),
+              ['Hva teller som en AI-analyse?', 'Hver ny analyse av en kunngjøring. Analyser som allerede finnes for samme innhold, teller ikke.'],
+            ]}
+          />
+        </Container>
+      </section>
+      <CtaBand
+        title={`Prøv alt i Profesjonell i ${trialDays} dager.`}
+        lead="Ingen kort, og ingenting trekkes automatisk når prøveperioden er over."
+        primary={user ? { href: '/app', label: 'Til appen' } : { href: '/registrer', label: 'Start prøveperiode' }}
+        secondary={{ href: '/funksjoner', label: 'Se funksjoner' }}
+      />
     </PublicLayout>
   );
 }
 
 // ---------------------------------------------------------------------------
 export function IndustriesPage() {
+  const { user, trialDays } = useUi();
   return (
     <PublicLayout>
-      <Container className="py-16">
-        <SectionTitle lead="Bransjene kobles til CPV-kodene oppdragsgiverne bruker i kunngjøringene. Dere kan i tillegg legge inn egne CPV-koder og nøkkelord i profilen.">
-          Bransjer
-        </SectionTitle>
-        <div className="mt-12 divide-y divide-line border-y border-line">
+      <PageHero
+        eyebrow="Bransjer"
+        title="Anbud for deres bransje"
+        lead="Bransjene kobles til CPV-kodene oppdragsgiverne bruker i kunngjøringene. Dere kan i tillegg legge inn egne CPV-koder og nøkkelord i profilen."
+      >
+        <ul className="mt-8 flex flex-wrap gap-2">
           {INDUSTRIES.map((i) => (
-            <section key={i.id} id={i.id} className="grid gap-4 py-7 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
-              <h2 className="text-[19px] font-semibold text-navy-900">{i.name}</h2>
-              <div className="space-y-3">
-                <p className="text-[15px] text-ink">{i.description}</p>
-                <p className="text-[14px] text-muted">
-                  CPV-grupper:{' '}
-                  {i.cpvPrefixes
-                    .map((p) => (p.length === 2 && CPV_DIVISIONS[p] ? `${p} ${CPV_DIVISIONS[p]}` : p))
-                    .join('; ')}
-                </p>
-                <p className="text-[14px] text-muted">Typiske ord: {i.keywords.slice(0, 6).join(', ')}</p>
-              </div>
-            </section>
+            <li key={i.id}>
+              <a href={`#${i.id}`} className="inline-flex rounded-full border border-line bg-white px-3 py-1 text-[13px] font-semibold text-navy-800 no-underline hover:border-navy-300">
+                {i.name}
+              </a>
+            </li>
           ))}
-        </div>
-        <div className="mt-10">
-          <a href="/registrer" className={buttonVariants({ variant: 'primary', size: 'lg' })}>
-            Se anbud i deres bransje
-          </a>
-        </div>
-      </Container>
+        </ul>
+      </PageHero>
+      <section className="py-16 sm:py-24">
+        <Container>
+          <div className="grid gap-5 md:grid-cols-2">
+            {INDUSTRIES.map((i) => (
+              <article key={i.id} id={i.id} className="lift scroll-mt-24 rounded-2xl border border-line bg-white p-6">
+                <div className="flex items-center gap-3">
+                  <IconChip icon={INDUSTRY_ICONS[i.id] ?? LuRadar} />
+                  <h2 className="text-[19px] font-semibold text-navy-900">{i.name}</h2>
+                </div>
+                <p className="mt-3 text-[15px] text-ink">{i.description}</p>
+                <p className="mt-4 text-[12px] font-semibold uppercase tracking-wide text-muted">CPV-grupper</p>
+                <ul className="mt-2 flex flex-wrap gap-1.5">
+                  {i.cpvPrefixes.map((p) => (
+                    <li key={p} className="rounded-md bg-paper px-2 py-0.5 text-[12px] text-muted ring-1 ring-line">
+                      <span className="num font-semibold text-navy-800">{p}</span>
+                      {p.length === 2 && CPV_DIVISIONS[p] ? ` ${CPV_DIVISIONS[p]}` : ''}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-4 text-[13px] text-muted">Typiske ord: {i.keywords.slice(0, 6).join(', ')}</p>
+              </article>
+            ))}
+          </div>
+        </Container>
+      </section>
+      <CtaBand
+        title="Se anbudene i deres bransje."
+        lead="Velg bransje, område og størrelse i profilen – så rangerer vi kunngjøringene for dere."
+        primary={user ? { href: '/app', label: 'Til appen' } : { href: '/registrer', label: `Prøv gratis i ${trialDays} dager` }}
+      />
     </PublicLayout>
   );
 }
@@ -518,34 +299,43 @@ export function AboutPage({ company }: { company: { name: string; orgNumber: str
   const { liveSources } = useUi();
   return (
     <PublicLayout>
-      <Container className="max-w-3xl py-16">
-        <SectionTitle>Om AnbudRadar</SectionTitle>
-        <div className="mt-8 space-y-5 text-[17px] leading-relaxed text-ink">
-          <p>
-            Offentlige anskaffelser er et stort marked, men det tar tid å finne de riktige konkurransene og forstå hva som kreves. Små og mellomstore bedrifter har
-            sjelden egne folk til å lese kunngjøringer hver dag.
-          </p>
-          <p>
-            AnbudRadar gjør det enklere: vi henter kunngjøringer fra {sourcesPhrase(liveSources)}, viser hvilke som passer bedriften og hjelper dere å forstå kravene – med
-            kildehenvisning, slik at dere alltid kan sjekke originalen.
-          </p>
-          <h2 className="pt-4 font-serif text-[22px] font-semibold text-navy-900">Prinsippene våre</h2>
-          <ul className="space-y-2 text-[16px]">
-            <li>Vi viser fakta fra kilden atskilt fra AI-tolkning.</li>
-            <li>Vi dikter aldri opp frister, beløp, krav eller konkurrenter. Det som mangler, sier vi at mangler.</li>
-            <li>Relevansscoren viser samsvar med profilen – ikke sjansen for å vinne.</li>
-            <li>Dere eier dataene deres og kan eksportere eller slette dem når som helst.</li>
-          </ul>
-          <h2 className="pt-4 font-serif text-[22px] font-semibold text-navy-900">Selskapet</h2>
-          <p className="text-[16px]">
-            {company.name}, org.nr. {company.orgNumber}
-            <br />
-            {company.address}
-            <br />
-            <a href={`mailto:${company.email}`}>{company.email}</a>
-          </p>
-        </div>
-      </Container>
+      <PageHero
+        eyebrow="Om oss"
+        title="Om AnbudRadar"
+        lead="Offentlige anskaffelser er et stort marked, men det tar tid å finne de riktige konkurransene og forstå hva som kreves."
+      />
+      <section className="py-16 sm:py-20">
+        <Container className="grid gap-12 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <div className="space-y-5 text-[17px] leading-relaxed text-ink">
+            <p>Små og mellomstore bedrifter har sjelden egne folk til å lese kunngjøringer hver dag.</p>
+            <p>
+              AnbudRadar gjør det enklere: vi henter kunngjøringer fra {sourcesPhrase(liveSources)}, viser hvilke som passer bedriften og hjelper dere å forstå kravene – med
+              kildehenvisning, slik at dere alltid kan sjekke originalen.
+            </p>
+            <h2 className="pt-4 font-serif text-[24px] font-semibold text-navy-900">Prinsippene våre</h2>
+            <CheckList
+              className="text-[16px]"
+              items={[
+                'Vi viser fakta fra kilden atskilt fra AI-tolkning.',
+                'Vi dikter aldri opp frister, beløp, krav eller konkurrenter. Det som mangler, sier vi at mangler.',
+                'Relevansscoren viser samsvar med profilen – ikke sjansen for å vinne.',
+                'Dere eier dataene deres og kan eksportere eller slette dem når som helst.',
+              ]}
+            />
+          </div>
+          <aside className="h-fit rounded-2xl border border-line bg-paper p-6">
+            <h2 className="text-[17px] font-semibold text-navy-900">Selskapet</h2>
+            <p className="mt-3 text-[15px] leading-relaxed text-ink">
+              {company.name}, org.nr. {company.orgNumber}
+              <br />
+              {company.address}
+            </p>
+            <a href={`mailto:${company.email}`} className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold">
+              <LuMail className="size-4" aria-hidden /> {company.email}
+            </a>
+          </aside>
+        </Container>
+      </section>
     </PublicLayout>
   );
 }
@@ -553,34 +343,38 @@ export function AboutPage({ company }: { company: { name: string; orgNumber: str
 export function ContactPage({ sent = false, errors = {}, values = {} }: { sent?: boolean; errors?: Record<string, string>; values?: Record<string, string> }) {
   return (
     <PublicLayout>
-      <Container className="max-w-2xl py-16">
-        <SectionTitle lead="Spørsmål om produktet, Enterprise-avtaler eller data? Skriv til oss, så svarer vi på e-post.">Kontakt</SectionTitle>
-        {sent ? (
-          <Alert tone="ok" className="mt-8" title="Takk for meldingen">
-            Vi svarer så snart vi kan.
-          </Alert>
-        ) : (
-          <PostForm action="/kontakt" className="mt-8 space-y-4">
-            <div className="hidden" aria-hidden>
-              <label htmlFor="website">Ikke fyll ut dette feltet</label>
-              <input id="website" name="website" tabIndex={-1} autoComplete="off" />
-            </div>
-            <Field label="Navn" htmlFor="c-name" error={errors.name}>
-              <Input id="c-name" name="name" required maxLength={120} defaultValue={values.name} autoComplete="name" />
-            </Field>
-            <Field label="E-post" htmlFor="c-email" error={errors.email}>
-              <Input id="c-email" name="email" type="email" required maxLength={254} defaultValue={values.email} autoComplete="email" />
-            </Field>
-            <Field label="Melding" htmlFor="c-msg" error={errors.message}>
-              <Textarea id="c-msg" name="message" rows={6} required maxLength={5000} defaultValue={values.message} />
-            </Field>
-            <p className="text-[13px] text-muted">
-              Vi bruker opplysningene bare til å svare deg. Se <a href="/personvern">personvernerklæringen</a>.
-            </p>
-            <Button type="submit">Send melding</Button>
-          </PostForm>
-        )}
-      </Container>
+      <PageHero eyebrow="Kontakt" title="Snakk med oss" lead="Spørsmål om produktet, Enterprise-avtaler eller data? Skriv til oss, så svarer vi på e-post." />
+      <section className="py-16 sm:py-20">
+        <Container className="max-w-2xl">
+          {sent ? (
+            <Alert tone="ok" title="Takk for meldingen">
+              Vi svarer så snart vi kan.
+            </Alert>
+          ) : (
+            <PostForm action="/kontakt" className="space-y-4 rounded-2xl border border-line bg-white p-6 shadow-[0_20px_50px_-35px_rgba(15,35,64,0.5)] sm:p-8">
+              <div className="hidden" aria-hidden>
+                <label htmlFor="website">Ikke fyll ut dette feltet</label>
+                <input id="website" name="website" tabIndex={-1} autoComplete="off" />
+              </div>
+              <Field label="Navn" htmlFor="c-name" error={errors.name}>
+                <Input id="c-name" name="name" required maxLength={120} defaultValue={values.name} autoComplete="name" />
+              </Field>
+              <Field label="E-post" htmlFor="c-email" error={errors.email}>
+                <Input id="c-email" name="email" type="email" required maxLength={254} defaultValue={values.email} autoComplete="email" />
+              </Field>
+              <Field label="Melding" htmlFor="c-msg" error={errors.message}>
+                <Textarea id="c-msg" name="message" rows={6} required maxLength={5000} defaultValue={values.message} />
+              </Field>
+              <p className="text-[13px] text-muted">
+                Vi bruker opplysningene bare til å svare deg. Se <a href="/personvern">personvernerklæringen</a>.
+              </p>
+              <Button type="submit" size="lg">
+                Send melding
+              </Button>
+            </PostForm>
+          )}
+        </Container>
+      </section>
     </PublicLayout>
   );
 }
@@ -589,15 +383,14 @@ function LegalShell({ title, updated, children }: { title: string; updated: stri
   const { legalReviewed } = useUi();
   return (
     <PublicLayout>
-      <Container className="max-w-3xl py-16">
-        <h1 className="font-serif text-[34px] font-semibold text-navy-900">{title}</h1>
-        <p className="mt-2 text-[14px] text-muted">Sist oppdatert {updated}</p>
+      <PageHero title={title} lead={`Sist oppdatert ${updated}`} />
+      <Container className="max-w-3xl py-12 sm:py-16">
         {!legalReviewed ? (
-          <Alert tone="warning" className="mt-6">
+          <Alert tone="warning" className="mb-8">
             Utkast. Teksten er ikke juridisk gjennomgått ennå og må kvalitetssikres før lansering.
           </Alert>
         ) : null}
-        <div className="legal mt-8 space-y-4 text-[16px] leading-relaxed text-ink [&_h2]:mt-10 [&_h2]:font-serif [&_h2]:text-[22px] [&_h2]:font-semibold [&_h2]:text-navy-900 [&_li]:ml-5 [&_li]:list-disc">
+        <div className="legal space-y-4 text-[16px] leading-relaxed text-ink [&_h2]:mt-10 [&_h2]:font-serif [&_h2]:text-[22px] [&_h2]:font-semibold [&_h2]:text-navy-900 [&_li]:ml-5 [&_li]:list-disc">
           {children}
         </div>
       </Container>

@@ -43,6 +43,7 @@ function uiValue(ctx: RequestContext): UiContextValue {
     aiIsMock: integrations.aiIsMock,
     legalReviewed: env.LEGAL_PAGES_REVIEWED,
     liveSources: liveSources(),
+    trialDays: env.TRIAL_DAYS,
   };
 }
 

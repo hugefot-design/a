@@ -1,4 +1,5 @@
 import { Alert, Button, buttonVariants, Checkbox, Field, Input, PostForm } from '../components';
+import { useUi } from '../context';
 import { AuthLayout } from '../layouts';
 
 type Errors = Record<string, string>;
@@ -26,10 +27,16 @@ export function LoginPage({ email = '', error, next }: { email?: string; error?:
 }
 
 export function RegisterPage({ values = {}, errors = {}, next }: { values?: Record<string, string>; errors?: Errors; next?: string }) {
+  const { trialDays } = useUi();
   return (
     <AuthLayout
       title="Opprett konto"
-      intro={<>Du får 14 dager med alle funksjoner i Profesjonell. Ingen kortinformasjon trengs. Har du konto? <a href="/logg-inn">Logg inn</a>.</>}
+      intro={
+        <>
+          {`Du får ${trialDays} dager med alle funksjoner i Profesjonell. Ingen kortinformasjon trengs. Har du konto? `}
+          <a href="/logg-inn">Logg inn</a>.
+        </>
+      }
     >
       <PostForm action={`/registrer${next ? `?neste=${encodeURIComponent(next)}` : ''}`} className="space-y-4">
         <Field label="Navn" htmlFor="name" error={errors.name}>
