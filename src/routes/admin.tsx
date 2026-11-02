@@ -6,6 +6,7 @@ import { listOrganizations, listUsers, organizationDetail, platformMetrics, syst
 import { setManualPlan, verifyStripePrices, type PriceCheck } from '@/domain/billing/stripe';
 import { PLANS, type PlanId } from '@/domain/billing/plans';
 import { CONNECTORS } from '@/connectors';
+import { enrichmentOverview } from '@/connectors/doffin-enrich';
 import { parseImportFile } from '@/connectors/manual';
 import { finishImportRun, ingestNotices, recordImportError, startImportRun } from '@/domain/tenders/ingest';
 import { redirectWith } from '@/server/flash';
@@ -131,7 +132,10 @@ export function registerAdminRoutes(router: Router): void {
     { maxBodyMb: 20 },
   );
 
-  router.get('/admin/kilder', 'admin', async (ctx) => render(ctx, <AdminSourcesPage sources={await sourceRows()} />, { title: 'Datakilder' }));
+  router.get('/admin/kilder', 'admin', async (ctx) => {
+    const [sources, enrichment] = await Promise.all([sourceRows(), enrichmentOverview()]);
+    return render(ctx, <AdminSourcesPage sources={sources} enrichment={enrichment} />, { title: 'Datakilder' });
+  });
 
   router.post('/admin/kilder/:id', 'admin', async (ctx) => {
     const id = ctx.params.id;

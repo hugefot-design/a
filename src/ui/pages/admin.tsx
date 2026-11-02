@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { INDUSTRY_BY_ID } from '@/domain/reference';
 import { PLANS } from '@/domain/billing/plans';
 import type { platformMetrics, organizationDetail, systemHealth, listOrganizations, listUsers } from '@/domain/admin/admin';
+import type { EnrichmentOverview } from '@/connectors/doffin-enrich';
 import { Alert, Badge, Button, Field, Input, PageHeader, Panel, PanelHeader, PostForm, Select, Stat, Textarea } from '../components';
 import { AdminShell } from '../layouts';
 import { formatDate, formatDateTime, formatInt, formatMoney, relativeTime } from '../format';
@@ -297,7 +298,74 @@ export function AdminImportsPage({
   );
 }
 
-export function AdminSourcesPage({ sources }: { sources: { id: string; name: string; enabled: boolean; verifiedLive: boolean; lastSuccessAt: Date | null; lastError: string | null; notes: string | null; configured: boolean; message: string }[] }) {
+const ENRICH_OUTCOME_LABEL: Record<string, string> = {
+  not_found: 'Ikke funnet (404)',
+  error: 'Feil hos Doffin eller nettverk',
+  too_large: 'For stor fil',
+  unsupported_format: 'Uventet format',
+  parse_error: 'Kunne ikke leses',
+  not_stored: 'Ikke lagret',
+  invalid_id: 'Ugyldig ID',
+};
+
+function EnrichmentPanel({ e }: { e: EnrichmentOverview }) {
+  const perDay = Math.floor((24 * 60) / e.intervalMinutes) * e.maxPerRun;
+  return (
+    <Panel className="mt-6">
+      <PanelHeader
+        title="Doffin: full kunngjøring (eForms-XML)"
+        description="Søket gir bare et sammendrag. Arbeideren henter full kunngjøring for nye treff – åpne konkurranser først – med høyst 10 nedlastinger per minutt."
+      />
+      <div className="space-y-4 px-5 py-4">
+        {!e.configured ? (
+          <Alert tone="warning" title="Mangler DOFFIN_API_KEY">
+            Legg nøkkelen inn som miljøvariabel (aldri i koden).
+          </Alert>
+        ) : !e.enabled ? (
+          <Alert tone="info" title="Automatisk henting er av">
+            Test først én kunngjøring: <code>npm run ingest -- --source doffin --id ÅÅÅÅ-NNNNNN --dry-run --save-raw ./storage/doffin-xml</code>. Sett deretter{' '}
+            <code>DOFFIN_ENRICH_XML=true</code> på både webtjenesten og arbeideren.
+          </Alert>
+        ) : (
+          <p className="text-[13px] text-muted">
+            På: hvert {e.intervalMinutes}. minutt, høyst {e.maxPerRun} per kjøring (inntil {formatInt(perDay)} per døgn).
+          </p>
+        )}
+        <p className="text-[13px] text-muted">Siste forsøk: {e.lastAttemptAt ? relativeTime(e.lastAttemptAt) : 'aldri'}.</p>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+          <Stat label="Lagret som XML" value={formatInt(e.enriched)} />
+          <Stat label="Hentet siste døgn" value={formatInt(e.okLast24h)} />
+          <Stat label="Venter nå" value={formatInt(e.waiting)} />
+          <Stat label="Prøves igjen" value={formatInt(e.retry)} />
+          <Stat label="Ga opp" value={formatInt(e.gaveUp)} />
+        </div>
+        {e.recentProblems.length ? (
+          <Table
+            head={['Doffin-ID', 'Status', 'Siste resultat', 'Forsøk', 'Sist forsøkt', 'Neste forsøk']}
+            rows={e.recentProblems.map((p) => [
+              <a href={`https://doffin.no/notices/${encodeURIComponent(p.doffinId)}`} target="_blank" rel="noopener noreferrer">
+                {p.doffinId}
+              </a>,
+              p.status === 'gave_up' ? <Badge tone="urgent">Ga opp</Badge> : <Badge tone="outline">Prøves igjen</Badge>,
+              <span title={p.lastMessage ?? undefined}>{ENRICH_OUTCOME_LABEL[p.lastOutcome] ?? p.lastOutcome}</span>,
+              p.attempts,
+              relativeTime(p.lastAttemptAt),
+              p.status === 'retry' && p.nextAttemptAt ? formatDateTime(p.nextAttemptAt) : '–',
+            ])}
+          />
+        ) : null}
+      </div>
+    </Panel>
+  );
+}
+
+export function AdminSourcesPage({
+  sources,
+  enrichment = null,
+}: {
+  sources: { id: string; name: string; enabled: boolean; verifiedLive: boolean; lastSuccessAt: Date | null; lastError: string | null; notes: string | null; configured: boolean; message: string }[];
+  enrichment?: EnrichmentOverview | null;
+}) {
   return (
     <AdminShell>
       <PageHeader title="Datakilder" description="«Verifisert live» settes automatisk først etter en vellykket henting fra kildens API." />
@@ -319,6 +387,7 @@ export function AdminSourcesPage({ sources }: { sources: { id: string; name: str
           ])}
         />
       </Panel>
+      {enrichment ? <EnrichmentPanel e={enrichment} /> : null}
     </AdminShell>
   );
 }

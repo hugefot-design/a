@@ -54,6 +54,7 @@ Alt kan byttes: appen er en vanlig Node-prosess + en arbeiderprosess + PostgreSQ
 ```
 POST /api/cron/ingest-ted         hver 2. time
 POST /api/cron/ingest-doffin      hver 2. time
+POST /api/cron/enrich-doffin      hvert 10. minutt (gjør ingenting før DOFFIN_ENRICH_XML=true)
 POST /api/cron/notifications      hvert 15. minutt
 POST /api/cron/emails             hvert 5. minutt
 POST /api/cron/weekly             hver time (sender bare mandag morgen)

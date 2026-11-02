@@ -11,9 +11,15 @@
  *   npm run ingest -- --source doffin --id 2026-123456 --dry-run                     (vis, LAGRER INGENTING)
  *   npm run ingest -- --source doffin --id 2026-123456 --dry-run --save-raw ./storage/doffin-xml
  *   npm run ingest -- --source doffin --id 2026-123456,2026-123457                   (hent og lagre)
+ *
+ * Berik Doffin-søketreff med full eForms-XML (det samme som arbeideren gjør når DOFFIN_ENRICH_XML er på):
+ *   npm run ingest -- --source doffin --enrich --plan                 (vis kandidatene, INGEN kall mot Doffin)
+ *   npm run ingest -- --source doffin --enrich --dry-run --limit 3    (last ned og vis, LAGRER INGENTING)
+ *   npm run ingest -- --source doffin --enrich --limit 10             (last ned og lagre)
  */
 import { closeDb } from '../src/lib/db';
 import { runConnector } from '../src/connectors';
+import { enrichDoffinXml } from '../src/connectors/doffin-enrich';
 import { recomputeMatchesForTenders } from '../src/domain/matching/service';
 
 function arg(name: string): string | undefined {
@@ -33,7 +39,7 @@ function args(name: string): string[] {
 async function main() {
   const source = arg('source');
   if (source !== 'ted' && source !== 'doffin') {
-    console.error('Bruk: npm run ingest -- --source ted|doffin [--since ÅÅÅÅ-MM-DD] [--until ÅÅÅÅ-MM-DD] [--limit N] [--dry-run] [--sample N] [--id DOFFIN-ID[,…]] [--save-raw MAPPE]');
+    console.error('Bruk: npm run ingest -- --source ted|doffin [--since ÅÅÅÅ-MM-DD] [--until ÅÅÅÅ-MM-DD] [--limit N] [--dry-run] [--sample N] [--id DOFFIN-ID[,…]] [--save-raw MAPPE] [--enrich [--plan]]');
     process.exit(2);
   }
   const sinceArg = arg('since');
@@ -47,6 +53,45 @@ async function main() {
   if (ids.length && source !== 'doffin') {
     console.error('--id støttes bare for Doffin (--source doffin).');
     process.exit(2);
+  }
+  if (process.argv.includes('--enrich')) {
+    if (source !== 'doffin' || ids.length) {
+      console.error('--enrich gjelder bare Doffin og kan ikke kombineres med --id.');
+      process.exit(2);
+    }
+    const plan = process.argv.includes('--plan');
+    const limitArg = arg('limit');
+    if (limitArg && !/^\d+$/.test(limitArg)) {
+      console.error('--limit må være et heltall.');
+      process.exit(2);
+    }
+    const result = await enrichDoffinXml({ trigger: 'cli', force: true, plan, dryRun, limit: limitArg ? Number(limitArg) : undefined });
+    console.log(
+      JSON.stringify(
+        {
+          ok: result.ok,
+          skipped: result.skipped,
+          error: result.error,
+          dryRun,
+          plan: result.plan?.map((c) => ({ id: c.doffinId, lifecycle: c.lifecycle, deadlineAt: c.deadlineAt, publishedAt: c.publishedAt, onTed: c.onTed, previousAttempts: c.previousAttempts })),
+          candidates: result.candidates,
+          recorded: result.recorded,
+          downloads: result.downloads,
+          stats: result.stats ? { ...result.stats, tenderIds: result.stats.tenderIds.length } : undefined,
+          errorSample: result.errorSample,
+          sample: result.sample?.slice(0, Number(arg('sample') ?? 1)),
+        },
+        null,
+        2,
+      ),
+    );
+    if (plan) console.error('\nPlan: ingen kall mot Doffin, ingenting lagret.');
+    else if (dryRun && !result.skipped) console.error('\nDry-run: ingen kunngjøringsdata eller forsøk er lagret (bare tempo-luken mot Doffin er oppdatert).');
+    if (result.ok && result.stats && !dryRun && result.stats.tenderIds.length) {
+      console.log(`Treff beregnet: ${await recomputeMatchesForTenders(result.stats.tenderIds)}`);
+    }
+    if (!result.ok) process.exitCode = 1;
+    return;
   }
   if (ids.length) {
     const result = await runConnector('doffin', { trigger: 'cli', ids, dryRun, saveRawDir: arg('save-raw'), force: true });

@@ -91,6 +91,10 @@ const schema = z.object({
   TED_API_BASE_URL: z.string().url().default('https://api.ted.europa.eu'),
   DOFFIN_API_BASE_URL: z.string().url().default('https://api.doffin.no/public/v2'),
   DOFFIN_API_KEY: optionalString,
+  // Automatisk henting av full eForms-XML for nye Doffin-treff (maks 10 nedlastinger/min). Av til formatet er live-verifisert.
+  DOFFIN_ENRICH_XML: bool(false),
+  DOFFIN_ENRICH_INTERVAL_MINUTES: z.coerce.number().int().min(5).max(1440).default(10),
+  DOFFIN_ENRICH_MAX_PER_RUN: z.coerce.number().int().min(1).max(60).default(25),
   INGEST_INTERVAL_MINUTES: z.coerce.number().int().min(15).default(120),
   INGEST_LOOKBACK_DAYS: z.coerce.number().int().min(1).max(365).default(14),
 

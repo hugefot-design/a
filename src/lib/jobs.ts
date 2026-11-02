@@ -7,6 +7,7 @@ import { log } from './logger';
  */
 export type JobKind =
   | 'ingest'
+  | 'enrich_doffin'
   | 'recompute_matches'
   | 'generate_notifications'
   | 'send_emails'

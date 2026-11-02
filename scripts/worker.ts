@@ -36,6 +36,11 @@ async function handleJob(job: Job): Promise<void> {
       if (!locked.result.ok) throw new Error(locked.result.error ?? 'Henting feilet');
       return;
     }
+    case 'enrich_doffin': {
+      const result = (await runScheduledTask('enrich-doffin', 'schedule')) as { ok?: boolean; error?: string } | undefined;
+      if (result && result.ok === false) throw new Error(result.error ?? 'XML-berikelse feilet');
+      return;
+    }
     case 'recompute_matches':
       await recomputeMatchesForTenders(Array.isArray(job.payload.tenderIds) ? (job.payload.tenderIds as string[]) : []);
       return;
@@ -57,6 +62,9 @@ async function handleJob(job: Job): Promise<void> {
 async function scheduleTick(): Promise<void> {
   if (await claimScheduledTask('ingest-ted', env.INGEST_INTERVAL_MINUTES)) await enqueueJob('ingest', { source: 'ted' }, { dedupeKey: 'ingest:ted' });
   if (await claimScheduledTask('ingest-doffin', env.INGEST_INTERVAL_MINUTES)) await enqueueJob('ingest', { source: 'doffin' }, { dedupeKey: 'ingest:doffin' });
+  if (env.DOFFIN_ENRICH_XML && env.DOFFIN_API_KEY && (await claimScheduledTask('enrich-doffin', env.DOFFIN_ENRICH_INTERVAL_MINUTES))) {
+    await enqueueJob('enrich_doffin', {}, { dedupeKey: 'enrich:doffin', maxAttempts: 1 });
+  }
   if (await claimScheduledTask('notifications', 15)) await enqueueJob('generate_notifications', {}, { dedupeKey: 'generate_notifications' });
   if (await claimScheduledTask('weekly-check', 60)) await runScheduledTask('weekly', 'schedule');
   if (await claimScheduledTask('refresh-matches', 24 * 60)) await runScheduledTask('refresh-matches', 'schedule');
@@ -65,7 +73,10 @@ async function scheduleTick(): Promise<void> {
 }
 
 async function loop(): Promise<void> {
-  log.info('worker_started', { ingestEveryMinutes: env.INGEST_INTERVAL_MINUTES });
+  log.info('worker_started', {
+    ingestEveryMinutes: env.INGEST_INTERVAL_MINUTES,
+    doffinXmlEnrichment: env.DOFFIN_ENRICH_XML ? `hvert ${env.DOFFIN_ENRICH_INTERVAL_MINUTES}. min, maks ${env.DOFFIN_ENRICH_MAX_PER_RUN}` : 'av',
+  });
   let lastSchedule = 0;
   while (running) {
     try {

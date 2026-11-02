@@ -4,6 +4,7 @@
  */
 import { afterEach, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { nextEnrichmentState } from '../../src/connectors/doffin-enrich';
 import { readFileSync } from 'node:fs';
 import JSZip from 'jszip';
 import { env } from '../../src/lib/env';
@@ -295,4 +296,22 @@ test('DFØs eksempelkunngjøringer (N4/N16/N29, E2/E3/E4 og EU) kan leses', { sk
     }
   }
   assert.ok(checked >= 8, `bare ${checked} eksempler funnet`);
+});
+
+test('XML-berikelse: nye forsøk med økende pause, og 429/ugyldig nøkkel teller ikke', () => {
+  const steps: [Parameters<typeof nextEnrichmentState>[0], number, ReturnType<typeof nextEnrichmentState>][] = [
+    ['ok', 0, { status: 'ok', attempts: 1, retryInHours: null }],
+    ['not_found', 0, { status: 'retry', attempts: 1, retryInHours: 24 }],
+    ['not_found', 1, { status: 'retry', attempts: 2, retryInHours: 24 }],
+    ['not_found', 2, { status: 'gave_up', attempts: 3, retryInHours: null }],
+    ['error', 0, { status: 'retry', attempts: 1, retryInHours: 1 }],
+    ['parse_error', 1, { status: 'retry', attempts: 2, retryInHours: 6 }],
+    ['unsupported_format', 2, { status: 'retry', attempts: 3, retryInHours: 24 }],
+    ['too_large', 3, { status: 'gave_up', attempts: 4, retryInHours: null }],
+    ['invalid_id', 0, { status: 'gave_up', attempts: 1, retryInHours: null }],
+    ['rate_limited', 2, null],
+    ['unauthorized', 0, null],
+    ['not_attempted', 0, null],
+  ];
+  for (const [outcome, previous, expected] of steps) assert.deepEqual(nextEnrichmentState(outcome, previous), expected, `${outcome} etter ${previous} forsøk`);
 });

@@ -6,11 +6,12 @@ import { deliverPendingEmails } from '@/lib/email';
 import { log } from '@/lib/logger';
 import { withTaskLock } from '@/lib/jobs';
 import { runConnector } from '@/connectors';
+import { enrichDoffinXml } from '@/connectors/doffin-enrich';
 import { recomputeMatchesForTenders } from '@/domain/matching/service';
 import { reconcileStripeSubscriptions } from '@/domain/billing/stripe';
 import { generateWeeklySummaries, runNotificationCycle } from '@/domain/notifications/engine';
 
-export const SCHEDULED_TASKS = ['ingest-ted', 'ingest-doffin', 'notifications', 'emails', 'weekly', 'retention', 'refresh-matches', 'reconcile-stripe'] as const;
+export const SCHEDULED_TASKS = ['ingest-ted', 'ingest-doffin', 'enrich-doffin', 'notifications', 'emails', 'weekly', 'retention', 'refresh-matches', 'reconcile-stripe'] as const;
 export type ScheduledTask = (typeof SCHEDULED_TASKS)[number];
 
 /** Oppbevaringsregler (personvern og databasestørrelse). Dokumentert i docs/PERSONVERN.md. */
@@ -28,6 +29,9 @@ export async function applyRetention(): Promise<Record<string, number>> {
   await run('audit_logs', sql`delete from audit_logs where created_at < now() - interval '365 days' returning 1`);
   await run('search_events', sql`delete from search_events where created_at < now() - interval '365 days' returning 1`);
   await run('import_errors', sql`delete from import_errors where created_at < now() - interval '90 days' returning 1`);
+  await run('import_runs', sql`delete from import_runs where finished_at is not null and started_at < now() - interval '365 days' returning 1`);
+  // Forsøkslogg for Doffin-XML: vellykkede og oppgitte etter 180 dager (da er kunngjøringen uansett ikke kandidat lenger).
+  await run('doffin_enrichment', sql`delete from doffin_enrichment where status <> 'retry' and last_attempt_at < now() - interval '180 days' returning 1`);
   await run('jobs', sql`delete from jobs where status in ('done', 'failed') and created_at < now() - interval '30 days' returning 1`);
   await run('invitations', sql`delete from invitations where (accepted_at is not null or revoked_at is not null or expires_at < now()) and created_at < now() - interval '90 days' returning 1`);
   // Partnerforespørsler inneholder kontaktinfo: ubesvarte 180 dager, avslåtte/trukne 12 måneder, godtatte 24 måneder.
@@ -46,6 +50,7 @@ export async function applyRetention(): Promise<Record<string, number>> {
 const LOCK_TTL_MINUTES: Record<ScheduledTask, number> = {
   'ingest-ted': 60,
   'ingest-doffin': 120,
+  'enrich-doffin': 30,
   notifications: 15,
   emails: 10,
   weekly: 30,
@@ -60,6 +65,9 @@ async function runUnlocked(task: ScheduledTask, trigger: 'schedule' | 'manual' |
       return runConnector('ted', { trigger, triggeredBy });
     case 'ingest-doffin':
       return runConnector('doffin', { trigger, triggeredBy });
+    case 'enrich-doffin':
+      // Gjør ingenting før DOFFIN_ENRICH_XML er slått på (gjelder også /api/cron).
+      return enrichDoffinXml({ trigger, triggeredBy });
     case 'notifications':
       return runNotificationCycle();
     case 'emails':

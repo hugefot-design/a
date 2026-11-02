@@ -34,6 +34,8 @@ Kunngjøringsdata er offentlige, men kan inneholde navn på kontaktpersoner og l
 | E-postlogg | 90 dager |
 | Revisjonslogg og søkestatistikk | 365 dager |
 | Importfeil, avsluttede jobber | 90 / 30 dager |
+| Importkjøringer (ingen persondata utover hvem som startet en manuell kjøring) | 365 dager |
+| Forsøkslogg for Doffin-XML (ingen persondata) | 180 dager |
 | Gamle invitasjoner | 90 dager |
 | Partnerforespørsler | Ubesvarte 180 dager, avslåtte/trukne 12 måneder, godtatte 24 måneder |
 

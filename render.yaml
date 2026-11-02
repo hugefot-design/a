@@ -76,6 +76,8 @@ services:
         value: anbudradar
       - key: DOFFIN_API_KEY
         sync: false
+      - key: DOFFIN_ENRICH_XML
+        value: "false"       # samme verdi som på arbeideren (admin-oversikten og /api/cron leser den her)
       - key: LEGAL_PAGES_REVIEWED
         value: "false"       # settes til true først når jurist har gått gjennom tekstene
       - key: COMPANY_LEGAL_NAME
@@ -158,6 +160,8 @@ services:
         value: anbudradar
       - key: DOFFIN_API_KEY
         sync: false
+      - key: DOFFIN_ENRICH_XML
+        value: "false"       # settes til true etter live-test: npm run ingest -- --source doffin --id … --dry-run
       - key: LEGAL_PAGES_REVIEWED
         value: "false"       # settes til true først når jurist har gått gjennom tekstene
       - key: COMPANY_LEGAL_NAME

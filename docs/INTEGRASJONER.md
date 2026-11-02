@@ -59,7 +59,21 @@ npm run ingest -- --source doffin --id 2026-123456 --dry-run --save-raw ./storag
 
 Dry-run lagrer ingen kunngjøringsdata, men oppdaterer tempo-luken. Kontroller i utskriften at `downloads[0].outcome` er `ok`, at `format` er `eforms-xml`, og at frist, dokumentlenke og kriterier stemmer med kunngjøringen på doffin.no. Filen i `./storage/doffin-xml` (utelatt fra Git) viser hva Doffin faktisk leverte.
 
-Den vanlige, planlagte hentingen bruker fortsatt bare søket. Automatisk XML-berikelse av alle Doffin-treff er neste steg etter at én ekte kunngjøring er kontrollert.
+### Automatisk XML-berikelse (av til live-test)
+
+Det planlagte sveipet bruker søket (raskt, 30 kall/min). Arbeideren kan i tillegg hente full XML for nye treff med download-endepunktet. Det er **av** til én ekte kunngjøring er kontrollert som over. Slå på med `DOFFIN_ENRICH_XML=true` på både webtjenesten og arbeideren (webtjenesten bruker den i admin-oversikten og for `/api/cron`).
+
+- **Hvilke:** Doffin-treff som bare har søkedata, i denne rekkefølgen: åpne konkurranser med frist fram i tid → konkurranser uten oppgitt frist → planlagte → andre publisert siste 30 dager (f.eks. tildelinger). Treff som ikke også finnes i TED går først. Avsluttede, eldre kunngjøringer og kunngjøringer som allerede har XML hoppes over.
+- **Tempo:** hvert `DOFFIN_ENRICH_INTERVAL_MINUTES` (10) minutt, høyst `DOFFIN_ENRICH_MAX_PER_RUN` (25) per kjøring. Det gir inntil 3 600 nedlastinger per døgn med standardverdiene. Samme luke som `--id` (6,5 s mellom kall), så grensen på 10 per minutt holdes også når begge kjører.
+- **Feil:** 404 prøves igjen etter ett døgn og gis opp etter tre forsøk. Andre feil prøves igjen etter 1, 6 og 24 timer og gis opp etter fire forsøk. 429 og ugyldig nøkkel stopper kjøringen uten å telle som forsøk. Forsøkene lagres i `doffin_enrichment` (ingen persondata).
+- **Oversikt:** Admin → Datakilder viser hvor mange som er lagret som XML, hentet siste døgn, venter, prøves igjen og er gitt opp, med de siste problemene.
+- **Antakelse (ikke verifisert):** at grensene for søk (30/min) og nedlasting (10/min) gjelder hver for seg, slik API-portalen beskriver dem. Hvis Doffin svarer 429, håndteres det uansett som over.
+
+```bash
+npm run ingest -- --source doffin --enrich --plan                # hvilke som ville blitt hentet (ingen kall mot Doffin)
+npm run ingest -- --source doffin --enrich --dry-run --limit 3   # last ned og vis, LAGRER INGENTING
+npm run ingest -- --source doffin --enrich --limit 10            # last ned og lagre
+```
 
 ## Stripe
 

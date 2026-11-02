@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 2. november 2026 (Doffin-nedlasting lagt til samme dag).
+Sist oppdatert 2. november 2026 (Doffin-nedlasting, automatisk XML-berikelse og nektelser i vilkårssøket lagt til samme dag).
 
 ## Testresultater
 
@@ -9,8 +9,8 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 98 av 98 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) |
-| Integrasjonstester (ekte database, ekte HTTP) | 64 av 64 bestått |
+| Enhetstester | 105 av 105 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) |
+| Integrasjonstester (ekte database, ekte HTTP) | 71 av 71 bestått |
 | Ende-til-ende i nettleser | 2 av 2 bestått |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -21,7 +21,9 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 - tallkontroll av AI-svar,
 - Doffin-nedlasting som ignorerer `Retry-After`,
 - søketreff som overskriver XML-data,
-- falske varsler ved XML-berikelse.
+- falske varsler ved XML-berikelse,
+- automatisk XML-berikelse: av-bryteren, utvalget (allerede beriket, gamle, rekkefølge), dry-run som lagrer forsøk, 429 som teller som forsøk, og antall/pause før den gir opp (8 av 8 fanget),
+- vilkårssøket: nektelser merket uten forbehold, i feil kategori, med vilkårlige ord imellom, eller slik at et senere ekte vilkår skjules.
 
 **Avhengigheter:** `npm audit` melder 0 sårbarheter (2.11.2026). `zod` er oppgradert fra 3 til 4 (rettet GHSA-mrhx-c7xc-m3w5), og standardmeldinger for validering er på norsk.
 
@@ -42,7 +44,7 @@ Det som dekkes:
 | Tjeneste | Status | Bevis / hva som mangler |
 | --- | --- | --- |
 | TED | **VERIFISERT** 1.11.2026 | 1 194 norske kunngjøringer hentet; frist på 98,4 % av konkurransene og dokumentlenke på 82,9 %; ekte import ga 1 110 nye og 82 sammenslåtte; ny kjøring ga 0 duplikater og 0 falske endringer. Seks ekte kunngjøringer ligger som testdata i `tests/fixtures/`. |
-| Doffin | **IKKE VERIFISERT** med nøkkel | Søk og nedlasting (`/v2/download/{doffinId}`) er bygget etter API-portalen. Nedlastingsadressen er kontrollert live 2.11.2026: den svarer 401 uten nøkkel, og klienten gir riktig melding. Formatet på et vellykket svar er ikke sett ennå. eForms-parseren er testet mot DFØs offisielle eksempler (N4/N16/N29, E2/E3/E4, EU). |
+| Doffin | **IKKE VERIFISERT** med nøkkel | Søk og nedlasting (`/v2/download/{doffinId}`) er bygget etter API-portalen. Nedlastingsadressen er kontrollert live 2.11.2026: den svarer 401 uten nøkkel, og klienten gir riktig melding. Formatet på et vellykket svar er ikke sett ennå. eForms-parseren er testet mot DFØs offisielle eksempler (N4/N16/N29, E2/E3/E4, EU). Automatisk XML-berikelse er bygget og testet mot simulert API, men **av** (`DOFFIN_ENRICH_XML`) til én ekte kunngjøring er kontrollert. |
 | Stripe | **IKKE VERIFISERT** | Testet med simulert Stripe-API og signerte hendelser. Må kjøres i testmodus med ekte konto. |
 | Resend | **IKKE VERIFISERT** | E-post logges lokalt. Må testes med verifisert domene og testmottakere. |
 | AI (Anthropic) | **IKKE VERIFISERT** | All AI i testene er simulert og merket «Testmodus». Kvaliteten på ekte svar (særlig kontraktsvilkår på norsk) er ikke målt. |
