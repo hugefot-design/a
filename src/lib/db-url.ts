@@ -31,6 +31,17 @@ export function deriveAppDatabaseUrl(adminUrl: string, appPassword: string): str
   return u.toString();
 }
 
+/**
+ * Setter passordet inn i en adresse (erstatter også Supabase-plassholderen «[YOUR-PASSWORD]»).
+ * Spesialtegn kodes riktig, så passordet kan limes inn som det er.
+ */
+export function withPassword(url: string, password: string): string | null {
+  if (!isPostgresUrl(url) || !password) return null;
+  const u = new URL(url.trim());
+  u.password = encodeURIComponent(password);
+  return u.toString();
+}
+
 /** Rolle (uten Supabase-poolerens «.prosjekt») og passord fra en adresse. */
 export function credentialsOf(url: string): { role: string; password: string } | null {
   if (!isPostgresUrl(url)) return null;

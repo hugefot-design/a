@@ -24,7 +24,7 @@ Render Free + Supabase Free, 0 kr per måned. Én webtjeneste, ingen egen arbeid
 | Start Command | `npm start` |
 | Health Check Path | `/api/health` |
 
-Miljøvariabler (legges direkte på tjenesten, eller i en miljøgruppe som **kobles** til tjenesten): `NODE_ENV=production`, `APP_URL=https://<navn>.onrender.com` (nøyaktig adressen Render viser), `TRUST_PROXY=true`, `DATABASE_SSL=require`, `DATABASE_ADMIN_URL` (Supabase → Connect → **Session pooler**, med databasepassordet), `DATABASE_APP_PASSWORD`, `SESSION_SECRET` og `CRON_SECRET` (de tre siste med «Generate»), og **`RUN_WORKER_IN_WEB=true`** så nettsiden selv henter anbud, beregner treff og sender varsler.
+Miljøvariabler (legges direkte på tjenesten, eller i en miljøgruppe som **kobles** til tjenesten): `NODE_ENV=production`, `APP_URL=https://<navn>.onrender.com` (nøyaktig adressen Render viser), `TRUST_PROXY=true`, `DATABASE_SSL=require`, `DATABASE_ADMIN_URL` (Supabase → Connect → Direct → **Session pooler**, adressen som den står, gjerne med `[YOUR-PASSWORD]`), `DATABASE_ADMIN_PASSWORD` (databasepassordet, limt inn som det er – spesialtegn håndteres automatisk), `DATABASE_APP_PASSWORD`, `SESSION_SECRET` og `CRON_SECRET` (de tre siste med «Generate»), og **`RUN_WORKER_IN_WEB=true`** så nettsiden selv henter anbud, beregner treff og sender varsler.
 
 `DATABASE_URL` trengs ikke i dette oppsettet: den lages fra `DATABASE_ADMIN_URL` og `DATABASE_APP_PASSWORD`, og migreringen oppretter rollen `anbudradar_app` selv første gang (SQL-steget i avsnitt 1 kan hoppes over). Byggeloggen bekrefter med «App-brukeren kan logge inn i databasen». Node-versjonen er låst til 22 i `package.json`.
 

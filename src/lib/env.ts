@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { z } from 'zod';
-import { deriveAppDatabaseUrl, isPostgresUrl } from './db-url';
+import { deriveAppDatabaseUrl, isPostgresUrl, withPassword } from './db-url';
 
 // Norske standardmeldinger for validering (zod 4). Skjemaene våre har egne meldinger der brukere
 // ser dem; dette gjelder resten (f.eks. manipulerte skjemaer og konfigurasjon).
@@ -47,7 +47,11 @@ const schema = z.object({
   TRUST_PROXY: bool(false),
 
   DATABASE_URL: required('DATABASE_URL').refine(isPostgresUrl, 'DATABASE_URL er ikke en databaseadresse (postgresql://…). Står plassholderen fortsatt der?'),
-  DATABASE_ADMIN_URL: required('DATABASE_ADMIN_URL').refine(isPostgresUrl, 'DATABASE_ADMIN_URL er ikke en databaseadresse (postgresql://…). Står plassholderen fortsatt der?'),
+  DATABASE_ADMIN_URL: required('DATABASE_ADMIN_URL')
+    .refine(isPostgresUrl, 'DATABASE_ADMIN_URL er ikke en databaseadresse (postgresql://…). Står plassholderen fortsatt der?')
+    .refine((v) => !/YOUR-PASSWORD/i.test(decodeURIComponent(v)), 'DATABASE_ADMIN_URL inneholder fortsatt [YOUR-PASSWORD]. Sett passordet i DATABASE_ADMIN_PASSWORD.'),
+  /** Databasepassordet for admin-adressen, limt inn som det er (settes inn i DATABASE_ADMIN_URL). */
+  DATABASE_ADMIN_PASSWORD: optionalString.refine((v) => !v || !/^lim-inn/i.test(v), 'DATABASE_ADMIN_PASSWORD er ikke fylt inn ennå (står fortsatt «lim-inn…»).'),
   /** Passord for app-rollen. Med dette kan DATABASE_URL utelates – den lages fra DATABASE_ADMIN_URL. */
   DATABASE_APP_PASSWORD: optionalString,
   DATABASE_SSL: z.enum(['disable', 'require']).default('disable'),
@@ -133,9 +137,17 @@ function envDiagnosis(): string {
   return lines.join('\n');
 }
 
-/** DATABASE_URL lages fra DATABASE_ADMIN_URL + DATABASE_APP_PASSWORD når den ikke er satt selv. */
+/**
+ * DATABASE_ADMIN_PASSWORD settes inn i DATABASE_ADMIN_URL, og DATABASE_URL lages fra
+ * DATABASE_ADMIN_URL + DATABASE_APP_PASSWORD når den ikke er satt selv.
+ */
 function applyDerivedDatabaseUrl(): void {
   const e = process.env;
+  const adminPassword = e.DATABASE_ADMIN_PASSWORD?.trim();
+  if (adminPassword && !/^lim-inn/i.test(adminPassword) && e.DATABASE_ADMIN_URL?.trim()) {
+    const withPw = withPassword(e.DATABASE_ADMIN_URL, adminPassword);
+    if (withPw) e.DATABASE_ADMIN_URL = withPw;
+  }
   if (e.DATABASE_URL?.trim() || !e.DATABASE_ADMIN_URL?.trim() || !e.DATABASE_APP_PASSWORD?.trim()) return;
   const derived = deriveAppDatabaseUrl(e.DATABASE_ADMIN_URL, e.DATABASE_APP_PASSWORD.trim());
   if (derived) e.DATABASE_URL = derived;
