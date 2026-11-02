@@ -35,24 +35,34 @@ Alt kan byttes: appen er en vanlig Node-prosess + en arbeiderprosess + PostgreSQ
 
 ## 3. Webapp og arbeider (Render)
 
-1. Legg koden i et Git-repo (husk `package-lock.json` etter første `npm install`).
-2. **Web service:** Build `npm install && npm run build`, Start `npm start`, helsesjekk `/api/health`.
-3. **Background worker:** samme repo, Build `npm install && npm run build`, Start `npm run worker`.
-4. Miljøvariabler på begge (se `.env.example`): `NODE_ENV=production`, `APP_URL=https://…`, `TRUST_PROXY=true`, database, `SESSION_SECRET`, `CRON_SECRET`, AI, e-post, Stripe og lagring.
+**Enklest: Blueprint.** Repoet har `render.yaml` med webapp og arbeider i Frankfurt. Filen oppretter ingenting av seg selv – i Render velger du *New → Blueprint*, kobler til repoet, ser over tjenestene og prisen, og limer inn hemmelighetene Render ber om (`sync: false`). `SESSION_SECRET` og `CRON_SECRET` genereres av Render og deles mellom webapp og arbeider (avmeldingslenker i e-post signeres med `SESSION_SECRET`, så verdien må være lik). *Blueprint-filen er ikke prøvd mot Render ennå – kontroller forhåndsvisningen før du bekrefter.*
+
+**Manuelt:**
+
+1. Legg koden i et Git-repo (`package-lock.json` er med).
+2. **Web service:** Build `npm ci --include=dev && npm run build`, Pre-deploy `node dist/migrate.js`, Start `npm start`, helsesjekk `/api/health`.
+   (`--include=dev` trengs fordi byggeverktøyene er utviklingsavhengigheter og `NODE_ENV=production` ellers hopper over dem.)
+3. **Background worker:** samme repo og bygg, Start `npm run worker`.
+4. Miljøvariabler på begge (se `.env.example`): `NODE_ENV=production`, `APP_URL=https://…`, `TRUST_PROXY=true`, database, `SESSION_SECRET` (samme på begge), `CRON_SECRET`, AI, e-post, Stripe og lagring.
    Appen nekter å starte i produksjon med `AI_PROVIDER=mock`, http-adresse, utviklingshemmelighet eller uten `CRON_SECRET`.
 5. Eget domene: legg det til hos Render, og oppdater `APP_URL`.
+
+**Hemmeligheter** legges bare inn i Render-dashbordet (Environment) eller i Supabase/Stripe/Resend sine egne kontrollpaneler – aldri i koden, i `render.yaml` eller i chat. `.env` er utelatt fra Git (`.gitignore`).
 
 **Uten arbeiderprosess** (f.eks. på en plattform med bare webprosesser): kall oppgavene fra en ekstern cron med `Authorization: Bearer $CRON_SECRET`:
 
 ```
-POST /api/cron/ingest-ted        hver 2. time
-POST /api/cron/ingest-doffin     hver 2. time
-POST /api/cron/notifications     hvert 15. minutt
-POST /api/cron/emails            hvert 5. minutt
-POST /api/cron/weekly            hver time (sender bare mandag morgen)
-POST /api/cron/refresh-matches   daglig
-POST /api/cron/retention         daglig
+POST /api/cron/ingest-ted         hver 2. time
+POST /api/cron/ingest-doffin      hver 2. time
+POST /api/cron/notifications      hvert 15. minutt
+POST /api/cron/emails             hvert 5. minutt
+POST /api/cron/weekly             hver time (sender bare mandag morgen)
+POST /api/cron/refresh-matches    daglig
+POST /api/cron/retention          daglig
+POST /api/cron/reconcile-stripe   hver 6. time (sammenligner abonnementer med Stripe)
 ```
+
+Oppgavene tar en lås i databasen (med utløpstid), så to samtidige kall – eller en arbeider og en ekstern cron – aldri kjører samme oppgave samtidig. Låsen fungerer også bak Supabase-pooleren.
 
 ## 4. Første oppstart
 
@@ -77,6 +87,41 @@ Sjekk deretter **Admin → Kilder**: en kilde markeres «verifisert» først nå
 - [ ] Sikkerhetskopi av databasen slått på, og gjenoppretting testet én gang
 - [ ] Overvåking: oppetidssjekk mot `/api/health`, varsling ved feil i logg (Render log streams eller tilsvarende)
 - [ ] Fjern eventuelle eksempeldata (`db:seed-dev` kjører uansett ikke i produksjon)
+- [ ] Profit Intelligence: samtykketeksten for partnerprofiler og den konkurranserettslige veiledningen gjennomgått av advokat
+- [ ] CI grønn på `main` før første produksjonsdeploy
+
+## 6. Sikkerhetskopi og gjenoppretting
+
+- **Daglig sikkerhetskopi** er inkludert i Supabase Pro (7 dager). Slå på **PITR** (gjenoppretting til et tidspunkt) når dere har betalende kunder.
+- **Egen kopi utenfor Supabase** (anbefalt ukentlig, lagres kryptert et annet sted):
+  ```bash
+  pg_dump "$DATABASE_ADMIN_URL" --format=custom --no-owner --file=anbudradar-$(date +%F).dump
+  ```
+- **Test gjenoppretting minst én gang før lansering**, til en ny tom database:
+  ```bash
+  createdb anbudradar_restore_test
+  pg_restore --no-owner --dbname=anbudradar_restore_test anbudradar-ÅÅÅÅ-MM-DD.dump
+  ```
+  Kontroller at `schema_migrations` har alle migreringene, og at antall rader i `organizations`, `subscriptions` og `tenders` stemmer.
+- **Opplastede filer** ligger i Supabase Storage og er ikke med i databasekopien. Dokumentene kan lastes opp på nytt av kundene, men vurder periodisk kopi av bøtta.
+
+## 7. Utrulling og tilbakerulling
+
+- **Migreringer er bare fremover og kjøres før ny kode tar trafikk** (`preDeployCommand`). Migreringene 0006–0010 legger til kolonner, tabeller, indekser og tilgangsregler, retter referansedata (NUTS-koder for fylker og frister på eksisterende kunngjøringer) og strammer inn rettighetene til webapp-rollen. Ingen tabeller eller kolonner slettes, så forrige versjon av koden på denne grenen fungerer mot det nye skjemaet. Å gå helt tilbake til den opprinnelige koden fra zip-filen etter 0007 er ikke støttet – tilgangsmodellen er strengere nå.
+- **Tilbakerulling av kode:** Render → tjenesten → *Events* → velg forrige vellykkede deploy → *Rollback*. Gjør det samme for arbeideren.
+- **Tilbakerulling av database** (sjelden – bare hvis en migrering har ødelagt data): stopp arbeideren, gjenopprett med PITR til tidspunktet før deploy, rull tilbake koden, start arbeideren. Skriv ned hva som skjedde.
+- **Før hver deploy med ny migrering:** ta en manuell sikkerhetskopi (Supabase → Database → Backups), kjør migreringen mot en kopi eller staging først hvis den endrer eksisterende data.
+- Hold `autoDeploy: false` til dere har CI som må være grønn før deploy.
+
+## 8. Kontinuerlig integrasjon (CI)
+
+`.github/workflows/ci.yml` kjører typesjekk, enhetstester, integrasjonstester mot PostgreSQL 16, produksjonsbygg og ende-til-ende i Chromium ved pull request og push til `main`. Ingen hemmeligheter trengs (AI, e-post og Stripe er simulert i `.env.test`). GitHub Actions er gratis for offentlige repoer; for private repoer bruker kjøringene av kontoens inkluderte minutter (ca. 6–10 minutter per kjøring).
+
+## 9. Overvåking
+
+- Oppetidssjekk mot `/api/health` hvert minutt (f.eks. Better Stack eller UptimeRobot). Svarer `503` når databasen ikke svarer.
+- **Admin → Helse**: arbeiderens siste livstegn, jobbkø, siste henting per kilde, e-postkø og feilede jobber.
+- Varsle på loggmeldingene `worker_tick_failed`, `stripe_webhook_failed`, `email_send_failed` og `ai_cost_limit_reached`.
 
 ## Logger og feilsøking
 

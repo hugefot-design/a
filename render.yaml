@@ -1,0 +1,170 @@
+# Render Blueprint for AnbudRadar (webapp + bakgrunnsarbeider).
+#
+# Filen oppretter INGENTING av seg selv. Den brukes først når du selv velger
+# «New → Blueprint» i Render og kobler til repoet – da viser Render hva som vil bli
+# opprettet og hva det koster før du bekrefter.
+#
+# Databasen ligger hos Supabase (EU-region) og settes opp etter docs/DRIFT.md.
+# Hemmeligheter har `sync: false`: Render ber deg lime dem inn i dashbordet.
+# De skal aldri skrives inn i denne filen eller i koden.
+
+services:
+  - type: web
+    name: anbudradar-web
+    runtime: node
+    region: frankfurt
+    plan: starter            # minst 512 MB; 2 GB anbefales når mange laster opp PDF-er
+    buildCommand: npm ci --include=dev && npm run build
+    preDeployCommand: node dist/migrate.js   # kjører nye migreringer før ny versjon tar trafikk
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: false        # deploy manuelt (eller fra CI) til dere har en fast rutine
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: TRUST_PROXY
+        value: "true"
+      - key: APP_URL
+        sync: false          # https://ditt-domene.no
+      - key: DATABASE_URL
+        sync: false          # rollen anbudradar_app (RLS) – se DRIFT.md
+      - key: DATABASE_ADMIN_URL
+        sync: false          # eier-rollen (migreringer og bakgrunnsjobber)
+      - key: DATABASE_SSL
+        value: require
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: AI_PROVIDER
+        value: anthropic
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        sync: false
+      - key: ANTHROPIC_MODEL_FAST
+        sync: false
+      - key: AI_MONTHLY_COST_LIMIT_USD_PER_ORG
+        value: "20"
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: ADMIN_NOTIFICATION_EMAIL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false          # sk_test_… til testing, sk_live_… først ved lansering
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_STARTER
+        sync: false
+      - key: STRIPE_PRICE_PROFESSIONAL
+        sync: false
+      - key: STRIPE_PRICE_BUSINESS
+        sync: false
+      - key: STORAGE_DRIVER
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: anbudradar
+      - key: DOFFIN_API_KEY
+        sync: false
+      - key: LEGAL_PAGES_REVIEWED
+        value: "false"       # settes til true først når jurist har gått gjennom tekstene
+      - key: COMPANY_LEGAL_NAME
+        sync: false
+      - key: COMPANY_ORG_NUMBER
+        sync: false
+      - key: COMPANY_ADDRESS
+        sync: false
+      - key: COMPANY_CONTACT_EMAIL
+        sync: false
+
+  - type: worker
+    name: anbudradar-worker
+    runtime: node
+    region: frankfurt
+    plan: starter
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run worker
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: TRUST_PROXY
+        value: "true"
+      - key: APP_URL
+        sync: false          # https://ditt-domene.no
+      - key: DATABASE_URL
+        sync: false          # rollen anbudradar_app (RLS) – se DRIFT.md
+      - key: DATABASE_ADMIN_URL
+        sync: false          # eier-rollen (migreringer og bakgrunnsjobber)
+      - key: DATABASE_SSL
+        value: require
+      - key: SESSION_SECRET         # må være lik i web og arbeider (avmeldingslenker signeres med den)
+        fromService:
+          type: web
+          name: anbudradar-web
+          envVarKey: SESSION_SECRET
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: anbudradar-web
+          envVarKey: CRON_SECRET
+      - key: AI_PROVIDER
+        value: anthropic
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        sync: false
+      - key: ANTHROPIC_MODEL_FAST
+        sync: false
+      - key: AI_MONTHLY_COST_LIMIT_USD_PER_ORG
+        value: "20"
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: ADMIN_NOTIFICATION_EMAIL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false          # sk_test_… til testing, sk_live_… først ved lansering
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_STARTER
+        sync: false
+      - key: STRIPE_PRICE_PROFESSIONAL
+        sync: false
+      - key: STRIPE_PRICE_BUSINESS
+        sync: false
+      - key: STORAGE_DRIVER
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: anbudradar
+      - key: DOFFIN_API_KEY
+        sync: false
+      - key: LEGAL_PAGES_REVIEWED
+        value: "false"       # settes til true først når jurist har gått gjennom tekstene
+      - key: COMPANY_LEGAL_NAME
+        sync: false
+      - key: COMPANY_ORG_NUMBER
+        sync: false
+      - key: COMPANY_ADDRESS
+        sync: false
+      - key: COMPANY_CONTACT_EMAIL
+        sync: false

@@ -56,7 +56,7 @@ export function registerPublicRoutes(router: Router): void {
   router.get('/priser', 'public', async (ctx) => render(ctx, <PricingPage />, { title: 'Priser' }));
   router.get('/bransjer', 'public', async (ctx) => render(ctx, <IndustriesPage />, { title: 'Bransjer' }));
   router.get('/om', 'public', async (ctx) => render(ctx, <AboutPage company={company()} />, { title: 'Om oss' }));
-  router.get('/personvern', 'public', async (ctx) => render(ctx, <PrivacyPage company={company()} />, { title: 'Personvern' }));
+  router.get('/personvern', 'public', async (ctx) => render(ctx, <PrivacyPage company={company()} aiProvider={env.AI_PROVIDER} />, { title: 'Personvern' }));
   router.get('/vilkar', 'public', async (ctx) => render(ctx, <TermsPage company={company()} />, { title: 'Vilkår' }));
   router.get('/kontakt', 'public', async (ctx) => render(ctx, <ContactPage />, { title: 'Kontakt' }));
 

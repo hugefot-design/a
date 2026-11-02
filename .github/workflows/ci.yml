@@ -1,0 +1,61 @@
+# Kontinuerlig integrasjon: typesjekk, enhetstester, integrasjonstester mot ekte PostgreSQL 16,
+# produksjonsbygg og ende-til-ende i Chromium. Ingen hemmeligheter trengs: AI, e-post og Stripe
+# er simulert i testmiljøet (.env.test), og testene nekter å kjøre mot andre databaser enn *_test.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Installer avhengigheter
+        run: npm ci
+      - name: Lag databaseroller og testdatabase
+        run: npm run db:setup-local
+      - name: Typesjekk
+        run: npm run typecheck
+      - name: Enhetstester
+        run: npm run test:unit
+      - name: Integrasjonstester (ekte database)
+        run: npm run test:integration
+      - name: Produksjonsbygg
+        run: npm run build
+      - name: Chromium for ende-til-ende
+        run: npx playwright install --with-deps chromium
+      - name: Ende-til-ende i nettleser
+        run: npm run test:e2e

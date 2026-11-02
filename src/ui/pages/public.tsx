@@ -183,6 +183,34 @@ export function HomePage({ specimen, coverage }: { specimen: Specimen | null; co
         </Container>
       </section>
 
+      <section className="py-20">
+        <Container className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
+          <SectionTitle lead="Legg inn timekost og marginer én gang. For hvert anbud regner AnbudRadar ut selvkost og minstepris, viser vilkårene som kan koste dere penger – med side og sitat – og sjekker om dere har folk og utstyr til å levere.">
+            Lønner det seg å by?
+          </SectionTitle>
+          <div className="rounded-lg border border-line bg-white p-5 text-[14px]">
+            <p className="text-[13px] font-semibold text-navy-900">Eksempel på oppsett (fiktive tall)</p>
+            <dl className="mt-3 divide-y divide-line">
+              {[
+                ['Selvkost', '660 000 kr', 'Beregnet'],
+                ['Minstepris (margin 8 %, risikopåslag 5 %)', '753 261 kr', 'Beregnet'],
+                ['Oppdragsgivers estimerte verdi', '1 000 000 kr', 'Dokument'],
+                ['Dagbot, tak 10 % av 1 000 000 kr', 'maks 100 000 kr', 'Dokument, s. 3'],
+              ].map(([label, value, basis]) => (
+                <div key={label} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <dt className="text-muted">{label}</dt>
+                  <dd className="flex items-center gap-2">
+                    <span className="num font-semibold text-navy-900">{value}</span>
+                    <Badge tone={basis === 'Beregnet' ? 'marker' : 'info'}>{basis}</Badge>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-[12px] text-muted">Økonomisk vurdering med deres egne tall – ikke en prognose for hvilken pris som vinner. Med i Profesjonell og Bedrift.</p>
+          </div>
+        </Container>
+      </section>
+
       {coverage.openReal > 0 ? (
         <section className="py-16">
           <Container className="flex flex-wrap items-end justify-between gap-8">
@@ -290,6 +318,26 @@ const FEATURES: { title: string; text: string; points: string[] }[] = [
       'Eksport til Word og godkjenning i teamet',
     ],
   },
+  {
+    title: 'Lønner det seg? (Profit Intelligence)',
+    text: 'Regn på oppdraget med deres egne kostnader før dere bruker tid på tilbudet. Hvert tall viser om det kommer fra dokumentet, fra dere, fra AI eller fra kalkulatoren.',
+    points: [
+      'Selvkost, minstepris, prisintervall og margin ved oppdragsgivers verdi – med formel for hvert tall',
+      'Dagbøter, betalingsfrist, prisregulering og garantier med dokument, side og sitat – og hva de kan koste',
+      'Kapasitet: bemanning, eksisterende kontrakter og utstyr mot det oppdraget krever',
+      'Anbefaling: Vurder å by, Undersøk nærmere eller Høy risiko – med begrunnelse, ikke vinnersjanse',
+    ],
+  },
+  {
+    title: 'Anbudspartnere',
+    text: 'Finn bedrifter som kan dekke det dere mangler – sertifisering, utstyr eller kapasitet – og bli funnet selv.',
+    points: [
+      'Profilen vises bare når dere publiserer den med samtykke',
+      'Kontaktinfo deles bare når mottakeren godtar',
+      'Innebygd sperre mot samarbeid mellom bedrifter som kan levere alene (konkurranseloven)',
+      'Del aldri priser eller tilbudsstrategi – det minner vi om i hver forespørsel',
+    ],
+  },
 ];
 
 export function FeaturesPage() {
@@ -338,6 +386,10 @@ const MATRIX: [string, (p: (typeof PLANS)['starter']['entitlements']) => ReactNo
   ['Personlig rangering med begrunnelse', (e) => (e.matching ? '✓' : '–')],
   ['Tilbudsarbeid med AI-utkast', (e) => (e.bidAssistant ? `${e.aiBidDraftsPerMonth} utkast/mnd` : '–')],
   ['Konkurrent- og tildelingsinnsikt', (e) => (e.competitorIntel ? '✓' : '–')],
+  ['Lønnsomhetskalkulator med kontraktsvilkår og kapasitet', (e) => (e.profitCalculator ? '✓' : '–')],
+  ['AI-analyse av lønnsomhet og kontraktsrisiko', (e) => (e.profitAI ? '✓' : '–')],
+  ['Partnerprofil (bli funnet som anbudspartner)', (e) => (e.partnerListing ? '✓' : '–')],
+  ['Søk etter anbudspartnere', (e) => (e.partnerSearch ? '✓' : '–')],
   ['Brukere', (e) => formatInt(e.maxMembers)],
 ];
 
@@ -553,9 +605,17 @@ function LegalShell({ title, updated, children }: { title: string; updated: stri
   );
 }
 
-export function PrivacyPage({ company }: { company: { name: string; orgNumber: string; address: string; email: string } }) {
+const AI_PROCESSOR: Record<string, string | null> = {
+  anthropic: 'Anthropic – AI-analyser (kan behandle data i USA).',
+  openai: 'OpenAI – AI-analyser (kan behandle data i USA).',
+  mock: null,
+  none: null,
+};
+
+export function PrivacyPage({ company, aiProvider = 'anthropic' }: { company: { name: string; orgNumber: string; address: string; email: string }; aiProvider?: string }) {
+  const aiProcessor = AI_PROCESSOR[aiProvider] ?? null;
   return (
-    <LegalShell title="Personvernerklæring" updated={formatDate(new Date('2026-11-01'), true)}>
+    <LegalShell title="Personvernerklæring" updated={formatDate(new Date('2026-11-02'), true)}>
       <p>
         Denne erklæringen forklarer hvordan {company.name} (org.nr. {company.orgNumber}, {company.address}) behandler personopplysninger i AnbudRadar. Vi er
         behandlingsansvarlig. Kontakt: <a href={`mailto:${company.email}`}>{company.email}</a>.
@@ -565,6 +625,13 @@ export function PrivacyPage({ company }: { company: { name: string; orgNumber: s
         <li>Kontoopplysninger: navn, e-postadresse og passord (lagret som sikker hash, aldri i klartekst).</li>
         <li>Organisasjon og bedriftsprofil: firmanavn, organisasjonsnummer og det dere selv legger inn om tjenester, område og kvalifikasjoner.</li>
         <li>Bruk av tjenesten: lagrede anbud og søk, varsler, tilbudsarbeid og dokumenter dere laster opp.</li>
+        <li>
+          Lønnsomhet og kapasitet: kalkyler, timekost, marginer, utstyr, eksisterende kontrakter og bemanning. Bemanning registreres som roller og antall –
+          ikke navn på ansatte. Dette er bedriftsopplysninger som bare organisasjonen selv ser.
+        </li>
+        <li>
+          Anbudspartnere: partnerprofilen dere velger å publisere, og navn og e-post til kontaktpersonen i forespørsler dere sender eller godtar.
+        </li>
         <li>Teknisk informasjon: innloggingsøkter, nettlesertype og en pseudonymisert IP-adresse for sikkerhet og misbrukskontroll.</li>
         <li>Betaling: håndteres av Stripe. Vi lagrer ikke kortnummer, bare referanser til kunde og abonnement.</li>
       </ul>
@@ -574,7 +641,18 @@ export function PrivacyPage({ company }: { company: { name: string; orgNumber: s
         <li>Sikkerhet, revisjonslogg og forebygging av misbruk (berettiget interesse, art. 6 nr. 1 f).</li>
         <li>Fakturering og regnskap (rettslig forpliktelse, art. 6 nr. 1 c).</li>
         <li>E-postvarsler dere selv har slått på. Dere kan endre eller slå dem av under Varsler.</li>
+        <li>
+          Publisering av partnerprofil: samtykke (art. 6 nr. 1 a). Samtykket kan trekkes når som helst ved å skjule profilen – den forsvinner da straks for
+          andre.
+        </li>
       </ul>
+      <h2>Anbudspartnere</h2>
+      <p>
+        En partnerprofil vises bare for andre kunder av AnbudRadar, og bare etter at en eier eller administrator har publisert den med samtykke. Profilen inneholder
+        det dere selv skriver om bedriften. Kalkyler, priser, kunder og dokumenter deles aldri. Sender dere en forespørsel, ser mottakeren meldingen og
+        kontaktpersonen dere oppgir. Mottakerens kontaktperson deles med dere bare hvis mottakeren godtar. Ubesvarte forespørsler slettes etter 180 dager,
+        avslåtte eller trukne etter 12 måneder og godtatte etter 24 måneder.
+      </p>
       <h2>Kunngjøringsdata</h2>
       <p>
         Kunngjøringer hentes fra offentlige kilder (Doffin og TED). De kan inneholde navn på kontaktpersoner hos oppdragsgiver eller leverandører som har vunnet
@@ -583,17 +661,29 @@ export function PrivacyPage({ company }: { company: { name: string; orgNumber: s
       <h2>AI-behandling</h2>
       <p>
         Når dere ber om en AI-analyse, sendes kunngjøringstekst og eventuelle dokumenter dere har lastet opp til vår AI-leverandør for behandling. For
-        tekstutkast sendes også opplysninger fra bedriftsprofilen. Vi bruker ikke dataene deres til å trene AI-modeller, og vi velger leverandører med
-        databehandleravtale. Hvilken leverandør som brukes, står i listen over databehandlere.
+        egnethetsvurdering og tekstutkast sendes også opplysninger fra bedriftsprofilen. Lønnsomhetsanalysen sender bare kunngjøringen og dokumentene – ikke
+        kostnadene, marginene eller bemanningen deres; regnestykket gjøres hos oss. Vi bruker ikke dataene deres til å trene AI-modeller, og vi velger
+        leverandører med databehandleravtale. Hvilken leverandør som brukes, står i listen over databehandlere.
       </p>
       <h2>Databehandlere</h2>
-      <p>Vi bruker underleverandører for drift: vertstjeneste og database, e-postutsending, betaling (Stripe) og AI. Oppdatert liste fås ved henvendelse. Ved overføring utenfor EØS bruker vi EUs standardkontraktsbestemmelser eller annet gyldig overføringsgrunnlag.</p>
+      <p>Vi bruker disse underleverandørene (databehandlere) ved ordinær drift:</p>
+      <ul>
+        <li>Supabase – database og fillagring (EU-region).</li>
+        <li>Render – kjøring av appen og bakgrunnsjobber (EU-region).</li>
+        <li>Resend – utsending av e-post.</li>
+        <li>Stripe – betaling og fakturering.</li>
+        {aiProcessor ? <li>{aiProcessor}</li> : <li>AI-leverandør: ikke tatt i bruk ennå.</li>}
+      </ul>
+      <p>
+        Ved overføring utenfor EØS bruker vi EUs standardkontraktsbestemmelser eller annet gyldig overføringsgrunnlag. Endringer i listen varsles på denne siden.
+      </p>
       <h2>Lagringstid</h2>
       <ul>
         <li>Konto og organisasjonsdata: så lenge kontoen er aktiv. Slettes når dere sletter kontoen eller organisasjonen.</li>
         <li>Innloggingsøkter: til de utløper (inntil 30 dager uten bruk).</li>
         <li>Varsler: leste varsler i 180 dager, øvrige i inntil 12 måneder.</li>
         <li>E-postlogg: 90 dager. Revisjonslogg: 12 måneder.</li>
+        <li>Partnerforespørsler: ubesvarte 180 dager, avslåtte og trukne 12 måneder, godtatte 24 måneder.</li>
         <li>Regnskapsopplysninger: så lenge bokføringsloven krever.</li>
       </ul>
       <h2>Informasjonskapsler</h2>
@@ -609,7 +699,7 @@ export function PrivacyPage({ company }: { company: { name: string; orgNumber: s
 
 export function TermsPage({ company }: { company: { name: string; orgNumber: string; address: string; email: string } }) {
   return (
-    <LegalShell title="Vilkår for bruk" updated={formatDate(new Date('2026-11-01'), true)}>
+    <LegalShell title="Vilkår for bruk" updated={formatDate(new Date('2026-11-02'), true)}>
       <p>
         Vilkårene gjelder for bruk av AnbudRadar, levert av {company.name} (org.nr. {company.orgNumber}). Ved å opprette konto godtar du vilkårene på vegne av
         deg selv og organisasjonen du representerer.
@@ -629,6 +719,21 @@ export function TermsPage({ company }: { company: { name: string; orgNumber: str
         AI-analyser og tekstutkast kan inneholde feil. De er ikke juridisk rådgivning. Dere er selv ansvarlige for innholdet i tilbud dere sender inn, og for at
         opplysningene om bedriften er riktige.
       </p>
+      <h2>Lønnsomhetsberegninger</h2>
+      <p>
+        Lønnsomhetskalkulatoren regner på tallene dere selv legger inn og på det som står i kunngjøringen og dokumentene. Resultatet er ikke en garanti for
+        fortjeneste, og ikke en prognose for hvilken pris som vinner eller hva andre leverandører byr. Dere er selv ansvarlige for prisen dere tilbyr.
+      </p>
+      <h2>Anbudspartnere</h2>
+      <ul>
+        <li>AnbudRadar formidler kontakt mellom kunder som selv har publisert en partnerprofil. Vi er ikke part i et samarbeid som avtales.</li>
+        <li>
+          Dere er selv ansvarlige for at et samarbeid er lovlig, blant annet etter konkurranseloven § 10. Bedrifter som hver for seg kan levere, skal som
+          hovedregel ikke gi felles tilbud. Del aldri priser, marginer eller tilbudsstrategi med en konkurrent. Veiledningen i tjenesten er ikke juridisk
+          rådgivning.
+        </li>
+        <li>Opplysningene i partnerprofilen skal være riktige. Vi kan skjule profiler som er villedende eller brukes til markedsføring som ikke gjelder samarbeid.</li>
+      </ul>
       <h2>Abonnement og betaling</h2>
       <ul>
         <li>Prøveperioden er gratis og går automatisk over til gratisnivået når den er over.</li>

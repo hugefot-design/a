@@ -50,6 +50,23 @@ export async function exportData(user: AuthUser, org: OrgContext | null): Promis
         `,
         subscription: first(await tx`select plan, status, source, current_period_end, trial_ends_at from subscriptions`),
         payments: await tx`select amount_cents, currency, status, created_at from payments`,
+        profitIntelligence: {
+          economics: first(await tx`select hourly_cost, overhead_pct, target_margin_pct, min_margin_pct, risk_buffer_pct, bid_cost_hours, notes, updated_at from org_economics`),
+          staff: await tx`select role, headcount, hours_per_year_each, certifications, notes, created_at from org_staff`,
+          equipment: await tx`select name, category, quantity, notes, created_at from org_equipment`,
+          contracts: await tx`select name, client, start_date, end_date, hours_per_month, notes, created_at from org_contracts`,
+          calculations: await tx`
+            select c.tender_id, t.title, c.inputs, c.recommendation, c.updated_at
+            from tender_calculations c join tenders t on t.id = c.tender_id
+          `,
+          partnerProfile: first(await tx`select * from partner_profiles where org_id = ${org.id}`),
+          partnerRequests: await tx`
+            select id, case when from_org_id = ${org.id} then 'sendt' else 'mottatt' end as direction, tender_id, role_sought, message,
+                   self_assessment, status, requester_contact_name, requester_contact_email, responder_contact_name, responder_contact_email,
+                   created_at, responded_at
+            from partner_requests
+          `,
+        },
       };
     });
   }

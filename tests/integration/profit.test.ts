@@ -426,3 +426,36 @@ test('radnivåsikkerhet: andre organisasjoner ser ikke kalkyler, økonomi, beman
   await cb.post(`/app/kapasitet/bemanning/${staff!.id}/slett`, {}, { from: '/app/kapasitet' });
   assert.equal((await systemSql()`select 1 from org_staff where id = ${staff!.id}`).length, 1);
 });
+
+test('personvern: eksporten inneholder Profit-data, og partnerforespørsler slettes etter fast tid', async () => {
+  const { applyRetention } = await import('../../src/domain/ops/tasks');
+  const owner = await createAccount({ plan: 'business', orgName: 'Eksport AS (test)' });
+  const other = await createAccount({ plan: 'business', orgName: 'Motpart AS (test)' });
+  const c = await clientFor(server.base, owner);
+  await c.post('/app/kapasitet/okonomi', { hourlyCost: '612', overheadPct: '', targetMarginPct: '', minMarginPct: '', riskBufferPct: '', bidCostHours: '', notes: '' }, { from: '/app/kapasitet' });
+  await c.post('/app/kapasitet/bemanning', { role: 'Eksportrolle', headcount: '2', hoursPerYearEach: '1600', certifications: '', notes: '' }, { from: '/app/kapasitet' });
+  const exported = JSON.parse((await c.get('/app/innstillinger/eksport')).body) as { organization: { profitIntelligence: Record<string, any> } };
+  assert.equal(exported.organization.profitIntelligence.economics.hourlyCost, 612);
+  assert.equal(exported.organization.profitIntelligence.staff[0].role, 'Eksportrolle');
+
+  const sql = systemSql();
+  for (const acc of [owner, other]) {
+    await sql`insert into partner_profiles (org_id, published, display_name, consent_at, consent_version) values (${acc.orgId}, true, 'Profil (test)', now(), 'partner-v1') on conflict (org_id) do nothing`;
+  }
+  const insert = (status: string, createdDaysAgo: number, respondedDaysAgo: number | null) => sql`
+    insert into partner_requests (from_org_id, to_org_id, role_sought, message, self_assessment, status, requester_contact_name, requester_contact_email, created_at, responded_at)
+    values (${owner.orgId}, ${other.orgId}, 'underleverandor', 'Gammel forespørsel (test)', 'ingen_kan_alene', ${status}, 'Navn', 'navn@example.com',
+            now() - make_interval(days => ${createdDaysAgo}), ${respondedDaysAgo === null ? null : sql`now() - make_interval(days => ${respondedDaysAgo})`})
+    returning id
+  `;
+  const [oldDeclined] = (await insert('declined', 400, 390)) as unknown as { id: string }[];
+  const [oldPending] = (await insert('pending', 200, null)) as unknown as { id: string }[];
+  const [recentAccepted] = (await insert('accepted', 100, 90)) as unknown as { id: string }[];
+  const [recentPending] = (await insert('pending', 10, null)) as unknown as { id: string }[];
+  await applyRetention();
+  const left = ((await sql`select id from partner_requests where from_org_id = ${owner.orgId}`) as unknown as { id: string }[]).map((r) => r.id);
+  assert.ok(!left.includes(oldDeclined!.id), 'avslått for over 12 måneder siden er slettet');
+  assert.ok(!left.includes(oldPending!.id), 'ubesvart i over 180 dager er slettet');
+  assert.ok(left.includes(recentAccepted!.id));
+  assert.ok(left.includes(recentPending!.id));
+});

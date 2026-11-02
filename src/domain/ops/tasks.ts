@@ -30,6 +30,14 @@ export async function applyRetention(): Promise<Record<string, number>> {
   await run('import_errors', sql`delete from import_errors where created_at < now() - interval '90 days' returning 1`);
   await run('jobs', sql`delete from jobs where status in ('done', 'failed') and created_at < now() - interval '30 days' returning 1`);
   await run('invitations', sql`delete from invitations where (accepted_at is not null or revoked_at is not null or expires_at < now()) and created_at < now() - interval '90 days' returning 1`);
+  // Partnerforespørsler inneholder kontaktinfo: ubesvarte 180 dager, avslåtte/trukne 12 måneder, godtatte 24 måneder.
+  await run('partner_requests', sql`
+    delete from partner_requests
+    where (status = 'pending' and created_at < now() - interval '180 days')
+       or (status in ('declined', 'withdrawn') and coalesce(responded_at, created_at) < now() - interval '365 days')
+       or (status = 'accepted' and coalesce(responded_at, created_at) < now() - interval '730 days')
+    returning 1
+  `);
   log.info('retention_applied', out);
   return out;
 }
