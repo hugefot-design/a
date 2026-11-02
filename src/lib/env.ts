@@ -1,6 +1,10 @@
 import { existsSync } from 'node:fs';
 import { z } from 'zod';
 
+// Norske standardmeldinger for validering (zod 4). Skjemaene våre har egne meldinger der brukere
+// ser dem; dette gjelder resten (f.eks. manipulerte skjemaer og konfigurasjon).
+z.config(z.locales.no());
+
 /**
  * Leser .env-fil (uten å overskrive variabler som allerede er satt) og validerer
  * konfigurasjonen. Hemmeligheter leses KUN på serveren og sendes aldri til nettleseren.

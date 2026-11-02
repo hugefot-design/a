@@ -23,7 +23,7 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 - søketreff som overskriver XML-data,
 - falske varsler ved XML-berikelse.
 
-**Kjent sårbarhet:** `npm audit` melder en høy sårbarhet i `zod` 3.x (minnebruk ved validering av svært store samlinger, GHSA-mrhx-c7xc-m3w5). Retting krever overgang til zod 4, som er en større endring. Skjemaene våre har lengdegrenser, og forespørsler har størrelsesgrense, men oppgraderingen bør planlegges.
+**Avhengigheter:** `npm audit` melder 0 sårbarheter (2.11.2026). `zod` er oppgradert fra 3 til 4 (rettet GHSA-mrhx-c7xc-m3w5), og standardmeldinger for validering er på norsk.
 
 Det som dekkes:
 

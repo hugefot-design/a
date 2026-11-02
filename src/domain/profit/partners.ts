@@ -313,7 +313,7 @@ export const partnerRequestSchema = z.object({
   selfAssessment: z.enum(['ingen_kan_alene', 'bare_en_kan_alene', 'usikker', 'begge_kan_alene'], { message: 'Svar på om dere kan levere alene.' }),
   contactName: z.string().trim().min(1, 'Skriv inn kontaktperson.').max(120),
   contactEmail: z.string().trim().toLowerCase().email('Skriv inn en gyldig e-postadresse.').max(254),
-  confirmNoPrices: z.literal(true, { errorMap: () => ({ message: 'Bekreft at dere ikke deler priser eller tilbudsstrategi.' }) }),
+  confirmNoPrices: z.literal(true, { error: 'Bekreft at dere ikke deler priser eller tilbudsstrategi.' }),
 });
 export type PartnerRequestForm = z.infer<typeof partnerRequestSchema>;
 

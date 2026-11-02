@@ -41,7 +41,7 @@ export const registerSchema = z.object({
   name: nameSchema,
   email: emailSchema,
   password: passwordSchema,
-  acceptTerms: z.literal('on', { errorMap: () => ({ message: 'Du må godta vilkårene for å opprette konto.' }) }),
+  acceptTerms: z.literal('on', { error: 'Du må godta vilkårene for å opprette konto.' }),
 });
 
 export type FieldErrors = Record<string, string>;

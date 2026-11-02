@@ -102,7 +102,8 @@ export const profileFormSchema = z
       .transform((v) => v.replace(/[\s ]/g, ''))
       .refine((v) => v === '' || (/^\d+$/.test(v) && Number(v) <= 1_000_000), 'Skriv inn et helt tall.')
       .transform((v) => (v === '' ? null : Number(v))),
-    annualRevenue: optionalMoney.default(''),
+    // zod 4: standardverdien brukes som ferdig verdi (kjøres ikke gjennom transformasjonene).
+    annualRevenue: optionalMoney.default(null),
     referenceProjects: z
       .array(
         z.object({
