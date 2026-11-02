@@ -2,7 +2,7 @@ import { LuArrowLeft, LuExternalLink, LuFileText, LuTrash2, LuUpload } from 'rea
 import type { ReactNode } from 'react';
 import { CONTRACT_NATURES, cpvLabel, INDUSTRY_BY_ID, procedureLabel, REGION_BY_CODE } from '@/domain/reference';
 import type { TenderDetail, TenderSourceRow } from '@/domain/tenders/queries';
-import type { StoredTenderAnalysis } from '@/domain/ai/analysis';
+import type { StoredFitAssessment, StoredTenderAnalysis } from '@/domain/ai/analysis';
 import type { MatchBreakdown } from '@/domain/matching/engine';
 import type { RefCheck } from '@/domain/ai/sources';
 import { BOOKMARK_STATUSES } from '@/domain/tenders/bookmarks';
@@ -37,6 +37,8 @@ export interface TenderPageProps {
   documents: { id: string; title: string; pageCount: number | null; textStatus: string; textError: string | null; orgId: string | null; createdAt: Date; sizeBytes: number | null }[];
   workspace: { id: string; status: string } | null;
   analysis: StoredTenderAnalysis | null;
+  fit: StoredFitAssessment | null;
+  canAssessFit: boolean;
   aiQuota: { used: number; limit: number };
 }
 
@@ -44,10 +46,11 @@ const SOURCE_NAMES: Record<string, string> = { ted: 'TED', doffin: 'Doffin', man
 
 function DeadlineBlock({ tender }: { tender: TenderDetail }) {
   const days = daysUntil(tender.deadlineAt);
+  const label = tender.deadlineKind === 'participation' ? 'Frist for å be om å delta' : 'Tilbudsfrist';
   if (!tender.deadlineAt) {
     return (
       <div>
-        <p className="text-[13px] text-muted">Tilbudsfrist</p>
+        <p className="text-[13px] text-muted">{label}</p>
         <p className="mt-1 text-[15px] font-semibold text-navy-900">Ikke oppgitt i kunngjøringen</p>
         <p className="mt-1 text-[12px] text-muted">Sjekk konkurransegrunnlaget hos kilden.</p>
       </div>
@@ -55,7 +58,7 @@ function DeadlineBlock({ tender }: { tender: TenderDetail }) {
   }
   return (
     <div>
-      <p className="text-[13px] text-muted">Tilbudsfrist</p>
+      <p className="text-[13px] text-muted">{label}</p>
       <p className="mt-1 font-serif text-[30px] font-semibold leading-none text-navy-900">
         {days !== null && days > 0 ? (
           <span className="hl">
@@ -67,6 +70,15 @@ function DeadlineBlock({ tender }: { tender: TenderDetail }) {
       </p>
       <p className="num mt-2 text-[14px] text-ink">{formatDateTime(tender.deadlineAt, tender.deadlineTimeKnown)}</p>
       {!tender.deadlineTimeKnown ? <p className="mt-0.5 text-[12px] text-muted">Klokkeslett er ikke oppgitt i dataene.</p> : null}
+      {tender.lotDeadlinesDiffer ? <p className="mt-0.5 text-[12px] text-muted">Delkontraktene har ulike frister – dette er den tidligste.</p> : null}
+      {tender.deadlineKind === 'participation' ? (
+        <p className="mt-1 text-[12px] text-muted">Begrenset konkurranse: tilbudsfristen settes i invitasjonen til de som kvalifiserer.</p>
+      ) : null}
+      {tender.questionsDeadlineAt ? (
+        <p className="mt-3 text-[13px] text-ink">
+          Spørsmålsfrist: <span className="num font-semibold">{formatDateTime(tender.questionsDeadlineAt, true)}</span>
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -81,10 +93,16 @@ export function TenderPage(p: TenderPageProps) {
     ...(t.buyerOrgNumber ? [{ term: 'Org.nr. oppdragsgiver', detail: <span className="num">{t.buyerOrgNumber}</span> }] : []),
     { term: 'Sted', detail: [t.placeText, regionNames.join(', ')].filter(Boolean).join(' – ') || 'Ikke oppgitt' },
     {
-      term: 'Tilbudsfrist',
+      term: t.deadlineKind === 'participation' ? 'Frist for å be om å delta' : 'Tilbudsfrist',
       detail: t.deadlineAt ? <span className="hl num">{formatDateTime(t.deadlineAt, t.deadlineTimeKnown)}</span> : 'Ikke oppgitt',
     },
+    ...(t.questionsDeadlineAt ? [{ term: 'Frist for spørsmål', detail: <span className="num">{formatDateTime(t.questionsDeadlineAt, true)}</span> }] : []),
     { term: 'Publisert', detail: formatDate(t.publishedAt) },
+    ...(t.durationText ? [{ term: 'Varighet', detail: t.durationText }] : []),
+    ...(t.contractStart || t.contractEnd
+      ? [{ term: 'Kontraktsperiode', detail: `${t.contractStart ? formatDate(t.contractStart) : '?'} – ${t.contractEnd ? formatDate(t.contractEnd) : '?'}` }]
+      : []),
+    ...(t.isFramework === true ? [{ term: 'Rammeavtale', detail: 'Ja' }] : []),
     { term: 'Estimert verdi', detail: t.estimatedValue !== null ? <span className="num">{formatMoney(t.estimatedValue, t.currency, false)}</span> : 'Ikke oppgitt' },
     { term: 'Kontraktstype', detail: t.contractNature ? (CONTRACT_NATURES[t.contractNature] ?? t.contractNature) : 'Ikke oppgitt' },
     ...(t.procedureType ? [{ term: 'Prosedyre', detail: procedureLabel(t.procedureType) }] : []),
@@ -191,6 +209,14 @@ export function TenderPage(p: TenderPageProps) {
             </div>
           </Panel>
 
+          {t.textLanguage === 'en' ? (
+            <p className="-mt-3 text-[12px] text-muted">Kunngjøringen er publisert på engelsk i TED. AI-analysen oppsummerer den på norsk.</p>
+          ) : null}
+
+          <DocumentsLinkPanel tender={t} />
+
+          <NoticeRequirementsPanel tender={t} />
+
           <AnalysisTeaser
             tenderId={t.id}
             analysis={p.analysis}
@@ -260,6 +286,7 @@ export function TenderPage(p: TenderPageProps) {
               )}
             </div>
           </Panel>
+          <FitPanel tenderId={t.id} fit={p.fit} canAssess={p.canAssessFit} aiConfigured={aiConfigured} quota={p.aiQuota} />
           {p.bookmark ? (
             <Panel>
               <PanelHeader title="Status for dere" />
@@ -297,6 +324,193 @@ export function TenderPage(p: TenderPageProps) {
         </aside>
       </div>
     </AppShell>
+  );
+}
+
+function DocumentsLinkPanel({ tender }: { tender: TenderDetail }) {
+  const docsHost = hostOf(tender.documentsUrl);
+  const submitHost = hostOf(tender.submissionUrl);
+  return (
+    <Panel>
+      <PanelHeader title="Konkurransedokumenter" description="Konkurransegrunnlaget ligger hos oppdragsgivers system. AnbudRadar laster det ikke ned automatisk." />
+      <div className="space-y-3 px-5 py-4 text-[14px]">
+        {tender.documentsUrl ? (
+          <p>
+            <a href={tender.documentsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-semibold">
+              <LuFileText className="size-4" aria-hidden /> Åpne konkurransedokumentene{docsHost ? ` hos ${docsHost}` : ''}
+              <LuExternalLink className="size-3.5" aria-hidden />
+            </a>
+          </p>
+        ) : (
+          <p className="text-muted">Lenken til dokumentene er ikke oppgitt i dataene vi har. Bruk «Åpne hos kilden».</p>
+        )}
+        {tender.submissionUrl && tender.submissionUrl !== tender.documentsUrl ? (
+          <p>
+            Tilbudet leveres{submitHost ? ` i ${submitHost}` : ''}:{' '}
+            <a href={tender.submissionUrl} target="_blank" rel="noopener noreferrer">
+              åpne innlevering
+            </a>
+          </p>
+        ) : null}
+        <p className="text-[13px] text-muted">
+          Vil du at AI-en skal lese kravene i dokumentene? Last ned konkurransegrunnlaget og last det opp under «Dokumenter» nedenfor.
+        </p>
+      </div>
+    </Panel>
+  );
+}
+
+function NoticeRequirementsPanel({ tender }: { tender: TenderDetail }) {
+  if (!tender.selectionCriteria?.length && !tender.awardCriteria?.length && !tender.lots?.length) return null;
+  return (
+    <Panel>
+      <PanelHeader title="Krav og kriterier i kunngjøringen" description="Ordrett fra kilden. Ingen AI er brukt i denne delen." />
+      <div className="space-y-5 px-5 py-4">
+        {tender.selectionCriteria?.length ? (
+          <section>
+            <h3 className="text-[14px] font-semibold text-navy-900">Kvalifikasjonskrav</h3>
+            <ul className="mt-2 list-disc space-y-2 pl-5 text-[14px] leading-relaxed">
+              {tender.selectionCriteria.map((c, i) => (
+                <li key={i} className="whitespace-pre-line">
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        {tender.awardCriteria?.length ? (
+          <section>
+            <h3 className="text-[14px] font-semibold text-navy-900">Tildelingskriterier</h3>
+            <ul className="mt-2 space-y-1 text-[14px]">
+              {tender.awardCriteria.map((c, i) => (
+                <li key={i}>
+                  {c.name}
+                  {c.weight ? <span className="num font-semibold"> – {c.weight}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        {tender.lots?.length ? (
+          <section>
+            <h3 className="text-[14px] font-semibold text-navy-900">Delkontrakter ({tender.lots.length})</h3>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-[14px]">
+              {tender.lots.map((l, i) => (
+                <li key={i}>
+                  {l.title ?? l.id ?? 'Uten tittel'}
+                  {l.estimatedValue !== null ? <span className="num text-muted"> – {formatMoney(l.estimatedValue, tender.currency, false)}</span> : null}
+                  {l.durationText ? <span className="text-muted">, {l.durationText}</span> : null}
+                </li>
+              ))}
+            </ol>
+          </section>
+        ) : null}
+      </div>
+    </Panel>
+  );
+}
+
+const FIT_LABEL: Record<string, { label: string; tone: 'ok' | 'urgent' | 'danger' | 'neutral' }> = {
+  god: { label: 'God match', tone: 'ok' },
+  middels: { label: 'Delvis match', tone: 'urgent' },
+  svak: { label: 'Svak match', tone: 'danger' },
+  uklar: { label: 'Uklart', tone: 'neutral' },
+};
+const STATUS_LABEL: Record<string, { label: string; tone: 'ok' | 'danger' | 'neutral' }> = {
+  oppfylt: { label: 'Oppfylt', tone: 'ok' },
+  ikke_oppfylt: { label: 'Ikke oppfylt', tone: 'danger' },
+  uklart: { label: 'Uklart', tone: 'neutral' },
+};
+
+function FitPanel({
+  tenderId,
+  fit,
+  canAssess,
+  aiConfigured,
+  quota,
+}: {
+  tenderId: string;
+  fit: StoredFitAssessment | null;
+  canAssess: boolean;
+  aiConfigured: boolean;
+  quota: { used: number; limit: number };
+}) {
+  const label = fit ? (FIT_LABEL[fit.data.fit] ?? FIT_LABEL.uklar!) : null;
+  return (
+    <Panel>
+      <div id="egnethet" className="flex flex-wrap items-center justify-between gap-2 border-b border-ai/20 bg-ai-soft px-5 py-4">
+        <h2 className="text-[15px] font-semibold text-navy-900">Kan vi delta? (AI-vurdering)</h2>
+        {label ? <Badge tone={label.tone}>{label.label}</Badge> : null}
+      </div>
+      <div className="space-y-4 p-5">
+        {!canAssess ? (
+          <p className="text-[14px] text-muted">
+            AI-vurdering av kravene mot bedriftsprofilen er med i Profesjonell og Bedrift. <a href="/app/abonnement">Se planer</a>
+          </p>
+        ) : !aiConfigured ? (
+          <p className="text-[14px] text-muted">AI er ikke slått på ennå.</p>
+        ) : fit ? (
+          <div className="space-y-4">
+            {fit.isMock ? <Alert tone="warning">Simulert svar fra testmodus – ikke en ekte vurdering.</Alert> : null}
+            <p className="text-[14px] leading-relaxed text-ink">{fit.data.overall}</p>
+            <ul className="space-y-2">
+              {fit.data.requirements.map((r, i) => {
+                const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.uklart!;
+                return (
+                  <li key={i} className="rounded-md border border-line px-3 py-2 text-[13px]">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge tone={st.tone}>{st.label}</Badge>
+                      <BasisBadge basis={r.basis} check={fit.verification[`requirements[${i}]`]} />
+                    </div>
+                    <p className="mt-1.5 font-semibold text-navy-900">{r.requirement}</p>
+                    <p className="mt-0.5 text-muted">{r.explanation}</p>
+                  </li>
+                );
+              })}
+            </ul>
+            {fit.data.missing_company_info.length ? (
+              <div>
+                <p className="text-[13px] font-semibold text-navy-900">Opplysninger dere bør legge inn eller avklare</p>
+                <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[13px]">
+                  {fit.data.missing_company_info.map((m, i) => (
+                    <li key={i}>{m}</li>
+                  ))}
+                </ul>
+                <a href="/app/profil" className="mt-1 inline-block text-[13px]">
+                  Oppdater bedriftsprofilen
+                </a>
+              </div>
+            ) : null}
+            <div>
+              <p className="text-[13px] font-semibold text-navy-900">Usikkerhet: {fit.data.uncertainty}</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[13px] text-muted">
+                {fit.data.uncertainty_reasons.map((m, i) => (
+                  <li key={i}>{m}</li>
+                ))}
+              </ul>
+            </div>
+            <p className="text-[12px] text-muted">
+              Laget {relativeTime(fit.createdAt)}. Bygger bare på kildene og profilen – ikke en garanti for at dere kvalifiserer.
+            </p>
+          </div>
+        ) : (
+          <p className="text-[14px] text-muted">
+            AI-en går gjennom kravene og sammenligner dem med bedriftsprofilen: hva dere oppfyller, hva som mangler, og hva som er uklart.
+          </p>
+        )}
+        {canAssess && aiConfigured ? (
+          <PostForm action={`/app/anbud/${tenderId}/egnethet`} className="flex flex-wrap items-center gap-3">
+            {fit ? <input type="hidden" name="force" value="1" /> : null}
+            <Button size="sm" variant={fit ? 'secondary' : 'primary'} busyLabel="Vurderer …">
+              {fit ? 'Vurder på nytt' : 'Vurder egnethet'}
+            </Button>
+            <span className="num text-[12px] text-muted">
+              AI-analyser: {quota.used} av {quota.limit} brukt
+            </span>
+          </PostForm>
+        ) : null}
+      </div>
+    </Panel>
   );
 }
 
@@ -347,7 +561,7 @@ function AnalysisTeaser({
           <p className="text-[14px] text-muted">AI-analyse er ikke slått på ennå. Administrator må legge inn en API-nøkkel.</p>
         ) : !canAnalyze ? (
           <p className="text-[14px] text-muted">
-            AI-sammendrag er med fra Starter. <a href="/app/abonnement">Se planer</a>
+            AI-sammendrag er med fra Start. <a href="/app/abonnement">Se planer</a>
           </p>
         ) : (
           <p className="text-[14px] text-muted">
@@ -434,8 +648,6 @@ function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; 
 // ---------------------------------------------------------------------------
 // Full AI-analyse
 // ---------------------------------------------------------------------------
-type Sourced = { text: string; source: { source_id: string; page: number | null; quote: string | null } | null };
-
 function RefChip({ check }: { check: RefCheck | undefined }) {
   if (!check) return <Badge tone="outline">Uten kilde</Badge>;
   if (!check.sourceExists) return <Badge tone="danger">Ukjent kilde – ikke stol på dette</Badge>;
@@ -458,66 +670,120 @@ function RefChip({ check }: { check: RefCheck | undefined }) {
   );
 }
 
-function SourcedList({ title, items, path, verification, empty }: { title: string; items: Sourced[]; path: string; verification: Record<string, RefCheck>; empty: string }) {
-  return (
-    <section className="space-y-2">
-      <h3 className="text-[15px] font-semibold text-navy-900">{title}</h3>
-      {items.length ? (
-        <ul className="space-y-3">
-          {items.map((item, i) => {
-            const check = verification[`${path}[${i}]`];
-            return (
-              <li key={i} className="rounded-md border border-line bg-white px-4 py-3">
-                <p className="text-[14px] text-ink">{item.text}</p>
-                <div className="mt-2 text-[12px]">
-                  <RefChip check={check} />
-                </div>
-                {check?.quote ? <p className="mt-1.5 border-l-2 border-line pl-2 text-[12px] italic text-muted">«{check.quote}»</p> : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="text-[14px] text-muted">{empty}</p>
-      )}
-    </section>
+type Claim = { text: string; basis?: 'kilde' | 'tolkning'; source: { source_id: string; page: number | null; quote: string | null } | null };
+type RequirementView = Claim & { category: string; path: string };
+
+const CATEGORY_TITLES: Record<string, string> = {
+  kvalifikasjon: 'Kvalifikasjonskrav',
+  sertifisering: 'Sertifiseringer og godkjenninger',
+  økonomi: 'Økonomiske krav',
+  dokumentasjon: 'Dokumentasjon som skal leveres',
+  leveranse: 'Krav til leveransen',
+  geografi: 'Geografi og leveringssted',
+  annet: 'Andre krav',
+};
+const CATEGORY_ORDER = ['kvalifikasjon', 'sertifisering', 'økonomi', 'dokumentasjon', 'leveranse', 'geografi', 'annet'];
+
+/** Krav fra analysen – v2 har én liste med kategori; eldre analyser (v1) hadde egne lister. */
+function requirementsOf(d: Record<string, unknown>): RequirementView[] {
+  if (Array.isArray(d.requirements)) {
+    return (d.requirements as (Claim & { category: string })[]).map((r, i) => ({ ...r, path: `requirements[${i}]` }));
+  }
+  const v1: [string, string][] = [
+    ['key_requirements', 'leveranse'],
+    ['qualification_criteria', 'kvalifikasjon'],
+    ['certifications', 'sertifisering'],
+    ['financial_requirements', 'økonomi'],
+    ['geographic_requirements', 'geografi'],
+    ['required_documentation', 'dokumentasjon'],
+  ];
+  return v1.flatMap(([key, category]) =>
+    (Array.isArray(d[key]) ? (d[key] as Claim[]) : []).map((r, i) => ({ ...r, basis: 'kilde' as const, category, path: `${key}[${i}]` })),
   );
+}
+
+function BasisBadge({ basis, check }: { basis: Claim['basis']; check: RefCheck | undefined }) {
+  if (basis === 'tolkning') return <Badge tone="ai">AI-tolkning</Badge>;
+  if (check?.quoteVerified) return <Badge tone="ok">Står i kilden</Badge>;
+  return <Badge tone="urgent">Oppgitt fra kilden – sitatet ble ikke funnet, sjekk selv</Badge>;
+}
+
+function ClaimItem({ item, check }: { item: Claim; check: RefCheck | undefined }) {
+  return (
+    <li className="rounded-md border border-line bg-white px-4 py-3">
+      <p className="text-[14px] text-ink">{item.text}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
+        <BasisBadge basis={item.basis} check={check} />
+        {check ? <RefChip check={check} /> : null}
+      </div>
+      {check?.quote ? <p className="mt-1.5 border-l-2 border-line pl-2 text-[12px] italic text-muted">«{check.quote}»</p> : null}
+    </li>
+  );
+}
+
+function hostOf(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).host.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
 }
 
 export function AnalysisPage({ tender, analysis }: { tender: TenderDetail; analysis: StoredTenderAnalysis }) {
   const d = analysis.data as Record<string, unknown>;
   const v = analysis.verification;
-  const list = (k: string) => (Array.isArray(d[k]) ? (d[k] as Sourced[]) : []);
+  const claims = (k: string) => (Array.isArray(d[k]) ? (d[k] as Claim[]) : []);
+  const strings = (k: string) => (Array.isArray(d[k]) ? (d[k] as string[]) : []);
   const deadlineAi = d.deadline as { value: string | null } | undefined;
   const durationAi = d.contract_duration as { value: string | null } | undefined;
+  const requirements = requirementsOf(d);
+  const documentsRead = analysis.coverage.filter((c) => c.kind === 'document');
+  const notRead = strings('documents_not_read');
+  const docsHost = hostOf(tender.documentsUrl);
   return (
     <AppShell>
       <a href={`/app/anbud/${tender.id}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted no-underline hover:text-navy-900">
         <LuArrowLeft className="size-4" aria-hidden /> Tilbake til kunngjøringen
       </a>
       <header className="mb-6">
-        <p className="text-[13px] font-semibold text-ai">AI-tolkning</p>
+        <p className="text-[13px] font-semibold text-ai">AI-analyse</p>
         <h1 className="mt-1 max-w-3xl font-serif text-[26px] font-semibold leading-tight text-navy-900">{tender.title}</h1>
       </header>
       <div className="space-y-4">
         {analysis.isMock ? <Alert tone="warning">Simulert svar fra testmodus (AI_PROVIDER=mock). Ikke en ekte AI-analyse.</Alert> : null}
         <Alert tone="info" title="Slik leser du analysen">
-          Teksten er laget av AI og kan inneholde feil. Hver opplysning viser kilden. «Sitat funnet i kilden» betyr at det ordrette sitatet faktisk står i
-          dokumentet. Fakta du skal handle på – særlig frister og krav – må alltid sjekkes i originaldokumentene.
+          Analysen er laget av AI og kan inneholde feil. «Står i kilden» betyr at det ordrette sitatet faktisk finnes i dokumentet. «AI-tolkning» er
+          AI-ens vurdering. Frister og krav du skal handle på, må alltid sjekkes i originaldokumentene.
         </Alert>
         <Panel className="p-5">
-          <h2 className="text-[13px] font-semibold text-muted">Analysen bygger på</h2>
+          <h2 className="text-[13px] font-semibold text-muted">AI-en har lest</h2>
           <ul className="mt-2 space-y-1 text-[14px]">
             {analysis.coverage.map((c) => (
               <li key={c.sourceId}>
                 {c.title}
                 {c.kind === 'document'
-                  ? ` – ${c.includedPages.length} av ${c.totalPages ?? c.includedPages.length} sider${c.truncated ? ' (dokumentet var for langt til å tas med i sin helhet)' : ''}`
+                  ? ` – ${c.includedPages.length} av ${c.totalPages ?? c.includedPages.length} sider${c.truncated ? ' (for langt til å tas med i sin helhet)' : ''}`
                   : ''}
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[12px] text-muted">
+          {!documentsRead.length || notRead.length ? (
+            <div className="mt-3 rounded-md bg-marker-soft px-3 py-2 text-[13px] text-ink">
+              <p className="font-semibold">Ikke lest av AI</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                {!documentsRead.length ? (
+                  <li>
+                    Konkurransegrunnlaget og vedleggene{docsHost ? ` (hos ${docsHost})` : ''}. Last dem opp under kunngjøringen for å få dem med i analysen.
+                  </li>
+                ) : null}
+                {notRead.map((n, i) => (
+                  <li key={i}>{n}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <p className="mt-3 text-[12px] text-muted">
             Laget {formatDateTime(analysis.createdAt)} med {analysis.provider === 'mock' ? 'testmodus' : `${analysis.provider} / ${analysis.model}`}.
           </p>
         </Panel>
@@ -528,16 +794,46 @@ export function AnalysisPage({ tender, analysis }: { tender: TenderDetail; analy
           <section>
             <h2 className="font-serif text-[20px] font-semibold text-navy-900">Sammendrag</h2>
             <p className="mt-2 text-[15px] leading-relaxed">{String(d.summary ?? '')}</p>
-            <h3 className="mt-5 text-[15px] font-semibold text-navy-900">Hva oppdragsgiver vil kjøpe</h3>
+            <h3 className="mt-5 text-[15px] font-semibold text-navy-900">Hva oppdragsgiver ønsker</h3>
             <p className="mt-1 text-[15px] leading-relaxed">{String(d.purchase_description ?? '')}</p>
           </section>
           {analysis.level === 'full' ? (
             <>
-              <SourcedList title="Viktige krav" items={list('key_requirements')} path="key_requirements" verification={v} empty="Ingen krav funnet i kildene." />
-              <SourcedList title="Kvalifikasjonskrav" items={list('qualification_criteria')} path="qualification_criteria" verification={v} empty="Ikke beskrevet i kildene." />
-              <SourcedList title="Sertifiseringer og godkjenninger" items={list('certifications')} path="certifications" verification={v} empty="Ingen nevnt i kildene." />
-              <SourcedList title="Økonomiske krav" items={list('financial_requirements')} path="financial_requirements" verification={v} empty="Ingen nevnt i kildene." />
-              <SourcedList title="Geografiske krav" items={list('geographic_requirements')} path="geographic_requirements" verification={v} empty="Ingen nevnt i kildene." />
+              {claims('scope_items').length ? (
+                <section className="space-y-2">
+                  <h3 className="text-[15px] font-semibold text-navy-900">Dette etterspørres</h3>
+                  <ul className="space-y-3">
+                    {claims('scope_items').map((item, i) => (
+                      <ClaimItem key={i} item={item} check={v[`scope_items[${i}]`]} />
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+              {CATEGORY_ORDER.map((cat) => {
+                const items = requirements.filter((r) => r.category === cat);
+                if (!items.length) return null;
+                return (
+                  <section key={cat} className="space-y-2">
+                    <h3 className="text-[15px] font-semibold text-navy-900">{CATEGORY_TITLES[cat]}</h3>
+                    <ul className="space-y-3">
+                      {items.map((item) => (
+                        <ClaimItem key={item.path} item={item} check={v[item.path]} />
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })}
+              {!requirements.length ? <p className="text-[14px] text-muted">AI-en fant ingen konkrete krav i kildene den har lest.</p> : null}
+              {claims('rejection_risks').length ? (
+                <section className="space-y-2 rounded-lg border border-danger/30 bg-danger-soft/40 p-4">
+                  <h3 className="text-[15px] font-semibold text-navy-900">Kan føre til avvisning</h3>
+                  <ul className="space-y-3">
+                    {claims('rejection_risks').map((item, i) => (
+                      <ClaimItem key={i} item={item} check={v[`rejection_risks[${i}]`]} />
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
               <section className="space-y-2">
                 <h3 className="text-[15px] font-semibold text-navy-900">Tildelingskriterier</h3>
                 {Array.isArray(d.evaluation_criteria) && (d.evaluation_criteria as unknown[]).length ? (
@@ -558,7 +854,16 @@ export function AnalysisPage({ tender, analysis }: { tender: TenderDetail; analy
                   <p className="text-[14px] text-muted">Ikke beskrevet i kildene.</p>
                 )}
               </section>
-              <SourcedList title="Dokumentasjon som skal leveres" items={list('required_documentation')} path="required_documentation" verification={v} empty="Ikke beskrevet i kildene." />
+              {strings('how_to_participate').length ? (
+                <section className="space-y-2">
+                  <h3 className="text-[15px] font-semibold text-navy-900">Slik deltar dere</h3>
+                  <ol className="list-decimal space-y-1 pl-5 text-[14px]">
+                    {strings('how_to_participate').map((step, i) => (
+                      <li key={i}>{step}</li>
+                    ))}
+                  </ol>
+                </section>
+              ) : null}
               <section className="space-y-2 rounded-lg border border-dashed border-ai/40 bg-ai-soft/60 p-4">
                 <h3 className="text-[15px] font-semibold text-navy-900">Risikoer (AI-vurdering)</h3>
                 <ul className="list-disc space-y-1 pl-5 text-[14px]">
@@ -573,9 +878,9 @@ export function AnalysisPage({ tender, analysis }: { tender: TenderDetail; analy
           )}
           <section className="space-y-2">
             <h3 className="text-[15px] font-semibold text-navy-900">Dette mangler i kildene</h3>
-            {Array.isArray(d.missing_information) && d.missing_information.length ? (
+            {strings('missing_information').length ? (
               <ul className="list-disc space-y-1 pl-5 text-[14px]">
-                {(d.missing_information as string[]).map((m, i) => (
+                {strings('missing_information').map((m, i) => (
                   <li key={i}>{m}</li>
                 ))}
               </ul>
@@ -586,7 +891,7 @@ export function AnalysisPage({ tender, analysis }: { tender: TenderDetail; analy
         </div>
         <aside className="space-y-4">
           <Panel className="p-5">
-            <p className="text-[13px] font-semibold text-muted">Frist i kunngjøringen</p>
+            <p className="text-[13px] font-semibold text-muted">{tender.deadlineKind === 'participation' ? 'Frist for å be om å delta' : 'Tilbudsfrist'} i kunngjøringen</p>
             <p className="num mt-1 font-semibold">{tender.deadlineAt ? formatDateTime(tender.deadlineAt, tender.deadlineTimeKnown) : 'Ikke oppgitt'}</p>
             {analysis.level === 'full' ? (
               <>
@@ -597,15 +902,28 @@ export function AnalysisPage({ tender, analysis }: { tender: TenderDetail; analy
                 </div>
                 <p className="mt-2 text-[12px] text-muted">Avviker de? Da gjelder kilden – sjekk konkurransegrunnlaget.</p>
                 <p className="mt-4 text-[13px] font-semibold text-muted">Kontraktens varighet</p>
-                <p className="mt-1 text-[14px]">{durationAi?.value ?? 'Ikke funnet i kildene'}</p>
+                <p className="mt-1 text-[14px]">{durationAi?.value ?? tender.durationText ?? 'Ikke funnet i kildene'}</p>
               </>
             ) : null}
           </Panel>
-          {analysis.level === 'full' && Array.isArray(d.questions_to_investigate) ? (
+          {Array.isArray(d.important_dates) && (d.important_dates as unknown[]).length ? (
+            <Panel className="p-5">
+              <p className="text-[14px] font-semibold text-navy-900">Viktige datoer</p>
+              <dl className="mt-2 space-y-2 text-[14px]">
+                {(d.important_dates as { label: string; value: string }[]).map((x, i) => (
+                  <div key={i}>
+                    <dt className="text-[12px] text-muted">{x.label}</dt>
+                    <dd className="num">{x.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </Panel>
+          ) : null}
+          {analysis.level === 'full' && strings('questions_to_investigate').length ? (
             <Panel className="p-5">
               <p className="text-[14px] font-semibold text-navy-900">Spørsmål å avklare</p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-[14px]">
-                {(d.questions_to_investigate as string[]).map((q, i) => (
+                {strings('questions_to_investigate').map((q, i) => (
                   <li key={i}>{q}</li>
                 ))}
               </ul>

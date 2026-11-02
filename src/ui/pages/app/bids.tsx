@@ -227,7 +227,20 @@ export function BidWorkspacePage(p: WorkspaceProps) {
             <PanelHeader
               title="Tilbudstekst"
               description="Skrives av dere. AI kan lage utkast fra bedriftsprofilen, men finner aldri på erfaring, sertifiseringer eller tall. Mangler vises som [FYLL INN: …]."
+              action={
+                !locked && p.aiConfigured ? (
+                  <PostForm action={`${base}/struktur/ai`}>
+                    <Button size="sm" variant="secondary" busyLabel="Foreslår …">
+                      Foreslå disposisjon med AI
+                    </Button>
+                  </PostForm>
+                ) : undefined
+              }
             />
+            <p className="border-b border-line bg-marker-soft px-5 py-2 text-[12px] text-ink">
+              AI-utkast er forslag. AnbudRadar kan ikke garantere at tilbudet er komplett eller at dere kvalifiserer – kontroller alt mot
+              konkurransegrunnlaget før innsending.
+            </p>
             <div className="divide-y divide-line">
               {p.sections.map((s) => (
                 <section key={s.id} className="space-y-2 px-5 py-4">

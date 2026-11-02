@@ -78,3 +78,52 @@ test('utenfor landene profilen dekker begrenses kraftig', () => {
 test('samme input gir samme resultat (deterministisk)', () => {
   assert.deepEqual(scoreTender(profile, tender, NOW), scoreTender(profile, tender, NOW));
 });
+
+test('søkeord alene gir aldri høy score (v2)', () => {
+  // Mange søkeord i tittelen, men ingen bransje- eller CPV-treff.
+  const r = scoreTender(
+    { ...profile, cpvCodes: ['72000000'], industries: ['it'], keywords: ['vakthold', 'resepsjon', 'rådhuset', 'sikkerhet'] },
+    { ...tender, cpvCodes: ['90911200'], industryIds: ['cleaning'] },
+    NOW,
+  );
+  assert.ok(r.score <= 45, `score ${r.score}`);
+  assert.ok(r.breakdown.caps.some((c) => /Bare søkeordtreff/.test(c)));
+});
+
+test('forklaring: oppfylte og ikke oppfylte krav, manglende opplysninger og usikkerhet', () => {
+  const r = scoreTender({ ...profile, annualRevenue: 50_000_000, referenceCount: 0 }, {
+    ...tender,
+    selectionCriteria: [
+      'The supplier must have had an average annual turnover of at least NOK 300 million for the years 2024 and 2025.',
+      'Description of up to three of the supplier\'s most relevant assignments carried out within the last five years (references).',
+    ],
+  }, NOW);
+  assert.ok(r.breakdown.fulfilled.some((f) => /vaktvirksomhetsloven/i.test(f)), JSON.stringify(r.breakdown.fulfilled));
+  assert.ok(r.breakdown.unfulfilled.some((u) => /300 mill\. kr/.test(u)), JSON.stringify(r.breakdown.unfulfilled));
+  assert.ok(r.breakdown.missingInfo.some((m) => /referanseprosjekter/.test(m)));
+  assert.ok(r.score <= 35, `omsetningskravet er ikke oppfylt: ${r.score}`);
+  assert.equal(r.breakdown.version, 2);
+
+  const longDescription = `${tender.description} Oppdraget omfatter stasjonært vakthold, resepsjon og adgangskontroll på hverdager og i helger, med rapportering til byggets driftsleder og beredskap ved hendelser.`;
+  const rich = scoreTender(
+    { ...profile, annualRevenue: 400_000_000, referenceCount: 3 },
+    { ...tender, description: longDescription, selectionCriteria: ['Average annual turnover of at least NOK 300 million.'] },
+    NOW,
+  );
+  assert.ok(rich.breakdown.fulfilled.some((f) => /oppfyller kravet på 300 mill\. kr/.test(f)));
+  assert.equal(rich.breakdown.uncertainty, 'lav');
+
+  const unknown = scoreTender({ ...profile, annualRevenue: null }, { ...tender, description: 'Kort.', selectionCriteria: [], cpvCodes: [] }, NOW);
+  assert.equal(unknown.breakdown.uncertainty, 'høy', 'lite tekst, ingen CPV og kvalifikasjonskrav ikke vurdert');
+  assert.ok(unknown.breakdown.uncertaintyReasons.includes('Kunngjøringen har lite beskrivende tekst'));
+});
+
+test('minstekrav til omsetning tolkes fra norsk og engelsk tekst – relative krav tolkes ikke', async () => {
+  const { requiredTurnover } = await import('../../src/domain/matching/engine');
+  assert.equal(requiredTurnover('The supplier must have had an average annual turnover of at least NOK 300 million for the years 2024 and 2025.'), 300_000_000);
+  assert.equal(requiredTurnover('Leverandøren skal ha en årlig omsetning på minst 10 millioner kroner.'), 10_000_000);
+  assert.equal(requiredTurnover('Krav: omsetning på minimum kr 5 000 000 siste år.'), 5_000_000);
+  assert.equal(requiredTurnover('Omsetning minst 1,5 mill. kroner'), 1_500_000);
+  assert.equal(requiredTurnover('Omsetningen skal være minst 2 ganger kontraktsverdien.'), null);
+  assert.equal(requiredTurnover('Leverandøren må ha god økonomi.'), null);
+});

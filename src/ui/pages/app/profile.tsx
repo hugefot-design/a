@@ -1,5 +1,5 @@
 import { CERTIFICATIONS, COMPANY_SIZES, CONTRACT_NATURES, INDUSTRIES, REGIONS } from '@/domain/reference';
-import type { CompanyProfile } from '@/domain/profile/profile';
+import { MAX_REFERENCES, type CompanyProfile, type profileFormFromData } from '@/domain/profile/profile';
 import { Alert, Button, Checkbox, Field, Input, Panel, PostForm, Select, Textarea } from '../../components';
 import { AppShell, AuthLayout } from '../../layouts';
 
@@ -26,7 +26,40 @@ export function profileToValues(p: CompanyProfile | null, orgName?: string): Val
     excludedCpv: p.excludedCpv.join(', '),
     excludedKeywords: p.excludedKeywords.join(', '),
     minDaysToDeadline: String(p.minDaysToDeadline),
+    products: p.products ?? '',
+    competencies: p.competencies ?? '',
+    employeeCount: p.employeeCount !== null && p.employeeCount !== undefined ? String(p.employeeCount) : '',
+    annualRevenue: p.annualRevenue !== null && p.annualRevenue !== undefined ? String(Math.round(p.annualRevenue)) : '',
+    ...referenceValues(
+      (p.referenceProjects ?? []).map((r) => ({
+        title: r.title,
+        client: r.client ?? '',
+        year: r.year !== null ? String(r.year) : '',
+        value: r.value !== null ? String(Math.round(r.value)) : '',
+        description: r.description ?? '',
+      })),
+    ),
   };
+}
+
+type RefStrings = { title: string; client: string; year: string; value: string; description: string };
+
+function referenceValues(refs: RefStrings[]): Values {
+  const out: Values = {};
+  refs.slice(0, MAX_REFERENCES).forEach((r, i) => {
+    out[`ref_title_${i}`] = r.title;
+    out[`ref_client_${i}`] = r.client;
+    out[`ref_year_${i}`] = r.year;
+    out[`ref_value_${i}`] = r.value;
+    out[`ref_description_${i}`] = r.description;
+  });
+  return out;
+}
+
+/** Skjemaverdier tilbake til skjemaet etter valideringsfeil (referansene flates ut til feltnavn). */
+export function formValues(raw: ReturnType<typeof profileFormFromData>): Values {
+  const { referenceProjects, ...rest } = raw;
+  return { ...rest, ...referenceValues(referenceProjects) };
 }
 
 function str(v: Values, k: string): string {
@@ -67,16 +100,24 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
             <Input id="orgNumber" name="orgNumber" inputMode="numeric" defaultValue={str(values, 'orgNumber')} invalid={Boolean(errors.orgNumber)} />
           </Field>
         </div>
-        <Field label="Antall ansatte" htmlFor="companySize">
-          <Select id="companySize" name="companySize" defaultValue={str(values, 'companySize')}>
-            <option value="">Velg</option>
-            {Object.entries(COMPANY_SIZES).map(([k, label]) => (
-              <option key={k} value={k}>
-                {label}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <div className="grid gap-5 sm:grid-cols-3">
+          <Field label="Antall ansatte" htmlFor="employeeCount" hint="Valgfritt, eksakt tall." error={errors.employeeCount}>
+            <Input id="employeeCount" name="employeeCount" inputMode="numeric" defaultValue={str(values, 'employeeCount')} invalid={Boolean(errors.employeeCount)} />
+          </Field>
+          <Field label="… eller størrelse" htmlFor="companySize">
+            <Select id="companySize" name="companySize" defaultValue={str(values, 'companySize')}>
+              <option value="">Velg</option>
+              {Object.entries(COMPANY_SIZES).map(([k, label]) => (
+                <option key={k} value={k}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Årlig omsetning (kr)" htmlFor="annualRevenue" hint="Siste regnskapsår. Brukes mot krav til økonomi." error={errors.annualRevenue}>
+            <Input id="annualRevenue" name="annualRevenue" inputMode="numeric" defaultValue={str(values, 'annualRevenue')} invalid={Boolean(errors.annualRevenue)} />
+          </Field>
+        </div>
         <Field label="Kort om bedriften" htmlFor="description" error={errors.description}>
           <Textarea id="description" name="description" rows={3} maxLength={2000} defaultValue={str(values, 'description')} />
         </Field>
@@ -92,8 +133,14 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
           </div>
           {errors.industries ? <p className="mt-1 text-[13px] font-medium text-danger">{errors.industries}</p> : null}
         </div>
-        <Field label="Tjenester og produkter" htmlFor="services" hint="Beskriv med egne ord, f.eks. «stasjonært vakthold, alarmmottak og resepsjonstjenester».">
+        <Field label="Tjenester" htmlFor="services" hint="Beskriv med egne ord, f.eks. «stasjonært vakthold, alarmmottak og resepsjonstjenester».">
           <Textarea id="services" name="services" rows={3} maxLength={3000} defaultValue={str(values, 'services')} />
+        </Field>
+        <Field label="Produkter (valgfritt)" htmlFor="products" hint="Varer og utstyr dere leverer, f.eks. «adgangskontroll, kameraer, låssystemer».">
+          <Textarea id="products" name="products" rows={2} maxLength={3000} defaultValue={str(values, 'products')} />
+        </Field>
+        <Field label="Kompetanse (valgfritt)" htmlFor="competencies" hint="Fagområder, metoder, roller og sertifiserte personer. Brukes i egnethetsvurdering og tilbudsutkast.">
+          <Textarea id="competencies" name="competencies" rows={2} maxLength={3000} defaultValue={str(values, 'competencies')} />
         </Field>
         <Field label="Nøkkelord" htmlFor="keywords" hint="Skill med komma. Brukes til å finne anbud som nevner ordene.">
           <Input id="keywords" name="keywords" defaultValue={str(values, 'keywords')} />
@@ -144,9 +191,37 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
             <Checkbox key={c.id} name="certifications" value={c.id} defaultChecked={certs.includes(c.id)} label={c.label} />
           ))}
         </div>
-        <Field label="Relevant erfaring og referanser" htmlFor="experience" hint="Faktiske oppdrag, kunder og resultater. Brukes i tilbudsutkast.">
+        <Field label="Relevant erfaring" htmlFor="experience" hint="Faktiske oppdrag, kunder og resultater med egne ord. Brukes i tilbudsutkast.">
           <Textarea id="experience" name="experience" rows={4} maxLength={5000} defaultValue={str(values, 'experience')} />
         </Field>
+      </Section>
+
+      <Section
+        title="Referanseprosjekter"
+        description={`Inntil ${MAX_REFERENCES} oppdrag dere kan dokumentere. Mange anbud krever referanser fra tilsvarende oppdrag.`}
+      >
+        {Array.from({ length: MAX_REFERENCES }, (_, i) => (
+          <div key={i} className="rounded-md border border-line p-4">
+            <p className="mb-3 text-[13px] font-semibold text-navy-900">Referanse {i + 1}</p>
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_6rem_minmax(0,1fr)]">
+              <Field label="Oppdrag" htmlFor={`ref_title_${i}`}>
+                <Input id={`ref_title_${i}`} name={`ref_title_${i}`} maxLength={200} defaultValue={str(values, `ref_title_${i}`)} />
+              </Field>
+              <Field label="Kunde" htmlFor={`ref_client_${i}`}>
+                <Input id={`ref_client_${i}`} name={`ref_client_${i}`} maxLength={200} defaultValue={str(values, `ref_client_${i}`)} />
+              </Field>
+              <Field label="År" htmlFor={`ref_year_${i}`} error={errors[`referenceProjects.${i}.year`]}>
+                <Input id={`ref_year_${i}`} name={`ref_year_${i}`} inputMode="numeric" maxLength={4} defaultValue={str(values, `ref_year_${i}`)} />
+              </Field>
+              <Field label="Verdi (kr)" htmlFor={`ref_value_${i}`} error={errors[`referenceProjects.${i}.value`]}>
+                <Input id={`ref_value_${i}`} name={`ref_value_${i}`} inputMode="numeric" defaultValue={str(values, `ref_value_${i}`)} />
+              </Field>
+            </div>
+            <Field label="Kort beskrivelse" htmlFor={`ref_description_${i}`} className="mt-3">
+              <Textarea id={`ref_description_${i}`} name={`ref_description_${i}`} rows={2} maxLength={1500} defaultValue={str(values, `ref_description_${i}`)} />
+            </Field>
+          </div>
+        ))}
       </Section>
 
       <Section title="Ekskluderinger" description="Anbud som treffer disse, skjules fra anbefalinger og varsler.">

@@ -88,22 +88,51 @@ export function TenderRow({ item, showScore }: { item: TenderListItem; showScore
   );
 }
 
+const UNCERTAINTY_LABEL: Record<string, { label: string; tone: 'ok' | 'urgent' | 'danger' }> = {
+  lav: { label: 'Lav usikkerhet', tone: 'ok' },
+  middels: { label: 'Middels usikkerhet', tone: 'urgent' },
+  høy: { label: 'Høy usikkerhet', tone: 'danger' },
+};
+
 export function MatchExplanation({ score, breakdown, excluded }: { score: number; breakdown: MatchBreakdown; excluded: boolean }) {
+  const v2 = breakdown.version === 2;
+  const uncertainty = v2 ? UNCERTAINTY_LABEL[breakdown.uncertainty] : null;
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <ScoreBar score={score} />
         {excluded ? <Badge tone="outline">Ekskludert</Badge> : null}
       </div>
-      <p className="text-[12px] text-muted">Viser hvor godt anbudet passer profilen din – ikke sjansen for å vinne.</p>
+      <p className="text-[12px] text-muted">
+        Viser hvor godt anbudet passer profilen din (0–100) – ikke sjansen for å vinne. Regnet ut fra kunngjøringen og profilen, uten AI.
+      </p>
+      {uncertainty ? (
+        <div>
+          <Badge tone={uncertainty.tone}>{uncertainty.label}</Badge>
+          {breakdown.uncertaintyReasons.length ? (
+            <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-[12px] text-muted">
+              {breakdown.uncertaintyReasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
       <ExplanationList icon={<LuCircleCheck className="size-4 text-ok" aria-hidden />} title="Hvorfor det passer" items={breakdown.reasons} />
-      <ExplanationList icon={<LuCircleAlert className="size-4 text-urgent" aria-hidden />} title="Mangler og avvik" items={breakdown.gaps} />
-      <ExplanationList
-        icon={<LuCircleX className="size-4 text-danger" aria-hidden />}
-        title="Kan stoppe dere"
-        items={breakdown.disqualifiers}
-        highlight
-      />
+      {v2 ? (
+        <>
+          <ExplanationList icon={<LuCircleCheck className="size-4 text-ok" aria-hidden />} title="Krav dere ser ut til å oppfylle" items={breakdown.fulfilled} />
+          <ExplanationList icon={<LuCircleX className="size-4 text-danger" aria-hidden />} title="Krav dere ikke ser ut til å oppfylle" items={breakdown.unfulfilled} highlight />
+          <ExplanationList icon={<LuCircleAlert className="size-4 text-urgent" aria-hidden />} title="Opplysninger som mangler" items={breakdown.missingInfo} />
+          <ExplanationList icon={<LuCircleAlert className="size-4 text-urgent" aria-hidden />} title="Andre avvik" items={breakdown.gaps.filter((g) => !breakdown.unfulfilled.some((u) => u.includes(g.slice(0, 25))))} />
+          {breakdown.caps.length ? <p className="text-[12px] text-muted">Poengsummen er begrenset: {breakdown.caps.join('; ')}.</p> : null}
+        </>
+      ) : (
+        <>
+          <ExplanationList icon={<LuCircleAlert className="size-4 text-urgent" aria-hidden />} title="Mangler og avvik" items={breakdown.gaps} />
+          <ExplanationList icon={<LuCircleX className="size-4 text-danger" aria-hidden />} title="Kan stoppe dere" items={breakdown.disqualifiers} highlight />
+        </>
+      )}
       {breakdown.nextSteps.length ? (
         <div>
           <p className="text-[13px] font-semibold text-navy-900">Anbefalte neste steg</p>

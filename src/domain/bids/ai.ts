@@ -1,14 +1,22 @@
 import { first, withTenant } from '@/lib/db';
 import type { OrgContext } from '@/server/http';
-import { CERT_BY_ID, COMPANY_SIZES } from '@/domain/reference';
 import { getTender } from '@/domain/tenders/queries';
 import { getLatestTenderAnalysis, loadDocumentSources, noticeSource } from '@/domain/ai/analysis';
 import { runAi } from '@/domain/ai/runner';
-import { BID_CHECKLIST_SYSTEM, BID_DRAFT_SYSTEM, BID_REVIEW_SYSTEM } from '@/domain/ai/prompts';
-import { bidChecklistJsonSchema, bidChecklistZ, bidDraftJsonSchema, bidDraftZ, bidReviewJsonSchema, bidReviewZ } from '@/domain/ai/schemas';
+import { BID_CHECKLIST_SYSTEM, BID_DRAFT_SYSTEM, BID_REVIEW_SYSTEM, BID_STRUCTURE_SYSTEM } from '@/domain/ai/prompts';
+import {
+  bidChecklistJsonSchema,
+  bidChecklistZ,
+  bidDraftJsonSchema,
+  bidDraftZ,
+  bidReviewJsonSchema,
+  bidReviewZ,
+  bidStructureJsonSchema,
+  bidStructureZ,
+} from '@/domain/ai/schemas';
 import { buildSourceBlock, checkRef, sanitizeSourceText, type AnalysisSource } from '@/domain/ai/sources';
-import { mockBidDraft, mockBidReview } from '@/domain/ai/mock';
-import { getProfile } from '@/domain/profile/profile';
+import { mockBidDraft, mockBidReview, mockBidStructure } from '@/domain/ai/mock';
+import { getProfile, profileFactsForAi } from '@/domain/profile/profile';
 import { invalidateApproval } from './bids';
 
 async function context(org: OrgContext, userId: string, workspaceId: string) {
@@ -24,20 +32,6 @@ async function context(org: OrgContext, userId: string, workspaceId: string) {
   });
 }
 
-function profileFacts(profile: Awaited<ReturnType<typeof getProfile>>): string[] {
-  if (!profile) return [];
-  const facts: string[] = [`Firmanavn: ${profile.companyName}`];
-  if (profile.orgNumber) facts.push(`Organisasjonsnummer: ${profile.orgNumber}`);
-  if (profile.companySize) facts.push(`Antall ansatte: ${COMPANY_SIZES[profile.companySize] ?? profile.companySize}`);
-  if (profile.description) facts.push(`Om bedriften: ${profile.description}`);
-  if (profile.services) facts.push(`Tjenester: ${profile.services}`);
-  if (profile.certifications.length) {
-    facts.push(`Sertifiseringer og godkjenninger (registrert av bedriften): ${profile.certifications.map((c) => CERT_BY_ID.get(c)?.label ?? c).join(', ')}`);
-  }
-  if (profile.experience) facts.push(`Erfaring og referanser (oppgitt av bedriften): ${profile.experience}`);
-  return facts;
-}
-
 export async function generateChecklist(org: OrgContext, userId: string, workspaceId: string) {
   const c = await context(org, userId, workspaceId);
   if (!c) return { ok: false as const, error: 'Fant ikke tilbudsarbeidet.' };
@@ -51,12 +45,15 @@ export async function generateChecklist(org: OrgContext, userId: string, workspa
     workspaceId,
     isPrivate: true,
     system: BID_CHECKLIST_SYSTEM,
-    user: `${block}\n\nLag sjekklisten.`,
+    cacheablePrefix: block,
+    user: 'Lag sjekklisten.',
+    tier: 'quality',
+    effort: 'low',
     schemaName: 'bid_checklist',
     schemaDescription: 'Sjekkliste for tilbudsarbeid',
     schema: bidChecklistJsonSchema,
     validator: bidChecklistZ,
-    maxOutputTokens: 2500,
+    maxOutputTokens: 8000,
     mockHint: () => ({
       items: [
         { label: 'Dokumenter kravene i kunngjøringen (testmodus)', category: 'kvalifikasjon' as const, source: { source_id: 'S0', page: null, quote: null } },
@@ -94,11 +91,9 @@ export async function draftSection(org: OrgContext, userId: string, workspaceId:
     }[]),
   );
   if (!section) return { ok: false as const, error: 'Fant ikke seksjonen.' };
-  const facts = profileFacts(c.profile);
+  const facts = profileFactsForAi(c.profile);
   const { block } = buildSourceBlock(c.sources, 60_000);
-  const user = `${block}
-
-<bedriftsprofil>
+  const user = `<bedriftsprofil>
 ${facts.map((f) => sanitizeSourceText(f)).join('\n') || '(Bedriftsprofilen er tom.)'}
 </bedriftsprofil>
 
@@ -113,12 +108,15 @@ ${section.content.trim() ? `Nåværende tekst (forbedre og utvid, men behold fak
     workspaceId,
     isPrivate: true,
     system: BID_DRAFT_SYSTEM,
+    cacheablePrefix: block,
     user,
+    tier: 'quality',
+    effort: 'medium',
     schemaName: 'bid_draft',
     schemaDescription: 'Utkast til tilbudstekst',
     schema: bidDraftJsonSchema,
     validator: bidDraftZ,
-    maxOutputTokens: 3000,
+    maxOutputTokens: 12000,
     mockHint: () => mockBidDraft(section.title, facts),
     hashExtra: section.id,
   });
@@ -142,7 +140,12 @@ export async function reviewDraft(org: OrgContext, userId: string, workspaceId: 
   );
   const a = c.analysis?.data as Record<string, { text: string }[]> | undefined;
   const requirements = a
-    ? [...(a.key_requirements ?? []), ...(a.qualification_criteria ?? []), ...(a.required_documentation ?? [])].map((x) => x.text).slice(0, 40)
+    ? (a.requirements?.length
+        ? a.requirements
+        : [...(a.key_requirements ?? []), ...(a.qualification_criteria ?? []), ...(a.required_documentation ?? [])]
+      )
+        .map((x) => x.text)
+        .slice(0, 40)
     : (c.tender.description ?? '')
         .split(/(?<=[.!?])\s+/)
         .filter((s) => /\b(må|skal|krav)\b/i.test(s))
@@ -169,13 +172,63 @@ Vurder om utkastet dekker hvert krav.`;
     isPrivate: true,
     system: BID_REVIEW_SYSTEM,
     user,
+    tier: 'quality',
+    effort: 'low',
     schemaName: 'bid_review',
     schemaDescription: 'Kravdekning i tilbudsutkast',
     schema: bidReviewJsonSchema,
     validator: bidReviewZ,
-    maxOutputTokens: 3000,
+    maxOutputTokens: 10000,
     mockHint: () => mockBidReview(requirements, sectionText),
   });
   if (!result.ok) return result;
   return { ok: true as const };
+}
+
+/** AI-forslag til disposisjon: nye seksjoner legges til (eksisterende seksjoner endres ikke). */
+export async function generateStructure(org: OrgContext, userId: string, workspaceId: string) {
+  const c = await context(org, userId, workspaceId);
+  if (!c) return { ok: false as const, error: 'Fant ikke tilbudsarbeidet.' };
+  const { block } = buildSourceBlock(c.sources);
+  const result = await runAi({
+    kind: 'bid_structure',
+    usageKind: 'ai_bid_structure',
+    org,
+    userId,
+    tenderId: c.tender.id,
+    workspaceId,
+    isPrivate: true,
+    system: BID_STRUCTURE_SYSTEM,
+    cacheablePrefix: block,
+    user: 'Foreslå disposisjonen for tilbudet.',
+    tier: 'quality',
+    effort: 'low',
+    schemaName: 'bid_structure',
+    schemaDescription: 'Disposisjon for tilbudet',
+    schema: bidStructureJsonSchema,
+    validator: bidStructureZ,
+    maxOutputTokens: 8000,
+    mockHint: () => mockBidStructure(c.sources),
+  });
+  if (!result.ok) return result;
+  const sections = (result.result.data as { sections: { title: string; purpose: string; requirements_covered: string[] }[] }).sections;
+  const added = await withTenant({ userId, orgId: org.id }, async (tx) => {
+    const existing = (await tx`select lower(title) as t from bid_sections where workspace_id = ${workspaceId}`) as unknown as { t: string }[];
+    const have = new Set(existing.map((e) => e.t));
+    const [max] = (await tx`select coalesce(max(sort_order), 0)::int as m from bid_sections where workspace_id = ${workspaceId}`) as unknown as { m: number }[];
+    let order = (max?.m ?? 0) + 1;
+    let n = 0;
+    for (const sec of sections) {
+      if (have.has(sec.title.toLowerCase())) continue;
+      const requirement = [sec.purpose, ...sec.requirements_covered.map((r) => `• ${r}`)].filter(Boolean).join('\n').slice(0, 4000);
+      await tx`
+        insert into bid_sections (workspace_id, org_id, title, requirement, sort_order, updated_by)
+        values (${workspaceId}, ${org.id}, ${sec.title.slice(0, 200)}, ${requirement || null}, ${order++}, ${userId})
+      `;
+      n++;
+    }
+    if (n) await invalidateApproval(tx, workspaceId);
+    return n;
+  });
+  return { ok: true as const, count: added };
 }

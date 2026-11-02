@@ -10,7 +10,7 @@ import { parseNaturalQuery } from '@/domain/search/nl-parser';
 import { cpvLabels, getTender, getTenderExtras, searchTenders } from '@/domain/tenders/queries';
 import { listBookmarks, toggleBookmark, updateBookmark, BOOKMARK_STATUSES } from '@/domain/tenders/bookmarks';
 import { createSavedSearch, deleteSavedSearch, listSavedSearches, updateSavedSearch } from '@/domain/search/saved';
-import { getLatestTenderAnalysis, runTenderAnalysis } from '@/domain/ai/analysis';
+import { getLatestFitAssessment, getLatestTenderAnalysis, runFitAssessment, runTenderAnalysis } from '@/domain/ai/analysis';
 import { usageSummary } from '@/domain/ai/usage';
 import { runAi } from '@/domain/ai/runner';
 import { WEEKLY_OVERVIEW_SYSTEM } from '@/domain/ai/prompts';
@@ -27,7 +27,7 @@ import { DashboardPage } from '@/ui/pages/app/dashboard';
 import { DiscoverPage } from '@/ui/pages/app/discover';
 import { AnalysisPage, TenderPage } from '@/ui/pages/app/tender';
 import { NotificationsPage, SavedSearchesPage, SavedTendersPage, type NotificationRow, type Prefs } from '@/ui/pages/app/lists';
-import { OnboardingOrgPage, OnboardingProfilePage, ProfilePage, profileToValues } from '@/ui/pages/app/profile';
+import { formValues, OnboardingOrgPage, OnboardingProfilePage, ProfilePage, profileToValues } from '@/ui/pages/app/profile';
 import { formBool, formStr, param, requireOrg, wantsJsonResponse } from '../helpers';
 
 /** Sti fra Referer-headeren, bare hvis den peker til vår egen side. Ugyldige verdier gir null. */
@@ -68,6 +68,8 @@ export function registerCoreAppRoutes(router: Router): void {
       isPrivate: true,
       system: WEEKLY_OVERVIEW_SYSTEM,
       user: `<kilder>\n<kilde id="S0" type="oversikt" tittel="Anbud i AnbudRadar denne uken">\n${lines.join('\n')}\n</kilde>\n</kilder>`,
+      tier: 'fast',
+      effort: 'low',
       schemaName: 'weekly_overview',
       schemaDescription: 'Kort ukesoversikt',
       schema: weeklyOverviewJsonSchema,
@@ -114,7 +116,7 @@ export function registerCoreAppRoutes(router: Router): void {
       const raw = profileFormFromData(form);
       const parsed = profileFormSchema.safeParse(raw);
       if (!parsed.success) {
-        return render(ctx, <OnboardingProfilePage values={raw} errors={zodErrors(parsed.error)} />, { title: 'Bedriftsprofil', status: 422 });
+        return render(ctx, <OnboardingProfilePage values={formValues(raw)} errors={zodErrors(parsed.error)} />, { title: 'Bedriftsprofil', status: 422 });
       }
       await ctx.tenant((tx) => saveProfile(tx, { orgId: org.id, userId: user.id, ipHash: ctx.ipHash }, parsed.data));
       await afterProfileSaved(org.id);
@@ -184,8 +186,9 @@ export function registerCoreAppRoutes(router: Router): void {
       const extras = await getTenderExtras(tx, id, org.id);
       const labels = await cpvLabels(tx, tender.cpvCodes);
       const analysis = await getLatestTenderAnalysis(tx, id, org.id);
+      const fit = org.entitlements.matching ? await getLatestFitAssessment(tx, id, org.id) : null;
       const usage = await usageSummary(tx, org);
-      return { tender, extras, labels, analysis, usage };
+      return { tender, extras, labels, analysis, fit, usage };
     });
     if (!data) throw new HttpError(404, 'Fant ikke kunngjøringen.');
     return render(
@@ -201,6 +204,8 @@ export function registerCoreAppRoutes(router: Router): void {
         documents={data.extras.documents}
         workspace={data.extras.workspace}
         analysis={data.analysis}
+        fit={data.fit}
+        canAssessFit={org.entitlements.matching}
         aiQuota={{ used: data.usage.analyses, limit: data.usage.analysesLimit }}
       />,
       { title: data.tender.title },
@@ -224,6 +229,15 @@ export function registerCoreAppRoutes(router: Router): void {
     const result = await runTenderAnalysis(org, user.id, id, { force: formBool(form, 'force') });
     if (!result.ok) return redirectWith(ctx, `/app/anbud/${id}`, 'error', result.error);
     return redirectWith(ctx, `/app/anbud/${id}/analyse`, 'success', result.cached ? 'Viser lagret analyse (ingen ny kostnad).' : 'Analysen er klar.');
+  });
+
+  router.post('/app/anbud/:id/egnethet', 'org', async (ctx) => {
+    const { org, user } = requireOrg(ctx);
+    const id = param(ctx, 'id');
+    const form = await ctx.form();
+    const result = await runFitAssessment(org, user.id, id, { force: formBool(form, 'force') });
+    if (!result.ok) return redirectWith(ctx, `/app/anbud/${id}#egnethet`, 'error', result.error);
+    return redirectWith(ctx, `/app/anbud/${id}#egnethet`, 'success', result.cached ? 'Viser lagret vurdering (ingen ny kostnad).' : 'Egnethetsvurderingen er klar.');
   });
 
   router.get('/app/anbud/:id/analyse', 'org', async (ctx) => {
@@ -419,7 +433,7 @@ export function registerCoreAppRoutes(router: Router): void {
     const raw = profileFormFromData(await ctx.form());
     const parsed = profileFormSchema.safeParse(raw);
     if (!parsed.success) {
-      return render(ctx, <ProfilePage values={raw} errors={zodErrors(parsed.error)} canEdit matchCount={null} />, { title: 'Bedriftsprofil', status: 422 });
+      return render(ctx, <ProfilePage values={formValues(raw)} errors={zodErrors(parsed.error)} canEdit matchCount={null} />, { title: 'Bedriftsprofil', status: 422 });
     }
     await ctx.tenant((tx) => saveProfile(tx, { orgId: org.id, userId: user.id, ipHash: ctx.ipHash }, parsed.data));
     const count = await afterProfileSaved(org.id);

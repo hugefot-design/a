@@ -14,8 +14,9 @@ interface ProfileRow extends MatchProfile {
 async function loadProfiles(orgId?: string): Promise<ProfileRow[]> {
   const sql = systemSql();
   return (await sql`
-    select org_id, industries, cpv_codes, keywords, services, regions, countries, certifications, min_contract_value,
-           max_contract_value, contract_types, excluded_cpv, excluded_keywords, min_days_to_deadline, version
+    select org_id, industries, cpv_codes, keywords, services, products, competencies, regions, countries, certifications,
+           min_contract_value, max_contract_value, contract_types, excluded_cpv, excluded_keywords, min_days_to_deadline, version,
+           annual_revenue, employee_count, jsonb_array_length(reference_projects)::int as reference_count
     from company_profiles
     where onboarding_completed_at is not null ${orgId ? sql`and org_id = ${orgId}` : sql``}
   `) as unknown as ProfileRow[];
@@ -25,7 +26,8 @@ async function loadCandidateTenders(tenderIds?: string[]): Promise<MatchTender[]
   const sql = systemSql();
   return (await sql`
     select id, title, left(description, 8000) as description, cpv_codes, industry_ids, region_codes, country_code,
-           estimated_value, currency, contract_nature, deadline_at, lifecycle
+           estimated_value, currency, contract_nature, deadline_at, lifecycle,
+           coalesce((select array_agg(left(x, 2000)) from jsonb_array_elements_text(t.selection_criteria) x), '{}') as selection_criteria
     from tenders t
     where (t.lifecycle = 'planned' or (t.lifecycle in ('competition', 'other') and (t.deadline_at > now() or (t.deadline_at is null and t.published_at > now() - interval '60 days'))))
       ${isProd ? sql`and t.is_sample = false` : sql``}

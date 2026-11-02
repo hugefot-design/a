@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { first, type Tx } from '@/lib/db';
+import { first, toJson, type Tx } from '@/lib/db';
 import { audit } from '@/lib/audit';
-import { CERT_BY_ID, INDUSTRY_BY_ID, REGION_BY_CODE } from '@/domain/reference';
+import { CERT_BY_ID, COMPANY_SIZES, INDUSTRY_BY_ID, REGION_BY_CODE } from '@/domain/reference';
 import { cleanCpv } from '@/domain/tenders/normalize';
 import { recomputeMatchesForOrg } from '@/domain/matching/service';
 import { orgNumberSchema } from '@/domain/org/org';
@@ -26,10 +26,25 @@ export interface CompanyProfile {
   excludedCpv: string[];
   excludedKeywords: string[];
   minDaysToDeadline: number;
+  products: string | null;
+  competencies: string | null;
+  employeeCount: number | null;
+  annualRevenue: number | null;
+  referenceProjects: ReferenceProject[];
   version: number;
   onboardingCompletedAt: Date | null;
   updatedAt: Date;
 }
+
+export interface ReferenceProject {
+  title: string;
+  client: string | null;
+  year: number | null;
+  value: number | null;
+  description: string | null;
+}
+
+export const MAX_REFERENCES = 5;
 
 const splitList = (v: string) =>
   v
@@ -79,7 +94,39 @@ export const profileFormSchema = z
       .max(1000)
       .transform((v) => [...new Set(splitList(v).map((k) => k.toLowerCase()))].slice(0, 40)),
     minDaysToDeadline: z.coerce.number().int().min(0, 'Minst 0 dager.').max(120, 'Maks 120 dager.'),
+    products: z.string().trim().max(3000).default('').transform((v) => v || null),
+    competencies: z.string().trim().max(3000).default('').transform((v) => v || null),
+    employeeCount: z
+      .string()
+      .default('')
+      .transform((v) => v.replace(/[\s ]/g, ''))
+      .refine((v) => v === '' || (/^\d+$/.test(v) && Number(v) <= 1_000_000), 'Skriv inn et helt tall.')
+      .transform((v) => (v === '' ? null : Number(v))),
+    annualRevenue: optionalMoney.default(''),
+    referenceProjects: z
+      .array(
+        z.object({
+          title: z.string().trim().max(200),
+          client: z.string().trim().max(200).transform((v) => v || null),
+          year: z
+            .string()
+            .trim()
+            .refine((v) => v === '' || (/^\d{4}$/.test(v) && Number(v) >= 1950 && Number(v) <= 2100), 'Skriv inn et årstall.')
+            .transform((v) => (v === '' ? null : Number(v))),
+          value: optionalMoney,
+          description: z.string().trim().max(1500).transform((v) => v || null),
+        }),
+      )
+      .max(MAX_REFERENCES)
+      .default([])
+      .transform((refs) => refs.filter((r) => r.title !== '')),
   })
+  .transform((v) => ({
+    ...v,
+    companySize:
+      v.companySize ??
+      (v.employeeCount === null ? null : v.employeeCount < 10 ? '1-9' : v.employeeCount < 50 ? '10-49' : v.employeeCount < 250 ? '50-249' : '250+'),
+  }))
   .refine((v) => v.minContractValue === null || v.maxContractValue === null || v.minContractValue <= v.maxContractValue, {
     message: 'Minste verdi kan ikke være større enn største verdi.',
     path: ['maxContractValue'],
@@ -112,6 +159,17 @@ export function profileFormFromData(form: FormData) {
     excludedCpv: s('excludedCpv'),
     excludedKeywords: s('excludedKeywords'),
     minDaysToDeadline: s('minDaysToDeadline') || '10',
+    products: s('products'),
+    competencies: s('competencies'),
+    employeeCount: s('employeeCount'),
+    annualRevenue: s('annualRevenue'),
+    referenceProjects: Array.from({ length: MAX_REFERENCES }, (_, i) => ({
+      title: s(`ref_title_${i}`),
+      client: s(`ref_client_${i}`),
+      year: s(`ref_year_${i}`),
+      value: s(`ref_value_${i}`),
+      description: s(`ref_description_${i}`),
+    })),
   };
 }
 
@@ -129,13 +187,15 @@ export async function saveProfile(
     insert into company_profiles (
       org_id, company_name, org_number, description, industries, services, keywords, cpv_codes, regions, countries,
       company_size, certifications, experience, min_contract_value, max_contract_value, contract_types, excluded_cpv,
-      excluded_keywords, min_days_to_deadline, onboarding_completed_at, updated_by
+      excluded_keywords, min_days_to_deadline, onboarding_completed_at, updated_by,
+      products, competencies, employee_count, annual_revenue, reference_projects
     ) values (
       ${ctx.orgId}, ${data.companyName}, ${data.orgNumber}, ${data.description}, ${data.industries}::text[], ${data.services},
       ${data.keywords}::text[], ${data.cpvCodes}::text[], ${data.regions}::text[], ${['NO']}::text[], ${data.companySize},
       ${data.certifications}::text[], ${data.experience}, ${data.minContractValue}, ${data.maxContractValue},
       ${data.contractTypes}::text[], ${data.excludedCpv}::text[], ${data.excludedKeywords}::text[], ${data.minDaysToDeadline},
-      now(), ${ctx.userId}
+      now(), ${ctx.userId},
+      ${data.products}, ${data.competencies}, ${data.employeeCount}, ${data.annualRevenue}, ${toJson(data.referenceProjects)}::text::jsonb
     )
     on conflict (org_id) do update set
       company_name = excluded.company_name, org_number = excluded.org_number, description = excluded.description,
@@ -145,6 +205,8 @@ export async function saveProfile(
       min_contract_value = excluded.min_contract_value, max_contract_value = excluded.max_contract_value,
       contract_types = excluded.contract_types, excluded_cpv = excluded.excluded_cpv,
       excluded_keywords = excluded.excluded_keywords, min_days_to_deadline = excluded.min_days_to_deadline,
+      products = excluded.products, competencies = excluded.competencies, employee_count = excluded.employee_count,
+      annual_revenue = excluded.annual_revenue, reference_projects = excluded.reference_projects,
       onboarding_completed_at = coalesce(company_profiles.onboarding_completed_at, now()),
       version = company_profiles.version + 1, updated_by = excluded.updated_by
   `;
@@ -155,4 +217,42 @@ export async function saveProfile(
 /** Etter at profiltransaksjonen er committet. */
 export async function afterProfileSaved(orgId: string): Promise<number> {
   return recomputeMatchesForOrg(orgId);
+}
+
+/**
+ * Opplysninger om bedriften slik AI-en får dem. Bare det bedriften selv har registrert – AI-en
+ * får beskjed om aldri å legge til noe. Tomme felt utelates (og skal behandles som ukjent).
+ */
+export function profileFactsForAi(profile: CompanyProfile | null): string[] {
+  if (!profile) return [];
+  const money = (v: number) => `${Math.round(v).toLocaleString('nb-NO')} kr`;
+  const facts: string[] = [`Firmanavn: ${profile.companyName}`];
+  if (profile.orgNumber) facts.push(`Organisasjonsnummer: ${profile.orgNumber}`);
+  if (profile.employeeCount !== null && profile.employeeCount !== undefined) facts.push(`Antall ansatte: ${profile.employeeCount}`);
+  else if (profile.companySize) facts.push(`Antall ansatte: ${COMPANY_SIZES[profile.companySize] ?? profile.companySize}`);
+  if (profile.annualRevenue !== null && profile.annualRevenue !== undefined) facts.push(`Årlig omsetning (oppgitt av bedriften): ${money(profile.annualRevenue)}`);
+  if (profile.description) facts.push(`Om bedriften: ${profile.description}`);
+  if (profile.industries.length) facts.push(`Bransjer: ${profile.industries.map((i) => INDUSTRY_BY_ID.get(i)?.name ?? i).join(', ')}`);
+  if (profile.services) facts.push(`Tjenester: ${profile.services}`);
+  if (profile.products) facts.push(`Produkter: ${profile.products}`);
+  if (profile.competencies) facts.push(`Kompetanse: ${profile.competencies}`);
+  if (profile.regions.length) {
+    facts.push(`Leverer i: ${profile.regions.includes('ALL') ? 'hele landet' : profile.regions.map((r) => REGION_BY_CODE.get(r)?.name ?? r).join(', ')}`);
+  }
+  if (profile.certifications.length) {
+    facts.push(`Sertifiseringer og godkjenninger (registrert av bedriften): ${profile.certifications.map((c) => CERT_BY_ID.get(c)?.label ?? c).join(', ')}`);
+  } else {
+    facts.push('Sertifiseringer og godkjenninger: ingen registrert');
+  }
+  if (profile.experience) facts.push(`Erfaring (oppgitt av bedriften): ${profile.experience}`);
+  for (const [i, r] of (profile.referenceProjects ?? []).entries()) {
+    const parts = [r.title, r.client ? `kunde ${r.client}` : null, r.year ? `år ${r.year}` : null, r.value ? `verdi ${money(r.value)}` : null].filter(Boolean);
+    facts.push(`Referanse ${i + 1}: ${parts.join(', ')}${r.description ? ` – ${r.description}` : ''}`);
+  }
+  if (profile.minContractValue !== null || profile.maxContractValue !== null) {
+    facts.push(
+      `Ønsket kontraktsstørrelse: ${profile.minContractValue !== null ? `fra ${money(profile.minContractValue)}` : ''}${profile.maxContractValue !== null ? ` til ${money(profile.maxContractValue)}` : ''}`.trim(),
+    );
+  }
+  return facts;
 }

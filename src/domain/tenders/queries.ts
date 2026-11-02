@@ -163,6 +163,20 @@ export interface TenderDetail {
   sourceUpdatedAt: Date | null;
   lastCheckedAt: Date;
   buyerReference: string | null;
+  questionsDeadlineAt: Date | null;
+  participationDeadlineAt: Date | null;
+  deadlineKind: 'tender' | 'participation' | null;
+  lotDeadlinesDiffer: boolean;
+  durationMonths: number | null;
+  durationText: string | null;
+  contractStart: Date | null;
+  contractEnd: Date | null;
+  submissionUrl: string | null;
+  lots: { id: string | null; title: string | null; estimatedValue: number | null; durationText: string | null }[];
+  selectionCriteria: string[];
+  awardCriteria: { name: string; type: string | null; weight: string | null }[];
+  isFramework: boolean | null;
+  textLanguage: string | null;
 }
 
 export interface TenderSourceRow {

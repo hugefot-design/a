@@ -4,11 +4,12 @@ import { sha256Hex } from '@/lib/crypto';
 import { log } from '@/lib/logger';
 import { rateLimit } from '@/lib/rate-limit';
 import type { OrgContext } from '@/server/http';
-import { AIError, estimateCostUsd, getProvider, type JsonSchema } from './provider';
+import { env } from '@/lib/env';
+import { AIError, estimateCostUsd, getProvider, type Effort, type JsonSchema, type ModelTier } from './provider';
 import { PROMPT_VERSION } from './prompts';
 import { quotaFor, recordUsage, usageSummary, type AiUsageKind } from './usage';
 
-export type AiKind = 'tender_analysis' | 'bid_checklist' | 'bid_draft' | 'bid_review' | 'weekly_overview';
+export type AiKind = 'tender_analysis' | 'match_explanation' | 'bid_checklist' | 'bid_structure' | 'bid_draft' | 'bid_review' | 'weekly_overview';
 
 export interface RunAiInput<T> {
   kind: AiKind;
@@ -20,7 +21,12 @@ export interface RunAiInput<T> {
   /** Lagres kun for organisasjonen (inneholder private dokumenter eller bedriftsdata). */
   isPrivate: boolean;
   system: string;
+  /** Kildene (lange og like for flere spørsmål om samme anbud) – bufres hos leverandøren. */
+  cacheablePrefix?: string;
   user: string;
+  /** 'fast' = billig modell for enkle oppgaver, 'quality' = beste modell (standard). */
+  tier?: ModelTier;
+  effort?: Effort;
   schemaName: string;
   schemaDescription: string;
   schema: JsonSchema;
@@ -37,11 +43,13 @@ export type RunAiResult =
   | { ok: false; code: 'not_configured' | 'quota' | 'rate_limited' | 'provider_error' | 'invalid_output'; error: string };
 
 export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
-  const provider = getProvider();
+  const provider = getProvider(input.tier ?? 'quality');
   if (!provider) {
     return { ok: false, code: 'not_configured', error: 'AI er ikke konfigurert. Administrator må legge inn en API-nøkkel (se README).' };
   }
-  const inputHash = sha256Hex([PROMPT_VERSION, input.kind, provider.name, provider.model, input.hashExtra ?? '', input.system, input.user].join('\u0000'));
+  const inputHash = sha256Hex(
+    [PROMPT_VERSION, input.kind, provider.name, provider.model, input.effort ?? '', input.hashExtra ?? '', input.system, input.cacheablePrefix ?? '', input.user].join('\u0000'),
+  );
   const ctx = { userId: input.userId, orgId: input.org.id };
 
   // 1. Hurtigbuffer: samme input → samme svar, uten ny kostnad.
@@ -70,8 +78,12 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
   if (quota.used >= quota.limit) {
     return { ok: false, code: 'quota', error: `Månedens AI-kvote (${quota.limit}) er brukt opp. Den fornyes den 1. i neste måned.` };
   }
-  if (!(await rateLimit(`ai:${input.org.id}`, 10, 60))) {
-    return { ok: false, code: 'rate_limited', error: 'For mange AI-forespørsler på kort tid. Vent ett minutt og prøv igjen.' };
+  if (env.AI_MONTHLY_COST_LIMIT_USD_PER_ORG > 0 && summary.costUsd >= env.AI_MONTHLY_COST_LIMIT_USD_PER_ORG) {
+    log.warn('ai_cost_limit_reached', { org: input.org.id, costUsd: summary.costUsd });
+    return { ok: false, code: 'quota', error: 'Organisasjonen har nådd månedens tak for AI-bruk. Kontakt oss hvis dere trenger mer.' };
+  }
+  if (!(await rateLimit(`ai:${input.org.id}`, 10, 60)) || !(await rateLimit(`ai-user:${input.userId}`, 60, 3600))) {
+    return { ok: false, code: 'rate_limited', error: 'For mange AI-forespørsler på kort tid. Vent litt og prøv igjen.' };
   }
 
   // 3. Kall leverandøren.
@@ -80,7 +92,9 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
   try {
     response = await provider.generate({
       system: input.system,
+      cacheablePrefix: input.cacheablePrefix,
       user: input.user,
+      effort: input.effort,
       schemaName: input.schemaName,
       schemaDescription: input.schemaDescription,
       schema: input.schema,
@@ -94,13 +108,15 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
     return { ok: false, code: 'provider_error', error: `${message} Prøv igjen om litt.` };
   }
 
-  const costUsd = estimateCostUsd(response.inputTokens, response.outputTokens);
+  const costUsd = estimateCostUsd(response.model, response);
+  // Bufrede tokens regnes med i «inn» i loggen; kostnaden over tar hensyn til lavere pris.
+  const totalInput = response.inputTokens + response.cacheReadTokens + response.cacheWriteTokens;
   const parsed = input.validator.safeParse(response.data);
   if (!parsed.success) {
     const message = 'AI-svaret hadde feil format og ble forkastet.';
-    await storeFailure(input, inputHash, response.provider, response.model, `${message} ${parsed.error.issues.slice(0, 3).map((i) => i.path.join('.') + ': ' + i.message).join('; ')}`, Date.now() - started, response.inputTokens, response.outputTokens, costUsd);
+    await storeFailure(input, inputHash, response.provider, response.model, `${message} ${parsed.error.issues.slice(0, 3).map((i) => i.path.join('.') + ': ' + i.message).join('; ')}`, Date.now() - started, totalInput, response.outputTokens, costUsd);
     await withTenant(ctx, (tx) =>
-      recordUsage(tx, { orgId: input.org.id, userId: input.userId, kind: input.usageKind, inputTokens: response.inputTokens, outputTokens: response.outputTokens, costUsd, cached: false }),
+      recordUsage(tx, { orgId: input.org.id, userId: input.userId, kind: input.usageKind, inputTokens: totalInput, outputTokens: response.outputTokens, costUsd, cached: false }),
     );
     return { ok: false, code: 'invalid_output', error: `${message} Prøv igjen.` };
   }
@@ -124,7 +140,7 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
         insert into ai_analyses (kind, tender_id, org_id, workspace_id, input_hash, prompt_version, provider, model, status, result,
                                  input_tokens, output_tokens, cost_usd, duration_ms, created_by)
         values (${input.kind}, ${input.tenderId}, ${input.org.id}, ${input.workspaceId ?? null}, ${inputHash}, ${PROMPT_VERSION},
-                ${response.provider}, ${response.model}, 'completed', ${toJson(result)}::text::jsonb, ${response.inputTokens},
+                ${response.provider}, ${response.model}, 'completed', ${toJson(result)}::text::jsonb, ${totalInput},
                 ${response.outputTokens}, ${costUsd}, ${duration}, ${input.userId})
         returning id
       `) as unknown as { id: string }[];
@@ -135,13 +151,13 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
       insert into ai_analyses (kind, tender_id, org_id, input_hash, prompt_version, provider, model, status, result,
                                input_tokens, output_tokens, cost_usd, duration_ms, created_by)
       values (${input.kind}, ${input.tenderId}, null, ${inputHash}, ${PROMPT_VERSION}, ${response.provider}, ${response.model},
-              'completed', ${toJson(result)}::text::jsonb, ${response.inputTokens}, ${response.outputTokens}, ${costUsd}, ${duration}, ${input.userId})
+              'completed', ${toJson(result)}::text::jsonb, ${totalInput}, ${response.outputTokens}, ${costUsd}, ${duration}, ${input.userId})
       returning id
     `) as unknown as { id: string }[];
     analysisId = row!.id;
   }
   await withTenant(ctx, (tx) =>
-    recordUsage(tx, { orgId: input.org.id, userId: input.userId, kind: input.usageKind, inputTokens: response.inputTokens, outputTokens: response.outputTokens, costUsd, cached: false }),
+    recordUsage(tx, { orgId: input.org.id, userId: input.userId, kind: input.usageKind, inputTokens: totalInput, outputTokens: response.outputTokens, costUsd, cached: false }),
   );
   return { ok: true, analysisId, result, cached: false };
 }

@@ -5,7 +5,7 @@
  */
 import { CERTIFICATIONS } from '@/domain/reference';
 import type { AnalysisSource } from './sources';
-import type { BasicSummary, BidDraft, BidReview, TenderAnalysis, WeeklyOverview } from './schemas';
+import type { BasicSummary, BidDraft, BidReview, BidStructure, FitAssessment, TenderAnalysis, WeeklyOverview } from './schemas';
 
 const MOCK_NOTE = '(Simulert svar fra testmodus – ikke en ekte AI-analyse.)';
 
@@ -64,29 +64,79 @@ export function mockTenderAnalysis(sources: AnalysisSource[]): TenderAnalysis {
   const pct = findQuote(sources, /\d+\s*%/);
   const financial = findQuote(sources, /omsetning|kredittvurdering|egenkapital/i);
   const duration = findQuote(sources, /\b(år|måneder)\b.*\b(opsjon|varighet|avtale)\b|\bopsjon\b/i);
+  const ref = (q: { source_id: string; page: number | null; quote: string }) => ({ source_id: q.source_id, page: q.page, quote: q.quote });
+  const category = (sentence: string) =>
+    /kvalifikasjon|tillatelse|godkjen|registrert|qualif|experience|erfaring/i.test(sentence)
+      ? ('kvalifikasjon' as const)
+      : /dokumentasjon|attest|documentation/i.test(sentence)
+        ? ('dokumentasjon' as const)
+        : ('leveranse' as const);
   return {
     summary: `${descSentences.slice(0, 2).join(' ') || 'Kunngjøringen har lite beskrivende tekst.'} ${MOCK_NOTE}`,
     purchase_description: descSentences[0] ?? 'Ikke beskrevet i kildene.',
-    key_requirements: requirementHits.map(({ s, p, sentence }) => ({ text: sentence, source: { source_id: s.id, page: p.page, quote: sentence.slice(0, 180) } })),
-    qualification_criteria: requirementHits
-      .filter(({ sentence }) => /kvalifikasjon|tillatelse|godkjen|registrert/i.test(sentence))
-      .map(({ s, p, sentence }) => ({ text: sentence, source: { source_id: s.id, page: p.page, quote: sentence.slice(0, 180) } })),
-    certifications: certs,
-    financial_requirements: financial ? [{ text: financial.sentence, source: { source_id: financial.source_id, page: financial.page, quote: financial.quote } }] : [],
+    scope_items: descSentences.slice(0, 2).map((text) => ({ text, basis: 'tolkning' as const, source: null })),
+    requirements: [
+      ...requirementHits.map(({ s, p, sentence }) => ({
+        text: sentence,
+        category: category(sentence),
+        basis: 'kilde' as const,
+        source: { source_id: s.id, page: p.page, quote: sentence.slice(0, 180) },
+      })),
+      ...certs.map((c) => ({ text: c.text, category: 'sertifisering' as const, basis: 'kilde' as const, source: c.source })),
+      ...(financial ? [{ text: financial.sentence, category: 'økonomi' as const, basis: 'kilde' as const, source: ref(financial) }] : []),
+    ],
+    important_dates: deadlineQuote ? [{ label: 'Tilbudsfrist', value: deadlineQuote.sentence.replace(/^tilbudsfrist:\s*/i, '').slice(0, 200), source: ref(deadlineQuote) }] : [],
     deadline: deadlineQuote
-      ? { value: deadlineQuote.sentence.replace(/^tilbudsfrist:\s*/i, '').slice(0, 200), source: { source_id: deadlineQuote.source_id, page: deadlineQuote.page, quote: deadlineQuote.quote } }
+      ? { value: deadlineQuote.sentence.replace(/^tilbudsfrist:\s*/i, '').slice(0, 200), source: ref(deadlineQuote) }
       : { value: null, source: null },
-    contract_duration: duration
-      ? { value: duration.sentence.slice(0, 200), source: { source_id: duration.source_id, page: duration.page, quote: duration.quote } }
-      : { value: null, source: null },
-    geographic_requirements: [],
-    evaluation_criteria: pct ? [{ criterion: pct.sentence.slice(0, 200), weight: null, source: { source_id: pct.source_id, page: pct.page, quote: pct.quote } }] : [],
-    required_documentation: [],
+    contract_duration: duration ? { value: duration.sentence.slice(0, 200), source: ref(duration) } : { value: null, source: null },
+    evaluation_criteria: pct ? [{ criterion: pct.sentence.slice(0, 200), weight: null, source: ref(pct) }] : [],
+    rejection_risks: requirementHits
+      .filter(({ sentence }) => /\b(må|skal)\b/i.test(sentence))
+      .slice(0, 3)
+      .map(({ s, p, sentence }) => ({ text: `Kravet må dokumenteres: ${sentence}`, basis: 'tolkning' as const, source: { source_id: s.id, page: p.page, quote: sentence.slice(0, 180) } })),
+    how_to_participate: ['Last ned konkurransegrunnlaget hos kilden.', 'Dokumenter kvalifikasjonskravene.', 'Lever tilbudet i oppdragsgivers system før fristen.'],
     risks: [{ text: `Testmodus: risikovurdering lages ikke. ${MOCK_NOTE}`, source: null }],
     questions_to_investigate: ['Hvilke dokumenter må legges ved tilbudet?', 'Er det spørsmålsfrist før tilbudsfristen?'],
     missing_information: [
       ...(duration ? [] : ['Kontraktens varighet er ikke oppgitt i kildene.']),
       ...(pct ? [] : ['Tildelingskriterier og vekting er ikke oppgitt i kildene.']),
+    ],
+    documents_not_read: sources.some((s2) => s2.kind === 'document') ? [] : ['Konkurransegrunnlaget (ikke lastet opp)'],
+  };
+}
+
+export function mockFitAssessment(sources: AnalysisSource[], profileFacts: string[]): FitAssessment {
+  const reqs = mockTenderAnalysis(sources).requirements.slice(0, 6);
+  const profileText = profileFacts.join(' ').toLowerCase();
+  return {
+    overall: `Testmodus: enkel sammenligning av ord i krav og bedriftsprofil. ${MOCK_NOTE}`,
+    fit: reqs.length ? 'middels' : 'uklar',
+    requirements: reqs.map((r) => {
+      const words = r.text.toLowerCase().split(/\W+/).filter((w) => w.length > 6);
+      const hit = words.some((w) => profileText.includes(w));
+      return {
+        requirement: r.text,
+        status: hit ? ('oppfylt' as const) : ('uklart' as const),
+        explanation: hit ? 'Profilen nevner dette.' : 'Profilen sier ikke noe om dette.',
+        basis: r.basis,
+        source: r.source,
+      };
+    }),
+    missing_company_info: profileFacts.some((f) => f.startsWith('Omsetning')) ? [] : ['Årlig omsetning'],
+    uncertainty: 'høy',
+    uncertainty_reasons: ['Simulert vurdering i testmodus.'],
+    next_steps: ['Les konkurransegrunnlaget.'],
+  };
+}
+
+export function mockBidStructure(sources: AnalysisSource[]): BidStructure {
+  const reqs = mockTenderAnalysis(sources).requirements;
+  return {
+    sections: [
+      { title: 'Om leverandøren', purpose: 'Kort presentasjon og kvalifikasjoner.', requirements_covered: reqs.filter((r) => r.category === 'kvalifikasjon').map((r) => r.text).slice(0, 3), source: null },
+      { title: 'Løsning og gjennomføring', purpose: `Hvordan oppdraget løses. ${MOCK_NOTE}`, requirements_covered: reqs.filter((r) => r.category === 'leveranse').map((r) => r.text).slice(0, 3), source: null },
+      { title: 'Pris', purpose: 'Utfylt prisskjema.', requirements_covered: [], source: null },
     ],
   };
 }

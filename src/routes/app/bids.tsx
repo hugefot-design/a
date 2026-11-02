@@ -12,7 +12,7 @@ import {
   uploadBidDocument,
   type BidAction,
 } from '@/domain/bids/bids';
-import { draftSection, generateChecklist, reviewDraft } from '@/domain/bids/ai';
+import { draftSection, generateChecklist, generateStructure, reviewDraft } from '@/domain/bids/ai';
 import { toDocx, toMarkdown, toPrintHtml } from '@/domain/bids/export';
 import { usageSummary } from '@/domain/ai/usage';
 import { redirectWith } from '@/server/flash';
@@ -100,6 +100,18 @@ export function registerBidRoutes(router: Router): void {
     const id = param(ctx, 'id');
     const result = await generateChecklist(org, user.id, id);
     return redirectWith(ctx, `/app/tilbud/${id}`, result.ok ? 'success' : 'error', result.ok ? `${result.count} punkter er lagt til fra kravene.` : result.error);
+  }, feature);
+
+  router.post('/app/tilbud/:id/struktur/ai', 'org', async (ctx) => {
+    const { org, user } = requireOrg(ctx);
+    const id = param(ctx, 'id');
+    const result = await generateStructure(org, user.id, id);
+    return redirectWith(
+      ctx,
+      `/app/tilbud/${id}`,
+      result.ok ? 'success' : 'error',
+      result.ok ? `${result.count} kapitler er foreslått. Gå gjennom og tilpass dem.` : result.error,
+    );
   }, feature);
 
   router.post('/app/tilbud/:id/sjekkliste/:itemId', 'org', async (ctx) => {

@@ -1,7 +1,14 @@
 import type { Tx } from '@/lib/db';
 import type { OrgContext } from '@/server/http';
 
-export type AiUsageKind = 'ai_tender_analysis' | 'ai_bid_checklist' | 'ai_bid_draft' | 'ai_bid_review' | 'ai_weekly_overview';
+export type AiUsageKind =
+  | 'ai_tender_analysis'
+  | 'ai_fit_assessment'
+  | 'ai_bid_checklist'
+  | 'ai_bid_structure'
+  | 'ai_bid_draft'
+  | 'ai_bid_review'
+  | 'ai_weekly_overview';
 
 export function currentPeriod(now = new Date()): string {
   return now.toISOString().slice(0, 7);
@@ -19,7 +26,7 @@ export interface UsageSummary {
 export async function usageSummary(tx: Tx, org: OrgContext): Promise<UsageSummary> {
   const [row] = (await tx`
     select
-      coalesce(sum(quantity) filter (where kind in ('ai_tender_analysis', 'ai_weekly_overview', 'ai_bid_checklist') and not cached), 0)::int as analyses,
+      coalesce(sum(quantity) filter (where kind in ('ai_tender_analysis', 'ai_fit_assessment', 'ai_weekly_overview', 'ai_bid_checklist', 'ai_bid_structure') and not cached), 0)::int as analyses,
       coalesce(sum(quantity) filter (where kind in ('ai_bid_draft', 'ai_bid_review') and not cached), 0)::int as drafts,
       coalesce(sum(cost_usd), 0)::float8 as cost_usd
     from usage_records where org_id = ${org.id} and period = ${currentPeriod()}

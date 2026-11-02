@@ -45,10 +45,20 @@ const schema = z.object({
   AI_PROVIDER: z.enum(['none', 'openai', 'anthropic', 'mock']).default('none'),
   OPENAI_API_KEY: optionalString,
   OPENAI_MODEL: optionalString,
+  OPENAI_MODEL_FAST: optionalString,
   ANTHROPIC_API_KEY: optionalString,
   ANTHROPIC_MODEL: optionalString,
+  /** Settes eksplisitt, slik at en tilfeldig ANTHROPIC_BASE_URL i miljøet aldri sender data til en annen vert. */
+  ANTHROPIC_API_BASE_URL: z.string().url().default('https://api.anthropic.com'),
+  /** Billig modell for enkle oppgaver (sammendrag, ukesoversikt). Uten den brukes ANTHROPIC_MODEL. */
+  ANTHROPIC_MODEL_FAST: optionalString,
+  /** 0 = bruk innebygd prisliste for kjente modeller (se src/domain/ai/provider.ts). */
   AI_INPUT_PRICE_PER_MTOK_USD: z.coerce.number().nonnegative().default(0),
   AI_OUTPUT_PRICE_PER_MTOK_USD: z.coerce.number().nonnegative().default(0),
+  AI_FAST_INPUT_PRICE_PER_MTOK_USD: z.coerce.number().nonnegative().default(0),
+  AI_FAST_OUTPUT_PRICE_PER_MTOK_USD: z.coerce.number().nonnegative().default(0),
+  /** Tak på AI-kostnad per organisasjon per måned (USD). 0 = ingen ekstra grense utover kvotene. */
+  AI_MONTHLY_COST_LIMIT_USD_PER_ORG: z.coerce.number().nonnegative().default(0),
   AI_MAX_INPUT_CHARS: z.coerce.number().int().positive().default(120_000),
   AI_TIMEOUT_MS: z.coerce.number().int().positive().default(90_000),
 

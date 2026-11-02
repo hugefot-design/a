@@ -1,20 +1,36 @@
 /**
- * Leverandøruavhengig AI-lag. Støtter OpenAI og Anthropic via HTTP (ingen SDK-avhengighet),
- * og en mock-leverandør som KUN er tillatt i utvikling og test.
+ * Leverandøruavhengig AI-lag. Støtter Anthropic (offisiell SDK) og OpenAI (HTTP), og en
+ * mock-leverandør som KUN er tillatt i utvikling og test.
  *
  * Alle kall ber om strukturert JSON etter et skjema, og svaret valideres med zod før lagring.
+ *
+ * Modellvalg etter oppgave (kostnad mot kvalitet):
+ *  - 'quality': full anbudsanalyse, egnethetsvurdering og tilbudstekst – her teller presisjon.
+ *  - 'fast':    korte sammendrag og ukesoversikt – en billig modell holder.
+ * Er det ikke satt en egen rask modell, brukes kvalitetsmodellen til alt.
  */
 import { env } from '@/lib/env';
+import { anthropicProvider } from './providers/anthropic';
+import { openAIProvider } from './providers/openai';
 
 export type JsonSchema = Record<string, unknown>;
+export type ModelTier = 'fast' | 'quality';
+export type Effort = 'low' | 'medium' | 'high';
 
 export interface StructuredRequest {
   system: string;
+  /**
+   * Lang og stabil tekst (kildene) som kommer først i forespørselen. Leverandører som støtter
+   * det, bufrer den (prompt caching), slik at flere spørsmål om samme anbud koster mindre.
+   */
+  cacheablePrefix?: string;
   user: string;
   schemaName: string;
   schemaDescription: string;
   schema: JsonSchema;
   maxOutputTokens: number;
+  /** Hvor grundig modellen skal tenke. Lavere = raskere og billigere. */
+  effort?: Effort;
   /** Brukes av mock-leverandøren for å lage forutsigbare svar. */
   mockHint?: unknown;
 }
@@ -23,6 +39,8 @@ export interface StructuredResponse {
   data: unknown;
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
   model: string;
   provider: 'openai' | 'anthropic' | 'mock';
 }
@@ -42,103 +60,15 @@ export class AIError extends Error {
   }
 }
 
-async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<Record<string, unknown>> {
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(env.AI_TIMEOUT_MS),
-    });
-  } catch (err) {
-    throw new AIError(`Kunne ikke nå AI-leverandøren: ${err instanceof Error ? err.message : String(err)}`, true);
-  }
-  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) {
-    const message = (data.error as { message?: string } | undefined)?.message ?? `HTTP ${res.status}`;
-    throw new AIError(`AI-leverandøren svarte med feil: ${message}`, res.status === 429 || res.status >= 500);
-  }
-  return data;
-}
-
-export const openAIProvider = (apiKey: string, model: string): AIProvider => ({
-  name: 'openai',
-  model,
-  async generate(req) {
-    const data = await postJson(
-      'https://api.openai.com/v1/chat/completions',
-      { Authorization: `Bearer ${apiKey}` },
-      {
-        model,
-        messages: [
-          { role: 'system', content: req.system },
-          { role: 'user', content: req.user },
-        ],
-        response_format: { type: 'json_schema', json_schema: { name: req.schemaName, strict: true, schema: req.schema } },
-        max_completion_tokens: req.maxOutputTokens,
-      },
-    );
-    const choice = (data.choices as { message?: { content?: string; refusal?: string } }[] | undefined)?.[0]?.message;
-    if (choice?.refusal) throw new AIError(`AI-leverandøren avviste forespørselen: ${choice.refusal}`);
-    if (!choice?.content) throw new AIError('Tomt svar fra AI-leverandøren.', true);
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(choice.content);
-    } catch {
-      throw new AIError('AI-svaret var ikke gyldig JSON.', true);
-    }
-    const usage = (data.usage ?? {}) as { prompt_tokens?: number; completion_tokens?: number };
-    return {
-      data: parsed,
-      inputTokens: usage.prompt_tokens ?? 0,
-      outputTokens: usage.completion_tokens ?? 0,
-      model: String(data.model ?? model),
-      provider: 'openai',
-    };
-  },
-});
-
-export const anthropicProvider = (apiKey: string, model: string): AIProvider => ({
-  name: 'anthropic',
-  model,
-  async generate(req) {
-    const data = await postJson(
-      'https://api.anthropic.com/v1/messages',
-      { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      {
-        model,
-        max_tokens: req.maxOutputTokens,
-        system: req.system,
-        messages: [{ role: 'user', content: req.user }],
-        tools: [{ name: req.schemaName, description: req.schemaDescription, input_schema: req.schema }],
-        tool_choice: { type: 'tool', name: req.schemaName },
-      },
-    );
-    const content = (data.content as { type: string; name?: string; input?: unknown }[] | undefined) ?? [];
-    const tool = content.find((c) => c.type === 'tool_use' && c.name === req.schemaName);
-    if (!tool?.input) throw new AIError('AI-svaret manglet strukturert innhold.', true);
-    const usage = (data.usage ?? {}) as { input_tokens?: number; output_tokens?: number };
-    return {
-      data: tool.input,
-      inputTokens: usage.input_tokens ?? 0,
-      outputTokens: usage.output_tokens ?? 0,
-      model: String(data.model ?? model),
-      provider: 'anthropic',
-    };
-  },
-});
-
 /** Mock: lager forutsigbare svar fra mockHint. Nekter å kjøre i produksjon. */
 export const mockProvider: AIProvider = {
   name: 'mock',
   model: 'mock-1',
   async generate(req) {
     if (env.NODE_ENV === 'production') throw new AIError('Mock-leverandøren kan ikke brukes i produksjon.');
-    if (typeof req.mockHint === 'function') {
-      return { data: (req.mockHint as () => unknown)(), inputTokens: Math.ceil(req.user.length / 4), outputTokens: 400, model: 'mock-1', provider: 'mock' };
-    }
-    return { data: req.mockHint ?? {}, inputTokens: Math.ceil(req.user.length / 4), outputTokens: 400, model: 'mock-1', provider: 'mock' };
+    const data = typeof req.mockHint === 'function' ? (req.mockHint as () => unknown)() : (req.mockHint ?? {});
+    const inputTokens = Math.ceil(((req.cacheablePrefix ?? '').length + req.user.length) / 4);
+    return { data, inputTokens, outputTokens: 400, cacheReadTokens: 0, cacheWriteTokens: 0, model: 'mock-1', provider: 'mock' };
   },
 };
 
@@ -148,13 +78,27 @@ export function setProviderOverride(p: AIProvider | null): void {
   override = p;
 }
 
-export function getProvider(): AIProvider | null {
-  if (override) return override;
+export function modelFor(tier: ModelTier): string | null {
   switch (env.AI_PROVIDER) {
     case 'openai':
-      return env.OPENAI_API_KEY && env.OPENAI_MODEL ? openAIProvider(env.OPENAI_API_KEY, env.OPENAI_MODEL) : null;
+      return (tier === 'fast' ? env.OPENAI_MODEL_FAST : null) ?? env.OPENAI_MODEL ?? null;
     case 'anthropic':
-      return env.ANTHROPIC_API_KEY && env.ANTHROPIC_MODEL ? anthropicProvider(env.ANTHROPIC_API_KEY, env.ANTHROPIC_MODEL) : null;
+      return (tier === 'fast' ? env.ANTHROPIC_MODEL_FAST : null) ?? env.ANTHROPIC_MODEL ?? null;
+    case 'mock':
+      return 'mock-1';
+    default:
+      return null;
+  }
+}
+
+export function getProvider(tier: ModelTier = 'quality'): AIProvider | null {
+  if (override) return override;
+  const model = modelFor(tier);
+  switch (env.AI_PROVIDER) {
+    case 'openai':
+      return env.OPENAI_API_KEY && model ? openAIProvider(env.OPENAI_API_KEY, model) : null;
+    case 'anthropic':
+      return env.ANTHROPIC_API_KEY && model ? anthropicProvider(env.ANTHROPIC_API_KEY, model) : null;
     case 'mock':
       return mockProvider;
     default:
@@ -162,6 +106,46 @@ export function getProvider(): AIProvider | null {
   }
 }
 
-export function estimateCostUsd(inputTokens: number, outputTokens: number): number {
-  return (inputTokens * env.AI_INPUT_PRICE_PER_MTOK_USD + outputTokens * env.AI_OUTPUT_PRICE_PER_MTOK_USD) / 1_000_000;
+// ---------------------------------------------------------------------------
+// Kostnad
+// ---------------------------------------------------------------------------
+export interface ModelPrice {
+  /** USD per million tokens */
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+/**
+ * Listepriser fra Anthropic (prisliste per 6.10.2026, standard API, inntil 100 000 tokens inn for
+ * Haiku 5.5). Cache-skriving er 1,25 × inn-pris (5 min), cache-lesing ca. 0,1 ×. Kontroller prisene
+ * før lansering – miljøvariablene AI_*_PRICE_PER_MTOK_USD overstyrer tabellen.
+ */
+export const KNOWN_MODEL_PRICES: Record<string, ModelPrice> = {
+  'claude-haiku-5-5': { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 },
+  'claude-sonnet-5-5': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 },
+  'claude-opus-5-5': { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 },
+};
+
+export function priceFor(model: string): ModelPrice {
+  const isFast = model === (env.ANTHROPIC_MODEL_FAST ?? env.OPENAI_MODEL_FAST) && model !== (env.ANTHROPIC_MODEL ?? env.OPENAI_MODEL);
+  const envInput = isFast ? env.AI_FAST_INPUT_PRICE_PER_MTOK_USD : env.AI_INPUT_PRICE_PER_MTOK_USD;
+  const envOutput = isFast ? env.AI_FAST_OUTPUT_PRICE_PER_MTOK_USD : env.AI_OUTPUT_PRICE_PER_MTOK_USD;
+  const known = KNOWN_MODEL_PRICES[model];
+  if (envInput > 0 || envOutput > 0) {
+    return { input: envInput, output: envOutput, cacheRead: envInput * 0.1, cacheWrite: envInput * 1.25 };
+  }
+  return known ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+}
+
+export function estimateCostUsd(
+  model: string,
+  usage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number },
+): number {
+  const p = priceFor(model);
+  return (
+    (usage.inputTokens * p.input + usage.outputTokens * p.output + (usage.cacheReadTokens ?? 0) * p.cacheRead + (usage.cacheWriteTokens ?? 0) * p.cacheWrite) /
+    1_000_000
+  );
 }
