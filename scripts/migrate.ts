@@ -10,6 +10,7 @@ import postgres from 'postgres';
 import { env, isProd } from '../src/lib/env';
 import { closeDb, systemSql } from '../src/lib/db';
 import { APP_ROLE, credentialsOf } from '../src/lib/db-url';
+import { audit } from '../src/lib/audit';
 
 const MIGRATIONS_DIR = join(process.cwd(), 'db', 'migrations');
 
@@ -155,6 +156,26 @@ export async function ensureAppRole(
   return 'unchanged';
 }
 
+/**
+ * PLATFORM_ADMIN_EMAILS: gjør disse registrerte brukerne til plattform-admin (bare tildeling –
+ * fjerning gjøres med `npm run make-admin -- <e-post> --remove`). Hver endring revisjonslogges.
+ * Adressene skrives maskert i byggeloggen.
+ */
+export async function applyAdminEmails(list: string | undefined = env.PLATFORM_ADMIN_EMAILS): Promise<number> {
+  const emails = [...new Set((list ?? '').split(/[\s,;]+/).map((e) => e.trim().toLowerCase()).filter((e) => e.includes('@')))];
+  let granted = 0;
+  for (const email of emails) {
+    const rows = (await systemSql()`
+      update users set is_platform_admin = true where lower(email) = ${email} and not is_platform_admin returning id
+    `) as unknown as { id: string }[];
+    if (!rows[0]) continue;
+    granted++;
+    await audit({ action: 'admin.role_changed', targetType: 'user', targetId: rows[0].id, metadata: { isPlatformAdmin: true, via: 'PLATFORM_ADMIN_EMAILS' } });
+    console.log(`Plattform-admin gitt til ${email.replace(/^(.).*(@.*)$/, '$1***$2')}.`);
+  }
+  return granted;
+}
+
 /** Sjekker at appen faktisk kan logge inn med DATABASE_URL (gir tydelig feil i byggeloggen). */
 async function verifyAppLogin(): Promise<void> {
   const result = await loginWithRetry(env.DATABASE_URL, [3_000, 6_000, 10_000, 15_000]);
@@ -198,6 +219,7 @@ const isMain = process.argv[1]?.endsWith('migrate.ts') || process.argv[1]?.endsW
 if (isMain) {
   migrate({ reset: process.argv.includes('--reset') })
     .then(() => verifyAppLogin())
+    .then(() => applyAdminEmails())
     .then(() => closeDb())
     .catch(async (err) => {
       console.error(`Migrering feilet: ${err instanceof Error ? err.message : String(err)}`);

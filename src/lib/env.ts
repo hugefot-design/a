@@ -117,6 +117,8 @@ const schema = z.object({
   INGEST_LOOKBACK_DAYS: z.coerce.number().int().min(1).max(365).default(14),
 
   TRIAL_DAYS: z.coerce.number().int().min(0).max(60).default(14),
+  /** Disse registrerte brukerne gjøres til plattform-admin ved hver deploy (komma-separert). Fjerner aldri tilgang. */
+  PLATFORM_ADMIN_EMAILS: optionalString,
   LEGAL_PAGES_REVIEWED: bool(false),
   COMPANY_LEGAL_NAME: z.string().default('[Selskapsnavn AS]'),
   COMPANY_ORG_NUMBER: z.string().default('[org.nr.]'),

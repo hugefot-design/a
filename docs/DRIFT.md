@@ -30,6 +30,8 @@ Miljøvariabler (legges direkte på tjenesten, eller i en miljøgruppe som **kob
 
 E-post i testperioden: `EMAIL_PROVIDER=resend`, `RESEND_API_KEY` (helst en nøkkel med bare «Sending access»), `EMAIL_FROM=onboarding@resend.dev` til et eget domene er verifisert i Resend, og **`EMAIL_ALLOWED_RECIPIENTS`** med egne testadresser. Da stoppes e-post til alle andre før Resend kalles (vises som «failed» med forklaring i utboksen). Fjern listen først ved lansering.
 
+Admin-tilgang uten databasetilgang: registrer deg i appen, sett `PLATFORM_ADMIN_EMAILS` til e-postadressen og deploy. Byggeloggen viser «Plattform-admin gitt til …» (maskert), og endringen revisjonslogges. Listen gir bare tilgang – fjerning gjøres med `npm run make-admin -- <e-post> --remove`.
+
 Begrensninger: tjenesten sover etter en stund uten besøk (første besøk tar 30–60 s, og jobbene står stille mens den sover), 0,1 CPU, Supabase Free pauser etter en uke uten bruk og har ingen sikkerhetskopi. Ingen e-post uten Resend (`EMAIL_PROVIDER=log` skriver dem til loggen). Bytt til oppsettet under før første betalende kunde, og fjern da `RUN_WORKER_IN_WEB`.
 
 ## 1. Database (Supabase)
