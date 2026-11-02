@@ -1,4 +1,5 @@
 import type postgres from 'postgres';
+import type { EformsSourceSummary } from './eforms-facts';
 import { first, type Db, type Tx } from '@/lib/db';
 import { isProd } from '@/lib/env';
 import { cpvToPrefix, type TenderQuery } from '@/domain/search/filters';
@@ -187,6 +188,8 @@ export interface TenderSourceRow {
   publishedAt: Date | null;
   fetchedAt: Date;
   removedAt: Date | null;
+  /** Regelverk og klima/miljø når kunngjøringen er hentet som full eForms-XML (Doffin). */
+  eforms: EformsSourceSummary | null;
 }
 
 export async function getTender(db: Db, id: string): Promise<TenderDetail | null> {
@@ -200,7 +203,12 @@ export async function getTender(db: Db, id: string): Promise<TenderDetail | null
 
 export async function getTenderExtras(tx: Tx, tenderId: string, orgId: string) {
   const sources = (await tx`
-    select source, source_notice_id, notice_type, source_url, published_at, fetched_at, removed_at
+    select source, source_notice_id, notice_type, source_url, published_at, fetched_at, removed_at,
+           case when raw->>'format' = 'eforms-xml' then jsonb_build_object(
+             'variant', raw->'variant', 'noticeSubtype', raw->'noticeSubtype', 'legalBasis', raw->'legalBasis',
+             'strategicProcurement', raw->'strategicProcurement', 'environmentalCriteria', raw->'environmentalCriteria',
+             'eSubmission', raw->'eSubmission'
+           ) end as eforms
     from tender_sources where tender_id = ${tenderId} order by published_at nulls last
   `) as unknown as TenderSourceRow[];
   const updates = (await tx`

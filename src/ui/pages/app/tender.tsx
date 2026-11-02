@@ -6,6 +6,7 @@ import type { StoredFitAssessment, StoredTenderAnalysis } from '@/domain/ai/anal
 import type { MatchBreakdown } from '@/domain/matching/engine';
 import type { RefCheck } from '@/domain/ai/sources';
 import { BOOKMARK_STATUSES } from '@/domain/tenders/bookmarks';
+import { eformsFacts, isEnvironmentNonCriterion, type EformsFacts } from '@/domain/tenders/eforms-facts';
 import { useUi } from '../../context';
 import {
   Alert,
@@ -91,6 +92,8 @@ export function TenderPage(p: TenderPageProps) {
   const t = p.tender;
   const ent = org!.entitlements;
   const regionNames = t.regionCodes.map((r) => REGION_BY_CODE.get(r)?.name ?? r);
+  // Nyeste kilde med full eForms-XML (Doffin) gir regelverk og klima/miljø.
+  const ef = eformsFacts([...p.sources].reverse().find((s) => s.eforms)?.eforms);
   const verified: { term: ReactNode; detail: ReactNode }[] = [
     { term: 'Oppdragsgiver', detail: t.buyerName ?? 'Ikke oppgitt' },
     ...(t.buyerOrgNumber ? [{ term: 'Org.nr. oppdragsgiver', detail: <span className="num">{t.buyerOrgNumber}</span> }] : []),
@@ -109,6 +112,7 @@ export function TenderPage(p: TenderPageProps) {
     { term: 'Estimert verdi', detail: t.estimatedValue !== null ? <span className="num">{formatMoney(t.estimatedValue, t.currency, false)}</span> : 'Ikke oppgitt' },
     { term: 'Kontraktstype', detail: t.contractNature ? (CONTRACT_NATURES[t.contractNature] ?? t.contractNature) : 'Ikke oppgitt' },
     ...(t.procedureType ? [{ term: 'Prosedyre', detail: procedureLabel(t.procedureType) }] : []),
+    ...regulationItems(ef),
     ...(t.buyerReference ? [{ term: 'Referanse', detail: t.buyerReference }] : []),
     {
       term: 'CPV-koder',
@@ -186,6 +190,7 @@ export function TenderPage(p: TenderPageProps) {
                 <p key={`${s.source}-${s.sourceNoticeId}`}>
                   {SOURCE_NAMES[s.source] ?? s.source} {s.sourceNoticeId}
                   {s.publishedAt ? `, publisert ${formatDate(s.publishedAt)}` : ''}
+                  {s.eforms ? ' (full kunngjøring)' : ''}
                   {s.removedAt ? ' (fjernet fra kilden)' : ''}
                   {s.sourceUrl ? (
                     <>
@@ -364,8 +369,64 @@ function DocumentsLinkPanel({ tender }: { tender: TenderDetail }) {
   );
 }
 
+/** Regelverk, klima/miljø og innlevering fra full Doffin-kunngjøring (tomt for andre kilder). */
+function regulationItems(ef: EformsFacts | null): { term: ReactNode; detail: ReactNode }[] {
+  if (!ef) return [];
+  const items: { term: ReactNode; detail: ReactNode }[] = [];
+  if (ef.noticeKind) {
+    items.push({
+      term: 'Kunngjøring',
+      detail: (
+        <>
+          {ef.noticeKind.label}
+          {ef.subtype ? <span className="text-muted"> · {ef.subtype}</span> : null}
+          <span className="block text-[12px] text-muted">{ef.noticeKind.hint}</span>
+        </>
+      ),
+    });
+  }
+  if (ef.legalBasis.length) {
+    items.push({
+      term: 'Regelverk',
+      detail: (
+        <ul className="space-y-0.5">
+          {ef.legalBasis.map((lb) => (
+            <li key={lb.label}>
+              {lb.url ? (
+                <a href={lb.url} target="_blank" rel="noopener noreferrer">
+                  {lb.label}
+                </a>
+              ) : (
+                lb.label
+              )}
+              {lb.description ? <span className="text-muted"> – {lb.description}</span> : null}
+            </li>
+          ))}
+        </ul>
+      ),
+    });
+  }
+  if (ef.environment.length) {
+    items.push({
+      term: 'Klima og miljø',
+      detail: (
+        <ul className="space-y-0.5">
+          {ef.environment.map((e) => (
+            <li key={e}>{e}</li>
+          ))}
+        </ul>
+      ),
+    });
+  }
+  if (ef.strategic.length) items.push({ term: 'Strategisk anskaffelse', detail: ef.strategic.join(', ') });
+  if (ef.eSubmission) items.push({ term: 'Elektronisk innlevering', detail: ef.eSubmission });
+  return items;
+}
+
 function NoticeRequirementsPanel({ tender }: { tender: TenderDetail }) {
-  if (!tender.selectionCriteria?.length && !tender.awardCriteria?.length && !tender.lots?.length) return null;
+  // Klimakrav i spesifikasjonen og unntak er ikke tildelingskriterier – de vises under «Klima og miljø».
+  const awardCriteria = (tender.awardCriteria ?? []).filter((c) => !isEnvironmentNonCriterion(c.type));
+  if (!tender.selectionCriteria?.length && !awardCriteria.length && !tender.lots?.length) return null;
   return (
     <Panel>
       <PanelHeader title="Krav og kriterier i kunngjøringen" description="Ordrett fra kilden. Ingen AI er brukt i denne delen." />
@@ -382,14 +443,14 @@ function NoticeRequirementsPanel({ tender }: { tender: TenderDetail }) {
             </ul>
           </section>
         ) : null}
-        {tender.awardCriteria?.length ? (
+        {awardCriteria.length ? (
           <section>
             <h3 className="text-[14px] font-semibold text-navy-900">Tildelingskriterier</h3>
             <ul className="mt-2 space-y-1 text-[14px]">
-              {tender.awardCriteria.map((c, i) => (
+              {awardCriteria.map((c, i) => (
                 <li key={i}>
                   {c.name}
-                  {c.weight ? <span className="num font-semibold"> – {c.weight}</span> : null}
+                  {c.weight ? <span className="num whitespace-nowrap font-semibold"> – {c.weight}</span> : null}
                 </li>
               ))}
             </ul>

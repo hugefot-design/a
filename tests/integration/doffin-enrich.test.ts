@@ -19,7 +19,7 @@ import { mapDoffinHit, setDoffinDownloadDeps, type DoffinHit } from '../../src/c
 import { enrichDoffinXml, enrichmentOverview, selectEnrichmentCandidates } from '../../src/connectors/doffin-enrich';
 import { runScheduledTask } from '../../src/domain/ops/tasks';
 import { finishImportRun, ingestNotices, startImportRun } from '../../src/domain/tenders/ingest';
-import { clientFor, createAccount, startServer } from '../helpers';
+import { clientFor, createAccount, startServer, tenderIdFor } from '../helpers';
 
 const RUN = randomUUID().slice(0, 6).replace(/[a-f]/g, '7');
 const id = (n: number) => `2026-${RUN}${n}`;
@@ -247,6 +247,35 @@ test('admin → Datakilder viser berikelsen med siste problemer (bare for plattf
 
     const user = await createAccount();
     assert.equal((await (await clientFor(server.base, user)).get('/admin/kilder')).status, 404);
+  } finally {
+    await server.close();
+  }
+});
+
+test('anbudssiden viser regelverk, terskel og klimakriterium fra full kunngjøring – og ingenting for bare søkedata', async () => {
+  const server = await startServer();
+  try {
+    const user = await createAccount();
+    const client = await clientFor(server.base, user);
+    // Samme anbud finnes også i TED, publisert før Doffin-kunngjøringen (vanlig over EØS-terskelverdiene).
+    const tenderId = await tenderIdFor('doffin', OPEN);
+    await systemSql()`
+      insert into tender_sources (tender_id, source, source_notice_id, published_at, raw, content_hash)
+      values (${tenderId}, 'ted', ${`${RUN}-2026`}, now() - interval '1 day', '{}'::jsonb, 'test')
+    `;
+    const page = await client.get(`/app/anbud/${tenderId}`);
+    assert.equal(page.status, 200);
+    assert.match(page.body, /Nasjonal kunngjøring \(bare i Doffin\)/);
+    assert.match(page.body, /Skjema N16/);
+    assert.match(page.body, /href="https:\/\/lovdata\.no\/dokument\/SF\/forskrift\/2016-08-12-974"[^>]*>Anskaffelsesforskriften<\/a>/);
+    assert.match(page.body, /Del 1 og 2/);
+    assert.match(page.body, /Klima- og miljøhensyn \(tildelingskriterium\) – 30\u00a0%/);
+    assert.match(page.body, /Elektronisk innlevering/);
+    assert.match(page.body, /\(full kunngjøring\)/);
+
+    const thin = await client.get(`/app/anbud/${await tenderIdFor('doffin', PLANNED)}`);
+    assert.equal(thin.status, 200);
+    for (const text of ['Nasjonal kunngjøring', 'Regelverk', 'Klima og miljø', '(full kunngjøring)']) assert.ok(!thin.body.includes(text), `ikke for søketreff: ${text}`);
   } finally {
     await server.close();
   }

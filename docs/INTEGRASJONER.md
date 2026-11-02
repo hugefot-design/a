@@ -44,6 +44,8 @@ En kilde vises først som tilkoblet for brukerne etter en vellykket ekte henting
 - eForms-ID-ene som kobler rettelser og tildelinger til riktig anbud,
 - vinnere med beløp og avtaledato.
 
+Når full kunngjøring er hentet, viser anbudssiden i tillegg kunngjøringstype (nasjonal under EØS-terskelverdiene, eller EU-kunngjøring som også går til TED) med skjemanummer, regelverk med lenke til forskriften på Lovdata, klima- og miljøhensyn (vektet kriterium, krav i spesifikasjonen eller unntak), strategisk anskaffelse og om elektronisk innlevering er påkrevd. Klimakrav i spesifikasjonen og unntak vises ikke som tildelingskriterier – verken på siden eller i teksten AI-en får. Lovdata-lenkene bruker adresseformatet offentlige virksomheter lenker med (`lovdata.no/dokument/SF/forskrift/2016-08-12-974`). **IKKE VERIFISERT:** Lovdata avviser automatiske kall fra utviklingsmiljøet, så lenkene er ikke åpnet derfra. Ukjente rettsgrunnlag vises som tekst uten lenke.
+
 - **Grense:** maks 10 nedlastinger per minutt per abonnement. Appen holder 6,5 s mellom kall gjennom en felles luke i databasen (`api_slots`), så webapp, arbeider og kommandolinje til sammen aldri går over grensen.
 - **429:** venter så lenge `Retry-After` sier (sekunder eller dato; 60 s hvis headeren mangler) og skyver luken for alle prosesser. Over 5 minutter: kjøringen stopper, og resten prøves senere.
 - **404:** registreres som feil på den ene kunngjøringen, og resten fortsetter. **401/403:** kjøringen stopper med beskjed om å sjekke nøkkelen.

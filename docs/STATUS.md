@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 2. november 2026 (Doffin-nedlasting, automatisk XML-berikelse og nektelser i vilkårssøket lagt til samme dag).
+Sist oppdatert 2. november 2026 (Doffin-nedlasting, automatisk XML-berikelse, regelverk/klima på anbudssiden og nektelser i vilkårssøket lagt til samme dag).
 
 ## Testresultater
 
@@ -9,11 +9,12 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 105 av 105 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) |
-| Integrasjonstester (ekte database, ekte HTTP) | 71 av 71 bestått |
+| Enhetstester | 109 av 109 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) |
+| Integrasjonstester (ekte database, ekte HTTP) | 72 av 72 bestått |
 | Ende-til-ende i nettleser | 2 av 2 bestått |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
+| Visuell kontroll av anbudssiden (regelverk/klima) og Admin → Datakilder (XML-berikelse), 1280 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 
 **Mutasjonssjekker** (testene skal feile når beskyttelsen fjernes – det gjorde de):
 - dry-run som skriver til databasen,
@@ -24,6 +25,7 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 - falske varsler ved XML-berikelse,
 - automatisk XML-berikelse: av-bryteren, utvalget (allerede beriket, gamle, rekkefølge), dry-run som lagrer forsøk, 429 som teller som forsøk, og antall/pause før den gir opp (8 av 8 fanget),
 - vilkårssøket: nektelser merket uten forbehold, i feil kategori, med vilkårlige ord imellom, eller slik at et senere ekte vilkår skjules.
+- anbudssiden: regelverk/klima fjernet, feil kilde valgt når anbudet også finnes i TED, og klimakrav i spesifikasjonen sendt til AI-en som tildelingskriterium.
 
 **Avhengigheter:** `npm audit` melder 0 sårbarheter (2.11.2026). `zod` er oppgradert fra 3 til 4 (rettet GHSA-mrhx-c7xc-m3w5), og standardmeldinger for validering er på norsk.
 

@@ -1,5 +1,6 @@
 import { first, withTenant, type Tx } from '@/lib/db';
 import { CONTRACT_NATURES, procedureLabel } from '@/domain/reference';
+import { isEnvironmentNonCriterion } from '@/domain/tenders/eforms-facts';
 import { getTender, type TenderDetail } from '@/domain/tenders/queries';
 import type { OrgContext } from '@/server/http';
 import { formatDateTime, formatMoney } from '@/ui/format';
@@ -52,9 +53,16 @@ export function noticeSource(t: TenderDetail): AnalysisSource {
     lines.push('', 'Kvalifikasjonskrav (slik de står i kunngjøringen):');
     t.selectionCriteria.forEach((c) => lines.push(`- ${c}`));
   }
-  if (t.awardCriteria?.length) {
+  // Klimakrav i spesifikasjonen og unntak (norske eForms-koder) er ikke tildelingskriterier.
+  const criteria = (t.awardCriteria ?? []).filter((c) => !isEnvironmentNonCriterion(c.type));
+  const environment = (t.awardCriteria ?? []).filter((c) => isEnvironmentNonCriterion(c.type));
+  if (criteria.length) {
     lines.push('', 'Tildelingskriterier (fra kunngjøringen):');
-    t.awardCriteria.forEach((c) => lines.push(`- ${c.name}${c.weight ? ` – vekt ${c.weight}` : ''}`));
+    criteria.forEach((c) => lines.push(`- ${c.name}${c.weight ? ` – vekt ${c.weight}` : ''}`));
+  }
+  if (environment.length) {
+    lines.push('', 'Klima og miljø (fra kunngjøringen, ikke tildelingskriterium):');
+    environment.forEach((c) => lines.push(`- ${c.name}`));
   }
   if (t.textLanguage === 'en') lines.push('', '(Kunngjøringen er publisert på engelsk.)');
   return {
