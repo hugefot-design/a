@@ -13,6 +13,21 @@ Anbefalt oppsett for lansering i Norge, med lav startkostnad:
 
 Alt kan byttes: appen er en vanlig Node-prosess + en arbeiderprosess + PostgreSQL. Fly.io, Railway, en VPS eller Docker fungerer like godt.
 
+## 0. Gratis testoppsett (for å se og prøve appen – ikke for betalende kunder)
+
+Render Free + Supabase Free, 0 kr per måned. Én webtjeneste, ingen egen arbeider:
+
+| Render-felt | Verdi |
+| --- | --- |
+| Branch | grenen med koden |
+| Build Command | `npm ci --include=dev && npm run build && node dist/migrate.js` (gratisplanen har ikke Pre-Deploy) |
+| Start Command | `npm start` |
+| Health Check Path | `/api/health` |
+
+Miljøvariabler: `NODE_ENV=production`, `NODE_VERSION=22.12.0`, `APP_URL=https://<navn>.onrender.com`, `TRUST_PROXY=true`, `DATABASE_URL`, `DATABASE_ADMIN_URL`, `DATABASE_SSL=require`, `SESSION_SECRET` og `CRON_SECRET` (bruk «Generate»), og **`RUN_WORKER_IN_WEB=true`** så nettsiden selv henter anbud, beregner treff og sender varsler.
+
+Begrensninger: tjenesten sover etter en stund uten besøk (første besøk tar 30–60 s, og jobbene står stille mens den sover), 0,1 CPU, Supabase Free pauser etter en uke uten bruk og har ingen sikkerhetskopi. Ingen e-post uten Resend (`EMAIL_PROVIDER=log` skriver dem til loggen). Bytt til oppsettet under før første betalende kunde, og fjern da `RUN_WORKER_IN_WEB`.
+
 ## 1. Database (Supabase)
 
 1. Opprett prosjekt i EU-region. Noter databasepassordet.

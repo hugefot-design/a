@@ -3,6 +3,7 @@ import { env } from '@/lib/env';
 import { log } from '@/lib/logger';
 import { closeDb } from '@/lib/db';
 import { buildRouter } from '@/routes';
+import { startWorker } from '@/worker/runner';
 import { createApp } from './app';
 
 const app = createApp(buildRouter());
@@ -15,8 +16,12 @@ server.headersTimeout = 66_000;
 server.requestTimeout = 120_000;
 
 server.listen(env.PORT, () => {
-  log.info('server_started', { port: env.PORT, url: env.APP_URL, env: env.NODE_ENV });
+  log.info('server_started', { port: env.PORT, url: env.APP_URL, env: env.NODE_ENV, workerInWeb: env.RUN_WORKER_IN_WEB });
 });
+
+// Gratisoppsett: bakgrunnsjobbene kjører i samme prosess. Jobbene låses i databasen, så det er trygt
+// også om en egen arbeider skulle kjøre samtidig – men da trengs ikke denne.
+const worker = env.RUN_WORKER_IN_WEB ? startWorker('web') : null;
 
 let shuttingDown = false;
 async function shutdown(signal: string) {
@@ -24,6 +29,7 @@ async function shutdown(signal: string) {
   shuttingDown = true;
   log.info('server_stopping', { signal });
   server.close(async () => {
+    await worker?.stop();
     await closeDb();
     process.exit(0);
   });

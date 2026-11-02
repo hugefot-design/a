@@ -95,6 +95,8 @@ const schema = z.object({
   DOFFIN_ENRICH_XML: bool(false),
   DOFFIN_ENRICH_INTERVAL_MINUTES: z.coerce.number().int().min(5).max(1440).default(10),
   DOFFIN_ENRICH_MAX_PER_RUN: z.coerce.number().int().min(1).max(60).default(25),
+  // Kjør bakgrunnsjobbene inne i nettsiden (gratisoppsett uten egen arbeider). Ikke sammen med en egen arbeider-tjeneste.
+  RUN_WORKER_IN_WEB: bool(false),
   INGEST_INTERVAL_MINUTES: z.coerce.number().int().min(15).default(120),
   INGEST_LOOKBACK_DAYS: z.coerce.number().int().min(1).max(365).default(14),
 
