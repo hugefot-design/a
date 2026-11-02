@@ -434,6 +434,7 @@ export function mockProfitAnalysis(sources: AnalysisSource[]): ProfitAnalysis {
   }
   const scan = scanContractTerms(sources, 1);
   for (const hit of scan.hits) {
+    if (hit.negated) continue;
     const category = TERM_TO_RISK[hit.category];
     if (!category || risks.some((r) => r.category === category)) continue;
     const source = sources.find((s) => s.id === hit.sourceId);

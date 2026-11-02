@@ -126,6 +126,14 @@ Hver anbefaling viser begrunnelser og en sjekkliste (oppfylt / ikke oppfylt / uk
 
 **Ordsøk uten AI** (`terms-scan.ts`) finner dagbøter, betalingsvilkår, prisregulering (inkl. «prisene er faste»), garantier, ansvar, leveringsfrister, forsikring, volum/opsjoner og standardkontrakter (NS 84xx, SSA) i kunngjøringen og dokumentene, med dokument, side og utdrag. Brukes for alle planer med kalkulator.
 
+*Nektelser:* Setninger som «Det vil ikke bli ilagt dagbot» eller «Det kreves ikke bankgaranti» merkes «Ser ut til å ikke gjelde» – treffet vises fortsatt med utdraget, så brukeren kontrollerer selv. Merkingen er bevisst forsiktig, fordi et ekte vilkår som feilaktig merkes som ikke gjeldende er verre enn en nektelse vi ikke oppdager:
+- bare dagbøter, garantier og forsikring. «Ingen ansvarsbegrensning» og «ingen prisregulering» betyr *mer* risiko og merkes aldri;
+- nektelsen må stå i samme leddsetning med høyst to faste fyllord imellom («ikke krav om», «ikke bli ilagt»);
+- resten av setningen må være tom eller bare avgrense til avtalen («i denne kontrakten»). Forbehold som «ved force majeure», «for mer enn 100 dager» eller «men morselskapsgaranti» gir ingen merking;
+- en nektet omtale teller ikke mot treffgrensen, så et ekte vilkår senere i dokumentet («Det kreves ikke bankgaranti. Leverandøren skal stille morselskapsgaranti.») blir funnet.
+
+Testmodus-AI bruker ikke nektede treff som risiko. Ekte AI leser hele teksten selv. Testene i `tests/unit/profit.test.ts` dekker både riktige merkinger og 18 setninger som *ikke* skal merkes.
+
 **AI-analysen** (`ai.ts`, Bedrift) henter ut:
 
 - beløp som står i kildene, varighet, hvordan pris skal oppgis og vektes,

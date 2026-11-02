@@ -826,10 +826,16 @@ function RiskPanel({ ws }: { ws: ProfitWorkspace }) {
                   <details>
                     <summary className="cursor-pointer text-[13px] font-semibold text-navy-900">
                       {TERM_LABELS[cat]} <span className="font-normal text-muted">({scan.byCategory[cat]!.length})</span>
+                      {scan.negatedOnly.includes(cat) ? (
+                        <Badge tone="outline" className="ml-2">
+                          Ser ut til å ikke gjelde
+                        </Badge>
+                      ) : null}
                     </summary>
                     <ul className="mt-1 space-y-1">
                       {scan.byCategory[cat]!.map((h, idx) => (
                         <li key={idx}>
+                          {h.negated ? <p className="text-[11px] font-semibold text-muted">Teksten ser ut til å si at dette ikke gjelder. Kontroller utdraget selv:</p> : null}
                           <SourceLine source={{ sourceId: h.sourceId, title: h.sourceTitle, page: h.page, quote: h.snippet }} />
                         </li>
                       ))}

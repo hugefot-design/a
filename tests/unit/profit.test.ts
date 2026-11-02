@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { calculate, computeLine, maxLiquidatedDamages, priceForMargin, workingCapital, type CalcInputs, type CostLine } from '../../src/domain/profit/calculator';
-import { scanContractTerms } from '../../src/domain/profit/terms-scan';
+import { isNegated, scanContractTerms, type TermCategory } from '../../src/domain/profit/terms-scan';
 import { analyzeCapacity } from '../../src/domain/profit/capacity';
 import { recommend } from '../../src/domain/profit/recommendation';
 
@@ -142,6 +142,81 @@ test('kontraktsvilkår finnes med side og utdrag – uten AI', () => {
   assert.ok(scan.notFound.includes('erstatningsansvar'));
   assert.equal(scan.noticeOnly, false);
   assert.equal(scanContractTerms([{ id: 'S0', kind: 'notice', title: 'K', pages: [{ page: null, text: 'Kort tekst.' }], totalPages: null, isPrivate: false }]).noticeOnly, true);
+});
+
+function scanText(text: string, max = 3) {
+  return scanContractTerms([{ id: 'D1', kind: 'document', title: 'Vilkår.pdf', pages: [{ page: 1, text }], totalPages: 1, isPrivate: false }], max);
+}
+function negatedIn(text: string, category: TermCategory): boolean[] {
+  return (scanText(text).byCategory[category] ?? []).map((h) => h.negated);
+}
+
+test('vilkårsskanner: «dagbøter» i flertall og andre bøyningsformer gir treff', () => {
+  assert.deepEqual(negatedIn('Ved forsinkelse påløper dagbøter etter punkt 5.', 'dagbot'), [false]);
+  assert.deepEqual(negatedIn('Dagbøtene beregnes per kalenderdag.', 'dagbot'), [false]);
+  assert.deepEqual(negatedIn('Avtalen kan forlenges med 1+1 år.', 'volum'), [false]);
+  assert.deepEqual(negatedIn('Leverandøren skal ha forsikring som dekker skade på tredjemann.', 'forsikring'), [false]);
+});
+
+test('vilkårsskanner: tydelige nektelser merkes som «ser ut til å ikke gjelde»', () => {
+  for (const text of [
+    'Det vil ikke bli ilagt dagbot.',
+    'Kontrakten har ingen bestemmelser om dagbot.',
+    'Dagbot gjelder ikke for denne avtalen.',
+    'Det vil ikke bli ilagt dagbøter i denne kontrakten.',
+    'Det ilegges ikke dagbot.',
+    'Det stilles ikke krav om bankgaranti i denne konkurransen.',
+    'Leverandøren skal ikke stille bankgaranti.',
+    'Det kreves ikke bankgaranti.',
+    'Oppdragsgiver vil ikke kreve dagbot.',
+    'Liquidated damages shall not apply.',
+    'No liquidated damages apply.',
+  ]) {
+    const scan = scanText(text);
+    const hits = scan.hits.filter((h) => h.category === 'dagbot' || h.category === 'garanti');
+    assert.equal(hits.length, 1, text);
+    assert.equal(hits[0]!.negated, true, text);
+    assert.ok(scan.negatedOnly.includes(hits[0]!.category), text);
+  }
+});
+
+test('vilkårsskanner: vilkår med forbehold, tak eller betingelser merkes aldri som ikke gjeldende', () => {
+  for (const [text, category] of [
+    ['Leverandøren som ikke leverer til avtalt tid, skal betale dagbot på 1 promille.', 'dagbot'],
+    ['Dagbot skal ikke overstige 10 % av kontraktssummen.', 'dagbot'],
+    ['Hvis leverandøren ikke overholder fristen, påløper dagbot.', 'dagbot'],
+    ['Ved ikke rettidig levering påløper dagbot.', 'dagbot'],
+    ['Leveres ikke varen påløper dagbot.', 'dagbot'],
+    ['Leverandøren skal uten ugrunnet opphold betale dagbot.', 'dagbot'],
+    ['Uten varsel ilegges dagbot.', 'dagbot'],
+    ['Det kan ikke kreves dagbot for mer enn 100 dager.', 'dagbot'],
+    ['Oppdragsgiver kan ikke kreve dagbot for mer enn 100 dager.', 'dagbot'],
+    ['Det ilegges ikke dagbot ved forsinkelse under tre dager.', 'dagbot'],
+    ['Dagbot gjelder ikke ved force majeure.', 'dagbot'],
+    ['Dagbot gjelder ikke, med unntak av ved forsinket oppstart.', 'dagbot'],
+    ['Det kreves ikke bankgaranti, men morselskapsgaranti.', 'garanti'],
+    ['Leverandøren kan ikke trekke tilbake bankgarantien.', 'garanti'],
+    ['Leverandøren skal ikke ha lavere forsikringssum enn 10 MNOK.', 'forsikring'],
+    // Her betyr nektelsen MER risiko for leverandøren – skal aldri merkes som ikke gjeldende.
+    ['Det gjelder ingen ansvarsbegrensning.', 'erstatningsansvar'],
+    ['Det gis ingen prisregulering i avtaleperioden.', 'prisregulering'],
+    ['Ingen garanti for volum.', 'volum'],
+  ] as const) {
+    const flags = negatedIn(text, category);
+    assert.ok(flags.length > 0, `ingen treff: ${text}`);
+    assert.ok(flags.every((n) => !n), `feilaktig merket som ikke gjeldende: ${text}`);
+  }
+});
+
+test('vilkårsskanner: en nektelse skjuler ikke et ekte vilkår senere i dokumentet', () => {
+  const text = 'Det kreves ikke bankgaranti. Leverandøren skal stille morselskapsgaranti for hele kontraktsperioden.';
+  const scan = scanText(text, 1);
+  const garanti = scan.byCategory.garanti!;
+  assert.deepEqual(garanti.map((h) => [h.match.toLowerCase(), h.negated]), [['bankgaranti', true], ['morselskapsgaranti', false]]);
+  assert.equal(scan.negatedOnly.includes('garanti'), false, 'kategorien har et ekte vilkår');
+  // Linjeskift fra PDF midt i setningen hindrer ikke gjenkjenning, men tom linje skiller avsnitt.
+  assert.equal(isNegated('Det vil ikke bli\nilagt dagbot.', 'Det vil ikke bli\nilagt '.length, 'dagbot'.length, 'dagbot'), true);
+  assert.equal(isNegated('Unntak som ikke\n\nDagbot påløper per dag.', 'Unntak som ikke\n\n'.length, 'Dagbot'.length, 'dagbot'), false);
 });
 
 test('kapasitet: eksisterende kontrakter i perioden binder timer, og mangler vises', () => {
