@@ -6,8 +6,9 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import postgres from 'postgres';
 import { env, isProd } from '../src/lib/env';
-import { appSql, closeDb, systemSql } from '../src/lib/db';
+import { closeDb, systemSql } from '../src/lib/db';
 import { APP_ROLE, credentialsOf } from '../src/lib/db-url';
 
 const MIGRATIONS_DIR = join(process.cwd(), 'db', 'migrations');
@@ -60,6 +61,58 @@ export async function migrate(options: { reset?: boolean; quiet?: boolean } = {}
   return ran;
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isAuthError(err: unknown): boolean {
+  const code = (err as { code?: string } | null)?.code;
+  return code === '28P01' || code === '28000' || /password authentication failed/i.test(err instanceof Error ? err.message : String(err));
+}
+
+/** Én innlogging med en egen, kortvarig tilkobling (ikke appens pool). */
+async function tryLogin(url: string): Promise<true | unknown> {
+  const client = postgres(url, {
+    max: 1,
+    connect_timeout: 10,
+    idle_timeout: 1,
+    ssl: env.DATABASE_SSL === 'require' ? 'require' : false,
+    prepare: process.env.DATABASE_PREPARE !== 'false',
+    onnotice: () => {},
+  });
+  try {
+    await client`select 1`;
+    return true;
+  } catch (err) {
+    return err;
+  } finally {
+    await client.end({ timeout: 2 }).catch(() => {});
+  }
+}
+
+/**
+ * Prøver innlogging flere ganger. Supabase-pooleren husker passord-data en stund, så rett etter en
+ * endring kan første forsøk feile selv om passordet er riktig.
+ */
+async function loginWithRetry(url: string, delaysMs: number[]): Promise<true | unknown> {
+  let last: unknown;
+  for (let i = 0; i <= delaysMs.length; i++) {
+    const result = await tryLogin(url);
+    if (result === true) return true;
+    last = result;
+    if (!isAuthError(result) || i === delaysMs.length) break;
+    await sleep(delaysMs[i]!);
+  }
+  return last;
+}
+
+/** Adresse for en rolle på samme vert som admin-adressen (Supabase-poolerens «.prosjekt» beholdes). */
+function urlForRole(role: string, password: string): string {
+  const u = new URL(env.DATABASE_ADMIN_URL);
+  const suffix = /(\..+)$/.exec(decodeURIComponent(u.username))?.[1] ?? '';
+  u.username = `${role}${suffix}`;
+  u.password = encodeURIComponent(password);
+  return u.toString();
+}
+
 const quoteLiteral = (v: string) => `'${v.replace(/'/g, "''")}'`;
 const quoteIdent = (v: string) => `"${v.replace(/"/g, '""')}"`;
 
@@ -71,7 +124,7 @@ const quoteIdent = (v: string) => `"${v.replace(/"/g, '""')}"`;
  */
 export async function ensureAppRole(
   sql: ReturnType<typeof systemSql>,
-  opts: { log?: (msg: string) => void; role?: string; password?: string; managePassword?: boolean } = {},
+  opts: { log?: (msg: string) => void; role?: string; password?: string; managePassword?: boolean; retryDelaysMs?: number[] } = {},
 ): Promise<'created' | 'updated' | 'unchanged' | 'skipped'> {
   const creds = opts.role && opts.password ? { role: opts.role, password: opts.password } : credentialsOf(env.DATABASE_URL);
   const role = creds?.role;
@@ -85,8 +138,13 @@ export async function ensureAppRole(
     return 'created';
   }
   if (opts.managePassword ?? Boolean(env.DATABASE_APP_PASSWORD)) {
+    // Bytt bare passord hvis innloggingen faktisk feiler. Å sette samme passord på nytt lager nye
+    // passord-data i Postgres, og da avviser Supabase-pooleren innlogging til den har oppdatert seg.
+    const login = await loginWithRetry(opts.role ? urlForRole(role, creds.password) : env.DATABASE_URL, opts.retryDelaysMs ?? [3_000, 6_000]);
+    if (login === true || !isAuthError(login)) return 'unchanged';
     try {
       await sql.unsafe(`alter role ${quoteIdent(role)} with login password ${quoteLiteral(creds.password)}`);
+      opts.log?.(`Oppdaterte passordet for ${role} slik at det stemmer med konfigurasjonen.`);
       return 'updated';
     } catch {
       // Rollen er laget av en annen bruker (f.eks. superbruker). Innloggingstesten etter migreringen
@@ -99,13 +157,14 @@ export async function ensureAppRole(
 
 /** Sjekker at appen faktisk kan logge inn med DATABASE_URL (gir tydelig feil i byggeloggen). */
 async function verifyAppLogin(): Promise<void> {
-  try {
-    await appSql()`select 1`;
+  const result = await loginWithRetry(env.DATABASE_URL, [3_000, 6_000, 10_000, 15_000]);
+  if (result === true) {
     console.log('App-brukeren kan logge inn i databasen.');
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Appen kan ikke logge inn med DATABASE_URL: ${msg}`);
+    return;
   }
+  const msg = result instanceof Error ? result.message : String(result);
+  const hint = isAuthError(result) ? ' Er passordet nettopp endret, kan Supabase-pooleren bruke noen minutter på å oppdatere seg – prøv å deploye igjen om litt.' : '';
+  throw new Error(`Appen kan ikke logge inn med DATABASE_URL: ${msg}.${hint}`);
 }
 
 /**

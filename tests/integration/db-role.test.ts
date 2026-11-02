@@ -42,8 +42,12 @@ test('rollen opprettes når den mangler, og passordet følger konfigurasjonen', 
   assert.deepEqual([r!.rolcanlogin, r!.rolbypassrls], [true, false], 'kan logge inn, men kan ikke omgå radnivåsikkerhet');
   assert.equal(await canLogin("første'passord"), true);
 
+  // Riktig passord allerede: ingen endring (å sette samme passord på nytt bryter Supabase-pooleren en stund).
+  assert.equal(await ensureAppRole(sql, { role: ROLE, password: "første'passord", managePassword: true, retryDelaysMs: [] }), 'unchanged');
+
   assert.equal(await ensureAppRole(sql, { role: ROLE, password: 'nytt-passord', managePassword: false }), 'unchanged');
   assert.equal(await canLogin('nytt-passord'), false, 'passordet endres ikke uten at det styres av konfigurasjonen');
-  assert.equal(await ensureAppRole(sql, { role: ROLE, password: 'nytt-passord', managePassword: true }), 'updated');
+  assert.equal(await ensureAppRole(sql, { role: ROLE, password: 'nytt-passord', managePassword: true, retryDelaysMs: [] }), 'updated');
   assert.equal(await canLogin('nytt-passord'), true);
+  assert.equal(await ensureAppRole(sql, { role: ROLE, password: 'nytt-passord', managePassword: true, retryDelaysMs: [] }), 'unchanged', 'ikke på nytt');
 });
