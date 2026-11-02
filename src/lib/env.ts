@@ -82,6 +82,8 @@ const schema = z.object({
 
   EMAIL_PROVIDER: z.enum(['log', 'resend']).default('log'),
   RESEND_API_KEY: optionalString,
+  /** Testperiode: bare disse mottakerne får e-post (komma-separert; «@firma.no» gir hele domenet). Tom = alle. */
+  EMAIL_ALLOWED_RECIPIENTS: optionalString,
   EMAIL_FROM: z.string().default('AnbudRadar <varsler@example.com>'),
   EMAIL_REPLY_TO: optionalString,
   ADMIN_NOTIFICATION_EMAIL: optionalString,

@@ -28,6 +28,8 @@ Miljøvariabler (legges direkte på tjenesten, eller i en miljøgruppe som **kob
 
 `DATABASE_URL` trengs ikke i dette oppsettet: den lages fra `DATABASE_ADMIN_URL` og `DATABASE_APP_PASSWORD`, og migreringen oppretter rollen `anbudradar_app` selv første gang (SQL-steget i avsnitt 1 kan hoppes over). Byggeloggen bekrefter med «App-brukeren kan logge inn i databasen». Node-versjonen er låst til 22 i `package.json`.
 
+E-post i testperioden: `EMAIL_PROVIDER=resend`, `RESEND_API_KEY` (helst en nøkkel med bare «Sending access»), `EMAIL_FROM=onboarding@resend.dev` til et eget domene er verifisert i Resend, og **`EMAIL_ALLOWED_RECIPIENTS`** med egne testadresser. Da stoppes e-post til alle andre før Resend kalles (vises som «failed» med forklaring i utboksen). Fjern listen først ved lansering.
+
 Begrensninger: tjenesten sover etter en stund uten besøk (første besøk tar 30–60 s, og jobbene står stille mens den sover), 0,1 CPU, Supabase Free pauser etter en uke uten bruk og har ingen sikkerhetskopi. Ingen e-post uten Resend (`EMAIL_PROVIDER=log` skriver dem til loggen). Bytt til oppsettet under før første betalende kunde, og fjern da `RUN_WORKER_IN_WEB`.
 
 ## 1. Database (Supabase)

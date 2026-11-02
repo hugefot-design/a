@@ -35,6 +35,17 @@ export async function queueEmail(msg: EmailMessage, db: Db = systemSql()): Promi
   return rows[0]?.id ?? null;
 }
 
+/** Testlisten (EMAIL_ALLOWED_RECIPIENTS): adresser eller «@domene». Uten liste er alle tillatt. */
+export function recipientAllowed(email: string, list: string | undefined = env.EMAIL_ALLOWED_RECIPIENTS): boolean {
+  if (!list?.trim()) return true;
+  const to = email.trim().toLowerCase();
+  return list
+    .split(/[\s,;]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+    .some((e) => (e.startsWith('@') ? to.endsWith(e) : to === e));
+}
+
 interface SendResult {
   ok: boolean;
   provider: string;
@@ -43,6 +54,8 @@ interface SendResult {
   logged?: boolean;
   /** Varig feil (f.eks. ugyldig adresse): ingen nye forsøk. */
   permanent?: boolean;
+  /** Stoppet av testlisten – ikke sendt til leverandøren. */
+  blocked?: boolean;
 }
 
 interface OutboxRow {
@@ -55,6 +68,9 @@ interface OutboxRow {
 }
 
 async function sendViaProvider(row: OutboxRow): Promise<SendResult> {
+  if (!recipientAllowed(row.toEmail)) {
+    return { ok: false, provider: env.EMAIL_PROVIDER, error: 'Ikke sendt: mottakeren står ikke på testlisten (EMAIL_ALLOWED_RECIPIENTS).', permanent: true, blocked: true };
+  }
   if (env.EMAIL_PROVIDER === 'resend') {
     if (!env.RESEND_API_KEY) return { ok: false, provider: 'resend', error: 'RESEND_API_KEY mangler' };
     try {
@@ -119,7 +135,8 @@ export async function deliverEmail(id: string): Promise<void> {
         next_attempt_at = now() + make_interval(mins => ${Math.min(60, 2 ** row.attempts)})
       where id = ${id}
     `;
-    (failed ? log.error : log.warn)('email_send_failed', { id, error: result.error, attempts: row.attempts, permanent: Boolean(result.permanent) });
+    if (result.blocked) log.info('email_blocked_test_recipients', { id });
+    else (failed ? log.error : log.warn)('email_send_failed', { id, error: result.error, attempts: row.attempts, permanent: Boolean(result.permanent) });
   }
 }
 
