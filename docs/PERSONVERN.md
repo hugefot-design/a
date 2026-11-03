@@ -48,6 +48,13 @@ Regler: `applyRetention()` i `src/domain/ops/tasks.ts`.
 - **Sletting:** Brukeren kan slette kontoen (krever passord). Organisasjoner der brukeren er eneste medlem slettes samtidig, inkludert dokumenter i lagringen. Eier kan slette hele organisasjonen.
 - **Retting:** Profil og kontoinfo kan endres i appen.
 
+## Juridiske sider og godtatte vilkår
+
+De offentlige tekstene står på `/vilkar`, `/personvern`, `/databehandleravtale`, `/underleverandorer`,
+`/informasjonskapsler` og `/sikkerhet` (utkast til advokat har gått gjennom dem, se [JURIDISK.md](JURIDISK.md)).
+Ved registrering lagres hvilken versjon av vilkårene og databehandleravtalen brukeren godtok, og når
+(`users.terms_version`, `users.terms_accepted_at`). Feltene er med i dataeksporten og kan ikke endres av appen.
+
 ## Databehandlere (ved anbefalt oppsett)
 
 | Leverandør | Rolle | Data |

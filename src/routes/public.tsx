@@ -7,16 +7,30 @@ import { CERTIFICATIONS } from '@/domain/reference';
 import { coverageStats } from '@/domain/tenders/queries';
 import { contactNotificationTemplate } from '@/domain/email/templates';
 import { zodErrors } from '@/domain/auth/auth';
+import { companyInfo, isPlaceholder, LEGAL_DOCS } from '@/domain/legal/legal';
 import { HttpError, text, type RequestContext } from '@/server/http';
 import { audit } from '@/lib/audit';
 import { verifyUnsubscribeToken } from '@/domain/email/unsubscribe';
 import { MessagePage, UnsubscribePage } from '@/ui/pages/auth';
 import { render } from '@/server/render';
 import type { Router } from '@/server/router';
-import { AboutPage, ContactPage, FeaturesPage, HomePage, IndustriesPage, PricingPage, PrivacyPage, TermsPage, type Specimen } from '@/ui/pages/public';
+import {
+  AboutPage,
+  ContactPage,
+  CookiesPage,
+  DpaPage,
+  FeaturesPage,
+  HomePage,
+  IndustriesPage,
+  PricingPage,
+  PrivacyPage,
+  SecurityPage,
+  SubprocessorsPage,
+  TermsPage,
+  type Specimen,
+} from '@/ui/pages/public';
 import { formStr } from './helpers';
 
-const company = () => ({ name: env.COMPANY_LEGAL_NAME, orgNumber: env.COMPANY_ORG_NUMBER, address: env.COMPANY_ADDRESS, email: env.COMPANY_CONTACT_EMAIL });
 
 let specimenCache: { at: number; value: Specimen | null } | null = null;
 
@@ -55,9 +69,29 @@ export function registerPublicRoutes(router: Router): void {
   router.get('/funksjoner', 'public', async (ctx) => render(ctx, <FeaturesPage />, { title: 'Funksjoner' }));
   router.get('/priser', 'public', async (ctx) => render(ctx, <PricingPage />, { title: 'Priser' }));
   router.get('/bransjer', 'public', async (ctx) => render(ctx, <IndustriesPage />, { title: 'Bransjer' }));
-  router.get('/om', 'public', async (ctx) => render(ctx, <AboutPage company={company()} />, { title: 'Om oss' }));
-  router.get('/personvern', 'public', async (ctx) => render(ctx, <PrivacyPage company={company()} aiProvider={env.AI_PROVIDER} />, { title: 'Personvern' }));
-  router.get('/vilkar', 'public', async (ctx) => render(ctx, <TermsPage company={company()} />, { title: 'Vilkår' }));
+  router.get('/om', 'public', async (ctx) => render(ctx, <AboutPage company={companyInfo()} />, { title: 'Om oss' }));
+  router.get('/personvern', 'public', async (ctx) => render(ctx, <PrivacyPage />, { title: 'Personvernerklæring' }));
+  router.get('/vilkar', 'public', async (ctx) => render(ctx, <TermsPage />, { title: 'Vilkår for bruk' }));
+  router.get('/databehandleravtale', 'public', async (ctx) => render(ctx, <DpaPage />, { title: 'Databehandleravtale' }));
+  router.get('/underleverandorer', 'public', async (ctx) => render(ctx, <SubprocessorsPage />, { title: 'Underleverandører' }));
+  router.get('/informasjonskapsler', 'public', async (ctx) => render(ctx, <CookiesPage />, { title: 'Informasjonskapsler' }));
+  router.get('/sikkerhet', 'public', async (ctx) => render(ctx, <SecurityPage />, { title: 'Sikkerhet' }));
+  // RFC 9116: hvor sårbarheter kan meldes. Finnes først når en ekte kontaktadresse er satt.
+  router.get('/.well-known/security.txt', 'public', async () => {
+    const { email } = companyInfo();
+    if (isPlaceholder(email)) throw new HttpError(404, 'Ikke satt opp ennå.');
+    const expires = new Date(Date.now() + 365 * 86_400_000).toISOString();
+    return text(
+      [
+        `Contact: mailto:${email}`,
+        `Expires: ${expires}`,
+        'Preferred-Languages: no, en',
+        `Canonical: ${env.APP_URL.replace(/\/$/, '')}/.well-known/security.txt`,
+        `Policy: ${env.APP_URL.replace(/\/$/, '')}/sikkerhet`,
+        '',
+      ].join('\n'),
+    );
+  });
   router.get('/kontakt', 'public', async (ctx) => render(ctx, <ContactPage />, { title: 'Kontakt' }));
 
   router.post('/kontakt', 'public', async (ctx) => {
@@ -114,7 +148,7 @@ export function registerPublicRoutes(router: Router): void {
   router.post('/avmeld', 'public', (ctx) => unsubscribe(ctx, true), { csrf: false });
 
   router.get('/sitemap.xml', 'public', async () => {
-    const urls = ['/', '/funksjoner', '/priser', '/bransjer', '/om', '/kontakt', '/personvern', '/vilkar'];
+    const urls = ['/', '/funksjoner', '/priser', '/bransjer', '/om', '/kontakt', ...LEGAL_DOCS.map((d) => d.href)];
     const base = env.APP_URL.replace(/\/$/, '');
     const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${base}${u}</loc></url>`).join('')}</urlset>`;
     return text(body, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } });

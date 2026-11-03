@@ -45,6 +45,9 @@ jobs:
           cache: npm
       - name: Installer avhengigheter
         run: npm ci
+      # Sikkerhetssiden (/sikkerhet) sier at avhengighetene sjekkes for kjente sårbarheter her.
+      - name: Kjente sårbarheter i avhengigheter (produksjon)
+        run: npm audit --omit=dev --audit-level=high
       - name: Lag databaseroller og testdatabase
         run: npm run db:setup-local
       - name: Typesjekk

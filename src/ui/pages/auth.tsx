@@ -53,7 +53,8 @@ export function RegisterPage({ values = {}, errors = {}, next }: { values?: Reco
             name="acceptTerms"
             label={
               <>
-                Jeg godtar <a href="/vilkar" target="_blank" rel="noopener">vilkårene</a> og har lest{' '}
+                Jeg godtar <a href="/vilkar" target="_blank" rel="noopener">vilkårene</a> og{' '}
+                <a href="/databehandleravtale" target="_blank" rel="noopener">databehandleravtalen</a> på vegne av virksomheten, og har lest{' '}
                 <a href="/personvern" target="_blank" rel="noopener">personvernerklæringen</a>.
               </>
             }

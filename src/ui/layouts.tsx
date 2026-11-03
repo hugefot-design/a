@@ -20,6 +20,7 @@ import {
 import { useUi } from './context';
 import { Alert, Button, buttonVariants, cn, CsrfField, FlashMessage, Logo, PostForm } from './components';
 import { formatDate, sourcesPhrase } from './format';
+import { companyConfigured, companyInfo, LEGAL_DOCS } from '@/domain/legal/legal';
 
 // ---------------------------------------------------------------------------
 // Offentlige sider
@@ -108,35 +109,56 @@ export function PublicLayout({ children, heroDark = false }: { children: ReactNo
   );
 }
 
+function FooterNav({ title, links }: { title: string; links: { href: string; label: string }[] }) {
+  return (
+    <nav aria-label={title} className="space-y-2 text-[14px]">
+      <p className="font-semibold text-navy-900">{title}</p>
+      {links.map((l) => (
+        <a key={l.href} className="block text-muted no-underline hover:text-navy-900" href={l.href}>
+          {l.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 function PublicFooter() {
   const { liveSources } = useUi();
+  const company = companyInfo();
   return (
-    <footer className="border-t border-line bg-paper">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div className="max-w-sm space-y-3">
+    <footer className="border-t border-line bg-paper print:hidden">
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="col-span-2 max-w-sm space-y-3 lg:col-span-1">
           <Logo />
           <p className="text-[14px] text-muted">
             Kunngjøringer hentes fra {sourcesPhrase(liveSources)}. Kildelenken følger alltid med, så du kan sjekke originalen.
           </p>
         </div>
-        <nav aria-label="Produkt" className="space-y-2 text-[14px]">
-          <p className="font-semibold text-navy-900">Produkt</p>
-          <a className="block text-muted no-underline hover:text-navy-900" href="/funksjoner">Funksjoner</a>
-          <a className="block text-muted no-underline hover:text-navy-900" href="/bransjer">Bransjer</a>
-          <a className="block text-muted no-underline hover:text-navy-900" href="/priser">Priser</a>
-        </nav>
-        <nav aria-label="Selskap" className="space-y-2 text-[14px]">
-          <p className="font-semibold text-navy-900">Selskap</p>
-          <a className="block text-muted no-underline hover:text-navy-900" href="/om">Om oss</a>
-          <a className="block text-muted no-underline hover:text-navy-900" href="/kontakt">Kontakt</a>
-          <a className="block text-muted no-underline hover:text-navy-900" href="/personvern">Personvern</a>
-          <a className="block text-muted no-underline hover:text-navy-900" href="/vilkar">Vilkår</a>
-        </nav>
+        <FooterNav
+          title="Produkt"
+          links={[
+            { href: '/funksjoner', label: 'Funksjoner' },
+            { href: '/bransjer', label: 'Bransjer' },
+            { href: '/priser', label: 'Priser' },
+          ]}
+        />
+        <FooterNav
+          title="Selskap"
+          links={[
+            { href: '/om', label: 'Om oss' },
+            { href: '/kontakt', label: 'Kontakt' },
+          ]}
+        />
+        <FooterNav title="Juridisk" links={LEGAL_DOCS} />
       </div>
       <div className="border-t border-line">
-        <p className="mx-auto max-w-6xl px-4 py-4 text-[12px] text-muted sm:px-6">
-          © {new Date().getFullYear()} AnbudRadar. TED-data © Den europeiske union. Doffin driftes av Direktoratet for forvaltning og økonomistyring (DFØ).
-        </p>
+        <div className="mx-auto max-w-6xl space-y-1 px-4 py-4 text-[12px] text-muted sm:px-6">
+          <p>
+            © {new Date().getFullYear()} AnbudRadar
+            {companyConfigured(company) ? ` · Levert av ${company.name}, org.nr. ${company.orgNumber}, ${company.address}` : ''}
+          </p>
+          <p>TED-data © Den europeiske union. Doffin driftes av Direktoratet for forvaltning og økonomistyring (DFØ).</p>
+        </div>
       </div>
     </footer>
   );

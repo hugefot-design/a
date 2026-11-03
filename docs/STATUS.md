@@ -69,7 +69,9 @@ Fremgangsmåte for hver: [INTEGRASJONER.md](INTEGRASJONER.md).
 - **Sitatkontrollen** bekrefter at sitatet står i kilden – ikke at tolkningen er riktig.
 - **Kun norsk (bokmål).**
 - **Ingen tofaktorinnlogging eller SSO** ennå.
-- **Juridiske tekster er utkast** og merket slik til `LEGAL_PAGES_REVIEWED=true`.
+- **Juridiske tekster er utkast** og merket slik til `LEGAL_PAGES_REVIEWED=true`. Pakken består av vilkår,
+  personvernerklæring, databehandleravtale, underleverandører, informasjonskapsler og sikkerhet; versjonen kunden
+  godtar lagres ved registrering. Spørsmål og forbehold til advokaten står i [JURIDISK.md](JURIDISK.md).
 - **Priser er eks. mva.** MVA i Stripe (fast sats eller Stripe Tax) må avklares med regnskapsfører.
 
 ## Kostnadsestimat per måned

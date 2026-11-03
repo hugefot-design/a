@@ -6,6 +6,7 @@ import { sendEmailSoon } from '@/lib/email';
 import { audit } from '@/lib/audit';
 import { rateLimit, resetRateLimit } from '@/lib/rate-limit';
 import { absoluteUrl, passwordResetTemplate, verifyEmailTemplate } from '@/domain/email/templates';
+import { LEGAL_VERSION } from '@/domain/legal/legal';
 import type { AuthUser } from '@/server/http';
 
 export const SESSION_COOKIE = isProd ? '__Host-ar_session' : 'ar_session';
@@ -151,14 +152,23 @@ export async function registerUser(input: { name: string; email: string; passwor
     return { ok: false as const, errors: { email: 'Det finnes allerede en konto med denne e-postadressen.' } };
   }
   const passwordHash = await hashPassword(input.password);
+  // Registreringsskjemaet krever avkrysning for vilkårene; versjonen og tidspunktet lagres som bevis.
   const rows = (await sql`
-    insert into users (email, name, password_hash) values (${input.email}, ${input.name}, ${passwordHash})
+    insert into users (email, name, password_hash, terms_version, terms_accepted_at)
+    values (${input.email}, ${input.name}, ${passwordHash}, ${LEGAL_VERSION}, now())
     on conflict (email) do nothing
     returning id, email, name, email_verified_at, is_platform_admin, current_org_id
   `) as unknown as UserRow[];
   const row = rows[0];
   if (!row) return { ok: false as const, errors: { email: 'Det finnes allerede en konto med denne e-postadressen.' } };
-  await audit({ action: 'auth.register', actorUserId: row.id, targetType: 'user', targetId: row.id, ipHash });
+  await audit({
+    action: 'auth.register',
+    actorUserId: row.id,
+    targetType: 'user',
+    targetId: row.id,
+    ipHash,
+    metadata: { termsVersion: LEGAL_VERSION },
+  });
   await sendVerificationEmail(row.id, row.email, row.name);
   return { ok: true as const, user: toAuthUser(row) };
 }

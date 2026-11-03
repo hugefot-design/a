@@ -12,7 +12,7 @@ import type { AuthUser, OrgContext } from '@/server/http';
 export async function exportData(user: AuthUser, org: OrgContext | null): Promise<Record<string, unknown>> {
   const sql = systemSql();
   const [account] = (await sql`
-    select id, email, name, email_verified_at, created_at, last_login_at from users where id = ${user.id}
+    select id, email, name, email_verified_at, created_at, last_login_at, terms_version, terms_accepted_at from users where id = ${user.id}
   `) as unknown as Record<string, unknown>[];
   const memberships = await sql`
     select o.id, o.name, m.role, m.created_at from organization_members m join organizations o on o.id = m.org_id where m.user_id = ${user.id}
