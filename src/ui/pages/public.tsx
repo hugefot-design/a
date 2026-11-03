@@ -3,6 +3,7 @@ import type { IconType } from 'react-icons';
 import { LuBellRing, LuCalculator, LuChartColumn, LuFileSearch, LuHandshake, LuListChecks, LuMail, LuRadar, LuSearch, LuX } from 'react-icons/lu';
 import { INDUSTRIES, CPV_DIVISIONS } from '@/domain/reference';
 import { PAID_PLANS, PLANS } from '@/domain/billing/plans';
+import { companyConfigured } from '@/domain/legal/legal';
 import { useUi } from '../context';
 import { Alert, Button, buttonVariants, cn, Field, Input, PostForm, Textarea } from '../components';
 import { PublicLayout } from '../layouts';
@@ -326,14 +327,23 @@ export function AboutPage({ company }: { company: { name: string; orgNumber: str
           </div>
           <aside className="h-fit rounded-2xl border border-line bg-paper p-6">
             <h2 className="text-[17px] font-semibold text-navy-900">Selskapet</h2>
-            <p className="mt-3 text-[15px] leading-relaxed text-ink">
-              {company.name}, org.nr. {company.orgNumber}
-              <br />
-              {company.address}
-            </p>
-            <a href={`mailto:${company.email}`} className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold">
-              <LuMail className="size-4" aria-hidden /> {company.email}
-            </a>
+            {companyConfigured(company) ? (
+              <>
+                <p className="mt-3 text-[15px] leading-relaxed text-ink">
+                  {company.name}, org.nr. {company.orgNumber}
+                  <br />
+                  {company.address}
+                </p>
+                <a href={`mailto:${company.email}`} className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold">
+                  <LuMail className="size-4" aria-hidden /> {company.email}
+                </a>
+              </>
+            ) : (
+              // Firmaopplysningene (COMPANY_*) er ikke lagt inn ennå – vis ikke plassholdere som ekte opplysninger.
+              <a href="/kontakt" className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold">
+                <LuMail className="size-4" aria-hidden /> Kontakt oss
+              </a>
+            )}
           </aside>
         </Container>
       </section>

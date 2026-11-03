@@ -81,12 +81,14 @@ test('firmaopplysninger: plassholdere markeres, ekte opplysninger vises i dokume
   assert.match(terms.body, /<mark[^>]*>\[e-post\]<\/mark>/);
   assert.doesNotMatch(terms.body, /mailto:kontakt@example\.com/, 'ingen lenke til en oppdiktet adresse');
   assert.doesNotMatch((await get('/')).body, /Levert av/, 'bunnteksten viser ikke plassholdere som ekte opplysninger');
+  assert.doesNotMatch((await get('/om')).body, /example\.com|\[Selskapsnavn|\[adresse\]/, '«Om oss» viser ikke plassholdere');
 
   Object.assign(mutableEnv, REAL);
   terms = await get('/vilkar');
   assert.doesNotMatch(terms.body, /<mark/);
   assert.ok(terms.body.includes('Testfirma AS, org.nr. 123 456 789, Storgata 1, 0155 Oslo, e-post'));
   assert.ok(terms.body.includes('href="mailto:post@testfirma.no"'));
+  assert.ok((await get('/om')).body.includes('Testfirma AS, org.nr. 123 456 789'), 'firmaopplysninger på «Om oss»');
   for (const path of ['/', '/priser', '/vilkar']) {
     assert.ok((await get(path)).body.includes('Levert av Testfirma AS, org.nr. 123 456 789, Storgata 1, 0155 Oslo'), `firmalinje i bunnteksten på ${path}`);
   }
