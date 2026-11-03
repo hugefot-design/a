@@ -51,8 +51,8 @@ Det som dekkes:
 | Stripe | **IKKE VERIFISERT** | Testet med simulert Stripe-API og signerte hendelser. Må kjøres i testmodus med ekte konto. |
 | Resend | **IKKE VERIFISERT** | E-post logges lokalt. Må testes med verifisert domene og testmottakere. |
 | AI (Anthropic) | **IKKE VERIFISERT** | All AI i testene er simulert og merket «Testmodus». Kvaliteten på ekte svar (særlig kontraktsvilkår på norsk) er ikke målt. |
-| Supabase | **IKKE VERIFISERT** | Migreringer og RLS kjører mot PostgreSQL 16 lokalt; Supabase-roller og pooler er ikke prøvd. |
-| Render | **IKKE VERIFISERT** | `render.yaml` følger Blueprint-spesifikasjonen, men er ikke prøvd. |
+| Supabase | **VERIFISERT live 2.–3.11.2026** (gratisplan) | Database i EU (Irland) via session pooler. Migreringene (0001–0013) kjøres ved hver deploy, og appen kobler til med egen databaserolle med radnivåsikkerhet – innloggingen med den rollen sjekkes ved hver deploy. Ikke prøvd mot Supabase: isolasjonstesten mellom to kunder (kjøres lokalt), fillagring (`STORAGE_DRIVER=supabase`) og gjenoppretting – gratisplanen har ingen automatiske sikkerhetskopier. |
+| Render | **VERIFISERT live 2.–3.11.2026** (gratisplan) | Nettsiden kjører i Frankfurt med automatisk utrulling fra grenen, helsesjekk på `/api/health` og bakgrunnsjobbene i samme tjeneste (`RUN_WORKER_IN_WEB`). Eget domene `anbudradar.com` med sertifikat; den gamle onrender-adressen sendes videre. Tjenesten er satt opp manuelt – `render.yaml` (Blueprint) er ikke prøvd. Gratisplanen sover etter 15 minutter uten trafikk, så henting og varsler går bare når siden er våken. |
 
 Fremgangsmåte for hver: [INTEGRASJONER.md](INTEGRASJONER.md).
 
