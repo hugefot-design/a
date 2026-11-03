@@ -6,6 +6,7 @@
 import type { ReactNode } from 'react';
 import {
   companyInfo,
+  contactIsGmail,
   cookies,
   isPlaceholder,
   LEGAL_DOCS,
@@ -729,6 +730,7 @@ export function PrivacyPage() {
             overføringsgrunnlag står på <a href="/underleverandorer">/underleverandorer</a>.
           </p>
           <Bullets items={subs.map((s) => `${s.name} – ${s.purpose.toLowerCase()}${s.planned ? ' (ikke tatt i bruk ennå)' : ''}`)} />
+          {contactIsGmail(c) ? <p>E-post du sender til kontaktadressen vår, mottas og lagres hos Google (Gmail), også utenfor EU/EØS.</p> : null}
           <p>Vi kan også utlevere opplysninger når loven krever det, for eksempel etter pålegg fra offentlig myndighet.</p>
         </>
       ),

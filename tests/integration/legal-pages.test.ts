@@ -95,6 +95,17 @@ test('firmaopplysninger: plassholdere markeres, ekte opplysninger vises i dokume
   Object.assign(mutableEnv, PLACEHOLDERS);
 });
 
+test('personvernerklæringen sier fra når kontaktadressen er en Gmail-konto', async () => {
+  const GMAIL = /mottas og lagres hos Google \(Gmail\)/;
+  Object.assign(mutableEnv, REAL);
+  assert.doesNotMatch((await get('/personvern')).body, GMAIL, 'egen e-post på domenet: ingen Google-setning');
+  Object.assign(mutableEnv, { COMPANY_CONTACT_EMAIL: 'testfirma@gmail.com' });
+  const page = await get('/personvern');
+  assert.match(page.body, GMAIL);
+  assert.ok(page.body.includes('href="mailto:testfirma@gmail.com"'));
+  Object.assign(mutableEnv, PLACEHOLDERS);
+});
+
 test('security.txt finnes først med en ekte kontaktadresse, og følger RFC 9116', async () => {
   Object.assign(mutableEnv, PLACEHOLDERS);
   assert.equal((await get('/.well-known/security.txt')).status, 404);

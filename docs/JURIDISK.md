@@ -71,6 +71,7 @@ oppdateres.
 | 4.7 | Stripe er selvstendig behandlingsansvarlig for blant annet svindelforebygging | Bekreft mot Stripes gjeldende vilkår. Stripe er ikke tatt i bruk ennå. |
 | 4.8 | Opplastede dokumenter ligger nå på serverdisken hos Render, som tømmes ved ny versjon | Teknisk forbehold, ikke juridisk – men det betyr at dokumenter kan forsvinne. Flytt til Supabase Storage (`STORAGE_DRIVER=supabase`) før kunder. |
 | 4.9 | Vilkårene for Doffins API og gjenbruk av TED-data tillater kommersiell visning slik tjenesten gjør | **IKKE VERIFISERT.** TED: EUs gjenbruksregler (kildeangivelse står i vilkårene og bunnteksten). Doffin: sjekk vilkårene i DFØs API-portal. |
+| 4.10 | Kontaktadressen er en gratis Gmail-konto (`anbudradar@gmail.com`). Gratis Gmail har ingen databehandleravtale; Google behandler e-posten etter egne vilkår, også utenfor EØS. Personvernerklæringen sier fra om dette | **Anbefaling:** Google Workspace (med databehandleravtale) eller e-post på eget domene før dere tar inn kunder, siden kunder og andre sender personopplysninger til adressen. |
 
 ## 5. Regelverk å sjekke tekstene mot
 

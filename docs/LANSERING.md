@@ -33,6 +33,7 @@ Hver oppgave gjøres i leverandørens kontrollpanel. Nøkler og passord legges *
 - [ ] Juridiske tekster gjennomgått og `LEGAL_PAGES_REVIEWED=true` (notat til advokat: [JURIDISK.md](JURIDISK.md))
 - [ ] Databehandleravtaler med Supabase, Render, Resend, Stripe og Anthropic
 - [ ] Protokoll over behandlingsaktiviteter (art. 30) og intern rutine for brudd på personopplysningssikkerheten
+- [ ] Kontaktadresse med databehandleravtale (Google Workspace eller e-post på eget domene) i stedet for gratis Gmail
 - [ ] MVA-oppsett avklart med regnskapsfører (fast sats eller Stripe Tax)
 - [ ] Selskapsinformasjon i `COMPANY_*`
 

@@ -34,6 +34,11 @@ export function companyConfigured(c: CompanyInfo = companyInfo()): boolean {
   return ![c.name, c.orgNumber, c.address, c.email].some(isPlaceholder);
 }
 
+/** Kontaktadressen er en Gmail-konto: e-post til oss mottas og lagres da hos Google. */
+export function contactIsGmail(c: CompanyInfo = companyInfo()): boolean {
+  return /@(gmail|googlemail)\.com$/i.test(c.email.trim());
+}
+
 /** De juridiske dokumentene – brukt i bunnteksten, på dokumentsidene og i sitemap. */
 export const LEGAL_DOCS: { href: string; label: string }[] = [
   { href: '/vilkar', label: 'Vilkår for bruk' },
