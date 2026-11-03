@@ -13,6 +13,7 @@ import { HttpError, parseCookies, redirect, serializeCookie, type RequestContext
 import { decodeFlash, FLASH_COOKIE } from './flash';
 import { render } from './render';
 import { serveStatic } from './static';
+import { canonicalRedirect } from './canonical';
 import { refreshLiveSourcesIfStale } from '@/domain/tenders/source-status';
 import type { Router } from './router';
 
@@ -291,6 +292,15 @@ export function createApp(router: Router) {
     let ctx: RequestContext | null = null;
     let status = 500;
     try {
+      // Gammel adresse (f.eks. onrender.com) → samme side på APP_URL. Bare i produksjon.
+      const canonical = isProd ? canonicalRedirect({ method: req.method, url: req.url, host: req.headers.host }, env.APP_URL) : null;
+      if (canonical) {
+        // Kort mellomlagring, så en senere domeneendring ikke sitter fast i nettleserne.
+        res.writeHead(301, { Location: canonical, 'Cache-Control': 'public, max-age=3600' });
+        res.end();
+        status = 301;
+        return;
+      }
       const url = new URL(req.url ?? '/', APP_ORIGIN);
       if (serveStatic(req, res, url.pathname)) {
         status = res.statusCode;

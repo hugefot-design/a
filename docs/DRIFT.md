@@ -24,7 +24,7 @@ Render Free + Supabase Free, 0 kr per måned. Én webtjeneste, ingen egen arbeid
 | Start Command | `npm start` |
 | Health Check Path | `/api/health` |
 
-Miljøvariabler (legges direkte på tjenesten, eller i en miljøgruppe som **kobles** til tjenesten): `NODE_ENV=production`, `APP_URL=https://<navn>.onrender.com` (nøyaktig adressen Render viser), `TRUST_PROXY=true`, `DATABASE_SSL=require`, `DATABASE_ADMIN_URL` (Supabase → Connect → Direct → **Session pooler**, adressen som den står, gjerne med `[YOUR-PASSWORD]`), `DATABASE_ADMIN_PASSWORD` (databasepassordet, limt inn som det er – spesialtegn håndteres automatisk), `DATABASE_APP_PASSWORD`, `SESSION_SECRET` og `CRON_SECRET` (de tre siste med «Generate»), og **`RUN_WORKER_IN_WEB=true`** så nettsiden selv henter anbud, beregner treff og sender varsler.
+Miljøvariabler (legges direkte på tjenesten, eller i en miljøgruppe som **kobles** til tjenesten): `NODE_ENV=production`, `APP_URL=https://<navn>.onrender.com` (nøyaktig adressen Render viser, eller eget domene når det er lagt inn – se punkt 3.5), `TRUST_PROXY=true`, `DATABASE_SSL=require`, `DATABASE_ADMIN_URL` (Supabase → Connect → Direct → **Session pooler**, adressen som den står, gjerne med `[YOUR-PASSWORD]`), `DATABASE_ADMIN_PASSWORD` (databasepassordet, limt inn som det er – spesialtegn håndteres automatisk), `DATABASE_APP_PASSWORD`, `SESSION_SECRET` og `CRON_SECRET` (de tre siste med «Generate»), og **`RUN_WORKER_IN_WEB=true`** så nettsiden selv henter anbud, beregner treff og sender varsler.
 
 `DATABASE_URL` trengs ikke i dette oppsettet: den lages fra `DATABASE_ADMIN_URL` og `DATABASE_APP_PASSWORD`, og migreringen oppretter rollen `anbudradar_app` selv første gang (SQL-steget i avsnitt 1 kan hoppes over). Byggeloggen bekrefter med «App-brukeren kan logge inn i databasen». Node-versjonen er låst til 22 i `package.json`.
 
@@ -66,7 +66,12 @@ Begrensninger: tjenesten sover etter en stund uten besøk (første besøk tar 30
 3. **Background worker:** samme repo og bygg, Start `npm run worker`.
 4. Miljøvariabler på begge (se `.env.example`): `NODE_ENV=production`, `APP_URL=https://…`, `TRUST_PROXY=true`, database, `SESSION_SECRET` (samme på begge), `CRON_SECRET`, AI, e-post, Stripe og lagring.
    Appen nekter å starte i produksjon med `AI_PROVIDER=mock`, http-adresse, utviklingshemmelighet eller uten `CRON_SECRET`.
-5. Eget domene: legg det til hos Render, og oppdater `APP_URL`.
+5. Eget domene: legg det til hos Render (Settings → Custom Domains, med `www` som videresender til hovedadressen), og sett
+   `APP_URL` til hovedadressen, f.eks. `https://anbudradar.com`. **Begge deler trengs:** skjemaer godtas bare fra `APP_URL`
+   (CSRF), så innlogging feiler på en adresse som ikke er `APP_URL`. I produksjon sender appen sider som åpnes på en annen
+   adresse (som `<navn>.onrender.com`) videre til samme side på `APP_URL` (301), mens `/api/…` (helsesjekk, webhooks) svarer
+   direkte. La «Render Subdomain» stå på, så gamle lenker fortsatt virker. Innloggede brukere må logge inn på nytt etter
+   byttet (innloggingskapselen gjelder bare én adresse).
 
 **Hemmeligheter** legges bare inn i Render-dashbordet (Environment) eller i Supabase/Stripe/Resend sine egne kontrollpaneler – aldri i koden, i `render.yaml` eller i chat. `.env` er utelatt fra Git (`.gitignore`).
 
