@@ -66,7 +66,7 @@ oppdateres.
 | 4.2 | Overføringsgrunnlag (SCC, eventuelt EU–US Data Privacy Framework) for hver leverandør, slik `/underleverandorer` beskriver | **IKKE VERIFISERT.** Teksten bygger på leverandørenes vanlige oppsett. Sjekk mot gjeldende DPA. |
 | 4.3 | Lokasjon: Render i Frankfurt og Supabase i Irland | Verifisert i oppsettet (region valgt ved opprettelse). |
 | 4.4 | AI-leverandøren bruker ikke API-data til trening, og hvor lenge den lagrer dem | **IKKE VERIFISERT** mot gjeldende vilkår. AI er ikke slått på ennå. |
-| 4.5 | Resend: domenet `anbudradar.com` er lagt inn med EU-region (Irland). Til DNS-postene er lagt inn og domenet er bekreftet, sendes e-post fra Resends felles adresse i USA-regionen | Under arbeid. Når domenet er bekreftet: oppdater lokasjonen for Resend i `src/domain/legal/legal.ts`. |
+| 4.5 | Resend: domenet `anbudradar.com` er bekreftet med EU-region (Irland), og e-post sendes fra `varsler@anbudradar.com`. Selskapet er amerikansk, og opplysninger kan også behandles i USA | Verifisert 3.11.2026. `/underleverandorer` viser dette. Overføringsgrunnlaget (SCC) må fortsatt bekreftes (4.2). |
 | 4.6 | Sikkerhetskopier: Supabase Free har ingen automatiske sikkerhetskopier; betalt plan har daglige | Teksten (sletting fra kopier innen 30 dager) stemmer begge veier, men **uten betalt plan finnes ingen kopier å gjenopprette fra.** |
 | 4.7 | Stripe er selvstendig behandlingsansvarlig for blant annet svindelforebygging | Bekreft mot Stripes gjeldende vilkår. Stripe er ikke tatt i bruk ennå. |
 | 4.8 | Opplastede dokumenter ligger nå på serverdisken hos Render, som tømmes ved ny versjon | Teknisk forbehold, ikke juridisk – men det betyr at dokumenter kan forsvinne. Flytt til Supabase Storage (`STORAGE_DRIVER=supabase`) før kunder. |
