@@ -105,3 +105,15 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 3. **Staging på Render + Supabase**, gjenopprettingstest av sikkerhetskopi, overvåking.
 4. **Pilot med 3–5 bedrifter i én bransje** (f.eks. vinterdrift/maskin eller renhold) – mål om de finner anbud de ellers ville gått glipp av, og om lønnsomhetskalkylen stemmer med egne tall.
 5. **Etter pilot:** automatisk henting av konkurransedokumenter der kildene tillater det, tofaktorinnlogging, feilovervåking, kapasitet per uke/sesong.
+
+## Abonnement og gratisplan (3.11.2026)
+
+- **Gratis** (uten kort): ekte anbud fra Doffin og TED, 5 søk per dag (distinkte søk; bla/gjenta teller ikke),
+  3 lagrede anbud, 1 AI-sammendrag per måned (krever bekreftet e-post), ingen automatiske varsler, ingen Profit
+  Intelligence eller Future Opportunities. Håndhevet på serveren, testet (`tests/integration/free-tier.test.ts`).
+- **Misbruksvern:** prøveperioden gis én gang per bruker (før kunne man få ny ved å opprette ny organisasjon);
+  søke- og AI-grensen gjelder også per bruker på tvers av organisasjoner; maks 5 organisasjoner per bruker;
+  lås mot samtidige forespørsler.
+- **Planer og priser uendret:** Start 199, Profesjonell 499, Bedrift 999 kr/mnd, Enterprise etter avtale
+  (settes manuelt i admin). Future Opportunities bare i Enterprise – se [FUTURE_OPPORTUNITIES.md](FUTURE_OPPORTUNITIES.md).
+- **Stripe** er fortsatt ikke testet mot en ekte testkonto (mangler testnøkkel); betalingsflyten er testet mot simulert Stripe.

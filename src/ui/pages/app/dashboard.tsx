@@ -6,7 +6,64 @@ import { AppShell } from '../../layouts';
 import { TenderRow } from '../../tender';
 import { formatDate, formatInt, formatMoney, relativeTime } from '../../format';
 
-export function DashboardPage({ data, aiAvailable, firstVisit }: { data: DashboardData; aiAvailable: boolean; firstVisit: boolean }) {
+export interface FreeUsage {
+  searchesUsed: number;
+  searchesLimit: number;
+  bookmarksUsed: number;
+  bookmarksLimit: number;
+  aiUsed: number;
+  aiLimit: number;
+}
+
+/** Gratisplanen: hva som er brukt av grensene, og én rolig vei til oppgradering. */
+function FreeUsagePanel({ u }: { u: FreeUsage }) {
+  const rows: [string, number, number, string][] = [
+    ['Søk i dag', u.searchesUsed, u.searchesLimit, 'nullstilles ved midnatt'],
+    ['Lagrede anbud', u.bookmarksUsed, u.bookmarksLimit, ''],
+    ['AI-sammendrag', u.aiUsed, u.aiLimit, 'per måned'],
+  ];
+  return (
+    <Panel className="mb-6">
+      <PanelHeader
+        title="Gratisplanen"
+        description="Ekte anbud fra Doffin og TED. Automatiske varsler, Profit Intelligence og Future Opportunities følger med betalte planer."
+        action={
+          <a href="/app/abonnement" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+            Se planer
+          </a>
+        }
+      />
+      <dl className="grid grid-cols-1 gap-5 p-5 sm:grid-cols-3">
+        {rows.map(([label, used, limit, hint]) => (
+          <div key={label} className="min-w-0">
+            <div className="flex items-baseline justify-between gap-2 text-[14px]">
+              <dt className="text-muted">{label}</dt>
+              <dd className="font-mono text-[13px] text-ink">
+                {formatInt(used)} av {formatInt(limit)}
+              </dd>
+            </div>
+            <div className="mt-1.5 h-1.5 rounded-full bg-navy-100" aria-hidden>
+              <div className={used >= limit ? 'h-1.5 rounded-full bg-urgent' : 'h-1.5 rounded-full bg-navy-600'} style={{ width: `${Math.min(100, (used / Math.max(1, limit)) * 100)}%` }} />
+            </div>
+            {hint ? <p className="mt-1 text-[12px] text-muted">{hint}</p> : null}
+          </div>
+        ))}
+      </dl>
+    </Panel>
+  );
+}
+
+export function DashboardPage({
+  data,
+  aiAvailable,
+  firstVisit,
+  freeUsage,
+}: {
+  data: DashboardData;
+  aiAvailable: boolean;
+  firstVisit: boolean;
+  freeUsage?: FreeUsage | null;
+}) {
   const { org, user } = useUi();
   const ent = org!.entitlements;
   const firstName = user?.name.split(' ')[0] ?? '';
@@ -27,6 +84,8 @@ export function DashboardPage({ data, aiAvailable, firstVisit }: { data: Dashboa
           Anbudene under er rangert etter profilen dere fylte ut. Lagre anbud dere vil følge med på, så minner vi dere på fristene.
         </Alert>
       ) : null}
+
+      {freeUsage ? <FreeUsagePanel u={freeUsage} /> : null}
 
       <Panel className="mb-6 grid grid-cols-2 gap-6 p-5 md:grid-cols-4">
         <Stat label={ent.matching ? 'Nye treff siste 7 dager' : 'Åpne anbud i deres bransjer'} value={formatInt(ent.matching ? data.newMatches : data.openInIndustries)} />

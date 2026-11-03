@@ -94,6 +94,7 @@ test('lagringstidene i personvernerklæringen stemmer med slettejobben', () => {
       'partner_requests',
       'rate_limits',
       'search_events',
+      'search_usage',
       'sessions',
     ],
   );

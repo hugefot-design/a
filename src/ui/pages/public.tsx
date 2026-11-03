@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { IconType } from 'react-icons';
 import { LuBellRing, LuCalculator, LuChartColumn, LuFileSearch, LuHandshake, LuListChecks, LuMail, LuRadar, LuSearch, LuX } from 'react-icons/lu';
 import { INDUSTRIES, CPV_DIVISIONS } from '@/domain/reference';
-import { PAID_PLANS, PLANS } from '@/domain/billing/plans';
+import { PAID_PLANS, PLANS, type PlanId } from '@/domain/billing/plans';
 import { companyConfigured } from '@/domain/legal/legal';
 import { useUi } from '../context';
 import { Alert, Button, buttonVariants, cn, Field, Input, PostForm, Textarea } from '../components';
@@ -153,10 +153,13 @@ export function FeaturesPage() {
 
 // ---------------------------------------------------------------------------
 const MATRIX: [string, (p: (typeof PLANS)['starter']['entitlements']) => ReactNode][] = [
+  ['Ekte anbud fra Doffin og TED', () => '✓'],
+  ['Søk per dag', (e) => (e.searchesPerDay >= 1_000_000 ? 'Ubegrenset' : formatInt(e.searchesPerDay))],
   ['Søk med filtre og naturlig språk', () => '✓'],
   ['Avansert søk (CPV, oppdragsgiver, ekskluderinger)', (e) => (e.advancedSearch ? '✓' : '–')],
   ['Lagrede anbud', (e) => (e.maxBookmarks >= 1_000_000 ? 'Ubegrenset' : formatInt(e.maxBookmarks))],
-  ['Lagrede søk med e-postvarsel', (e) => (e.maxSavedSearches ? formatInt(e.maxSavedSearches) : '–')],
+  ['Automatiske varsler', (e) => (e.alerts === 'none' ? '–' : '✓')],
+  ['Lagrede søk med e-postvarsel', (e) => (e.maxSavedSearches >= 1_000_000 ? 'Ubegrenset' : e.maxSavedSearches ? formatInt(e.maxSavedSearches) : '–')],
   ['Fristvarsler og endringsvarsler', (e) => (e.alerts === 'full' ? '✓' : '–')],
   ['AI-analyser per måned', (e) => formatInt(e.aiAnalysesPerMonth)],
   ['Full analyse med kildehenvisning og dokumentopplasting', (e) => (e.aiFullAnalysis ? '✓' : 'Kort sammendrag')],
@@ -167,8 +170,11 @@ const MATRIX: [string, (p: (typeof PLANS)['starter']['entitlements']) => ReactNo
   ['AI-analyse av lønnsomhet og kontraktsrisiko', (e) => (e.profitAI ? '✓' : '–')],
   ['Partnerprofil (bli funnet som anbudspartner)', (e) => (e.partnerListing ? '✓' : '–')],
   ['Søk etter anbudspartnere', (e) => (e.partnerSearch ? '✓' : '–')],
+  ['Future Opportunities: prosjekter før de blir anbud', (e) => (e.futureOpportunities ? '✓' : '–')],
   ['Brukere', (e) => formatInt(e.maxMembers)],
 ];
+
+const COMPARE: PlanId[] = ['free', ...PAID_PLANS, 'enterprise'];
 
 export function PricingPage() {
   const { user, liveSources, trialDays } = useUi();
@@ -183,22 +189,34 @@ export function PricingPage() {
         <Container>
           <h2 className="sr-only">Planer</h2>
           <PlanCards />
-          <p className="mt-6 text-center text-[14px] text-muted">
-            Større organisasjoner med behov for flere brukere, høyere grenser eller faktura: <a href="/kontakt">kontakt oss om Enterprise</a>.
+          <div className="mt-10 grid grid-cols-1 gap-8 border-y border-line py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto] lg:items-center">
+            <div>
+              <p className="font-mono text-[12px] font-medium uppercase tracking-[0.12em] text-navy-600">Enterprise · pris etter avtale</p>
+              <h3 className="mt-2 text-[24px] font-[740] leading-tight tracking-[-0.02em] text-navy-950">Se prosjektene før de blir anbud.</h3>
+            </div>
+            <CheckList className="text-[14px]" items={PLANS.enterprise.features.slice(1, 4)} />
+            <a href="/kontakt" className={buttonVariants({ variant: 'secondary' })}>
+              Kontakt oss
+            </a>
+          </div>
+          <p className="mt-6 text-[14px] text-muted">
+            Gratis uten kort: {PLANS.free.features.slice(0, 4).join(' · ')}. <a href="/registrer">Opprett konto</a>.
           </p>
 
           <div className="mt-20">
             <SectionHeading eyebrow="Detaljer">Sammenlign planer</SectionHeading>
           </div>
           <div className="scroll-x mt-8 rounded-2xl border border-line bg-white">
-            <table className="w-full min-w-[560px] text-[14px]">
+            <table className="w-full min-w-[760px] text-[14px]">
               <thead>
                 <tr className="border-b border-line bg-paper text-left">
                   <th className="px-4 py-3.5 font-semibold">Funksjon</th>
-                  {PAID_PLANS.map((id) => (
+                  {COMPARE.map((id) => (
                     <th key={id} className={cn('px-4 py-3.5 text-center font-semibold', id === 'professional' && 'text-navy-900')}>
                       {PLANS[id].name}
-                      <span className="num block text-[12px] font-normal text-muted">{PLANS[id].priceNok} kr/mnd</span>
+                      <span className="num block text-[12px] font-normal text-muted">
+                        {PLANS[id].priceNok ? `${PLANS[id].priceNok} kr/mnd` : id === 'free' ? '0 kr' : 'Etter avtale'}
+                      </span>
                     </th>
                   ))}
                 </tr>
@@ -207,7 +225,7 @@ export function PricingPage() {
                 {MATRIX.map(([label, fn]) => (
                   <tr key={label} className="border-b border-line last:border-0 hover:bg-navy-50/50">
                     <td className="px-4 py-3">{label}</td>
-                    {PAID_PLANS.map((id) => (
+                    {COMPARE.map((id) => (
                       <td key={id} className={cn('num px-4 py-3 text-center', id === 'professional' && 'bg-navy-50/40')}>
                         {fn(PLANS[id].entitlements)}
                       </td>

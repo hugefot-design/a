@@ -3,6 +3,7 @@
  * av organisasjoner. Duplikater hindres av unik nøkkel (user_id, dedupe_key).
  */
 import { systemSql, type Tx } from '@/lib/db';
+import { relatedNotices, signalMatch } from '@/domain/opportunities/opportunities';
 import { log } from '@/lib/logger';
 import { sha256Hex } from '@/lib/crypto';
 import { queueEmail } from '@/lib/email';
@@ -24,7 +25,8 @@ type NotificationType =
   | 'competitor_award'
   | 'system'
   | 'partner_request'
-  | 'partner_response';
+  | 'partner_response'
+  | 'opportunity';
 
 export interface NewNotification {
   orgId: string;
@@ -504,6 +506,97 @@ export async function generateWeeklySummaries(now = new Date(), force = false): 
 }
 
 /** Én full syklus: lag varsler og send e-post som er klare. */
+/**
+ * Future Opportunities (bare organisasjoner med Enterprise):
+ * 1. Fulgt planlagt anskaffelse er utlyst (fakta: samme anskaffelse har gått fra planlagt til konkurranse).
+ * 2. Ny konkurranse som KAN gjelde et fulgt prosjekt (vurdering – merkes slik i teksten).
+ * 3. Daglig oppsummering av nye politiske saker som passer profilen.
+ */
+export async function generateOpportunityAlerts(ents: Map<string, Entitlements>, prefs: MemberPref[]): Promise<number> {
+  const sql = systemSql();
+  const byOrg = prefsByOrg(prefs);
+  const allowed = (orgId: string) => ents.get(orgId)?.futureOpportunities === true;
+  const items: NewNotification[] = [];
+
+  const published = (await sql`
+    select f.org_id, t.id as tender_id, t.title, t.buyer_name
+    from opportunity_follows f join tenders t on t.id = f.tender_id
+    where t.lifecycle in ('competition', 'other') and (t.deadline_at is null or t.deadline_at > now())
+  `) as unknown as { orgId: string; tenderId: string; title: string; buyerName: string | null }[];
+  for (const r of published) {
+    if (!allowed(r.orgId)) continue;
+    for (const p of byOrg.get(r.orgId) ?? []) {
+      if (!p.tenderChanges) continue;
+      items.push({
+        orgId: r.orgId,
+        userId: p.userId,
+        type: 'opportunity',
+        tenderId: r.tenderId,
+        title: `Utlyst: ${r.title}`,
+        body: `Den planlagte anskaffelsen du følger, er nå utlyst som konkurranse${r.buyerName ? ` av ${r.buyerName}` : ''}.`,
+        url: `/app/anbud/${r.tenderId}`,
+        dedupeKey: `opp-published:${r.tenderId}`,
+      });
+    }
+  }
+
+  const follows = (await sql`
+    select f.id, f.org_id, f.tender_id, f.signal_id, coalesce(t.title, g.title) as title
+    from opportunity_follows f left join tenders t on t.id = f.tender_id left join opportunity_signals g on g.id = f.signal_id
+  `) as unknown as { id: string; orgId: string; tenderId: string | null; signalId: string | null; title: string }[];
+  const active = follows.filter((f) => allowed(f.orgId));
+  if (active.length) {
+    const related = await relatedNotices(
+      active.map((f) => ({ kind: f.tenderId ? ('planned_notice' as const) : ('political_case' as const), id: (f.tenderId ?? f.signalId)! })),
+      3,
+    );
+    for (const f of active) {
+      for (const r of related.get((f.tenderId ?? f.signalId)!) ?? []) {
+        for (const p of byOrg.get(f.orgId) ?? []) {
+          if (!p.tenderChanges) continue;
+          items.push({
+            orgId: f.orgId,
+            userId: p.userId,
+            type: 'opportunity',
+            tenderId: r.tenderId,
+            title: `Kan gjelde et prosjekt du følger: ${r.title}`,
+            body: `Ny konkurranse${r.buyerName ? ` fra ${r.buyerName}` : ''}. Den kan gjelde «${f.title}», men det er vår vurdering – sjekk selv.`,
+            url: `/app/anbud/${r.tenderId}`,
+            dedupeKey: `opp-related:${f.id}:${r.tenderId}`,
+          });
+        }
+      }
+    }
+  }
+
+  const fresh = (await sql`
+    select id, region_codes, industry_ids from opportunity_signals where first_seen_at > now() - interval '24 hours' and country_code = 'NO'
+  `) as unknown as { id: string; regionCodes: string[]; industryIds: string[] }[];
+  if (fresh.length) {
+    const profiles = (await sql`select org_id, industries, regions from company_profiles`) as unknown as { orgId: string; industries: string[]; regions: string[] }[];
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo' }).format(new Date());
+    for (const prof of profiles) {
+      if (!allowed(prof.orgId)) continue;
+      const n = fresh.filter((g) => signalMatch(prof, g).score !== null).length;
+      if (!n) continue;
+      for (const p of byOrg.get(prof.orgId) ?? []) {
+        if (!p.newMatches) continue;
+        items.push({
+          orgId: prof.orgId,
+          userId: p.userId,
+          type: 'opportunity',
+          tenderId: null,
+          title: n === 1 ? 'Ny politisk sak som passer profilen' : `${n} nye politiske saker som passer profilen`,
+          body: 'Saker om fremtidige prosjekter fra kommuner og fylker, før de eventuelt blir anbud.',
+          url: '/app/fremtidige',
+          dedupeKey: `opp-new:${day}`,
+        });
+      }
+    }
+  }
+  return insertNotifications(items);
+}
+
 export async function runNotificationCycle(): Promise<Record<string, number>> {
   const ents = await entitlementsByOrg();
   const prefs = await memberPrefs();
@@ -513,6 +606,7 @@ export async function runNotificationCycle(): Promise<Record<string, number>> {
     deadlines: await generateDeadlineReminders(ents, prefs),
     updates: await generateUpdateAlerts(ents, prefs),
     competitors: await generateCompetitorAlerts(ents, prefs),
+    opportunities: await generateOpportunityAlerts(ents, prefs),
     trialReminders: await generateTrialReminders(),
     emails: 0,
   };

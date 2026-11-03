@@ -7,7 +7,7 @@ import type { OrgContext } from '@/server/http';
 import { env } from '@/lib/env';
 import { AIError, estimateCostUsd, getProvider, type Effort, type JsonSchema, type ModelTier } from './provider';
 import { PROMPT_VERSION } from './prompts';
-import { quotaFor, recordUsage, usageSummary, type AiUsageKind } from './usage';
+import { currentPeriod, quotaFor, recordUsage, usageSummary, ANALYSIS_KINDS, type AiUsageKind } from './usage';
 
 export type AiKind = 'tender_analysis' | 'match_explanation' | 'profit_analysis' | 'bid_checklist' | 'bid_structure' | 'bid_draft' | 'bid_review' | 'weekly_overview';
 
@@ -77,6 +77,12 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
   if (quota.limit <= 0) return { ok: false, code: 'quota', error: 'AI-funksjonen er ikke med i planen din.' };
   if (quota.used >= quota.limit) {
     return { ok: false, code: 'quota', error: `Månedens AI-kvote (${quota.limit}) er brukt opp. Den fornyes den 1. i neste måned.` };
+  }
+  // Gratisplanen: bekreftet e-post, kvoten gjelder per bruker på tvers av organisasjoner, og bare
+  // én AI-forespørsel om gangen (hindrer omgåelse med flere kontoer/organisasjoner og samtidige klikk).
+  if (input.org.entitlements.plan === 'free') {
+    const free = await freeAiCheck(input.userId, quota.limit);
+    if (free) return free;
   }
   if (env.AI_MONTHLY_COST_LIMIT_USD_PER_ORG > 0 && summary.costUsd >= env.AI_MONTHLY_COST_LIMIT_USD_PER_ORG) {
     log.warn('ai_cost_limit_reached', { org: input.org.id, costUsd: summary.costUsd });
@@ -183,4 +189,24 @@ async function storeFailure(
   } catch (err) {
     log.error('ai_failure_store_failed', { err });
   }
+}
+
+/** Ekstra vern for gratisplanen. Returnerer en feil, eller null når forespørselen kan gå videre. */
+async function freeAiCheck(userId: string, limit: number): Promise<{ ok: false; code: 'quota' | 'rate_limited'; error: string } | null> {
+  const sql = systemSql();
+  const [u] = (await sql`select email_verified_at from users where id = ${userId}`) as unknown as { emailVerifiedAt: Date | null }[];
+  if (!u?.emailVerifiedAt) {
+    return { ok: false, code: 'quota', error: 'Bekreft e-postadressen din for å bruke AI-sammendraget i gratisplanen. Lenken står i e-posten vi sendte.' };
+  }
+  const [row] = (await sql`
+    select count(*)::int as n from usage_records
+    where user_id = ${userId} and period = ${currentPeriod()} and not cached and kind in ${sql(ANALYSIS_KINDS)}
+  `) as unknown as { n: number }[];
+  if ((row?.n ?? 0) >= limit) {
+    return { ok: false, code: 'quota', error: `Gratisplanen har ${limit} AI-sammendrag per måned, og det er brukt. Det fornyes den 1. i neste måned – eller oppgrader for flere.` };
+  }
+  if (!(await rateLimit(`ai-free:${userId}`, 1, 300))) {
+    return { ok: false, code: 'rate_limited', error: 'En AI-forespørsel er allerede i gang. Vent litt og prøv igjen.' };
+  }
+  return null;
 }

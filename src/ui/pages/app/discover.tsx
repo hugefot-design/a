@@ -156,6 +156,8 @@ export interface DiscoverProps {
   removedAdvanced: boolean;
   canSaveSearch: boolean;
   savedSearchLimitReached: boolean;
+  /** Dagens søk for planer med grense (gratis). */
+  searchQuota?: { used: number; limit: number; unlimited: boolean };
 }
 
 export function DiscoverPage(props: DiscoverProps) {
@@ -166,7 +168,17 @@ export function DiscoverPage(props: DiscoverProps) {
   return (
     <AppShell wide>
       <div className="mb-6 space-y-3">
-        <h1 className="font-serif text-[28px] font-semibold text-navy-900">Finn anbud</h1>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h1 className="font-serif text-[28px] font-semibold text-navy-900">Finn anbud</h1>
+          {props.searchQuota && !props.searchQuota.unlimited ? (
+            <p className="text-[13px] text-muted">
+              <span className="font-mono font-medium text-navy-950">
+                {props.searchQuota.used} av {props.searchQuota.limit}
+              </span>{' '}
+              søk brukt i dag · <a href="/app/abonnement">Ubegrenset med en betalt plan</a>
+            </p>
+          ) : null}
+        </div>
         <form method="get" action="/app/anbud" role="search" className="flex flex-col gap-2 sm:flex-row">
           <label htmlFor="nl" className="sr-only">
             Beskriv hva du leter etter

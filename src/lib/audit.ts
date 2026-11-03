@@ -38,6 +38,7 @@ export type AuditAction =
   | 'profit.economics_updated'
   | 'profit.capacity_updated'
   | 'profit.calculation_saved'
+  | 'opportunity.followed'
   | 'profit.calculation_deleted'
   | 'partner.profile_published'
   | 'partner.profile_hidden'

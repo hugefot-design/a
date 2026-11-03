@@ -179,8 +179,14 @@ test('funksjoner låses etter plan på serveren', async () => {
   const tenderId = await tenderIdFor('manual', n.sourceNoticeId);
 
   const cf = await clientFor(server.base, free);
+  // Gratisplanen har 1 AI-sammendrag per måned: det første går, det neste stoppes på serveren.
   await cf.post(`/app/anbud/${tenderId}/analyse`, {}, { from: `/app/anbud/${tenderId}` });
-  assert.equal((await systemSql()`select 1 from ai_analyses where tender_id = ${tenderId} and created_by = ${free.user.id}`).length, 0);
+  assert.equal((await systemSql()`select 1 from ai_analyses where tender_id = ${tenderId} and created_by = ${free.user.id}`).length, 1);
+  const n2 = makeNotice();
+  await ingest([n2]);
+  const tender2 = await tenderIdFor('manual', n2.sourceNoticeId);
+  await cf.post(`/app/anbud/${tender2}/analyse`, {}, { from: `/app/anbud/${tender2}` });
+  assert.equal((await systemSql()`select 1 from ai_analyses where tender_id = ${tender2} and created_by = ${free.user.id}`).length, 0);
 
   const cp = await clientFor(server.base, pro);
   const bids = await cp.get('/app/tilbud');

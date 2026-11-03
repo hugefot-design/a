@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { first } from '@/lib/db';
 import { env, integrationStatus } from '@/lib/env';
 import { rateLimit } from '@/lib/rate-limit';
-import { createOrganization, orgNumberSchema, switchOrganization } from '@/domain/org/org';
+import { consumeSearch, searchKey, searchQuota } from '@/domain/billing/quota';
+import { createOrganization, OrgLimitError, orgNumberSchema, switchOrganization } from '@/domain/org/org';
 import { afterProfileSaved, getProfile, profileFormFromData, profileFormSchema, saveProfile } from '@/domain/profile/profile';
 import { zodErrors } from '@/domain/auth/auth';
 import { queryFromParams, queryToParams, restrictQuery, sanitizeQuery, type TenderQuery } from '@/domain/search/filters';
@@ -25,6 +26,7 @@ import { render } from '@/server/render';
 import type { Router } from '@/server/router';
 import { DashboardPage } from '@/ui/pages/app/dashboard';
 import { DiscoverPage } from '@/ui/pages/app/discover';
+import { LimitReachedPage } from '@/ui/pages/system';
 import { AnalysisPage, TenderPage } from '@/ui/pages/app/tender';
 import { calculationBadge } from '@/domain/profit/service';
 import { NotificationsPage, SavedSearchesPage, SavedTendersPage, type NotificationRow, type Prefs } from '@/ui/pages/app/lists';
@@ -48,7 +50,21 @@ export function registerCoreAppRoutes(router: Router): void {
     const { org } = requireOrg(ctx);
     const data = await ctx.tenant((tx) => loadDashboard(tx, org));
     const aiAvailable = integrationStatus().ai && org.entitlements.aiFullAnalysis;
-    return render(ctx, <DashboardPage data={data} aiAvailable={aiAvailable} firstVisit={ctx.query.get('velkommen') === '1'} />, { title: 'Oversikt' });
+    let freeUsage = null;
+    if (org.entitlements.plan === 'free') {
+      const [sq, usage] = await Promise.all([searchQuota(org.id, ctx.user!.id, org.entitlements), ctx.tenant((tx) => usageSummary(tx, org))]);
+      freeUsage = {
+        searchesUsed: sq.used,
+        searchesLimit: sq.limit,
+        bookmarksUsed: data.savedCount,
+        bookmarksLimit: org.entitlements.maxBookmarks,
+        aiUsed: usage.analyses,
+        aiLimit: usage.analysesLimit,
+      };
+    }
+    return render(ctx, <DashboardPage data={data} aiAvailable={aiAvailable} firstVisit={ctx.query.get('velkommen') === '1'} freeUsage={freeUsage} />, {
+      title: 'Oversikt',
+    });
   });
 
   router.post('/app/ukesoversikt', 'org', async (ctx) => {
@@ -103,7 +119,12 @@ export function registerCoreAppRoutes(router: Router): void {
     const parsed = z.object({ name: z.string().trim().min(1, 'Skriv inn firmanavnet.').max(160), orgNumber: orgNumberSchema }).safeParse(values);
     if (!parsed.success) return render(ctx, <OnboardingOrgPage errors={zodErrors(parsed.error)} values={values} />, { title: 'Kom i gang', status: 422 });
     if (!(await rateLimit(`create-org:${ctx.user!.id}`, 5, 3600))) throw new HttpError(429, 'For mange forsøk. Prøv igjen senere.');
-    await createOrganization(ctx.user!, { name: parsed.data.name, orgNumber: parsed.data.orgNumber }, ctx.ipHash);
+    try {
+      await createOrganization(ctx.user!, { name: parsed.data.name, orgNumber: parsed.data.orgNumber }, ctx.ipHash);
+    } catch (err) {
+      if (err instanceof OrgLimitError) return render(ctx, <OnboardingOrgPage errors={{ name: err.message }} values={values} />, { title: 'Kom i gang', status: 422 });
+      throw err;
+    }
     return redirect('/app/onboarding');
   });
 
@@ -145,6 +166,17 @@ export function registerCoreAppRoutes(router: Router): void {
       query = sanitizeQuery({ ...query, ...parsed.query, page: query.page, sort: query.sort });
     }
     const { query: effective, removed } = restrictQuery(query, org.entitlements.advancedSearch);
+    // Gratisgrensen for søk håndheves her, før søket kjøres.
+    const key = searchKey(effective, nl);
+    const searchQuotaState = key
+      ? await consumeSearch(org.id, ctx.user!.id, org.entitlements, key)
+      : { ...(await searchQuota(org.id, ctx.user!.id, org.entitlements)), allowed: true };
+    if (!searchQuotaState.allowed) {
+      return render(ctx, <LimitReachedPage kind="search" used={searchQuotaState.used} limit={searchQuotaState.limit} />, {
+        title: 'Dagens søk er brukt opp',
+        status: 402,
+      });
+    }
     const matching = org.entitlements.matching;
     const results = await ctx.tenant(async (tx) => {
       const r = await searchTenders(tx, effective, { orgId: org.id, matching });
@@ -172,6 +204,7 @@ export function registerCoreAppRoutes(router: Router): void {
         removedAdvanced={removed}
         canSaveSearch={savedCount < org.entitlements.maxSavedSearches}
         savedSearchLimitReached={org.entitlements.maxSavedSearches > 0 && savedCount >= org.entitlements.maxSavedSearches}
+        searchQuota={searchQuotaState}
       />,
       { title: 'Finn anbud' },
     );

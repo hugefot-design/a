@@ -19,6 +19,7 @@ import { HttpError, redirect, serializeCookie } from '@/server/http';
 import { render } from '@/server/render';
 import type { Router } from '@/server/router';
 import { BillingPage } from '@/ui/pages/app/billing';
+import { searchQuota } from '@/domain/billing/quota';
 import { SettingsPage, type SettingsProps } from '@/ui/pages/app/settings';
 import { formStr, param, requireManager, requireOrg } from '../helpers';
 
@@ -184,6 +185,7 @@ export function registerAccountRoutes(router: Router): void {
           checkout={ctx.query.get('checkout')}
           bookmarkCount={data.counts.bookmarks}
           memberCount={data.counts.members}
+          searchQuota={await searchQuota(org.id, ctx.user!.id, org.entitlements)}
         />,
         { title: 'Abonnement' },
       );

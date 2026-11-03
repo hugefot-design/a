@@ -7,6 +7,8 @@ export type PaidPlanId = 'starter' | 'professional' | 'business';
 
 export interface Entitlements {
   plan: PlanId;
+  /** Distinkte søk per dag (filtre/fritekst). Å bla i en liste eller gjenta et søk teller ikke. */
+  searchesPerDay: number;
   advancedSearch: boolean;
   maxBookmarks: number;
   maxSavedSearches: number;
@@ -28,6 +30,8 @@ export interface Entitlements {
   partnerListing: boolean;
   /** Kan søke etter partnere og sende forespørsler. */
   partnerSearch: boolean;
+  /** Future Opportunities: planlagte anskaffelser og politiske saker før de blir anbud (Enterprise). */
+  futureOpportunities: boolean;
 }
 
 export interface PlanInfo {
@@ -39,22 +43,23 @@ export interface PlanInfo {
   entitlements: Entitlements;
 }
 
-const UNLIMITED = 1_000_000;
+export const UNLIMITED = 1_000_000;
 
 export const PLANS: Record<PlanId, PlanInfo> = {
   free: {
     id: 'free',
     name: 'Gratis',
     priceNok: 0,
-    tagline: 'Etter prøveperioden, eller for å se deg rundt.',
-    features: ['Søk i kunngjøringer', 'Inntil 5 lagrede anbud'],
+    tagline: 'Smak på produktet med ekte anbud fra Doffin og TED.',
+    features: ['Ekte anbud fra Doffin og TED', '5 søk per dag', '3 lagrede anbud', '1 AI-sammendrag per måned', 'Ingen automatiske varsler'],
     entitlements: {
       plan: 'free',
+      searchesPerDay: 5,
       advancedSearch: false,
-      maxBookmarks: 5,
+      maxBookmarks: 3,
       maxSavedSearches: 0,
       alerts: 'none',
-      aiAnalysesPerMonth: 0,
+      aiAnalysesPerMonth: 1,
       aiFullAnalysis: false,
       documentUpload: false,
       matching: false,
@@ -67,6 +72,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       profitAI: false,
       partnerListing: false,
       partnerSearch: false,
+      futureOpportunities: false,
     },
   },
   starter: {
@@ -84,6 +90,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     ],
     entitlements: {
       plan: 'starter',
+      searchesPerDay: UNLIMITED,
       advancedSearch: false,
       maxBookmarks: 25,
       maxSavedSearches: 3,
@@ -101,6 +108,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       profitAI: false,
       partnerListing: true,
       partnerSearch: false,
+      futureOpportunities: false,
     },
   },
   professional: {
@@ -119,6 +127,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     ],
     entitlements: {
       plan: 'professional',
+      searchesPerDay: UNLIMITED,
       advancedSearch: true,
       maxBookmarks: 200,
       maxSavedSearches: 20,
@@ -136,6 +145,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       profitAI: false,
       partnerListing: true,
       partnerSearch: false,
+      futureOpportunities: false,
     },
   },
   business: {
@@ -155,6 +165,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     ],
     entitlements: {
       plan: 'business',
+      searchesPerDay: UNLIMITED,
       advancedSearch: true,
       maxBookmarks: UNLIMITED,
       maxSavedSearches: 100,
@@ -172,16 +183,24 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       profitAI: true,
       partnerListing: true,
       partnerSearch: true,
+      futureOpportunities: false,
     },
   },
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
     priceNok: null,
-    tagline: 'Egne avtaler for større organisasjoner.',
-    features: ['Alt i Bedrift', 'Avtalte grenser for brukere og AI-bruk', 'Fakturaavtale'],
+    tagline: 'For større virksomheter. Pris etter avtale.',
+    features: [
+      'Alt i Bedrift',
+      'Future Opportunities: planlagte anskaffelser og politiske saker før de blir anbud',
+      'Følg prosjekter og få varsel når de utlyses',
+      'Avtalte grenser for brukere og AI-bruk',
+      'Prioritert støtte og fakturaavtale',
+    ],
     entitlements: {
       plan: 'enterprise',
+      searchesPerDay: UNLIMITED,
       advancedSearch: true,
       maxBookmarks: UNLIMITED,
       maxSavedSearches: UNLIMITED,
@@ -199,6 +218,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       profitAI: true,
       partnerListing: true,
       partnerSearch: true,
+      futureOpportunities: true,
     },
   },
 };
@@ -321,7 +341,8 @@ export type Feature =
   | 'profitCalculator'
   | 'profitAI'
   | 'partnerListing'
-  | 'partnerSearch';
+  | 'partnerSearch'
+  | 'futureOpportunities';
 
 export const FEATURE_LABELS: Record<Feature, { name: string; minPlan: PlanId }> = {
   advancedSearch: { name: 'Avansert søk', minPlan: 'professional' },
@@ -335,4 +356,5 @@ export const FEATURE_LABELS: Record<Feature, { name: string; minPlan: PlanId }> 
   profitAI: { name: 'Profit Intelligence med AI', minPlan: 'business' },
   partnerListing: { name: 'Partnerprofil', minPlan: 'starter' },
   partnerSearch: { name: 'Søk etter anbudspartnere', minPlan: 'business' },
+  futureOpportunities: { name: 'Future Opportunities', minPlan: 'enterprise' },
 };

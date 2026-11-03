@@ -11,6 +11,9 @@ export type AiUsageKind =
   | 'ai_bid_review'
   | 'ai_weekly_overview';
 
+/** AI-bruk som teller mot «AI-analyser per måned». */
+export const ANALYSIS_KINDS = ['ai_tender_analysis', 'ai_fit_assessment', 'ai_profit_analysis', 'ai_weekly_overview', 'ai_bid_checklist', 'ai_bid_structure'];
+
 export function currentPeriod(now = new Date()): string {
   return now.toISOString().slice(0, 7);
 }
@@ -27,7 +30,7 @@ export interface UsageSummary {
 export async function usageSummary(tx: Tx, org: OrgContext): Promise<UsageSummary> {
   const [row] = (await tx`
     select
-      coalesce(sum(quantity) filter (where kind in ('ai_tender_analysis', 'ai_fit_assessment', 'ai_profit_analysis', 'ai_weekly_overview', 'ai_bid_checklist', 'ai_bid_structure') and not cached), 0)::int as analyses,
+      coalesce(sum(quantity) filter (where kind in ${tx(ANALYSIS_KINDS)} and not cached), 0)::int as analyses,
       coalesce(sum(quantity) filter (where kind in ('ai_bid_draft', 'ai_bid_review') and not cached), 0)::int as drafts,
       coalesce(sum(cost_usd), 0)::float8 as cost_usd
     from usage_records where org_id = ${org.id} and period = ${currentPeriod()}

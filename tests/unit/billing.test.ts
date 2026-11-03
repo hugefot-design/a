@@ -35,7 +35,7 @@ test('prøveperiode og manuell avtale utløper', () => {
 });
 
 test('rettigheter per plan', () => {
-  assert.equal(entitlementsFor('free').aiAnalysesPerMonth, 0);
+  assert.equal(entitlementsFor('free').aiAnalysesPerMonth, 1); // gratisplanen: 1 AI-sammendrag per måned
   assert.equal(entitlementsFor('starter').advancedSearch, false);
   assert.equal(entitlementsFor('professional').matching, true);
   assert.equal(entitlementsFor('professional').bidAssistant, false);

@@ -121,7 +121,7 @@ export interface TestAccount {
   orgId: string;
 }
 
-const DEFAULT_PROFILE = {
+export const DEFAULT_PROFILE = {
   companyName: 'Testbedrift AS (test)',
   orgNumber: '',
   description: 'Fiktiv testbedrift.',

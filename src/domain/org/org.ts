@@ -59,7 +59,16 @@ export async function loadOrgContext(user: AuthUser): Promise<OrgContext | null>
   };
 }
 
-/** Oppretter organisasjon med eier, prøveperiode og standard varselinnstillinger. */
+/** Maks antall organisasjoner én bruker kan opprette (hindrer misbruk av gratisgrensene). */
+export const MAX_ORGS_CREATED_PER_USER = 5;
+
+export class OrgLimitError extends Error {}
+
+/**
+ * Oppretter organisasjon med eier og standard varselinnstillinger. Prøveperioden gis bare én gang
+ * per bruker: en ny organisasjon fra en bruker som allerede har hatt prøveperiode, starter på
+ * gratisplanen (ellers kunne man fått evig prøveperiode ved å opprette nye organisasjoner).
+ */
 export async function createOrganization(
   user: AuthUser,
   input: { name: string; orgNumber: string | null },
@@ -67,15 +76,27 @@ export async function createOrganization(
 ): Promise<string> {
   const sql = systemSql();
   const orgId = await sql.begin(async (tx) => {
+    const [me] = (await tx`select trial_started_at from users where id = ${user.id} for update`) as unknown as { trialStartedAt: Date | null }[];
+    const [created] = (await tx`select count(*)::int as n from organizations where created_by = ${user.id}`) as unknown as { n: number }[];
+    if ((created?.n ?? 0) >= MAX_ORGS_CREATED_PER_USER) {
+      throw new OrgLimitError(`Du kan opprette inntil ${MAX_ORGS_CREATED_PER_USER} organisasjoner. Kontakt oss hvis du trenger flere.`);
+    }
+    const trial = !me?.trialStartedAt;
     const [org] = (await tx`
       insert into organizations (name, org_number, created_by) values (${input.name}, ${input.orgNumber}, ${user.id})
       returning id
     `) as unknown as { id: string }[];
     await tx`insert into organization_members (org_id, user_id, role) values (${org!.id}, ${user.id}, 'owner')`;
-    await tx`
-      insert into subscriptions (org_id, plan, status, source, trial_ends_at)
-      values (${org!.id}, ${TRIAL_PLAN}, 'trialing', 'trial', now() + make_interval(days => ${env.TRIAL_DAYS}))
-    `;
+    if (trial) {
+      await tx`
+        insert into subscriptions (org_id, plan, status, source, trial_ends_at)
+        values (${org!.id}, ${TRIAL_PLAN}, 'trialing', 'trial', now() + make_interval(days => ${env.TRIAL_DAYS}))
+      `;
+      await tx`update users set trial_started_at = now() where id = ${user.id}`;
+    } else {
+      // Prøveperioden er brukt: organisasjonen starter på gratisplanen.
+      await tx`insert into subscriptions (org_id, plan, status, source, trial_ends_at) values (${org!.id}, ${TRIAL_PLAN}, 'trialing', 'trial', now())`;
+    }
     await tx`insert into notification_preferences (user_id, org_id) values (${user.id}, ${org!.id}) on conflict do nothing`;
     await tx`update users set current_org_id = ${org!.id} where id = ${user.id}`;
     return org!.id;

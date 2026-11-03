@@ -60,6 +60,8 @@ async function scheduleTick(): Promise<void> {
   if (env.DOFFIN_ENRICH_XML && env.DOFFIN_API_KEY && (await claimScheduledTask('enrich-doffin', env.DOFFIN_ENRICH_INTERVAL_MINUTES))) {
     await enqueueJob('enrich_doffin', {}, { dedupeKey: 'enrich:doffin', maxAttempts: 1 });
   }
+  // Future Opportunities: politiske saker fra eInnsyn to ganger i døgnet (få, høflige kall).
+  if (await claimScheduledTask('ingest-einnsyn', 12 * 60)) await runScheduledTask('ingest-einnsyn', 'schedule');
   if (await claimScheduledTask('notifications', 15)) await enqueueJob('generate_notifications', {}, { dedupeKey: 'generate_notifications' });
   if (await claimScheduledTask('weekly-check', 60)) await runScheduledTask('weekly', 'schedule');
   if (await claimScheduledTask('refresh-matches', 24 * 60)) await runScheduledTask('refresh-matches', 'schedule');

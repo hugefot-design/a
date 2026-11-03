@@ -190,7 +190,7 @@ export function faqItems(o: { trialDays: number; sources: string }): [string, Re
     ['Hvor kommer anbudene fra?', `Fra ${o.sources}. Hver kunngjøring lenker til originalen, så dere alltid kan sjekke kilden.`],
     [
       'Hva skjer etter prøveperioden?',
-      `Prøveperioden varer i ${o.trialDays} dager med alt i Profesjonell. Etterpå går kontoen over til gratisnivået med søk og inntil 5 lagrede anbud. Dere velger selv om dere vil betale – ingenting trekkes automatisk.`,
+      `Prøveperioden varer i ${o.trialDays} dager med alt i Profesjonell. Etterpå går kontoen over til gratisplanen: ekte anbud, 5 søk per dag, 3 lagrede anbud og 1 AI-sammendrag per måned. Dere velger selv om dere vil betale – ingenting trekkes automatisk.`,
     ],
     ['Kan vi si opp når som helst?', 'Ja. Abonnementet løper ut perioden dere har betalt for, og fornyes ikke etter det.'],
     ['Er AI-analysen alltid riktig?', 'Nei. Den er et hjelpemiddel. Hver opplysning har kilde, og konkurransegrunnlaget gjelder alltid ved avvik.'],

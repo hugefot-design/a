@@ -15,6 +15,7 @@ import {
   LuSearch,
   LuSettings,
   LuShield,
+  LuTelescope,
   LuUsers,
 } from 'react-icons/lu';
 import { useUi } from './context';
@@ -198,6 +199,8 @@ interface NavItem {
   icon: typeof LuSearch;
   match?: string;
   badge?: number;
+  /** Liten etikett, f.eks. «Enterprise» for en funksjon planen ikke har. */
+  tag?: string;
 }
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
@@ -218,15 +221,22 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
           {item.badge > 99 ? '99+' : item.badge}
         </span>
       ) : null}
+      {item.tag ? <span className="rounded border border-white/20 px-1 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-navy-200">{item.tag}</span> : null}
     </a>
   );
 }
 
 function AppNav() {
-  const { path, unreadCount, user } = useUi();
+  const { path, unreadCount, user, org } = useUi();
   const main: NavItem[] = [
     { href: '/app', label: 'Oversikt', icon: LuLayoutDashboard, match: '/app' },
     { href: '/app/anbud', label: 'Finn anbud', icon: LuSearch },
+    {
+      href: '/app/fremtidige',
+      label: 'Fremtidige prosjekter',
+      icon: LuTelescope,
+      tag: org?.entitlements.futureOpportunities ? undefined : 'Enterprise',
+    },
     { href: '/app/lagret', label: 'Lagrede anbud', icon: LuBookmark },
     { href: '/app/sok', label: 'Lagrede søk', icon: LuSave },
     { href: '/app/lonnsomhet', label: 'Lønnsomhet', icon: LuCalculator },

@@ -141,6 +141,7 @@ export const RETENTION: RetentionRule[] = [
   { what: 'Lenker for e-postbekreftelse og nytt passord', how: '7 dager etter at lenken utløp.' },
   { what: 'Varsler i appen', how: 'Leste etter 180 dager, alle etter 365 dager.' },
   { what: 'E-postlogg (hva som er sendt)', how: '90 dager.' },
+  { what: 'Teller for gratisgrensen på søk (hvilke søk som er brukt, ikke hva det ble søkt på)', how: '8 dager.' },
   { what: 'Revisjonslogg og søkestatistikk', how: '365 dager.' },
   { what: 'Partnerforespørsler', how: 'Ubesvarte etter 180 dager, avslåtte og trukne etter 12 måneder, godtatte etter 24 måneder.' },
   { what: 'Invitasjoner', how: '90 dager etter at de ble brukt, trukket tilbake eller utløp.' },

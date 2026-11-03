@@ -23,7 +23,10 @@ export async function toggleBookmark(
   }
   const [count] = (await tx`select count(*)::int as n from bookmarks where org_id = ${org.id}`) as unknown as { n: number }[];
   if ((count?.n ?? 0) >= org.entitlements.maxBookmarks) {
-    return { ok: false, error: `Planen din har plass til ${org.entitlements.maxBookmarks} lagrede anbud. Fjern noen eller oppgrader.` };
+    return {
+      ok: false,
+      error: `Planen din har plass til ${org.entitlements.maxBookmarks} lagrede anbud. Fjern et anbud, eller oppgrader under Abonnement for å lagre flere.`,
+    };
   }
   const tender = await tx`select 1 from tenders where id = ${tenderId}`;
   if (!tender.length) return { ok: false, error: 'Fant ikke kunngjøringen.' };

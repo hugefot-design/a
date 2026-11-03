@@ -7,11 +7,12 @@ import { log } from '@/lib/logger';
 import { withTaskLock } from '@/lib/jobs';
 import { runConnector } from '@/connectors';
 import { enrichDoffinXml } from '@/connectors/doffin-enrich';
+import { ingestEinnsyn } from '@/connectors/einnsyn';
 import { recomputeMatchesForTenders } from '@/domain/matching/service';
 import { reconcileStripeSubscriptions } from '@/domain/billing/stripe';
 import { generateWeeklySummaries, runNotificationCycle } from '@/domain/notifications/engine';
 
-export const SCHEDULED_TASKS = ['ingest-ted', 'ingest-doffin', 'enrich-doffin', 'notifications', 'emails', 'weekly', 'retention', 'refresh-matches', 'reconcile-stripe'] as const;
+export const SCHEDULED_TASKS = ['ingest-ted', 'ingest-doffin', 'enrich-doffin', 'ingest-einnsyn', 'notifications', 'emails', 'weekly', 'retention', 'refresh-matches', 'reconcile-stripe'] as const;
 export type ScheduledTask = (typeof SCHEDULED_TASKS)[number];
 
 /** Oppbevaringsregler (personvern og databasestørrelse). Dokumentert i docs/PERSONVERN.md. */
@@ -24,6 +25,7 @@ export async function applyRetention(): Promise<Record<string, number>> {
   await run('sessions', sql`delete from sessions where expires_at < now() returning 1`);
   await run('email_tokens', sql`delete from email_tokens where expires_at < now() - interval '7 days' returning 1`);
   await run('rate_limits', sql`delete from rate_limits where window_start < now() - interval '2 days' returning 1`);
+  await run('search_usage', sql`delete from search_usage where day < (now() at time zone 'Europe/Oslo')::date - 8 returning 1`);
   await run('notifications', sql`delete from notifications where (read_at is not null and created_at < now() - interval '180 days') or created_at < now() - interval '365 days' returning 1`);
   await run('email_outbox', sql`delete from email_outbox where created_at < now() - interval '90 days' returning 1`);
   await run('audit_logs', sql`delete from audit_logs where created_at < now() - interval '365 days' returning 1`);
@@ -51,6 +53,7 @@ const LOCK_TTL_MINUTES: Record<ScheduledTask, number> = {
   'ingest-ted': 60,
   'ingest-doffin': 120,
   'enrich-doffin': 30,
+  'ingest-einnsyn': 30,
   notifications: 15,
   emails: 10,
   weekly: 30,
@@ -68,6 +71,8 @@ async function runUnlocked(task: ScheduledTask, trigger: 'schedule' | 'manual' |
     case 'enrich-doffin':
       // Gjør ingenting før DOFFIN_ENRICH_XML er slått på (gjelder også /api/cron).
       return enrichDoffinXml({ trigger, triggeredBy });
+    case 'ingest-einnsyn':
+      return ingestEinnsyn();
     case 'notifications':
       return runNotificationCycle();
     case 'emails':

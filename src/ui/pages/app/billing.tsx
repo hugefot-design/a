@@ -15,6 +15,29 @@ export interface BillingProps {
   checkout: string | null;
   bookmarkCount: number;
   memberCount: number;
+  searchQuota: { used: number; limit: number; unlimited: boolean };
+}
+
+/** Én linje med forbruk og en tynn måler når det finnes en grense. */
+function UsageRow({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const unlimited = limit >= 1_000_000;
+  const pct = unlimited || limit <= 0 ? 0 : Math.min(100, (used / limit) * 100);
+  return (
+    <div>
+      <div className="flex justify-between gap-3">
+        <dt className="text-muted">{label}</dt>
+        <dd className="font-mono text-[13px] text-ink">
+          {formatInt(used)}
+          {unlimited ? ' · ubegrenset' : ` av ${formatInt(limit)}`}
+        </dd>
+      </div>
+      {!unlimited && limit > 0 ? (
+        <div className="mt-1 h-1.5 rounded-full bg-navy-100" aria-hidden>
+          <div className={cn('h-1.5 rounded-full', pct >= 100 ? 'bg-urgent' : 'bg-navy-600')} style={{ width: `${pct}%` }} />
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function BillingPage(p: BillingProps) {
@@ -83,39 +106,24 @@ export function BillingPage(p: BillingProps) {
           ) : null}
         </Panel>
         <Panel>
-          <PanelHeader title="Bruk denne måneden" />
-          <dl className="space-y-3 p-5 text-[14px]">
-            <div className="flex justify-between">
-              <dt className="text-muted">AI-analyser</dt>
-              <dd className="num">
-                {formatInt(p.usage.analyses)} av {formatInt(p.usage.analysesLimit)}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted">AI-utkast</dt>
-              <dd className="num">
-                {formatInt(p.usage.drafts)} av {formatInt(p.usage.draftsLimit)}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted">Lagrede anbud</dt>
-              <dd className="num">
-                {formatInt(p.bookmarkCount)}
-                {org!.entitlements.maxBookmarks < 1_000_000 ? ` av ${formatInt(org!.entitlements.maxBookmarks)}` : ''}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted">Brukere</dt>
-              <dd className="num">
-                {formatInt(p.memberCount)} av {formatInt(org!.entitlements.maxMembers)}
-              </dd>
-            </div>
+          <PanelHeader title="Forbruk" description="Søk telles per dag, AI per måned." />
+          <dl className="space-y-3.5 p-5 text-[14px]">
+            {!p.searchQuota.unlimited ? <UsageRow label="Søk i dag" used={p.searchQuota.used} limit={p.searchQuota.limit} /> : null}
+            <UsageRow label="AI-analyser" used={p.usage.analyses} limit={p.usage.analysesLimit} />
+            {p.usage.draftsLimit > 0 ? <UsageRow label="AI-utkast" used={p.usage.drafts} limit={p.usage.draftsLimit} /> : null}
+            <UsageRow label="Lagrede anbud" used={p.bookmarkCount} limit={org!.entitlements.maxBookmarks} />
+            <UsageRow label="Brukere" used={p.memberCount} limit={org!.entitlements.maxMembers} />
           </dl>
+          {org!.plan === 'free' ? (
+            <p className="border-t border-line px-5 py-3 text-[13px] text-muted">
+              Gratisplanen har ekte anbud fra Doffin og TED, men ingen automatiske varsler, Profit Intelligence eller Future Opportunities.
+            </p>
+          ) : null}
         </Panel>
       </div>
 
       <h2 className="mb-3 font-serif text-[20px] font-semibold text-navy-900">Planer</h2>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {PAID_PLANS.map((id: PaidPlanId) => {
           const plan = PLANS[id];
           const current = org!.plan === id && b.status !== 'trial';
@@ -155,10 +163,30 @@ export function BillingPage(p: BillingProps) {
             </Panel>
           );
         })}
+        <Panel className={cn('flex flex-col border-dashed p-5', org!.plan === 'enterprise' && 'border-solid border-navy-900')}>
+          <div className="flex items-center justify-between">
+            <h3 className="text-[16px] font-semibold text-navy-900">{PLANS.enterprise.name}</h3>
+            {org!.plan === 'enterprise' ? <Badge tone="ok">Din plan</Badge> : null}
+          </div>
+          <p className="mt-2 text-[20px] font-semibold text-navy-900">Pris etter avtale</p>
+          <p className="mt-1 text-[13px] text-muted">{PLANS.enterprise.tagline}</p>
+          <ul className="mt-4 flex-1 space-y-1.5 text-[14px]">
+            {PLANS.enterprise.features.map((f) => (
+              <li key={f} className="flex gap-2">
+                <span className="text-ok" aria-hidden>
+                  ✓
+                </span>
+                {f}
+              </li>
+            ))}
+          </ul>
+          {org!.plan === 'enterprise' ? null : (
+            <a href="/kontakt" className="mt-5 inline-flex h-10 w-full items-center justify-center rounded-md border border-line-strong text-[14px] font-semibold text-navy-900 no-underline hover:bg-paper">
+              Kontakt oss
+            </a>
+          )}
+        </Panel>
       </div>
-      <p className="mt-4 text-[13px] text-muted">
-        Trenger dere flere brukere, høyere AI-grenser eller faktura? <a href="/kontakt">Kontakt oss om Enterprise</a>.
-      </p>
 
       {p.payments.length ? (
         <Panel className="mt-6">
