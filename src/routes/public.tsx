@@ -3,8 +3,7 @@ import { systemSql } from '@/lib/db';
 import { env, isProd } from '@/lib/env';
 import { rateLimit } from '@/lib/rate-limit';
 import { queueEmail } from '@/lib/email';
-import { CERTIFICATIONS } from '@/domain/reference';
-import { coverageStats } from '@/domain/tenders/queries';
+import { marketSnapshot, noticeSpecimen } from '@/domain/tenders/market';
 import { contactNotificationTemplate } from '@/domain/email/templates';
 import { zodErrors } from '@/domain/auth/auth';
 import { companyInfo, isPlaceholder, LEGAL_DOCS } from '@/domain/legal/legal';
@@ -27,41 +26,14 @@ import {
   SecurityPage,
   SubprocessorsPage,
   TermsPage,
-  type Specimen,
 } from '@/ui/pages/public';
 import { formStr } from './helpers';
 
 
-let specimenCache: { at: number; value: Specimen | null } | null = null;
-
-/** En åpen kunngjøring fra databasen til forsiden (ekte data; eksempeldata kun utenfor produksjon). */
-async function loadSpecimen(): Promise<Specimen | null> {
-  if (specimenCache && Date.now() - specimenCache.at < 10 * 60_000) return specimenCache.value;
-  const sql = systemSql();
-  const rows = (await sql`
-    select id, title, buyer_name, deadline_at, deadline_time_known, estimated_value, currency, description, is_sample
-    from tenders t
-    where t.lifecycle = 'competition' and t.deadline_at > now() + interval '5 days' and t.estimated_value is not null
-      ${isProd ? sql`and not t.is_sample` : sql``}
-    order by t.is_sample asc, t.first_seen_at desc
-    limit 20
-  `) as unknown as (Omit<Specimen, 'requirement'> & { description: string | null })[];
-  let pick: Specimen | null = null;
-  for (const r of rows) {
-    const text = `${r.title} ${r.description ?? ''}`;
-    const cert = CERTIFICATIONS.find((c) => c.patterns.some((p) => p.test(text)));
-    const candidate: Specimen = { ...r, requirement: cert ? cert.label : null };
-    if (!pick || (cert && !pick.requirement)) pick = candidate;
-    if (pick.requirement) break;
-  }
-  specimenCache = { at: Date.now(), value: pick };
-  return pick;
-}
-
 export function registerPublicRoutes(router: Router): void {
   router.get('/', 'public', async (ctx) => {
-    const [specimen, coverage] = await Promise.all([loadSpecimen(), coverageStats(systemSql())]);
-    return render(ctx, <HomePage specimen={specimen} coverage={coverage} />, {
+    const [market, specimen] = await Promise.all([marketSnapshot(), noticeSpecimen()]);
+    return render(ctx, <HomePage market={market} specimen={specimen} />, {
       title: 'Offentlige anbud for norske bedrifter',
       description: 'Finn, forstå og svar på offentlige anbud. AnbudRadar rangerer kunngjøringer etter hva bedriften leverer og forklarer kravene med kildehenvisning.',
     });

@@ -1,259 +1,427 @@
 /**
- * Forsiden. Ærlig markedsføring: ingen oppdiktede kunder, omtaler eller tall.
- * - Produktbildet er en tydelig merket illustrasjon med fiktive anbud.
- * - «Rett fra databasen» er en ekte kunngjøring (eksempeldata merkes).
- * - Antall kunngjøringer og kilder vises bare når de er ekte og verifisert.
+ * Forsiden. Bygd på ekte data fra databasen – ingen oppdiktede kunder, omtaler eller tall:
+ * - Tallet i toppen og fristtavla er åpne kunngjøringer fra Doffin og TED akkurat nå.
+ * - Kunngjøringen med markeringer er en ekte, åpen kunngjøring; markeringen er ordrett fra teksten.
+ * - Kartet og bransjelisten teller åpne konkurranser. Et anbud kan gjelde flere fylker og bransjer.
+ * Eneste illustrasjon er stegene, og den er merket «Eksempel».
  */
-import type { IconType } from 'react-icons';
-import {
-  LuArrowRight,
-  LuBellRing,
-  LuBuilding2,
-  LuCalculator,
-  LuFileSearch,
-  LuRadar,
-  LuShieldCheck,
-} from 'react-icons/lu';
-import { INDUSTRIES } from '@/domain/reference';
+import type { ReactNode } from 'react';
+import { LuArrowRight, LuArrowUpRight } from 'react-icons/lu';
+import type { MarketSnapshot, NoticeSpecimen } from '@/domain/tenders/market';
 import { useUi } from '../context';
-import { buttonVariants, cn, SampleBadge } from '../components';
+import { buttonVariants, cn } from '../components';
 import { PublicLayout } from '../layouts';
-import { daysUntil, formatDateTime, formatInt, formatMoney, relativeTime, sourcesPhrase } from '../format';
-import { CheckList, Container, CtaBand, FaqList, faqItems, IconChip, INDUSTRY_ICONS, PlanCards, RadarDecor, ScoreRing, SectionHeading } from '../marketing';
+import { formatDate, formatInt, formatMoney, sourcesPhrase } from '../format';
+import { Container, FaqList, faqItems, PlanCards } from '../marketing';
 
-export interface Specimen {
-  id: string;
-  title: string;
-  buyerName: string | null;
-  deadlineAt: Date | null;
-  deadlineTimeKnown: boolean;
-  estimatedValue: number | null;
-  currency: string | null;
-  requirement: string | null;
-  isSample: boolean;
+const TZ = 'Europe/Oslo';
+const isoDay = new Intl.DateTimeFormat('en-CA', { timeZone: TZ });
+const weekdayDate = new Intl.DateTimeFormat('nb-NO', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: TZ });
+const clock = new Intl.DateTimeFormat('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+const longDay = new Intl.DateTimeFormat('nb-NO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ });
+
+const time = (d: Date) => clock.format(d).replace(':', '.');
+
+/** Fristen slik den står på tavla: «I dag 12.00», «I morgen», «fre. 07.11». */
+export function boardWhen(deadline: Date, timeKnown: boolean, now = new Date()): { day: string; time: string | null } {
+  const d = isoDay.format(deadline);
+  const day =
+    d === isoDay.format(now) ? 'I dag' : d === isoDay.format(new Date(now.getTime() + 86_400_000)) ? 'I morgen' : weekdayDate.format(deadline).replace(/\.$/, '');
+  return { day, time: timeKnown ? time(deadline) : null };
 }
 
-export interface Coverage {
-  openReal: number;
-  totalReal: number;
-  lastIngested: Date | null;
-  sources: { id: string; name: string; enabled: boolean; verifiedLive: boolean; lastSuccessAt: Date | null }[];
+/** «om 2 timer», «om 3 dager» – til avslutningen. */
+function until(deadline: Date, now = new Date()): string {
+  const ms = deadline.getTime() - now.getTime();
+  const h = Math.round(ms / 3_600_000);
+  if (h < 1) return 'om under en time';
+  if (h < 36) return `om ${h} ${h === 1 ? 'time' : 'timer'}`;
+  const days = Math.round(ms / 86_400_000);
+  return `om ${days} dager`;
 }
 
-// Fiktive anbud til produktbildet. Navnene er oppdiktet.
-const DEMO_TENDERS = [
-  { title: 'Renhold av skoler og barnehager 2027–2030', buyer: 'Fjordvik kommune', value: '4,2 mill. kr', days: 18, source: 'Doffin', score: 92 },
-  { title: 'Rammeavtale vinduspuss og fasadevask', buyer: 'Nordvik helseforetak', value: '1,1 mill. kr', days: 9, source: 'Doffin', score: 81 },
-  { title: 'Drift og renhold av administrasjonsbygg', buyer: 'Vestlia fylkeskommune', value: '12,5 mill. kr', days: 26, source: 'TED', score: 67 },
-];
-
-
+function Mono({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={cn('font-mono text-[12px] font-medium uppercase tracking-[0.12em]', className)}>{children}</span>;
+}
 
 // ---------------------------------------------------------------------------
-// Toppseksjon
+// Toppseksjon: dagens tall og fristtavla
 // ---------------------------------------------------------------------------
-function ProductWindow() {
+function Hero({ m }: { m: MarketSnapshot }) {
+  const { trialDays, liveSources } = useUi();
+  const fetched = m.lastFetched ?? m.lastIngested;
   return (
-    <figure className="relative overflow-hidden rounded-xl bg-white text-ink shadow-[0_40px_90px_-30px_rgba(0,0,0,0.7)] ring-1 ring-white/10">
-      <div className="flex items-center gap-3 border-b border-line bg-paper px-4 py-2.5">
-        <span className="flex gap-1.5" aria-hidden>
-          <span className="size-2.5 rounded-full bg-[#f87171]" />
-          <span className="size-2.5 rounded-full bg-[#fbbf24]" />
-          <span className="size-2.5 rounded-full bg-[#4ade80]" />
-        </span>
-        <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-muted">Finn anbud · rangert for Fjordvik Renhold AS</span>
-        <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-muted ring-1 ring-line">Illustrasjon · fiktive data</span>
-      </div>
-      <ul className="divide-y divide-line" aria-label="Fiktive anbud, rangert etter relevans">
-        {DEMO_TENDERS.map((t, i) => (
-          <li key={t.title} className={cn('flex items-center gap-3.5 px-4 py-3.5 sm:px-5', i === 0 && 'bg-navy-50/60')}>
-            <ScoreRing value={t.score} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[14px] font-semibold text-navy-900">{t.title}</p>
-              <p className="truncate text-[12px] text-muted">
-                {t.buyer} · <span className="num">{t.value}</span>
-              </p>
-            </div>
-            <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">
-              <span className={cn('num rounded px-1.5 py-0.5 text-[12px] font-semibold', t.days <= 10 ? 'bg-marker text-ink' : 'bg-marker-soft text-ink')}>
-                {t.days} dager igjen
-              </span>
-              <span className="text-[11px] font-semibold text-faint">{t.source}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
-      <div aria-hidden className="flex items-center justify-between border-t border-line bg-paper px-4 py-2.5 text-[12px] text-faint sm:px-5">
-        <span>Sortert etter relevans</span>
-        <span className="font-semibold text-navy-700">Lagre søket</span>
-      </div>
-    </figure>
-  );
-}
-
-/** Ekte kunngjøring fra databasen (eller en tydelig merket illustrasjon når basen er tom). */
-function LiveSpecimen({ s, className }: { s: Specimen | null; className?: string }) {
-  if (!s) {
-    return (
-      <figure className={cn('rounded-xl bg-white p-5 text-ink shadow-[0_30px_70px_-30px_rgba(0,0,0,0.6)] ring-1 ring-black/5', className)}>
-        <figcaption className="text-[11px] font-semibold uppercase tracking-wide text-muted">Illustrasjon – ikke en ekte kunngjøring</figcaption>
-        <p className="mt-2 font-serif text-[17px] font-semibold leading-snug text-navy-900">Renhold av kommunale bygg</p>
-        <p className="mt-3 text-[14px]">
-          Krav: <span className="hl hl-draw">godkjent i renholdsregisteret</span>
-        </p>
-      </figure>
-    );
-  }
-  const days = daysUntil(s.deadlineAt);
-  return (
-    <figure className={cn('rounded-xl bg-white p-5 text-ink shadow-[0_30px_70px_-30px_rgba(0,0,0,0.6)] ring-1 ring-black/5', className)}>
-      <figcaption className="flex flex-wrap items-center justify-between gap-2">
-        <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-ok">
-          <span className="live-dot" aria-hidden /> Rett fra databasen nå
-        </span>
-        {s.isSample ? <SampleBadge /> : null}
-      </figcaption>
-      <p className="mt-2 line-clamp-2 font-serif text-[17px] font-semibold leading-snug text-navy-900">{s.title}</p>
-      {s.buyerName ? <p className="mt-0.5 truncate text-[13px] text-muted">{s.buyerName}</p> : null}
-      <dl className="mt-3 space-y-1.5 text-[14px]">
-        <div className="flex flex-wrap gap-x-2">
-          <dt className="text-muted">Frist</dt>
-          <dd>
-            <span className="hl hl-draw num">{s.deadlineAt ? formatDateTime(s.deadlineAt, s.deadlineTimeKnown) : 'ikke oppgitt'}</span>
-            {days !== null && days > 0 ? <span className="text-muted"> · {days} dager igjen</span> : null}
-          </dd>
-        </div>
-        <div className="flex flex-wrap gap-x-2">
-          <dt className="text-muted">Verdi</dt>
-          <dd className="num">{formatMoney(s.estimatedValue, s.currency, false)}</dd>
-        </div>
-        {s.requirement ? (
-          <div className="flex flex-wrap gap-x-2">
-            <dt className="text-muted">Nevner krav om</dt>
-            <dd>
-              <span className="hl hl-draw">{s.requirement}</span>
-            </dd>
-          </div>
-        ) : null}
-      </dl>
-    </figure>
-  );
-}
-
-function Hero({ specimen }: { specimen: Specimen | null }) {
-  const { user, liveSources, trialDays } = useUi();
-  return (
-    <section className="relative isolate overflow-hidden bg-navy-950 text-white">
-      <div aria-hidden className="hero-grid absolute inset-0 -z-10" />
-      <div aria-hidden className="absolute -right-[20%] -top-[30%] -z-10 h-[900px] w-[900px] rounded-full bg-[radial-gradient(closest-side,rgba(51,90,150,0.45),transparent)]" />
-      <Container className="grid grid-cols-1 items-center gap-14 pb-20 pt-10 sm:pb-24 sm:pt-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-10 lg:pb-28 lg:pt-20">
+    <section className="border-b border-line">
+      <Container className="grid grid-cols-1 gap-10 py-12 sm:py-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-center lg:gap-14 lg:py-20">
         <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[13px] font-semibold text-navy-100">
-            {liveSources.length ? (
-              <>
-                <span className="live-dot" aria-hidden /> Henter nye kunngjøringer fra {sourcesPhrase(liveSources)}
-              </>
-            ) : (
-              <>
-                <LuRadar className="size-4 text-marker" aria-hidden /> Offentlige anbud for norske bedrifter
-              </>
-            )}
+          <Mono className="text-muted">
+            {longDay.format(m.at)}
+            {fetched ? ` · sist hentet kl. ${time(fetched)}` : ''}
+          </Mono>
+          {m.open > 0 ? (
+            <h1 className="mt-5 text-[44px] font-[780] leading-[0.98] tracking-[-0.035em] text-navy-950 sm:text-[64px] lg:text-[72px]">
+              <span className="hl">{formatInt(m.open)}</span> offentlige anbud er åpne i Norge akkurat nå.
+            </h1>
+          ) : (
+            <h1 className="mt-5 text-[44px] font-[780] leading-[0.98] tracking-[-0.035em] text-navy-950 sm:text-[64px]">
+              Offentlige anbud i Norge, samlet på ett sted.
+            </h1>
+          )}
+          <p className="mt-6 max-w-[34rem] text-[18px] leading-relaxed text-ink sm:text-[19px]">
+            AnbudRadar leser alle sammen og viser bedriften din de som passer – med frist, krav og lenke til kunngjøringen.
           </p>
-          <h1 className="mt-6 max-w-xl font-serif text-[40px] font-semibold leading-[1.06] tracking-[-0.02em] text-white sm:text-[56px] lg:text-[60px]">
-            Finn anbudene som passer – <span className="text-marker">før fristen går ut.</span>
-          </h1>
-          <p className="mt-6 max-w-lg text-[19px] leading-relaxed text-navy-100">Vi samler offentlige anbud på ett sted og viser dere de som passer best.</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href={user ? '/app' : '/registrer'} className={buttonVariants({ variant: 'inverse', size: 'lg', className: 'group shadow-[0_10px_30px_-10px_rgba(255,255,255,0.4)]' })}>
-              {user ? 'Til appen' : `Prøv gratis i ${trialDays} dager`}
-              <LuArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <a href="/registrer" className={buttonVariants({ size: 'lg' })}>
+              Prøv gratis i {trialDays} dager <LuArrowRight className="size-4" aria-hidden />
             </a>
-            <a href="#slik-virker-det" className={buttonVariants({ variant: 'ghost', size: 'lg', className: 'text-white hover:bg-white/10' })}>
-              Se hvordan det virker
+            <a href="#slik-leser-vi" className={buttonVariants({ variant: 'ghost', size: 'lg' })}>
+              Se hva vi leser ut
             </a>
           </div>
-          <CheckList
-            dark
-            inline
-            className="mt-8 text-[14px] text-navy-100"
-            items={[`${trialDays} dager gratis`, 'Ingen kort', 'Fra 199 kr/mnd eks. mva.']}
-          />
+          {m.open > 0 ? (
+            <dl className="mt-10 grid max-w-[34rem] grid-cols-3 gap-4 border-t border-line pt-5">
+              {[
+                [formatInt(m.new24h), 'nye siste døgn'],
+                [formatInt(m.closingWeek), 'frister de neste 7 dagene'],
+                [formatInt(m.buyers), 'oppdragsgivere'],
+              ].map(([n, label]) => (
+                <div key={label} className="min-w-0">
+                  <dt className="sr-only">{label}</dt>
+                  <dd>
+                    <span className="block text-[26px] font-[750] leading-none tracking-[-0.02em] text-navy-950">{n}</span>
+                    <span className="mt-1.5 block text-[13px] leading-snug text-muted">{label}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          <p className="mt-6 text-[13px] text-muted">Kilder: {sourcesPhrase(liveSources, true)}.</p>
         </div>
-
-        <div className="relative mx-auto w-full min-w-0 max-w-[560px] lg:max-w-none">
-          <RadarDecor className="left-1/2 top-1/2 -z-10 w-[150%] -translate-x-1/2 -translate-y-1/2 sm:w-[125%]" />
-          <ProductWindow />
-          {/* Ekte kunngjøring fra databasen – bare på store skjermer, så mobilen ikke får mer å lese. */}
-          <LiveSpecimen s={specimen} className="relative z-10 -mt-12 ml-[-6%] hidden w-[74%] lg:block" />
-        </div>
+        <Fristtavla rows={m.board} now={m.at} />
       </Container>
     </section>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Kilder og dekning (bare ekte tall)
-// ---------------------------------------------------------------------------
-function SourcesStrip({ coverage }: { coverage: Coverage }) {
-  const { liveSources } = useUi();
-  const sources = [
-    { id: 'doffin', name: 'Doffin', sub: 'Norges kunngjøringsdatabase' },
-    { id: 'ted', name: 'TED', sub: 'EUs kunngjøringsdatabase' },
-  ].filter((s) => liveSources.includes(s.id));
-  if (!sources.length && coverage.openReal === 0) return null;
+function Fristtavla({ rows, now }: { rows: MarketSnapshot['board']; now: Date }) {
   return (
-    <section className="border-b border-line bg-white">
-      <Container className={cn('flex flex-col gap-5 py-7 md:flex-row md:items-center', sources.length ? 'md:justify-between' : 'items-center md:justify-center')}>
-        {sources.length ? (
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">Kunngjøringer fra</p>
-            {sources.map((s) => (
-              <p key={s.id} className="flex items-baseline gap-2">
-                <span className="font-serif text-[22px] font-semibold text-navy-900">{s.name}</span>
-                <span className="text-[13px] text-muted">{s.sub}</span>
-              </p>
-            ))}
-          </div>
-        ) : null}
-        {coverage.openReal > 0 ? (
-          <p className="flex items-center gap-3 text-[14px] text-muted">
-            <span className="num font-serif text-[28px] font-semibold leading-none text-navy-900">{formatInt(coverage.openReal)}</span>
-            <span>
-              åpne kunngjøringer akkurat nå
-              {coverage.lastIngested ? <span className="block text-[12px] text-muted">Sist hentet {relativeTime(coverage.lastIngested)}</span> : null}
-            </span>
+    <figure className="min-w-0">
+      <div className="board overflow-hidden rounded-2xl bg-board text-board-text shadow-[0_30px_70px_-35px_rgba(11,22,38,0.9)]">
+        <div className="flex items-center justify-between gap-3 border-b border-board-line px-5 py-3.5">
+          <Mono className="text-board-amber">Frister</Mono>
+          <Mono className="text-board-dim">Neste {rows.length || ''} · kl. {time(now)}</Mono>
+        </div>
+        {rows.length ? (
+          <ol className="divide-y divide-board-line">
+            {rows.map((r, i) => {
+              const when = boardWhen(r.deadlineAt, r.deadlineTimeKnown, now);
+              return (
+                <li key={r.id} className="board-row grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-4 px-5 py-3 sm:grid-cols-[7.5rem_minmax(0,1fr)]" style={{ animationDelay: `${i * 70}ms` }}>
+                  <div className="font-mono text-[13px] leading-snug text-board-amber">
+                    <span className="block font-medium uppercase">{when.day}</span>
+                    {when.time ? <span className="block text-board-amber/80">kl. {when.time}</span> : null}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-semibold leading-snug text-board-text">{r.title}</p>
+                    <p className="mt-0.5 truncate text-[13px] leading-snug text-board-dim">
+                      {r.buyerName ?? 'Oppdragsgiver ikke oppgitt'}
+                      {r.place ? ` · ${r.place}` : ''}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <p className="px-5 py-10 text-[14px] text-board-dim">Ingen åpne frister akkurat nå. Tavla fylles når neste henting er ferdig.</p>
+        )}
+        <div className="flex items-center justify-between gap-3 border-t border-board-line px-5 py-3">
+          <Mono className="text-board-dim">Doffin · TED</Mono>
+          <a href="/registrer" className="inline-flex items-center gap-1 text-[13px] font-semibold text-board-amber no-underline hover:text-white">
+            Se alle i appen <LuArrowRight className="size-3.5" aria-hidden />
+          </a>
+        </div>
+      </div>
+      <figcaption className="mt-3 text-[13px] text-muted">Ekte kunngjøringer, sortert etter frist. Oppdateres fortløpende.</figcaption>
+    </figure>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// En ekte kunngjøring, markert slik AnbudRadar leser den
+// ---------------------------------------------------------------------------
+function Ref({ n }: { n: number }) {
+  return (
+    <span className="ml-1 inline-flex size-5 -translate-y-px items-center justify-center rounded-full bg-navy-950 align-middle font-mono text-[11px] font-medium text-white" aria-hidden>
+      {n}
+    </span>
+  );
+}
+
+function AnnotatedNotice({ s }: { s: NoticeSpecimen }) {
+  const when = boardWhen(s.deadlineAt, s.deadlineTimeKnown);
+  const deadlineText = `${formatDate(s.deadlineAt, true)}${when.time ? ` kl. ${when.time}` : ''}`;
+  const sourceName = s.source === 'doffin' ? 'Doffin' : s.source === 'ted' ? 'TED' : s.source;
+  const notes: { n: number; label: string; value: string; text: string }[] = [
+    { n: 1, label: 'Frist', value: deadlineText, text: 'Du får påminnelse 7, 3 og 1 dag før.' },
+    ...(s.excerpt.mark && s.requirement
+      ? [{ n: 2, label: 'Krav', value: s.requirement, text: 'Står ordrett i kunngjøringen. Vi viser hvor, så du kan sjekke selv.' }]
+      : []),
+    { n: s.excerpt.mark ? 3 : 2, label: 'Verdi', value: formatMoney(s.estimatedValue, s.currency), text: 'Anslått av oppdragsgiver. Regn på om det lønner seg før du byr.' },
+    { n: s.excerpt.mark ? 4 : 3, label: 'Kilde', value: `${sourceName} ${s.noticeId}`, text: 'Lenke til originalen følger alltid med.' },
+  ];
+  const ref = (label: string) => notes.find((x) => x.label === label)!.n;
+  return (
+    <section id="slik-leser-vi" className="scroll-mt-20 border-b border-line bg-paper">
+      <Container className="py-16 sm:py-20">
+        <div className="max-w-2xl">
+          <Mono className="text-navy-600">Slik leser vi en kunngjøring</Mono>
+          <h2 className="mt-3 text-[32px] font-[760] leading-[1.04] tracking-[-0.028em] sm:text-[44px]">Det viktigste står ofte gjemt i teksten.</h2>
+          <p className="mt-4 text-[17px] leading-relaxed text-muted">
+            Under er en ekte, åpen kunngjøring. Det AnbudRadar trekker ut, er markert – med henvisning til hvor det står.
           </p>
-        ) : null}
+        </div>
+        <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-12">
+          <article className="min-w-0 rounded-lg border border-line-strong bg-white p-6 shadow-[0_1px_0_rgba(15,35,64,0.04),0_18px_40px_-28px_rgba(15,35,64,0.35)] sm:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-4">
+              <Mono className="text-muted">Kunngjøring av konkurranse</Mono>
+              <Mono className="text-muted">
+                <span className="hl-soft">{sourceName} {s.noticeId}</span>
+                <Ref n={ref('Kilde')} />
+              </Mono>
+            </div>
+            <h3 className="mt-5 text-[21px] font-[720] leading-snug tracking-[-0.015em] text-navy-950 sm:text-[24px]">{s.title}</h3>
+            <dl className="mt-5 grid grid-cols-1 gap-x-8 gap-y-3 text-[14px] sm:grid-cols-2">
+              <div className="min-w-0">
+                <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">Oppdragsgiver</dt>
+                <dd className="mt-0.5 font-semibold text-ink">{s.buyerName ?? 'Ikke oppgitt'}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">Sted</dt>
+                <dd className="mt-0.5 font-semibold text-ink">{s.place ?? 'Ikke oppgitt'}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">Tilbudsfrist</dt>
+                <dd className="mt-0.5 font-semibold text-ink">
+                  <span className="hl">{deadlineText}</span>
+                  <Ref n={ref('Frist')} />
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">Anslått verdi</dt>
+                <dd className="mt-0.5 font-semibold text-ink">
+                  <span className="hl">{formatMoney(s.estimatedValue, s.currency)}</span>
+                  <Ref n={ref('Verdi')} />
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-6 border-t border-line pt-5 text-[15px] leading-relaxed text-ink">
+              {s.excerpt.before}
+              {s.excerpt.mark ? (
+                <>
+                  <mark className="hl">{s.excerpt.mark}</mark>
+                  <Ref n={ref('Krav')} />
+                </>
+              ) : null}
+              {s.excerpt.after}
+            </p>
+          </article>
+          <ol className="min-w-0 space-y-5 self-center">
+            {notes.map((x) => (
+              <li key={x.n} className="grid grid-cols-[1.75rem_minmax(0,1fr)] gap-3">
+                <span className="mt-0.5 inline-flex size-6 items-center justify-center rounded-full bg-navy-950 font-mono text-[12px] font-medium text-white" aria-hidden>
+                  {x.n}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-navy-950">
+                    {x.label}: <span className="font-normal">{x.value}</span>
+                  </p>
+                  <p className="mt-0.5 text-[14px] leading-relaxed text-muted">{x.text}</p>
+                </div>
+              </li>
+            ))}
+            {s.sourceUrl ? (
+              <li className="pl-[2.5rem]">
+                <a href={s.sourceUrl} rel="noopener" className="inline-flex items-center gap-1 text-[14px] font-semibold">
+                  Åpne kunngjøringen hos {sourceName} <LuArrowUpRight className="size-4" aria-hidden />
+                </a>
+              </li>
+            ) : null}
+          </ol>
+        </div>
       </Container>
     </section>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Slik virker det – tre korte steg
+// Hvor er anbudene? Fylkeskart i ruter + bransjer
 // ---------------------------------------------------------------------------
-function HowItWorks() {
-  const steps: { icon: IconType; title: string; text: string }[] = [
-    { icon: LuBuilding2, title: 'Fortell hva dere gjør', text: 'Bransje, område og størrelse. Tar et par minutter.' },
-    { icon: LuRadar, title: 'Få anbudene som passer', text: 'Vi sorterer anbudene etter hvor godt de passer dere.' },
-    { icon: LuBellRing, title: 'Svar i tide', text: 'Påminnelse før fristen og hjelp med tilbudet.' },
+/** Forenklet kart: hvert fylke er én rute, plassert omtrent der det ligger (kolonne, rad). */
+const TILE_POS: Record<string, [number, number]> = {
+  '56': [3, 0], // Finnmark
+  '55': [2, 1], // Troms
+  '18': [1, 2], // Nordland
+  '50': [1, 3], // Trøndelag
+  '15': [0, 4], // Møre og Romsdal
+  '34': [1, 4], // Innlandet
+  '46': [0, 5], // Vestland
+  '33': [1, 5], // Buskerud
+  '03': [2, 5], // Oslo
+  '32': [3, 5], // Akershus
+  '11': [0, 6], // Rogaland
+  '40': [1, 6], // Telemark
+  '39': [2, 6], // Vestfold
+  '31': [3, 6], // Østfold
+  '42': [1, 7], // Agder
+};
+/** Sekvensiell skala i én farge (lys → mørk). Tekst er mørk på lyse ruter og hvit på mørke. */
+const RAMP = [
+  { bg: 'bg-navy-50', text: 'text-muted' },
+  { bg: 'bg-navy-100', text: 'text-navy-950' },
+  { bg: 'bg-navy-200', text: 'text-navy-950' },
+  { bg: 'bg-navy-300', text: 'text-navy-950' },
+  { bg: 'bg-navy-600', text: 'text-white' },
+  { bg: 'bg-navy-800', text: 'text-white' },
+];
+export function rampStep(n: number, max: number): number {
+  if (n <= 0 || max <= 0) return 0;
+  const r = n / max;
+  return r <= 0.2 ? 1 : r <= 0.4 ? 2 : r <= 0.6 ? 3 : r <= 0.8 ? 4 : 5;
+}
+
+function MarketMap({ m }: { m: MarketSnapshot }) {
+  const max = Math.max(0, ...m.regions.map((r) => r.n));
+  const top = m.industries.slice(0, 9);
+  return (
+    <section className="border-b border-line">
+      <Container className="py-16 sm:py-20">
+        <div className="max-w-2xl">
+          <Mono className="text-navy-600">Akkurat nå</Mono>
+          <h2 className="mt-3 text-[32px] font-[760] leading-[1.04] tracking-[-0.028em] sm:text-[44px]">Hvor er anbudene, og hva gjelder de?</h2>
+          <p className="mt-4 text-[17px] leading-relaxed text-muted">Åpne konkurranser per fylke og bransje. Et anbud kan gjelde flere fylker og bransjer.</p>
+        </div>
+        <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-16">
+          <figure className="min-w-0">
+            <div data-chart tabIndex={0} role="img" aria-label={`Åpne anbud per fylke: ${m.regions.map((r) => `${r.name} ${r.n}`).join(', ')}.`} className="mx-auto grid max-w-[420px] grid-cols-4 gap-1.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-navy-600 focus-visible:ring-offset-4">
+              {m.regions.map((r) => {
+                const [col, row] = TILE_POS[r.code] ?? [0, 0];
+                const step = RAMP[rampStep(r.n, max)]!;
+                return (
+                  <div
+                    key={r.code}
+                    data-tip={`${formatInt(r.n)} åpne anbud|${r.name}`}
+                    className={cn('flex aspect-[1.25] min-w-0 flex-col justify-between rounded-[6px] p-2 transition-opacity data-[active]:opacity-80', step.bg, step.text)}
+                    style={{ gridColumnStart: col + 1, gridRowStart: row + 1 }}
+                    aria-hidden
+                  >
+                    <span className="truncate text-[11px] font-semibold leading-tight sm:text-[12px]">{r.name}</span>
+                    <span className="font-mono text-[15px] font-medium leading-none sm:text-[17px]">{formatInt(r.n)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <figcaption className="mx-auto mt-4 flex max-w-[420px] flex-wrap items-center justify-between gap-3 text-[12px] text-muted">
+              <span className="flex items-center gap-1.5">
+                Færre
+                {RAMP.slice(1).map((s, i) => (
+                  <span key={i} className={cn('inline-block size-3 rounded-[3px]', s.bg)} aria-hidden />
+                ))}
+                Flere
+              </span>
+              <span>
+                Forenklet kart.{m.regionless ? ` ${formatInt(m.regionless)} uten fylke.` : ''}
+              </span>
+            </figcaption>
+          </figure>
+          <div className="min-w-0">
+            <h3 className="font-mono text-[12px] font-medium uppercase tracking-[0.12em] text-muted">Bransjer med flest åpne anbud</h3>
+            {top.length ? (
+              <ul className="mt-4 divide-y divide-line border-y border-line">
+                {top.map((i) => (
+                  <li key={i.id}>
+                    <a href={`/bransjer#${i.id}`} className="group flex items-baseline gap-3 py-3 text-ink no-underline">
+                      <span className="text-[16px] font-semibold group-hover:underline">{i.name}</span>
+                      <span className="mb-1 flex-1 border-b border-dotted border-line-strong" aria-hidden />
+                      <span className="font-mono text-[15px] font-medium text-navy-950">{formatInt(i.n)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-4 text-[14px] text-muted">Ingen åpne anbud å vise akkurat nå.</p>
+            )}
+            <a href="/bransjer" className="mt-5 inline-flex items-center gap-1 text-[14px] font-semibold">
+              Alle bransjer <LuArrowRight className="size-4" aria-hidden />
+            </a>
+          </div>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tre steg (en ekte rekkefølge), med små utsnitt merket «Eksempel»
+// ---------------------------------------------------------------------------
+function Steps() {
+  const steps: { title: string; text: string; sample: ReactNode }[] = [
+    {
+      title: 'Fortell hva dere leverer',
+      text: 'Bransje, område og størrelse på oppdrag. Det tar et par minutter.',
+      sample: (
+        <div className="flex flex-wrap gap-1.5">
+          {['Renhold', 'Vestland', '1–10 mill. kr', 'ISO 14001'].map((t) => (
+            <span key={t} className="rounded-full border border-line-strong bg-white px-2.5 py-0.5 text-[13px] text-ink">
+              {t}
+            </span>
+          ))}
+        </div>
+      ),
+    },
+    {
+      title: 'Få de som passer',
+      text: 'Hvert anbud får en score for hvor godt det passer – og hvorfor.',
+      sample: (
+        <div>
+          <div className="flex items-baseline justify-between text-[13px]">
+            <span className="font-semibold text-ink">Samsvar med profilen</span>
+            <span className="font-mono font-medium text-navy-950">86</span>
+          </div>
+          <div className="mt-1.5 h-1.5 rounded-full bg-navy-100">
+            <div className="h-1.5 w-[86%] rounded-full bg-navy-600" />
+          </div>
+          <p className="mt-2 text-[12px] text-muted">Renhold · Vestland · krav du oppfyller</p>
+        </div>
+      ),
+    },
+    {
+      title: 'Svar i tide',
+      text: 'Påminnelser før fristen, og hjelp med kravene og tilbudet.',
+      sample: (
+        <div className="flex flex-wrap gap-1.5 font-mono text-[12px]">
+          {['7 dager', '3 dager', '1 dag'].map((t) => (
+            <span key={t} className="rounded border border-line-strong bg-white px-2 py-0.5 text-ink">
+              {t}
+            </span>
+          ))}
+        </div>
+      ),
+    },
   ];
   return (
-    <section id="slik-virker-det" className="scroll-mt-20 py-20 sm:py-24">
-      <Container>
-        <SectionHeading center>Slik virker det</SectionHeading>
-        <ol className="mt-12 grid gap-5 md:grid-cols-3">
+    <section className="border-b border-line">
+      <Container className="py-16 sm:py-20">
+        <Mono className="text-navy-600">Slik kommer du i gang</Mono>
+        <ol className="mt-8 grid grid-cols-1 border-t border-line md:grid-cols-3">
           {steps.map((s, i) => (
-            <li key={s.title} className="lift flex items-start gap-5 rounded-2xl border border-line bg-white p-5 md:block md:p-7 md:text-center">
-              <span className="relative flex size-14 shrink-0 items-center justify-center rounded-2xl bg-navy-900 text-white shadow-[0_10px_24px_-12px_rgba(15,35,64,0.8)] md:mx-auto">
-                <s.icon className="size-6" aria-hidden />
-                <span className="num absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-marker text-[13px] font-semibold text-ink ring-2 ring-white">
-                  {i + 1}
-                </span>
-              </span>
-              <div className="min-w-0">
-                <h3 className="text-[19px] font-semibold text-navy-900 md:mt-5 md:text-[20px]">{s.title}</h3>
-                <p className="mt-1 text-[16px] leading-relaxed text-muted md:mt-2">{s.text}</p>
+            <li key={s.title} className={cn('flex flex-col py-8 md:px-8 md:py-6', i > 0 && 'border-t border-line md:border-l md:border-t-0', i === 0 && 'md:pl-0', i === 2 && 'md:pr-0')}>
+              <span className="font-mono text-[13px] font-medium text-muted">Steg {i + 1}</span>
+              <h3 className="mt-3 text-[22px] font-[740] leading-tight tracking-[-0.02em]">{s.title}</h3>
+              <p className="mt-2 text-[15px] leading-relaxed text-muted">{s.text}</p>
+              <div className="mt-5 rounded-md border border-dashed border-line-strong bg-paper p-3">
+                <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-faint">Eksempel</p>
+                {s.sample}
               </div>
             </li>
           ))}
@@ -264,136 +432,89 @@ function HowItWorks() {
 }
 
 // ---------------------------------------------------------------------------
-// Det dere får – fire fordeler, én kort setning hver
+// Priser, spørsmål, avslutning
 // ---------------------------------------------------------------------------
-function Benefits() {
-  const { liveSources } = useUi();
-  const items: { icon: IconType; title: string; text: string }[] = [
-    { icon: LuRadar, title: 'Alt på ett sted', text: `Anbud fra ${sourcesPhrase(liveSources)}, hentet automatisk.` },
-    { icon: LuFileSearch, title: 'Forstå kravene raskt', text: 'Kort oppsummering – og hvor i dokumentet det står.' },
-    { icon: LuBellRing, title: 'Varsel før fristen', text: 'Påminnelse 7, 3 og 1 dag før det er for sent.' },
-    { icon: LuCalculator, title: 'Se om det lønner seg', text: 'Regn på pris og risiko med deres egne tall.' },
-  ];
-  return (
-    <section className="border-y border-line bg-paper py-20 sm:py-24">
-      <Container>
-        <SectionHeading center>Mindre leting – mer tid til tilbudene</SectionHeading>
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {items.map((it) => (
-            <article key={it.title} className="lift flex items-start gap-4 rounded-2xl border border-line bg-white p-5 sm:block sm:p-6">
-              <IconChip icon={it.icon} className="size-12 [&_svg]:size-6" />
-              <div className="min-w-0">
-                <h3 className="text-[19px] font-semibold text-navy-900 sm:mt-4">{it.title}</h3>
-                <p className="mt-1 text-[16px] leading-relaxed text-muted sm:mt-1.5">{it.text}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-        <p className="mx-auto mt-10 flex max-w-2xl items-start gap-3 rounded-2xl bg-white px-5 py-4 text-[16px] text-ink ring-1 ring-line">
-          <LuShieldCheck className="mt-0.5 size-6 shrink-0 text-ok" aria-hidden />
-          <span>
-            <strong className="text-navy-900">Vi finner aldri på noe.</strong> Frister og krav vises slik de står i kunngjøringen, og AI-en viser hvor svaret står.
-          </span>
-        </p>
-        <p className="mt-8 text-center">
-          <a href="/funksjoner" className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-navy-800 no-underline hover:underline">
-            Se alle funksjoner <LuArrowRight className="size-4" aria-hidden />
-          </a>
-        </p>
-      </Container>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Bransjer – bare navn og ikon
-// ---------------------------------------------------------------------------
-function Industries() {
-  return (
-    <section className="py-20 sm:py-24">
-      <Container>
-        <SectionHeading center>For bransjer som selger til det offentlige</SectionHeading>
-        <ul className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {INDUSTRIES.map((i) => {
-            const Icon = INDUSTRY_ICONS[i.id] ?? LuRadar;
-            return (
-              <li key={i.id}>
-                <a
-                  href={`/bransjer#${i.id}`}
-                  className="lift flex h-full items-center gap-3 rounded-xl border border-line bg-white px-4 py-3.5 text-[15px] font-semibold text-navy-900 no-underline hover:border-navy-300"
-                >
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
-                    <Icon className="size-[18px]" aria-hidden />
-                  </span>
-                  <span className="min-w-0">{i.name}</span>
-                </a>
-              </li>
-            );
-          })}
-        </ul>
-      </Container>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Priser (bare pris og knapp) og spørsmål
-// ---------------------------------------------------------------------------
-function PricingTeaser() {
+function Pricing() {
   const { trialDays } = useUi();
   return (
-    <section className="border-t border-line bg-paper py-20 sm:py-24">
-      <Container>
-        <SectionHeading center lead={`${trialDays} dager gratis. Ingen kort. Ingen binding.`}>
-          Enkle priser
-        </SectionHeading>
-        <div className="mt-12">
-          <PlanCards showFeatures={false} />
+    <section className="border-b border-line">
+      <Container className="py-16 sm:py-20">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="max-w-xl">
+            <Mono className="text-navy-600">Prisliste</Mono>
+            <h2 className="mt-3 text-[32px] font-[760] leading-[1.04] tracking-[-0.028em] sm:text-[44px]">Tre planer. Ingen binding.</h2>
+          </div>
+          <p className="max-w-sm text-[15px] text-muted">
+            {`${trialDays} dager gratis med alt i Profesjonell. Ingen kort, og ingenting trekkes automatisk.`}
+          </p>
         </div>
-        <p className="mt-8 text-center">
-          <a href="/priser" className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-navy-800 no-underline hover:underline">
-            Se hva som er med i hver plan <LuArrowRight className="size-4" aria-hidden />
-          </a>
-        </p>
+        <div className="mt-10">
+          <PlanCards maxFeatures={3} />
+        </div>
+        <a href="/priser" className="mt-6 inline-flex items-center gap-1 text-[14px] font-semibold">
+          Se alt som er med i hver plan <LuArrowRight className="size-4" aria-hidden />
+        </a>
       </Container>
     </section>
   );
 }
 
 function Faq() {
-  const { liveSources, trialDays } = useUi();
+  const { trialDays, liveSources } = useUi();
   return (
-    <section className="py-20 sm:py-24">
-      <Container className="max-w-3xl">
-        <SectionHeading center>Vanlige spørsmål</SectionHeading>
-        <div className="mt-10">
-          <FaqList items={faqItems({ trialDays, sources: sourcesPhrase(liveSources, true) }).slice(0, 4)} />
+    <section className="border-b border-line">
+      <Container className="grid grid-cols-1 gap-10 py-16 sm:py-20 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <div>
+          <Mono className="text-navy-600">Spørsmål</Mono>
+          <h2 className="mt-3 text-[32px] font-[760] leading-[1.04] tracking-[-0.028em] sm:text-[44px]">Det folk lurer på.</h2>
+          <p className="mt-4 text-[15px] text-muted">
+            Flere spørsmål? <a href="/kontakt">Skriv til oss</a>.
+          </p>
         </div>
-        <p className="mt-6 text-center text-[15px] text-muted">
-          Flere spørsmål? <a href="/kontakt">Kontakt oss</a>.
-        </p>
+        <FaqList items={faqItems({ trialDays, sources: sourcesPhrase(liveSources, true) }).slice(0, 4)} />
       </Container>
     </section>
   );
 }
 
-export function HomePage({ specimen, coverage }: { specimen: Specimen | null; coverage: Coverage }) {
-  const { user, trialDays } = useUi();
+function FinalCta({ m }: { m: MarketSnapshot }) {
+  const { trialDays } = useUi();
+  const next = m.board[0];
   return (
-    <PublicLayout heroDark>
-      <Hero specimen={specimen} />
-      <SourcesStrip coverage={coverage} />
-      <HowItWorks />
-      <Benefits />
-      <Industries />
-      <PricingTeaser />
+    <section>
+      <Container className="flex flex-col items-start gap-8 py-16 sm:py-24 lg:flex-row lg:items-end lg:justify-between">
+        <p className="max-w-3xl text-[34px] font-[760] leading-[1.04] tracking-[-0.03em] text-navy-950 sm:text-[52px]">
+          {next ? (
+            <>
+              Neste frist går ut <span className="hl">{until(next.deadlineAt, m.at)}</span>.
+            </>
+          ) : (
+            'Neste frist venter ikke.'
+          )}
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <a href="/registrer" className={buttonVariants({ size: 'lg' })}>
+            Prøv gratis i {trialDays} dager <LuArrowRight className="size-4" aria-hidden />
+          </a>
+          <a href="/priser" className={buttonVariants({ variant: 'secondary', size: 'lg' })}>
+            Se priser
+          </a>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+export function HomePage({ market, specimen }: { market: MarketSnapshot; specimen: NoticeSpecimen | null }) {
+  return (
+    <PublicLayout>
+      <Hero m={market} />
+      {specimen ? <AnnotatedNotice s={specimen} /> : null}
+      <MarketMap m={market} />
+      <Steps />
+      <Pricing />
       <Faq />
-      <CtaBand
-        title="Neste frist venter ikke."
-        lead="Lag en konto og se hvilke anbud som passer dere i dag."
-        primary={user ? { href: '/app', label: 'Til appen' } : { href: '/registrer', label: `Prøv gratis i ${trialDays} dager` }}
-        secondary={{ href: '/priser', label: 'Se priser' }}
-      />
+      <FinalCta m={market} />
     </PublicLayout>
   );
 }

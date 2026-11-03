@@ -63,7 +63,7 @@ export function renderHtml(ctx: RequestContext, element: ReactNode, opts: Render
 ${noindex ? '<meta name="robots" content="noindex, nofollow">' : ''}
 <meta name="theme-color" content="#0f2340">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="${asset('fonts/instrument-sans-400.woff')}" as="font" type="font/woff" crossorigin>
+<link rel="preload" href="${asset('fonts/schibsted-grotesk-latin-wght-normal.woff2')}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${asset('app.css')}">
 <script type="module" src="${asset('app.js')}" nonce="${ctx.nonce}"></script>
 </head>

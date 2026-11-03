@@ -1,6 +1,7 @@
 /**
- * Byggeklosser for de offentlige markedssidene (forside, funksjoner, priser, bransjer …).
- * Ren HTML/CSS/SVG – ingen bilder og ingen JavaScript. Dekor er skjult for skjermlesere.
+ * Byggeklosser for de offentlige sidene (forside, funksjoner, priser, bransjer …).
+ * Stilen: norsk grotesk, mono for etiketter og tall, hårfine linjer i stedet for kort med skygge.
+ * Ingen dekor som ikke betyr noe – ingen ikonbokser, radarsirkler eller mørke bånd.
  */
 import type { ReactNode } from 'react';
 import type { IconType } from 'react-icons';
@@ -41,45 +42,42 @@ export const INDUSTRY_ICONS: Record<string, IconType> = {
 };
 
 export function IconChip({ icon: Icon, className }: { icon: IconType; className?: string }) {
-  return (
-    <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl bg-navy-50 text-navy-700', className)}>
-      <Icon className="size-5" aria-hidden />
-    </span>
-  );
+  return <Icon className={cn('size-6 shrink-0 text-navy-700', className)} aria-hidden strokeWidth={1.6} />;
 }
 
-/** Planene med pris. `maxFeatures` korter ned listen (forsiden). */
+/** Prislisten: tre kolonner med hårfine skillelinjer. `maxFeatures` korter ned listen (forsiden). */
 export function PlanCards({ maxFeatures, ctaHref = '/registrer', showFeatures = true }: { maxFeatures?: number; ctaHref?: string; showFeatures?: boolean }) {
   return (
-    <div className="grid gap-5 md:grid-cols-3">
-      {PAID_PLANS.map((id) => {
+    <div className="grid grid-cols-1 border-y border-line md:grid-cols-3">
+      {PAID_PLANS.map((id, i) => {
         const p = PLANS[id];
         const featured = id === 'professional';
         return (
           <section
             key={id}
             className={cn(
-              'lift relative flex flex-col rounded-2xl border p-6',
-              featured ? 'border-navy-900 bg-navy-950 text-white shadow-[0_30px_60px_-30px_rgba(15,35,64,0.8)]' : 'border-line bg-white',
+              'relative flex flex-col py-8 md:px-8',
+              i > 0 && 'border-t border-line md:border-l md:border-t-0',
+              i === 0 && 'md:pl-0',
+              i === PAID_PLANS.length - 1 && 'md:pr-0',
             )}
           >
-            {featured ? <span className="absolute -top-3 left-6 rounded-full bg-marker px-2.5 py-0.5 text-[12px] font-semibold text-ink">Med i prøveperioden</span> : null}
-            <h3 className={cn('text-[18px] font-semibold', featured ? 'text-white' : 'text-navy-900')}>{p.name}</h3>
-            <p className={cn('mt-1 text-[14px]', featured ? 'text-navy-200' : 'text-muted')}>{p.tagline}</p>
-            <p className="mt-5">
-              <span className={cn('num font-serif text-[44px] font-semibold leading-none', featured ? 'text-white' : 'text-navy-900')}>{p.priceNok}</span>
-              <span className={cn('text-[15px]', featured ? 'text-navy-200' : 'text-muted')}> kr/mnd</span>
+            {featured ? <span className="absolute inset-x-0 top-0 h-1 bg-marker md:inset-x-8" aria-hidden /> : null}
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 className="text-[20px] font-[740] tracking-[-0.015em] text-navy-950">{p.name}</h3>
+              {featured ? <span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-navy-700">Med i prøveperioden</span> : null}
+            </div>
+            <p className="mt-1 text-[14px] text-muted">{p.tagline}</p>
+            <p className="mt-6 flex items-baseline gap-2">
+              <span className="text-[52px] font-[780] leading-none tracking-[-0.04em] text-navy-950">{p.priceNok}</span>
+              <span className="font-mono text-[12px] uppercase tracking-[0.08em] text-muted">kr/mnd eks. mva.</span>
             </p>
             {showFeatures ? (
-              <CheckList
-                dark={featured}
-                className={cn('mt-6 flex-1 text-[14px]', featured ? 'text-navy-100' : 'text-ink')}
-                items={maxFeatures ? p.features.slice(0, maxFeatures) : p.features}
-              />
+              <CheckList className="mt-6 flex-1 text-[14px] text-ink" items={maxFeatures ? p.features.slice(0, maxFeatures) : p.features} />
             ) : (
               <span className="flex-1" />
             )}
-            <a href={ctaHref} className={buttonVariants({ variant: featured ? 'inverse' : 'secondary', className: 'mt-7 w-full' })}>
+            <a href={ctaHref} className={buttonVariants({ variant: featured ? 'primary' : 'secondary', className: 'mt-7 w-full' })}>
               Start prøveperiode
             </a>
           </section>
@@ -94,73 +92,42 @@ export function Container({ children, className }: { children: ReactNode; classN
 }
 
 export function Eyebrow({ children, dark = false }: { children: ReactNode; dark?: boolean }) {
-  return <p className={cn('text-[13px] font-semibold uppercase tracking-[0.12em]', dark ? 'text-marker' : 'text-navy-600')}>{children}</p>;
+  return <p className={cn('font-mono text-[12px] font-medium uppercase tracking-[0.12em]', dark ? 'text-marker' : 'text-navy-600')}>{children}</p>;
 }
 
 export function SectionHeading({
   eyebrow,
   children,
   lead,
-  center = false,
   dark = false,
 }: {
   eyebrow?: ReactNode;
   children: ReactNode;
   lead?: ReactNode;
+  /** Beholdt for kompatibilitet – overskrifter er alltid venstrestilt. */
   center?: boolean;
   dark?: boolean;
 }) {
   return (
-    <div className={cn('max-w-2xl', center && 'mx-auto text-center')}>
+    <div className="max-w-2xl">
       {eyebrow ? <Eyebrow dark={dark}>{eyebrow}</Eyebrow> : null}
-      <h2 className={cn('mt-2 font-serif text-[30px] font-semibold leading-[1.12] tracking-[-0.01em] sm:text-[40px]', dark ? 'text-white' : 'text-navy-900')}>
-        {children}
-      </h2>
+      <h2 className={cn('mt-3 text-[30px] font-[760] leading-[1.05] tracking-[-0.028em] sm:text-[42px]', dark ? 'text-white' : 'text-navy-950')}>{children}</h2>
       {lead ? <p className={cn('mt-4 text-[17px] leading-relaxed', dark ? 'text-navy-200' : 'text-muted')}>{lead}</p> : null}
     </div>
   );
 }
 
-/** Lys toppseksjon for undersider, med svakt rutenett. */
+/** Toppseksjon for undersider: stor, venstrestilt tittel og hårfin linje under. */
 export function PageHero({ eyebrow, title, lead, children }: { eyebrow?: ReactNode; title: ReactNode; lead?: ReactNode; children?: ReactNode }) {
   return (
-    <section className="relative isolate overflow-hidden border-b border-line bg-paper">
-      <div aria-hidden className="paper-grid absolute inset-0 -z-10" />
+    <section className="border-b border-line">
       <Container className="py-14 sm:py-20">
         {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
-        <h1 className={cn('max-w-3xl font-serif text-[36px] font-semibold leading-[1.08] tracking-[-0.015em] text-navy-900 sm:text-[48px]', eyebrow && 'mt-2')}>{title}</h1>
-        {lead ? <p className="mt-5 max-w-2xl text-[18px] leading-relaxed text-muted">{lead}</p> : null}
+        <h1 className={cn('max-w-4xl text-[40px] font-[780] leading-[1] tracking-[-0.035em] text-navy-950 sm:text-[60px]', eyebrow && 'mt-4')}>{title}</h1>
+        {lead ? <p className="mt-6 max-w-2xl text-[18px] leading-relaxed text-ink">{lead}</p> : null}
         {children}
       </Container>
     </section>
-  );
-}
-
-/** Radarringer med roterende sveip og et par «treff» (ren dekor). */
-export function RadarDecor({ className, blips = true }: { className?: string; blips?: boolean }) {
-  return (
-    <div aria-hidden className={cn('pointer-events-none absolute aspect-square', className)}>
-      <svg viewBox="0 0 100 100" className="absolute inset-0 size-full">
-        {[49.5, 39, 28.5, 18].map((r) => (
-          <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="rgb(255 255 255 / 0.10)" strokeWidth="0.25" />
-        ))}
-        <line x1="50" y1="0.5" x2="50" y2="99.5" stroke="rgb(255 255 255 / 0.06)" strokeWidth="0.2" />
-        <line x1="0.5" y1="50" x2="99.5" y2="50" stroke="rgb(255 255 255 / 0.06)" strokeWidth="0.2" />
-      </svg>
-      <div className="radar-sweep absolute inset-[0.5%]" />
-      {blips
-        ? [
-            ['24%', '30%', '0s'],
-            ['70%', '22%', '1.4s'],
-            ['78%', '64%', '2.6s'],
-          ].map(([left, top, delay]) => (
-            <span key={`${left}${top}`} className="absolute size-2" style={{ left, top }}>
-              <span className="radar-blip absolute inset-0 rounded-full bg-marker" style={{ animationDelay: delay }} />
-              <span className="absolute inset-[25%] rounded-full bg-marker" />
-            </span>
-          ))
-        : null}
-    </div>
   );
 }
 
@@ -168,10 +135,8 @@ export function CheckList({ items, className, dark = false, inline = false }: { 
   return (
     <ul className={cn(inline ? 'flex flex-wrap gap-x-6 gap-y-2' : 'space-y-2.5', className)}>
       {items.map((item, i) => (
-        <li key={i} className="flex gap-3">
-          <span className={cn('mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full', dark ? 'bg-white/10 text-marker' : 'bg-ok-soft text-ok')}>
-            <LuCheck className="size-3.5" aria-hidden strokeWidth={3} />
-          </span>
+        <li key={i} className="flex gap-2.5">
+          <LuCheck className={cn('mt-[3px] size-4 shrink-0', dark ? 'text-marker' : 'text-navy-700')} aria-hidden strokeWidth={2.5} />
           <span>{item}</span>
         </li>
       ))}
@@ -179,30 +144,12 @@ export function CheckList({ items, className, dark = false, inline = false }: { 
   );
 }
 
-/** Relevans 0–100 som ring (eksempler på forsiden). */
-export function ScoreRing({ value, size = 44, label = 'Relevans' }: { value: number; size?: number; label?: string }) {
-  const r = 15.5;
-  const c = 2 * Math.PI * r;
-  const tone = value >= 80 ? 'var(--color-ok)' : value >= 60 ? 'var(--color-navy-600)' : 'var(--color-faint)';
-  return (
-    <span className="relative inline-flex shrink-0 items-center justify-center" style={{ width: size, height: size }} role="img" aria-label={`${label} ${value} av 100`}>
-      <svg viewBox="0 0 36 36" className="absolute inset-0 size-full -rotate-90">
-        <circle cx="18" cy="18" r={r} fill="none" stroke="var(--color-line)" strokeWidth="3" />
-        <circle cx="18" cy="18" r={r} fill="none" stroke={tone} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(c * value) / 100} ${c}`} />
-      </svg>
-      <span className="num relative font-semibold text-navy-900" style={{ fontSize: size * 0.3 }}>
-        {value}
-      </span>
-    </span>
-  );
-}
-
 export function FaqList({ items }: { items: [string, ReactNode][] }) {
   return (
-    <div className="divide-y divide-line rounded-2xl border border-line bg-white">
+    <div className="divide-y divide-line border-y border-line">
       {items.map(([q, a]) => (
-        <details key={q} className="group px-5 py-4 sm:px-6">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-semibold text-navy-900 [&::-webkit-details-marker]:hidden">
+        <details key={q} className="group py-4">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[17px] font-semibold text-navy-950 [&::-webkit-details-marker]:hidden">
             {q}
             <LuChevronDown className="size-5 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
           </summary>
@@ -213,23 +160,21 @@ export function FaqList({ items }: { items: [string, ReactNode][] }) {
   );
 }
 
-/** Avsluttende oppfordring på mørk bakgrunn. */
+/** Avsluttende oppfordring: en tydelig setning og knappene, uten dekor. */
 export function CtaBand({ title, lead, primary, secondary }: { title: ReactNode; lead: ReactNode; primary: { href: string; label: string }; secondary?: { href: string; label: string } }) {
   return (
-    <section className="relative isolate overflow-hidden bg-navy-950 text-white">
-      <div aria-hidden className="hero-grid absolute inset-0 -z-10" />
-      <RadarDecor className="-right-56 top-1/2 -z-10 w-[560px] -translate-y-1/2 opacity-80" />
-      <Container className="flex flex-col items-start gap-8 py-20 sm:py-24 lg:flex-row lg:items-center lg:justify-between">
-        <div className="max-w-xl">
-          <h2 className="font-serif text-[32px] font-semibold leading-tight text-white sm:text-[40px]">{title}</h2>
-          <p className="mt-4 text-[17px] leading-relaxed text-navy-200">{lead}</p>
+    <section>
+      <Container className="flex flex-col items-start gap-8 py-16 sm:py-24 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-2xl">
+          <h2 className="text-[32px] font-[760] leading-[1.04] tracking-[-0.03em] text-navy-950 sm:text-[48px]">{title}</h2>
+          <p className="mt-4 text-[17px] leading-relaxed text-muted">{lead}</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <a href={primary.href} className={buttonVariants({ variant: 'inverse', size: 'lg' })}>
+          <a href={primary.href} className={buttonVariants({ size: 'lg' })}>
             {primary.label}
           </a>
           {secondary ? (
-            <a href={secondary.href} className={buttonVariants({ variant: 'ghost', size: 'lg', className: 'text-white hover:bg-white/10' })}>
+            <a href={secondary.href} className={buttonVariants({ variant: 'secondary', size: 'lg' })}>
               {secondary.label}
             </a>
           ) : null}

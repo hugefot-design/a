@@ -58,7 +58,7 @@ test('ny kunde: fra registrering til tilbudsarbeid', async () => {
 
   // Offentlig forside → registrering
   await page.goto(`${BASE}/`);
-  assert.match((await page.locator('h1').textContent()) ?? '', /Finn anbudene som passer/);
+  assert.match((await page.locator('h1').textContent()) ?? '', /offentlige anbud er åpne i Norge|Offentlige anbud i Norge, samlet/);
   // Samme oppfordring står øverst og nederst på forsiden – bruk den øverste.
   await page.getByRole('link', { name: 'Prøv gratis i 14 dager' }).first().click();
   await page.fill('#name', 'Eva Ende-til-ende');

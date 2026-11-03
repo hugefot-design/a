@@ -10,7 +10,7 @@ import { PublicLayout } from '../layouts';
 import { formatDate, formatInt, sourcesPhrase } from '../format';
 import { CheckList, Container, CtaBand, FaqList, faqItems, IconChip, INDUSTRY_ICONS, PageHero, PlanCards, SectionHeading } from '../marketing';
 
-export { HomePage, type Coverage, type Specimen } from './home';
+export { HomePage } from './home';
 export { CookiesPage, DpaPage, PrivacyPage, SecurityPage, SubprocessorsPage, TermsPage } from './legal';
 
 // ---------------------------------------------------------------------------
