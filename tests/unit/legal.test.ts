@@ -138,7 +138,13 @@ test('underleverandører som ikke er satt opp, merkes som planlagt', () => {
     assert.match(by('Render')!.purpose, /opplastede dokumenter/, 'lokale filer ligger hos Render');
 
     Object.assign(e, { STRIPE_SECRET_KEY: 'sk_test_x', AI_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: 'x', EMAIL_PROVIDER: 'resend', RESEND_API_KEY: 'x', STORAGE_DRIVER: 'supabase' });
+    Object.assign(e, { EMAIL_FROM: 'AnbudRadar <onboarding@resend.dev>' });
     list = subprocessors();
+    assert.equal(by('Resend')?.location, 'USA', 'Resends fellesadresse sender fra USA');
+    Object.assign(e, { EMAIL_FROM: 'AnbudRadar <varsler@anbudradar.com>' });
+    list = subprocessors();
+    assert.match(by('Resend')!.location, /^EU \(Irland\)/, 'eget domene er lagt inn med EU-region');
+    assert.match(by('Resend')!.transfer, /USA/, 'selskapet er amerikansk – det skal fortsatt stå');
     assert.equal(by('Stripe')?.planned, false);
     assert.equal(by('Anthropic')?.planned, false);
     assert.equal(by('Resend')?.planned, false);

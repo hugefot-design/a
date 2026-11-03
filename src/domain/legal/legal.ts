@@ -57,6 +57,7 @@ export interface Subprocessor {
 /** Underleverandørene ut fra faktisk oppsett. Planlagte vises tydelig merket. */
 export function subprocessors(): Subprocessor[] {
   const filesInSupabase = env.STORAGE_DRIVER === 'supabase';
+  const emailFromOwnDomain = !/@resend\.dev\b/i.test(env.EMAIL_FROM);
   const list: Subprocessor[] = [
     {
       name: 'Render Services, Inc.',
@@ -76,8 +77,12 @@ export function subprocessors(): Subprocessor[] {
       name: 'Resend, Inc.',
       purpose: 'Utsending av e-post (bekreftelser, varsler, ukesoversikt)',
       data: 'E-postadresse, navn og innholdet i e-posten',
-      location: 'USA',
-      transfer: 'EUs standardavtaler (SCC) i leverandørens databehandleravtale.',
+      // Eget avsenderdomene (anbudradar.com) er lagt inn hos Resend med EU-region (eu-west-1, Irland).
+      // Fellesadressen onboarding@resend.dev, som brukes før domenet er bekreftet, sender fra USA.
+      location: emailFromOwnDomain ? 'EU (Irland) for utsending. Selskapet er amerikansk.' : 'USA',
+      transfer: emailFromOwnDomain
+        ? 'E-post sendes fra EU. Opplysninger kan også behandles i USA; det dekkes av EUs standardavtaler (SCC) i leverandørens databehandleravtale.'
+        : 'EUs standardavtaler (SCC) i leverandørens databehandleravtale.',
       planned: env.EMAIL_PROVIDER !== 'resend' || !env.RESEND_API_KEY,
     },
     {
