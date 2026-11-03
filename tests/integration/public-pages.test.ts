@@ -33,11 +33,10 @@ test('alle offentlige sider svarer og har nøyaktig én h1', async () => {
   }
 });
 
-test('forsiden bygger på ekte data og merker eksempler', async () => {
+test('forsiden er kort og bygger på ekte data', async () => {
   const page = await get('/');
   assert.match(page.body, /offentlige anbud er åpne i Norge|Offentlige anbud i Norge, samlet/);
   assert.match(page.body, /Frister/);
-  assert.match(page.body, /Eksempel/);
   assert.doesNotMatch(page.body.replaceAll('<!-- -->', ''), />null/);
   // Forsiden skal være lett å lese: korte tekster (detaljene står på undersidene).
   const text = (page.body.match(/<main[^>]*>([\s\S]*)<\/main>/)?.[1] ?? '')
@@ -45,7 +44,7 @@ test('forsiden bygger på ekte data og merker eksempler', async () => {
     .replace(/<details[\s\S]*?<summary[^>]*>([\s\S]*?)<\/summary>[\s\S]*?<\/details>/g, ' $1 ')
     .replace(/<[^>]+>/g, ' ');
   const words = text.split(/\s+/).filter((w) => /\p{L}|\d/u.test(w)).length;
-  assert.ok(words < 900, `forsiden har ${words} synlige ord – hold den kort`);
+  assert.ok(words < 300, `forsiden har ${words} synlige ord – hold den kort`);
   // Ingen påstander om kunder eller omtaler vi ikke kan dokumentere.
   assert.doesNotMatch(page.body, /fornøyde kunder|kundene våre sier|★/i);
 });

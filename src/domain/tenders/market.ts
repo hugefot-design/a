@@ -1,9 +1,10 @@
 /**
- * Markedsbildet på forsiden: ekte tall og ekte kunngjøringer fra databasen – aldri oppdiktet.
+ * Tallene og fristtavla på forsiden, og eksempelkunngjøringen på /funksjoner: ekte tall og ekte
+ * kunngjøringer fra databasen – aldri oppdiktet.
  * Eksempeldata tas aldri med. Mellomlagres i fem minutter, så forsiden er rask og databasen spares.
  */
 import { systemSql } from '@/lib/db';
-import { CERTIFICATIONS, INDUSTRIES, REGIONS } from '@/domain/reference';
+import { CERTIFICATIONS, REGIONS } from '@/domain/reference';
 import { statusCondition } from './queries';
 
 export interface BoardRow {
@@ -27,12 +28,6 @@ export interface MarketSnapshot {
   /** Siste vellykkede henting fra en påslått kilde. */
   lastFetched: Date | null;
   board: BoardRow[];
-  /** Alle 15 fylker, også de med 0. Et anbud kan gjelde flere fylker. */
-  regions: { code: string; name: string; n: number }[];
-  /** Åpne anbud uten oppgitt fylke (f.eks. «hele landet» eller utlandet). */
-  regionless: number;
-  /** Bransjer med minst ett åpent anbud, flest først. */
-  industries: { id: string; name: string; n: number }[];
 }
 
 const REGION_NAME = new Map(REGIONS.map((r) => [r.code, r.name]));
@@ -54,7 +49,6 @@ export async function marketSnapshot(): Promise<MarketSnapshot> {
       count(*) filter (where t.first_seen_at > now() - interval '24 hours')::int as new24h,
       count(*) filter (where ${open} and t.deadline_at < now() + interval '7 days')::int as closing_week,
       count(distinct lower(t.buyer_name)) filter (where ${open} and t.buyer_name is not null)::int as buyers,
-      count(*) filter (where ${open} and cardinality(t.region_codes) = 0)::int as regionless,
       max(t.first_seen_at) as last_ingested,
       (select max(last_success_at) from data_sources where enabled) as last_fetched
     from tenders t
@@ -64,7 +58,6 @@ export async function marketSnapshot(): Promise<MarketSnapshot> {
     new24h: number;
     closingWeek: number;
     buyers: number;
-    regionless: number;
     lastIngested: Date | null;
     lastFetched: Date | null;
   }[];
@@ -76,7 +69,7 @@ export async function marketSnapshot(): Promise<MarketSnapshot> {
     from tenders t
     where not t.is_sample and t.lifecycle in ('competition', 'other') and t.deadline_at > now()
     order by t.deadline_at asc, t.id
-    limit 8
+    limit 6
   `) as unknown as {
     id: string;
     title: string;
@@ -88,22 +81,6 @@ export async function marketSnapshot(): Promise<MarketSnapshot> {
     source: string | null;
   }[];
 
-  const regionCounts = (await sql`
-    select rc as code, count(*)::int as n
-    from tenders t, unnest(t.region_codes) as rc
-    where not t.is_sample and ${open}
-    group by rc
-  `) as unknown as { code: string; n: number }[];
-
-  const industryCounts = (await sql`
-    select ind as id, count(*)::int as n
-    from tenders t, unnest(t.industry_ids) as ind
-    where not t.is_sample and ${open}
-    group by ind
-  `) as unknown as { id: string; n: number }[];
-
-  const byRegion = new Map(regionCounts.map((r) => [r.code, r.n]));
-  const byIndustry = new Map(industryCounts.map((r) => [r.id, r.n]));
   const value: MarketSnapshot = {
     at: new Date(),
     open: totals!.open,
@@ -121,11 +98,6 @@ export async function marketSnapshot(): Promise<MarketSnapshot> {
       place: (r.regionCodes[0] && REGION_NAME.get(r.regionCodes[0])) || r.placeText || null,
       source: r.source,
     })),
-    regions: REGIONS.map((r) => ({ code: r.code, name: r.name, n: byRegion.get(r.code) ?? 0 })),
-    regionless: totals!.regionless,
-    industries: INDUSTRIES.map((i) => ({ id: i.id, name: i.name, n: byIndustry.get(i.id) ?? 0 }))
-      .filter((i) => i.n > 0)
-      .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'nb')),
   };
   cache = { at: Date.now(), value };
   return value;

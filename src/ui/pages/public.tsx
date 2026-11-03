@@ -3,12 +3,15 @@ import type { IconType } from 'react-icons';
 import { LuBellRing, LuCalculator, LuChartColumn, LuFileSearch, LuHandshake, LuListChecks, LuMail, LuRadar, LuSearch, LuX } from 'react-icons/lu';
 import { INDUSTRIES, CPV_DIVISIONS } from '@/domain/reference';
 import { PAID_PLANS, PLANS, type PlanId } from '@/domain/billing/plans';
+import type { NoticeSpecimen } from '@/domain/tenders/market';
 import { companyConfigured } from '@/domain/legal/legal';
 import { useUi } from '../context';
 import { Alert, Button, buttonVariants, cn, Field, Input, PostForm, Textarea } from '../components';
 import { PublicLayout } from '../layouts';
 import { formatDate, formatInt, sourcesPhrase } from '../format';
 import { CheckList, Container, CtaBand, FaqList, faqItems, IconChip, INDUSTRY_ICONS, PageHero, PlanCards, SectionHeading } from '../marketing';
+
+import { NoticeExample } from './notice-example';
 
 export { HomePage } from './home';
 export { CookiesPage, DpaPage, PrivacyPage, SecurityPage, SubprocessorsPage, TermsPage } from './legal';
@@ -90,7 +93,7 @@ const FEATURES: { icon: IconType; title: string; text: string; points: string[] 
   },
 ];
 
-export function FeaturesPage() {
+export function FeaturesPage({ specimen }: { specimen: NoticeSpecimen | null }) {
   const { user, trialDays } = useUi();
   return (
     <PublicLayout>
@@ -108,6 +111,7 @@ export function FeaturesPage() {
           </a>
         </div>
       </PageHero>
+      {specimen ? <NoticeExample s={specimen} /> : null}
       <section className="py-16 sm:py-24">
         <Container>
           <div className="grid gap-5 md:grid-cols-2">

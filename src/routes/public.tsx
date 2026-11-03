@@ -32,13 +32,13 @@ import { formStr } from './helpers';
 
 export function registerPublicRoutes(router: Router): void {
   router.get('/', 'public', async (ctx) => {
-    const [market, specimen] = await Promise.all([marketSnapshot(), noticeSpecimen()]);
-    return render(ctx, <HomePage market={market} specimen={specimen} />, {
+    const market = await marketSnapshot();
+    return render(ctx, <HomePage market={market} />, {
       title: 'Offentlige anbud for norske bedrifter',
       description: 'Finn, forstå og svar på offentlige anbud. AnbudRadar rangerer kunngjøringer etter hva bedriften leverer og forklarer kravene med kildehenvisning.',
     });
   });
-  router.get('/funksjoner', 'public', async (ctx) => render(ctx, <FeaturesPage />, { title: 'Funksjoner' }));
+  router.get('/funksjoner', 'public', async (ctx) => render(ctx, <FeaturesPage specimen={await noticeSpecimen()} />, { title: 'Funksjoner' }));
   router.get('/priser', 'public', async (ctx) => render(ctx, <PricingPage />, { title: 'Priser' }));
   router.get('/bransjer', 'public', async (ctx) => render(ctx, <IndustriesPage />, { title: 'Bransjer' }));
   router.get('/om', 'public', async (ctx) => render(ctx, <AboutPage company={companyInfo()} />, { title: 'Om oss' }));
