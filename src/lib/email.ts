@@ -36,6 +36,9 @@ export async function queueEmail(msg: EmailMessage, db: Db = systemSql()): Promi
 }
 
 /** Testlisten (EMAIL_ALLOWED_RECIPIENTS): adresser eller «@domene». Uten liste er alle tillatt. */
+/** Feilteksten i utboksen for e-post som testlisten stoppet (brukes også til å telle dem i admin). */
+export const BLOCKED_BY_ALLOWLIST = 'Ikke sendt: mottakeren står ikke på testlisten (EMAIL_ALLOWED_RECIPIENTS).';
+
 export function recipientAllowed(email: string, list: string | undefined = env.EMAIL_ALLOWED_RECIPIENTS): boolean {
   if (!list?.trim()) return true;
   const to = email.trim().toLowerCase();
@@ -69,7 +72,7 @@ interface OutboxRow {
 
 async function sendViaProvider(row: OutboxRow): Promise<SendResult> {
   if (!recipientAllowed(row.toEmail)) {
-    return { ok: false, provider: env.EMAIL_PROVIDER, error: 'Ikke sendt: mottakeren står ikke på testlisten (EMAIL_ALLOWED_RECIPIENTS).', permanent: true, blocked: true };
+    return { ok: false, provider: env.EMAIL_PROVIDER, error: BLOCKED_BY_ALLOWLIST, permanent: true, blocked: true };
   }
   if (env.EMAIL_PROVIDER === 'resend') {
     if (!env.RESEND_API_KEY) return { ok: false, provider: 'resend', error: 'RESEND_API_KEY mangler' };

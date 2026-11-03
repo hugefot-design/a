@@ -9,7 +9,7 @@ import { getSession, SESSION_COOKIE } from '@/domain/auth/auth';
 import { loadOrgContext } from '@/domain/org/org';
 import { FEATURE_LABELS } from '@/domain/billing/plans';
 import { ErrorPage, FeatureLockedPage } from '@/ui/pages/system';
-import { HttpError, parseCookies, redirect, serializeCookie, type RequestContext } from './http';
+import { HttpError, homePath, parseCookies, redirect, serializeCookie, type RequestContext } from './http';
 import { decodeFlash, FLASH_COOKIE } from './flash';
 import { render } from './render';
 import { serveStatic } from './static';
@@ -217,7 +217,7 @@ async function dispatch(ctx: RequestContext, router: Router): Promise<Response> 
     case 'public':
       break;
     case 'guest':
-      if (ctx.user) return redirect('/app');
+      if (ctx.user) return redirect(homePath(ctx.user));
       break;
     case 'user':
     case 'org':

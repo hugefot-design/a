@@ -137,3 +137,72 @@ document.querySelectorAll<HTMLTextAreaElement>('textarea[data-count]').forEach((
   area.addEventListener('input', update);
   update();
 });
+
+// Diagrammer: vis verdien for søylen under pekeren (eller fingeren), og la piltastene bla mellom
+// søylene når diagrammet har fokus. Tabellen under hvert diagram har de samme tallene, så dette
+// er bare en snarvei. Teksten settes med textContent – aldri som HTML.
+(() => {
+  const tip = document.createElement('div');
+  tip.className = 'chart-tip';
+  tip.setAttribute('role', 'status');
+  tip.hidden = true;
+  const value = document.createElement('strong');
+  const label = document.createElement('span');
+  tip.append(value, label);
+  let active: HTMLElement | null = null;
+
+  function show(slot: HTMLElement) {
+    const [v = '', l = ''] = (slot.dataset.tip ?? '').split('|');
+    if (!tip.isConnected) document.body.append(tip);
+    active?.removeAttribute('data-active');
+    active = slot;
+    slot.setAttribute('data-active', '');
+    value.textContent = v;
+    label.textContent = l;
+    tip.hidden = false;
+    const r = slot.getBoundingClientRect();
+    const t = tip.getBoundingClientRect();
+    const left = Math.min(Math.max(8, r.left + r.width / 2 - t.width / 2), window.innerWidth - t.width - 8);
+    let top = r.top - t.height - 8;
+    if (top < 8) top = r.bottom + 8;
+    tip.style.left = `${left + window.scrollX}px`;
+    tip.style.top = `${top + window.scrollY}px`;
+  }
+  function hide() {
+    active?.removeAttribute('data-active');
+    active = null;
+    tip.hidden = true;
+  }
+  const slotFrom = (target: EventTarget | null) => (target instanceof Element ? target.closest<HTMLElement>('[data-chart] [data-tip]') : null);
+
+  document.addEventListener('pointerover', (event) => {
+    const slot = slotFrom(event.target);
+    if (slot) show(slot);
+  });
+  document.addEventListener('pointerout', (event) => {
+    const slot = slotFrom(event.target);
+    if (slot && !slot.contains(event.relatedTarget as Node | null)) hide();
+  });
+  document.addEventListener('focusin', (event) => {
+    const chart = event.target instanceof HTMLElement && event.target.matches('[data-chart]') ? event.target : null;
+    const slots = chart?.querySelectorAll<HTMLElement>('[data-tip]');
+    if (slots?.length) show(slots[slots.length - 1]!);
+  });
+  document.addEventListener('focusout', (event) => {
+    if (event.target instanceof HTMLElement && event.target.matches('[data-chart]')) hide();
+  });
+  document.addEventListener('keydown', (event) => {
+    const chart = event.target instanceof HTMLElement && event.target.matches('[data-chart]') ? event.target : null;
+    if (!chart) return;
+    const slots = Array.from(chart.querySelectorAll<HTMLElement>('[data-tip]'));
+    if (!slots.length) return;
+    const index = active ? slots.indexOf(active) : slots.length - 1;
+    const next =
+      event.key === 'ArrowLeft' ? index - 1 : event.key === 'ArrowRight' ? index + 1 : event.key === 'Home' ? 0 : event.key === 'End' ? slots.length - 1 : null;
+    if (event.key === 'Escape') return hide();
+    if (next === null) return;
+    event.preventDefault();
+    show(slots[Math.min(Math.max(next, 0), slots.length - 1)]!);
+  });
+  window.addEventListener('scroll', hide, { passive: true });
+})();

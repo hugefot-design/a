@@ -19,7 +19,7 @@ import {
 } from '@/domain/auth/auth';
 import { acceptInvitation, findInvitation } from '@/domain/org/org';
 import { redirectWith } from '@/server/flash';
-import { redirect, safeRedirectPath, serializeCookie, type RequestContext } from '@/server/http';
+import { homePath, redirect, safeRedirectPath, serializeCookie, type RequestContext } from '@/server/http';
 import { render } from '@/server/render';
 import type { Router } from '@/server/router';
 import {
@@ -51,7 +51,9 @@ export function registerAuthRoutes(router: Router): void {
   router.post('/logg-inn', 'guest', async (ctx) => {
     const form = await ctx.form();
     const email = str(form, 'email');
-    const next = safeRedirectPath(ctx.query.get('neste'), '/app');
+    // Bare en gyldig «neste»-lenke huskes; ellers bestemmes målet av hvem som logger inn (admin → /admin).
+    const requested = ctx.query.get('neste');
+    const next = requested && safeRedirectPath(requested, '') ? requested : undefined;
     const result = await authenticate(email, str(form, 'password'), ctx.ipHash);
     if (!result.ok) {
       const error =
@@ -63,7 +65,7 @@ export function registerAuthRoutes(router: Router): void {
       return render(ctx, <LoginPage email={email} error={error} next={next} />, { title: 'Logg inn', status: result.reason === 'invalid' ? 401 : 429 });
     }
     await startSession(ctx, result.user.id);
-    return redirect(next);
+    return redirect(next ?? homePath(result.user));
   });
 
   router.get('/registrer', 'guest', async (ctx) =>

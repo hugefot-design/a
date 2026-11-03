@@ -2,7 +2,8 @@ import { systemSql } from '@/lib/db';
 import { env, integrationStatus } from '@/lib/env';
 import { audit } from '@/lib/audit';
 import { enqueueJob } from '@/lib/jobs';
-import { listOrganizations, listUsers, organizationDetail, platformMetrics, systemHealth } from '@/domain/admin/admin';
+import { listOrganizations, listUsers, organizationDetail, systemHealth } from '@/domain/admin/admin';
+import { adminOverview } from '@/domain/admin/overview';
 import { setManualPlan, verifyStripePrices, type PriceCheck } from '@/domain/billing/stripe';
 import { PLANS, type PlanId } from '@/domain/billing/plans';
 import { CONNECTORS } from '@/connectors';
@@ -13,8 +14,8 @@ import { redirectWith } from '@/server/flash';
 import { HttpError } from '@/server/http';
 import { render } from '@/server/render';
 import type { Router } from '@/server/router';
+import { AdminOverviewPage } from '@/ui/pages/admin-overview';
 import {
-  AdminDashboardPage,
   AdminHealthPage,
   AdminImportsPage,
   AdminListPage,
@@ -45,7 +46,7 @@ async function sourceRows() {
 }
 
 export function registerAdminRoutes(router: Router): void {
-  router.get('/admin', 'admin', async (ctx) => render(ctx, <AdminDashboardPage m={await platformMetrics()} integrations={integrationStatus()} />, { title: 'Admin' }));
+  router.get('/admin', 'admin', async (ctx) => render(ctx, <AdminOverviewPage o={await adminOverview()} />, { title: 'Admin – oversikt' }));
 
   router.get('/admin/brukere', 'admin', async (ctx) => {
     const q = (ctx.query.get('q') ?? '').trim().slice(0, 100);

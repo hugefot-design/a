@@ -34,6 +34,8 @@ Eget e-postdomene (`anbudradar.com`, lagt inn i Resend med EU-region): DNS ligge
 
 Admin-tilgang uten databasetilgang: registrer deg i appen, sett `PLATFORM_ADMIN_EMAILS` til e-postadressen og deploy. Byggeloggen viser «Plattform-admin gitt til …» (maskert), og endringen revisjonslogges. Listen gir bare tilgang – fjerning gjøres med `npm run make-admin -- <e-post> --remove`.
 
+Plattform-administratorer havner i admin-panelet (`/admin`) når de logger inn (en `neste`-lenke går foran). Forsiden **Oversikt** viser nøkkeltall med trend, det som trenger oppmerksomhet (feilet henting, kilder som ikke er hentet nylig, bakgrunnsjobber, e-post som ikke gikk eller ble stoppet av testlisten, ubesvarte henvendelser, prøveperioder som slutter), en lanseringssjekk beregnet fra oppsettet, datakildene med «Hent nå», nye anbud og brukere per dag (med tabell) og siste hendelser. Oversikten viser ingen navn eller e-postadresser til brukere.
+
 Begrensninger: tjenesten sover etter en stund uten besøk (første besøk tar 30–60 s, og jobbene står stille mens den sover), 0,1 CPU, Supabase Free pauser etter en uke uten bruk og har ingen sikkerhetskopi. Ingen e-post uten Resend (`EMAIL_PROVIDER=log` skriver dem til loggen). Bytt til oppsettet under før første betalende kunde, og fjern da `RUN_WORKER_IN_WEB`.
 
 ## 1. Database (Supabase)

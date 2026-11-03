@@ -144,6 +144,11 @@ export function text(body: string, init: ResponseInit = {}): Response {
 }
 
 /** Tillat kun relative lenker innenfor appen (hindrer åpne omdirigeringer). */
+/** Der en bruker havner etter innlogging: plattform-administratorer i admin-panelet, alle andre i appen. */
+export function homePath(user: { isPlatformAdmin: boolean } | null | undefined): string {
+  return user?.isPlatformAdmin ? '/admin' : '/app';
+}
+
 export function safeRedirectPath(value: string | null | undefined, fallback = '/app'): string {
   if (!value) return fallback;
   if (!value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) return fallback;

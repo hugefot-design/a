@@ -67,8 +67,8 @@ export function PublicLayout({ children, heroDark = false }: { children: ReactNo
           </nav>
           <div className="flex items-center gap-2">
             {user ? (
-              <a href="/app" className={buttonVariants({ variant: heroDark ? 'inverse' : 'primary', size: 'sm' })}>
-                Til appen
+              <a href={user.isPlatformAdmin ? '/admin' : '/app'} className={buttonVariants({ variant: heroDark ? 'inverse' : 'primary', size: 'sm' })}>
+                {user.isPlatformAdmin ? 'Til admin' : 'Til appen'}
               </a>
             ) : (
               <>
@@ -424,7 +424,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
 // Admin
 // ---------------------------------------------------------------------------
 const ADMIN_NAV = [
-  { href: '/admin', label: 'Nøkkeltall' },
+  { href: '/admin', label: 'Oversikt' },
   { href: '/admin/brukere', label: 'Brukere' },
   { href: '/admin/organisasjoner', label: 'Organisasjoner' },
   { href: '/admin/importer', label: 'Importer' },
@@ -447,7 +447,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </a>
           <span className="rounded bg-marker px-1.5 text-[12px] font-bold text-navy-900">Admin</span>
           <a href="/app" className="ml-auto text-[13px] font-semibold text-navy-100 no-underline hover:text-white">
-            Tilbake til appen
+            Til appen
           </a>
         </div>
         <nav className="scroll-x mx-auto max-w-7xl px-2 sm:px-4" aria-label="Adminmeny">

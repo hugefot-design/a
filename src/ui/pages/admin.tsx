@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { INDUSTRY_BY_ID } from '@/domain/reference';
 import { PLANS } from '@/domain/billing/plans';
-import type { platformMetrics, organizationDetail, systemHealth, listOrganizations, listUsers } from '@/domain/admin/admin';
+import type { organizationDetail, systemHealth, listOrganizations, listUsers } from '@/domain/admin/admin';
 import type { EnrichmentOverview } from '@/connectors/doffin-enrich';
 import { Alert, Badge, Button, Field, Input, PageHeader, Panel, PanelHeader, PostForm, Select, Stat, Textarea } from '../components';
 import { AdminShell } from '../layouts';
@@ -55,72 +55,6 @@ export function Table({ head, rows, empty = 'Ingen rader.' }: { head: ReactNode[
         </tbody>
       </table>
     </div>
-  );
-}
-
-export function AdminDashboardPage({ m, integrations }: { m: Awaited2<ReturnType<typeof platformMetrics>>; integrations: Record<string, unknown> }) {
-  const pct = (v: number) => `${(v * 100).toFixed(1).replace('.', ',')} %`;
-  return (
-    <AdminShell>
-      <PageHeader title="Nøkkeltall" description="Interne tall. Personopplysninger vises ikke her." />
-      <Panel className="mb-6 grid grid-cols-2 gap-6 p-5 md:grid-cols-4 xl:grid-cols-6">
-        <Stat label="Brukere" value={formatInt(m.users.total)} hint={`${m.users.new7d} nye siste 7 d`} />
-        <Stat label="Aktive 7 d / 30 d" value={`${m.users.active7d} / ${m.users.active30d}`} />
-        <Stat label="Organisasjoner" value={formatInt(m.orgs)} hint={`${m.onboarded} med fullført profil`} />
-        <Stat label="Betalende" value={formatInt(m.paying)} hint={`Konvertering ${pct(m.conversion)}`} />
-        <Stat label="MRR (estimat)" value={formatMoney(m.mrr)} hint="Listepris eks. mva." />
-        <Stat label="Churn 30 d" value={pct(m.churn)} hint={`${m.canceled30d} avsluttet`} />
-      </Panel>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Panel>
-          <PanelHeader title="Planer (effektiv)" />
-          <Table head={['Plan', 'Organisasjoner']} rows={Object.entries(m.byPlan).map(([k, v]) => [PLANS[k as keyof typeof PLANS]?.name ?? k, formatInt(v)])} />
-          <p className="px-4 py-2 text-[12px] text-muted">Aktive prøveperioder: {m.trials}</p>
-        </Panel>
-        <Panel>
-          <PanelHeader title="AI denne måneden" />
-          <Table
-            head={['Fullført', 'Feilet', 'Tokens inn', 'Tokens ut', 'Kostnad (USD)']}
-            rows={[[m.ai.completed, m.ai.failed, formatInt(m.ai.inputTokens), formatInt(m.ai.outputTokens), m.ai.costUsd.toFixed(4)]]}
-          />
-          <p className="px-4 py-2 text-[12px] text-muted">Kostnad beregnes fra AI_INPUT/OUTPUT_PRICE_PER_MTOK_USD. 0 betyr at prisene ikke er satt.</p>
-        </Panel>
-        <Panel className="lg:col-span-2">
-          <PanelHeader title="Datakilder og ferskhet" />
-          <Table
-            head={['Kilde', 'Påslått', 'Verifisert live', 'Kunngjøringer', 'Sist vellykket', 'Siste feil']}
-            rows={m.freshness.map((f) => [
-              f.name,
-              f.enabled ? 'Ja' : 'Nei',
-              f.verifiedLive ? <Badge tone="ok">Ja</Badge> : <Badge tone="urgent">Nei</Badge>,
-              formatInt(f.notices),
-              f.lastSuccessAt ? relativeTime(f.lastSuccessAt) : 'Aldri',
-              f.lastError ? <span className="text-danger">{f.lastError.slice(0, 80)}</span> : '–',
-            ])}
-          />
-          <p className="px-4 py-2 text-[12px] text-muted">
-            {formatInt(m.tenders.total)} kunngjøringer ({formatInt(m.tenders.open)} åpne, {formatInt(m.tenders.sample)} eksempeldata). Importfeil siste 7 d:{' '}
-            {m.imports.errors} ({m.imports.failedRuns} feilede kjøringer).
-          </p>
-        </Panel>
-        <Panel>
-          <PanelHeader title="Nye brukere per uke" />
-          <Table head={['Uke', 'Registreringer']} rows={m.registrations.map((r) => [r.week, formatInt(r.n)])} empty="Ingen registreringer siste 8 uker." />
-        </Panel>
-        <Panel>
-          <PanelHeader title="Mest søkte bransjer (30 d)" />
-          <Table head={['Bransje', 'Søk']} rows={m.searchedIndustries.map((s) => [INDUSTRY_BY_ID.get(s.industry)?.name ?? s.industry, formatInt(s.n)])} />
-        </Panel>
-        <Panel>
-          <PanelHeader title="Mest lagrede anbud" />
-          <Table head={['Anbud', 'Lagret']} rows={m.savedTenders.map((s) => [s.title, formatInt(s.n)])} />
-        </Panel>
-        <Panel>
-          <PanelHeader title="Integrasjoner" />
-          <Table head={['Integrasjon', 'Status']} rows={integrationRows(integrations)} />
-        </Panel>
-      </div>
-    </AdminShell>
   );
 }
 
@@ -425,7 +359,7 @@ export function AdminHealthPage({
         <Stat label="Node.js" value={h.node} hint={`Oppetid ${Math.round(h.uptimeSec / 60)} min`} />
         <Stat label="Migreringer" value={h.migrations.length} hint={h.migrations.at(-1)?.version} />
       </Panel>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Panel>
           <PanelHeader title="Jobbkø" />
           <Table head={['Status', 'Antall']} rows={h.jobs.map((j) => [j.status, j.n])} empty="Køen er tom." />
