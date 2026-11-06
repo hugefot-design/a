@@ -251,6 +251,20 @@ export async function invalidateApproval(tx: Tx, workspaceId: string): Promise<v
 // ---------------------------------------------------------------------------
 const ALLOWED = /\.(pdf|docx|xlsx|doc|xls|txt|png|jpg|jpeg|zip)$/i;
 
+/** Filtypen bestemmes av filendelsen på serveren – aldri av det nettleseren oppgir (kan forfalskes). */
+export const BID_MIME: Record<string, string> = {
+  pdf: 'application/pdf',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  doc: 'application/msword',
+  xls: 'application/vnd.ms-excel',
+  txt: 'text/plain; charset=utf-8',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  zip: 'application/zip',
+};
+
 export async function uploadBidDocument(org: OrgContext, userId: string, workspaceId: string, file: File, category: string) {
   if (file.size === 0) return { ok: false as const, error: 'Filen er tom.' };
   if (file.size > env.MAX_UPLOAD_MB * 1024 * 1024) return { ok: false as const, error: `Filen er større enn ${env.MAX_UPLOAD_MB} MB.` };
@@ -261,11 +275,12 @@ export async function uploadBidDocument(org: OrgContext, userId: string, workspa
   const exists = await withTenant({ userId, orgId: org.id }, (tx) => tx`select 1 from bid_workspaces where id = ${workspaceId} and org_id = ${org.id}`);
   if (!exists.length) return { ok: false as const, error: 'Fant ikke tilbudsarbeidet.' };
   const buf = Buffer.from(await file.arrayBuffer());
-  await storage().put(key, buf, file.type || 'application/octet-stream');
+  const mime = BID_MIME[ext] ?? 'application/octet-stream';
+  await storage().put(key, buf, mime);
   await withTenant({ userId, orgId: org.id }, async (tx) => {
     await tx`
       insert into bid_documents (workspace_id, org_id, name, category, storage_key, mime_type, size_bytes, uploaded_by)
-      values (${workspaceId}, ${org.id}, ${name}, ${category.slice(0, 40) || 'vedlegg'}, ${key}, ${file.type || null}, ${buf.length}, ${userId})
+      values (${workspaceId}, ${org.id}, ${name}, ${category.slice(0, 40) || 'vedlegg'}, ${key}, ${mime}, ${buf.length}, ${userId})
     `;
     await invalidateApproval(tx, workspaceId);
   });
@@ -283,7 +298,9 @@ export async function getBidDocument(org: OrgContext, userId: string, documentId
     ),
   );
   if (!row) return null;
-  return { name: row.name, mimeType: row.mimeType ?? 'application/octet-stream', data: await storage().get(row.storageKey) };
+  // Eldre rader kan ha typen nettleseren oppga; bruk filendelsen.
+  const ext = row.name.split('.').pop()?.toLowerCase() ?? '';
+  return { name: row.name, mimeType: BID_MIME[ext] ?? 'application/octet-stream', data: await storage().get(row.storageKey) };
 }
 
 export async function deleteBidDocument(org: OrgContext, userId: string, documentId: string): Promise<boolean> {

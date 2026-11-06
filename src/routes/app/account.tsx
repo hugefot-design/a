@@ -51,6 +51,12 @@ function tabFrom(value: string | null): SettingsProps['tab'] {
   return value === 'team' || value === 'personvern' || value === 'organisasjon' ? value : 'konto';
 }
 
+/**
+ * Viktige endringer (passord, sletting, eksport av alle data, hvem som har tilgang): brukere med
+ * totrinnsinnlogging må ha bekreftet de siste 15 minuttene (se server/app.ts).
+ */
+const SENSITIVE = { sensitive: true } as const;
+
 export function registerAccountRoutes(router: Router): void {
   // ------------------------------------------------------------ Innstillinger
   router.get('/app/innstillinger', 'org', async (ctx) => {
@@ -77,7 +83,7 @@ export function registerAccountRoutes(router: Router): void {
       return render(ctx, <SettingsPage tab="konto" {...await loadSettings(ctx, 'konto')} errors={result.errors} />, { title: 'Innstillinger', status: 422 });
     }
     return redirectWith(ctx, '/app/innstillinger', 'success', 'Passordet er endret. Andre enheter er logget ut.');
-  });
+  }, SENSITIVE);
 
   router.post('/app/innstillinger/logg-ut-andre', 'org', async (ctx) => {
     const n = await deleteOtherSessions(ctx.user!.id, ctx.session!.id);
@@ -91,7 +97,7 @@ export function registerAccountRoutes(router: Router): void {
     return new Response(JSON.stringify(data, null, 2), {
       headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': `attachment; filename="${filename}"`, 'Cache-Control': 'no-store' },
     });
-  });
+  }, SENSITIVE);
 
   router.post('/app/innstillinger/slett-konto', 'org', async (ctx) => {
     const result = await deleteAccount(ctx.user!, formStr(await ctx.form(), 'password', 300));
@@ -103,7 +109,7 @@ export function registerAccountRoutes(router: Router): void {
     }
     ctx.responseCookies.push(serializeCookie(SESSION_COOKIE, '', { maxAge: 0, secure: isProd }));
     return redirectWith(ctx, '/', 'success', 'Kontoen er slettet.');
-  });
+  }, SENSITIVE);
 
   router.post('/app/innstillinger/slett-organisasjon', 'org', async (ctx) => {
     const { org, user } = requireOrg(ctx);
@@ -115,7 +121,7 @@ export function registerAccountRoutes(router: Router): void {
       });
     }
     return redirectWith(ctx, '/app', 'success', 'Organisasjonen er slettet.');
-  });
+  }, SENSITIVE);
 
   // ------------------------------------------------------------------- Team
   router.post('/app/team/inviter', 'org', async (ctx) => {
@@ -125,7 +131,7 @@ export function registerAccountRoutes(router: Router): void {
     const result = await inviteMember(user, org, formStr(form, 'email', 300), role);
     if (!result.ok) return redirectWith(ctx, '/app/innstillinger?fane=team', 'error', result.error);
     return redirectWith(ctx, '/app/innstillinger?fane=team', 'success', 'Invitasjonen er sendt.');
-  });
+  }, SENSITIVE);
 
   router.post('/app/team/invitasjon/:id/trekk', 'org', async (ctx) => {
     const { org, user } = requireManager(ctx);
@@ -139,7 +145,7 @@ export function registerAccountRoutes(router: Router): void {
     if (!['owner', 'admin', 'member'].includes(role)) throw new HttpError(400, 'Ugyldig rolle.');
     const result = await changeMemberRole(user, org, param(ctx, 'userId'), role as 'owner' | 'admin' | 'member');
     return redirectWith(ctx, '/app/innstillinger?fane=team', result.ok ? 'success' : 'error', result.ok ? 'Rollen er endret.' : result.error);
-  });
+  }, SENSITIVE);
 
   router.post('/app/team/:userId/fjern', 'org', async (ctx) => {
     const { org, user } = requireOrg(ctx);
@@ -147,7 +153,7 @@ export function registerAccountRoutes(router: Router): void {
     const result = await removeMember(user, org, target);
     if (!result.ok) return redirectWith(ctx, '/app/innstillinger?fane=team', 'error', result.error);
     return target === user.id ? redirectWith(ctx, '/app', 'success', 'Du har forlatt organisasjonen.') : redirectWith(ctx, '/app/innstillinger?fane=team', 'success', 'Medlemmet er fjernet.');
-  });
+  }, SENSITIVE);
 
   // ------------------------------------------------------------ Abonnement
   router.get(

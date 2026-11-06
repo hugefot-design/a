@@ -9,7 +9,7 @@ tjenester/produksjon) og **forslag** (krever eiers godkjenning: nye leverandøre
 
 | # | Forbedring | Hvorfor | Status |
 | --- | --- | --- | --- |
-| 1 | **Sikkerhetsgjennomgang med tester** – autorisasjon på alle ruter, RLS, opplasting, SSRF, rate limiting, webhooks, hemmeligheter | Kundenes økonomi og tilbud er forretningshemmeligheter; må være på plass før vekst | Pågår |
+| 1 | **Sikkerhetsgjennomgang med tester** – autorisasjon på alle ruter, RLS, opplasting, SSRF, rate limiting, webhooks, hemmeligheter | Kundenes økonomi og tilbud er forretningshemmeligheter; må være på plass før vekst | **Implementert og testet** – 5 funn rettet, se [SIKKERHETSGJENNOMGANG.md](SIKKERHETSGJENNOMGANG.md). Ikke rullet ut. |
 | 2 | **Krav- og avvisningssjekk** – «skal»-krav, minstekrav og avvisningsgrunner fra kunngjøring og dokumenter, med side og sitat, uten AI | Avvisning er den dyreste feilen i tilbudsarbeid; virker også når AI er av | Planlagt |
 | 3 | **Tilbudsresultat og læring** – vunnet/tapt, vinner og vinnerpris hentet fra tildelingene, avvik mot egen kalkyle | Gjør bedriften bedre for hvert tilbud; gir grunnlag for bedre anbefalinger | Planlagt |
 | 4 | **Markedspris fra tidligere tildelinger** og prissimulering i Profit Intelligence | Prising er det vanskeligste; ekte tildelte verdier for lignende kontrakter | Planlagt |

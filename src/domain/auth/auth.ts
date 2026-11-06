@@ -305,6 +305,10 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 export async function changePassword(userId: string, current: string, next: string, keepSessionId: string) {
+  // Hindrer at noen med en stjålet økt prøver mange passord her.
+  if (!(await rateLimit(`password-check:${userId}`, 10, 3600))) {
+    return { ok: false as const, errors: { currentPassword: 'For mange forsøk. Vent en time og prøv igjen.' } as FieldErrors };
+  }
   const sql = appSql();
   const row = first((await sql`select password_hash from users where id = ${userId}`) as unknown as { passwordHash: string }[]);
   if (!row || !(await verifyPassword(current, row.passwordHash))) {

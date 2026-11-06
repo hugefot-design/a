@@ -1,6 +1,7 @@
 import { env } from '@/lib/env';
 import { safeEqual } from '@/lib/crypto';
 import { log } from '@/lib/logger';
+import { rateLimit } from '@/lib/rate-limit';
 import { handleStripeEvent, StripeError, verifyStripeSignature } from '@/domain/billing/stripe';
 import { runScheduledTask, SCHEDULED_TASKS, type ScheduledTask } from '@/domain/ops/tasks';
 import { HttpError, json, type RequestContext } from '@/server/http';
@@ -45,7 +46,11 @@ export function registerWebhookRoutes(router: Router): void {
     '/api/cron/:task',
     'public',
     async (ctx) => {
-      if (!bearerOk(ctx)) throw new HttpError(401, 'Ugyldig eller manglende nøkkel.');
+      if (!bearerOk(ctx)) {
+        // Mange feil nøkler fra samme sted: stopp, så nøkkelen ikke kan gjettes.
+        if (!(await rateLimit(`cron-fail:${ctx.ipHash}`, 20, 3600))) throw new HttpError(429, 'For mange forsøk.');
+        throw new HttpError(401, 'Ugyldig eller manglende nøkkel.');
+      }
       const task = ctx.params.task as ScheduledTask;
       if (!SCHEDULED_TASKS.includes(task)) throw new HttpError(404, 'Ukjent oppgave.');
       const result = await runScheduledTask(task, 'schedule');

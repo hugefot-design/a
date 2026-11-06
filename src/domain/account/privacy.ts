@@ -4,6 +4,7 @@
 import { first, systemSql, withTenant } from '@/lib/db';
 import { verifyPassword } from '@/lib/crypto';
 import { audit } from '@/lib/audit';
+import { rateLimit } from '@/lib/rate-limit';
 import { log } from '@/lib/logger';
 import { storage } from '@/lib/storage';
 import { cancelStripeSubscriptionNow } from '@/domain/billing/stripe';
@@ -107,6 +108,7 @@ export async function deleteOrganization(user: AuthUser, org: OrgContext, confir
 
 /** Sletter kontoen. Organisasjoner der brukeren er eneste medlem slettes også. */
 export async function deleteAccount(user: AuthUser, password: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!(await rateLimit(`password-check:${user.id}`, 10, 3600))) return { ok: false, error: 'For mange forsøk. Vent en time og prøv igjen.' };
   const sql = systemSql();
   const row = first((await sql`select password_hash from users where id = ${user.id}`) as unknown as { passwordHash: string }[]);
   if (!row || !(await verifyPassword(password, row.passwordHash))) return { ok: false, error: 'Passordet er feil.' };

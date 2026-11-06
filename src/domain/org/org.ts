@@ -1,3 +1,4 @@
+import { rateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 import { first, systemSql, withTenant } from '@/lib/db';
 import { env } from '@/lib/env';
@@ -152,6 +153,11 @@ export async function listMembers(userId: string, orgId: string) {
   });
 }
 
+/** Grenser for invitasjons-e-post. */
+export const INVITES_PER_ORG_PER_DAY = 20;
+export const INVITES_PER_USER_PER_HOUR = 10;
+export const INVITES_PER_RECIPIENT_PER_DAY = 3;
+
 export async function inviteMember(
   actor: AuthUser,
   org: OrgContext,
@@ -163,9 +169,21 @@ export async function inviteMember(
   const email = emailRaw.trim().toLowerCase();
   if (!z.string().email().safeParse(email).success) return { ok: false, error: 'Skriv inn en gyldig e-postadresse.' };
 
+  // Invitasjoner sendes som e-post med navn brukeren selv har valgt. Grenser hindrer at funksjonen brukes
+  // til søppelpost (inviter – trekk tilbake – inviter på nytt) og verner avsenderdomenets omdømme.
+  if (
+    !(await rateLimit(`invite:org:${org.id}`, INVITES_PER_ORG_PER_DAY, 86_400)) ||
+    !(await rateLimit(`invite:user:${actor.id}`, INVITES_PER_USER_PER_HOUR, 3600)) ||
+    !(await rateLimit(`invite:email:${sha256Hex(email)}`, INVITES_PER_RECIPIENT_PER_DAY, 86_400))
+  ) {
+    return { ok: false, error: 'For mange invitasjoner på kort tid. Prøv igjen senere.' };
+  }
+
   const { members, invitations } = await listMembers(actor.id, org.id);
   if (members.some((m) => m.email.toLowerCase() === email)) return { ok: false, error: 'Personen er allerede medlem.' };
-  if (members.length + invitations.length >= org.entitlements.maxMembers) {
+  // En ny invitasjon til samme adresse erstatter den gamle, så den teller ikke dobbelt.
+  const otherInvitations = invitations.filter((i) => i.email.toLowerCase() !== email);
+  if (members.length + otherInvitations.length >= org.entitlements.maxMembers) {
     return { ok: false, error: `Planen din har plass til ${org.entitlements.maxMembers} bruker(e). Oppgrader for å invitere flere.` };
   }
   const token = randomToken(32);
