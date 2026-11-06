@@ -89,3 +89,17 @@ test('ikoner for nettleser, Google, iPhone og Android finnes og er lenket fra si
   assert.match(data[1]!.logo!, /\/icon-512\.png$/);
   assert.doesNotMatch((await get('/priser')).body, /application\/ld\+json/);
 });
+
+test('lenker som deles, får tittel, tekst og bilde på riktig språk (ikke i appen)', async () => {
+  const home = await get('/');
+  assert.match(home.body, /<meta property="og:image" content="[^"]*\/assets\/og\/og-nb\.png">/);
+  assert.match(home.body, /<meta property="og:title" content="[^"]+">/);
+  assert.match(home.body, /<meta name="twitter:card" content="summary_large_image">/);
+  const en = await get('/en/pricing');
+  assert.match(en.body, /og-en\.png/);
+  assert.match(en.body, /<meta property="og:url" content="[^"]*\/en\/pricing">/);
+  assert.match(en.body, /<meta property="og:locale" content="en_GB">/);
+  for (const l of ['nb', 'en', 'sv', 'da']) assert.equal((await fetch(`${server.base}/assets/og/og-${l}.png`)).status, 200, l);
+  const login = await fetch(`${server.base}/app`, { redirect: 'manual' });
+  assert.notEqual(login.status, 200, 'appen krever innlogging');
+});

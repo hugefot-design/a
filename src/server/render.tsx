@@ -6,7 +6,7 @@ import { env, integrationStatus, isDev, isProd } from '@/lib/env';
 import { UiContext, type UiContextValue } from '@/ui/context';
 import type { RequestContext } from './http';
 import { liveSources } from '@/domain/tenders/source-status';
-import { LOCALES, localePath, MARKETING_PATHS, messages, preferredLocale } from '@/i18n';
+import { LOCALE_INFO, LOCALES, localePath, MARKETING_PATHS, messages, preferredLocale } from '@/i18n';
 
 const ASSET_DIR = join(process.cwd(), 'public', 'assets');
 let manifestCache: Record<string, string> | null = null;
@@ -76,6 +76,26 @@ function structuredData(ctx: RequestContext): string {
   return `<script type="application/ld+json" nonce="${ctx.nonce}">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
 }
 
+/** Forhåndsvisning når en lenke deles (Facebook, LinkedIn, Messenger, SMS): tittel, tekst og bilde. */
+function socialMeta(ctx: RequestContext, title: string, description: string): string {
+  const base = env.APP_URL.replace(/\/$/, '');
+  const url = base + (isMarketing(ctx.path) ? localePath(ctx.locale, ctx.path) : ctx.path);
+  const m = messages(ctx.locale);
+  return [
+    '<meta property="og:type" content="website">',
+    '<meta property="og:site_name" content="AnbudRadar">',
+    `<meta property="og:title" content="${escapeHtml(title)}">`,
+    `<meta property="og:description" content="${escapeHtml(description)}">`,
+    `<meta property="og:url" content="${escapeHtml(url)}">`,
+    `<meta property="og:image" content="${escapeHtml(`${base}/assets/og/og-${ctx.locale}.png`)}">`,
+    '<meta property="og:image:width" content="1200">',
+    '<meta property="og:image:height" content="630">',
+    `<meta property="og:image:alt" content="${escapeHtml(`${m.home.title1} ${m.home.title2}`)}">`,
+    `<meta property="og:locale" content="${LOCALE_INFO[ctx.locale].intl.replace('-', '_')}">`,
+    '<meta name="twitter:card" content="summary_large_image">',
+  ].join('\n');
+}
+
 /** Kanonisk adresse og hreflang for de oversatte markedssidene. */
 function alternates(ctx: RequestContext): string {
   if (!isMarketing(ctx.path)) return '';
@@ -102,6 +122,7 @@ export function renderHtml(ctx: RequestContext, element: ReactNode, opts: Render
 <meta name="description" content="${escapeHtml(description)}">
 ${noindex ? '<meta name="robots" content="noindex, nofollow">' : ''}
 ${noindex || (opts.status ?? 200) !== 200 ? '' : alternates(ctx)}
+${noindex || (opts.status ?? 200) !== 200 ? '' : socialMeta(ctx, title, description)}
 <meta name="theme-color" content="#060e1b">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
