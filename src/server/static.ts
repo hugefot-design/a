@@ -34,9 +34,30 @@ const ROOT_FILES = new Set([
   '/robots.txt',
 ]);
 
+/**
+ * Bekreftelsesfilen fra Google Search Console (metoden «HTML-fil»). Bare filnavnet Google ga eieren:
+ * vi kjenner de første tegnene (resten ble kuttet på telefonskjermen), og Googles koder er tilfeldige,
+ * så andre kan ikke bruke denne til å bekrefte nettstedet som sitt. Filen må ligge der så lenge
+ * nettstedet skal være bekreftet.
+ */
+const GOOGLE_VERIFICATION_FILE = /^\/(google89c7bd88[0-9a-f]{6,10})\.html$/;
+
+function serveGoogleVerification(req: IncomingMessage, res: ServerResponse, pathname: string): boolean {
+  const name = GOOGLE_VERIFICATION_FILE.exec(pathname)?.[1];
+  if (!name) return false;
+  const body = `google-site-verification: ${name}.html`;
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Content-Length', Buffer.byteLength(body));
+  res.end(req.method === 'HEAD' ? undefined : body);
+  return true;
+}
+
 /** Serverer filer fra /public. Returnerer true hvis forespørselen ble håndtert. */
 export function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string): boolean {
   if (req.method !== 'GET' && req.method !== 'HEAD') return false;
+  if (serveGoogleVerification(req, res, pathname)) return true;
   if (!pathname.startsWith('/assets/') && !ROOT_FILES.has(pathname)) return false;
 
   let decoded: string;

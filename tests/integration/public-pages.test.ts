@@ -6,7 +6,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { closeDb } from '../../src/lib/db';
 import { env } from '../../src/lib/env';
-import { startServer } from '../helpers';
+import { Client, startServer } from '../helpers';
 
 let server: Awaited<ReturnType<typeof startServer>>;
 const savedTrialDays = env.TRIAL_DAYS;
@@ -102,4 +102,13 @@ test('lenker som deles, får tittel, tekst og bilde på riktig språk (ikke i ap
   for (const l of ['nb', 'en', 'sv', 'da']) assert.equal((await fetch(`${server.base}/assets/og/og-${l}.png`)).status, 200, l);
   const login = await fetch(`${server.base}/app`, { redirect: 'manual' });
   assert.notEqual(login.status, 200, 'appen krever innlogging');
+});
+
+test('Google Search Console: bekreftelsesfilen svarer bare for eierens filnavn', async () => {
+  const c = new Client(server.base);
+  const ok = await c.get('/google89c7bd88c1234567.html');
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body, 'google-site-verification: google89c7bd88c1234567.html');
+  assert.equal((await c.get('/google0000000000000000.html')).status, 404);
+  assert.equal((await c.get('/google89c7bd88.html')).status, 404);
 });
