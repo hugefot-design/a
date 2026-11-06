@@ -62,6 +62,20 @@ function suggestion(ctx: RequestContext) {
   return preferred && preferred !== 'nb' ? preferred : null;
 }
 
+/**
+ * Strukturerte data på forsiden: nettstedets navn (Google viser «AnbudRadar» i stedet for adressen)
+ * og logoen. Bare fakta som stemmer: navn, adresse og logo.
+ */
+function structuredData(ctx: RequestContext): string {
+  const base = env.APP_URL.replace(/\/$/, '');
+  const data = [
+    { '@context': 'https://schema.org', '@type': 'WebSite', name: 'AnbudRadar', url: `${base}/`, inLanguage: ctx.locale },
+    { '@context': 'https://schema.org', '@type': 'Organization', name: 'AnbudRadar', url: `${base}/`, logo: `${base}/icon-512.png` },
+  ];
+  // < escapes, så innholdet aldri kan avslutte script-taggen.
+  return `<script type="application/ld+json" nonce="${ctx.nonce}">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
+}
+
 /** Kanonisk adresse og hreflang for de oversatte markedssidene. */
 function alternates(ctx: RequestContext): string {
   if (!isMarketing(ctx.path)) return '';
@@ -88,8 +102,14 @@ export function renderHtml(ctx: RequestContext, element: ReactNode, opts: Render
 <meta name="description" content="${escapeHtml(description)}">
 ${noindex ? '<meta name="robots" content="noindex, nofollow">' : ''}
 ${noindex || (opts.status ?? 200) !== 200 ? '' : alternates(ctx)}
-<meta name="theme-color" content="#0f2340">
+<meta name="theme-color" content="#060e1b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+${env.GOOGLE_SITE_VERIFICATION ? `<meta name="google-site-verification" content="${escapeHtml(env.GOOGLE_SITE_VERIFICATION)}">` : ''}
+${ctx.path === '/' && (opts.status ?? 200) === 200 ? structuredData(ctx) : ''}
 <link rel="preload" href="${asset('fonts/schibsted-grotesk-latin-wght-normal.woff2')}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${asset('app.css')}">
 <script type="module" src="${asset('app.js')}" nonce="${ctx.nonce}"></script>

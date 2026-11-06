@@ -22,7 +22,17 @@ const TYPES: Record<string, string> = {
   '.webmanifest': 'application/manifest+json',
 };
 
-const ROOT_FILES = new Set(['/favicon.svg', '/robots.txt']);
+/** Filer på rotnivå: ikoner (nettleser, Google, iPhone, Android), manifest og robots.txt. */
+const ROOT_FILES = new Set([
+  '/favicon.svg',
+  '/favicon.ico',
+  '/favicon-96x96.png',
+  '/apple-touch-icon.png',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/site.webmanifest',
+  '/robots.txt',
+]);
 
 /** Serverer filer fra /public. Returnerer true hvis forespørselen ble håndtert. */
 export function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string): boolean {

@@ -116,6 +116,8 @@ const schema = z.object({
   INGEST_INTERVAL_MINUTES: z.coerce.number().int().min(15).default(120),
   INGEST_LOOKBACK_DAYS: z.coerce.number().int().min(1).max(365).default(14),
 
+  /** Valgfri: koden fra Google Search Console («HTML-tagg»), så Google kan bekrefte at nettstedet er ditt. Ikke hemmelig. */
+  GOOGLE_SITE_VERIFICATION: optionalString,
   TRIAL_DAYS: z.coerce.number().int().min(0).max(60).default(14),
   /** Disse registrerte brukerne gjøres til plattform-admin ved hver deploy (komma-separert). Fjerner aldri tilgang. */
   PLATFORM_ADMIN_EMAILS: optionalString,

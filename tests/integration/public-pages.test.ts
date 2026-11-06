@@ -61,3 +61,31 @@ test('prøveperioden i markedsteksten følger TRIAL_DAYS', async () => {
     assert.doesNotMatch(page.body, /14 dager/);
   }
 });
+
+test('ikoner for nettleser, Google, iPhone og Android finnes og er lenket fra siden', async () => {
+  for (const [path, type] of [
+    ['/favicon.ico', 'image/x-icon'],
+    ['/favicon.svg', 'image/svg+xml'],
+    ['/favicon-96x96.png', 'image/png'],
+    ['/apple-touch-icon.png', 'image/png'],
+    ['/icon-192.png', 'image/png'],
+    ['/icon-512.png', 'image/png'],
+    ['/site.webmanifest', 'application/manifest+json'],
+  ] as const) {
+    const res = await fetch(`${server.base}${path}`);
+    assert.equal(res.status, 200, path);
+    assert.equal(res.headers.get('content-type'), type, path);
+    assert.ok((await res.arrayBuffer()).byteLength > 100, `${path} er ikke tom`);
+  }
+  const manifest = (await (await fetch(`${server.base}/site.webmanifest`)).json()) as { icons: { src: string }[] };
+  for (const icon of manifest.icons) assert.equal((await fetch(`${server.base}${icon.src}`)).status, 200, icon.src);
+  const home = await get('/');
+  for (const tag of ['href="/favicon.ico"', 'href="/favicon.svg"', 'href="/apple-touch-icon.png"', 'rel="manifest"']) assert.ok(home.body.includes(tag), tag);
+  // Strukturerte data: nettstedets navn og logo, bare på forsiden.
+  const ld = /<script type="application\/ld\+json"[^>]*>([^<]+)<\/script>/.exec(home.body)?.[1];
+  assert.ok(ld, 'JSON-LD på forsiden');
+  const data = JSON.parse(ld!) as { '@type': string; name: string; logo?: string }[];
+  assert.deepEqual(data.map((d) => [d['@type'], d.name]), [['WebSite', 'AnbudRadar'], ['Organization', 'AnbudRadar']]);
+  assert.match(data[1]!.logo!, /\/icon-512\.png$/);
+  assert.doesNotMatch((await get('/priser')).body, /application\/ld\+json/);
+});
