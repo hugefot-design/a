@@ -23,13 +23,15 @@ import {
   LuShieldCheck,
   LuTelescope,
 } from 'react-icons/lu';
-import { INDUSTRIES } from '@/domain/reference';
+import { INDUSTRIES, REGION_BY_CODE } from '@/domain/reference';
+import { industryRegionPath, industrySlugNb, regionPath } from '@/domain/slugs';
 import { PLANS, type PlanId } from '@/domain/billing/plans';
-import type { IndustryListing, NoticeSpecimen } from '@/domain/tenders/market';
+import type { BoardRow, IndustryListing, MarketSnapshot, NoticeSpecimen } from '@/domain/tenders/market';
 import { companyConfigured } from '@/domain/legal/legal';
 import { useUi } from '../context';
 import { Alert, Button, cn, Field, Input, PostForm, Textarea } from '../components';
 import { PublicLayout } from '../layouts';
+import { NewsletterSignup } from '../newsletter';
 import { sourcesText, type Locale, type Messages } from '@/i18n';
 import { clockTime, dayOfMonth, fill, int, money, monthShort, plural, pluralTemplate, rich } from '@/i18n/format';
 import { FaqList, faqItems, INDUSTRY_ICONS } from '../marketing';
@@ -284,8 +286,8 @@ export function PricingPage() {
 // ---------------------------------------------------------------------------
 // Bransjer
 // ---------------------------------------------------------------------------
-export function IndustriesPage({ counts }: { counts: Record<string, number> }) {
-  const { user, m, lp } = useUi();
+export function IndustriesPage({ counts, regions }: { counts: Record<string, number>; regions: MarketSnapshot['regions'] }) {
+  const { user, m, lp, locale } = useUi();
   const t = m.industries;
   const all = INDUSTRIES.map((i) => ({ id: i.id, name: i.name, n: counts[i.id] ?? 0 })).sort((a, b) => b.n - a.n);
   return (
@@ -296,6 +298,16 @@ export function IndustriesPage({ counts }: { counts: Record<string, number> }) {
           <IndustryTiles industries={all} />
         </Wrap>
       </section>
+      {/* Fylkessidene finnes bare på norsk. */}
+      {locale === 'nb' ? (
+        <section className="bg-white py-16 sm:py-20">
+          <Wrap>
+            <H2>Anbud per fylke</H2>
+            <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-muted">Se åpne anbud der dere holder til – fordelt på bransjer, med frister og oppdragsgivere.</p>
+            <CountyGrid regions={regions} />
+          </Wrap>
+        </section>
+      ) : null}
       <SignalCta
         title={t.ctaTitle}
         lead={t.ctaLead}
@@ -306,8 +318,73 @@ export function IndustriesPage({ counts }: { counts: Record<string, number> }) {
 }
 
 /** Registrering som sender brukeren videre med bransje og fylke ferdig utfylt i profilen. */
-function signupWith(lp: (href: string) => string, next: string): string {
+export function signupWith(lp: (href: string) => string, next: string): string {
   return lp(`/registrer?neste=${encodeURIComponent(next)}`);
+}
+
+/** Alle 15 fylker med antall åpne anbud, som lenker til fylkessidene (bare norsk). */
+export function CountyGrid({ regions }: { regions: MarketSnapshot['regions'] }) {
+  return (
+    <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {regions.map((r) => (
+        <li key={r.code}>
+          <a
+            href={regionPath(r.code)}
+            className="card-lift group flex items-center gap-4 rounded-2xl border border-line bg-white p-4 text-night no-underline sm:p-5"
+          >
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-night text-signal">
+              <LuMapPin className="size-5" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[16px] font-semibold">{r.name}</span>
+              <span className="block text-[14px] text-muted">{r.n === 1 ? '1 åpent anbud' : `${r.n.toLocaleString('nb-NO')} åpne anbud`}</span>
+            </span>
+            <LuArrowRight className="size-5 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-night" aria-hidden />
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Liste over åpne anbud med frist, oppdragsgiver og sted (bransje- og fylkessidene). */
+export function TenderRows({ rows }: { rows: (BoardRow & { estimatedValue?: number | null; currency?: string | null })[] }) {
+  const { user, m, lp, locale } = useUi();
+  const t = m.industries;
+  return (
+    <ol className="mt-5 space-y-3">
+      {rows.map((r) => (
+        <li key={r.id}>
+          <a
+            href={user ? `/app/anbud/${r.id}` : signupWith(lp, `/app/anbud/${r.id}`)}
+            className="card-lift group grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-4 rounded-2xl border border-line bg-white p-4 text-night no-underline sm:grid-cols-[4.25rem_minmax(0,1fr)_auto] sm:p-5"
+          >
+            <span className="flex flex-col items-center justify-center rounded-xl bg-cream py-2 text-center">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{monthShort(locale, r.deadlineAt)}</span>
+              <span className="text-[22px] font-[780] leading-none">{dayOfMonth(r.deadlineAt)}</span>
+              {r.deadlineTimeKnown ? <span className="mt-0.5 font-mono text-[11px] text-muted">{clockTime(locale, r.deadlineAt)}</span> : null}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[16px] font-semibold leading-snug group-hover:underline">{r.title}</span>
+              <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13.5px] text-muted">
+                {r.buyerName ? <span className="truncate">{r.buyerName}</span> : null}
+                {r.place ? (
+                  <span className="inline-flex items-center gap-1">
+                    <LuMapPin className="size-3.5" aria-hidden />
+                    {r.place}
+                  </span>
+                ) : null}
+                {r.estimatedValue ? <span>{fill(t.value, { value: money(locale, r.estimatedValue, r.currency ?? null) })}</span> : null}
+              </span>
+            </span>
+            <span className="hidden items-center gap-1 text-[14px] font-semibold text-night sm:inline-flex">
+              {t.see} <LuArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 export function IndustryPage({ industryId, region, listing }: { industryId: string; region: string | null; listing: IndustryListing }) {
@@ -318,7 +395,10 @@ export function IndustryPage({ industryId, region, listing }: { industryId: stri
   const Icon = INDUSTRY_ICONS[industryId] ?? LuRadar;
   const q = new URLSearchParams({ bransje: industryId, ...(region ? { fylke: region } : {}) });
   const alertHref = user ? '/app/onboarding' : signupWith(lp, `/app/onboarding?${q}`);
-  const base = lp(`/bransjer/${industryId}`);
+  const base = lp(`/bransjer/${industrySlugNb(industryId)}`);
+  // Norsk: egne sider per fylke (/bransjer/renhold/trondelag). Andre språk: filter i adressen.
+  const regionHref = (code: string) => (locale === 'nb' ? industryRegionPath(industryId, code) : `${base}?fylke=${code}`);
+  const county = region ? REGION_BY_CODE.get(region)?.name : null;
   return (
     <PublicLayout>
       <NightHero
@@ -332,7 +412,7 @@ export function IndustryPage({ industryId, region, listing }: { industryId: stri
             <span className="hidden size-14 shrink-0 items-center justify-center rounded-2xl bg-signal text-night sm:flex">
               <Icon className="size-7" aria-hidden strokeWidth={1.8} />
             </span>
-            {name}
+            {county ? (locale === 'nb' ? `${name} i ${county}` : `${name} – ${county}`) : name}
           </span>
         }
         lead={t.names[industryId]?.description ?? ref.description}
@@ -360,7 +440,7 @@ export function IndustryPage({ industryId, region, listing }: { industryId: stri
               {listing.regions.map((r) => (
                 <a
                   key={r.code}
-                  href={`${base}?fylke=${r.code}`}
+                  href={regionHref(r.code)}
                   className={cn(
                     'rounded-full border px-3.5 py-1.5 text-[14px] font-semibold no-underline',
                     region === r.code ? 'border-night bg-night text-white' : 'border-line bg-white text-night hover:border-night',
@@ -372,41 +452,17 @@ export function IndustryPage({ industryId, region, listing }: { industryId: stri
             </nav>
             <h2 className="mt-10 text-[22px] font-[740] tracking-[-0.02em] text-night">{t.listTitle}</h2>
             {listing.rows.length ? (
-              <ol className="mt-5 space-y-3">
-                {listing.rows.map((r) => (
-                  <li key={r.id}>
-                    <a
-                      href={user ? `/app/anbud/${r.id}` : signupWith(lp, `/app/anbud/${r.id}`)}
-                      className="card-lift group grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-4 rounded-2xl border border-line bg-white p-4 text-night no-underline sm:grid-cols-[4.25rem_minmax(0,1fr)_auto] sm:p-5"
-                    >
-                      <span className="flex flex-col items-center justify-center rounded-xl bg-cream py-2 text-center">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{monthShort(locale, r.deadlineAt)}</span>
-                        <span className="text-[22px] font-[780] leading-none">{dayOfMonth(r.deadlineAt)}</span>
-                        {r.deadlineTimeKnown ? <span className="mt-0.5 font-mono text-[11px] text-muted">{clockTime(locale, r.deadlineAt)}</span> : null}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-[16px] font-semibold leading-snug group-hover:underline">{r.title}</span>
-                        <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13.5px] text-muted">
-                          {r.buyerName ? <span className="truncate">{r.buyerName}</span> : null}
-                          {r.place ? (
-                            <span className="inline-flex items-center gap-1">
-                              <LuMapPin className="size-3.5" aria-hidden />
-                              {r.place}
-                            </span>
-                          ) : null}
-                          {r.estimatedValue ? <span>{fill(t.value, { value: money(locale, r.estimatedValue, r.currency) })}</span> : null}
-                        </span>
-                      </span>
-                      <span className="hidden items-center gap-1 text-[14px] font-semibold text-night sm:inline-flex">
-                        {t.see} <LuArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
-                      </span>
-                    </a>
-                  </li>
-                ))}
-              </ol>
+              <TenderRows rows={listing.rows} />
             ) : (
               <p className="mt-5 rounded-2xl border border-dashed border-line-strong p-6 text-[15px] text-muted">{t.none}</p>
             )}
+            {county && region && locale === 'nb' ? (
+              <p className="mt-8 text-[15px]">
+                <a href={regionPath(region)} className="inline-flex items-center gap-1.5 font-semibold">
+                  Alle offentlige anbud i {county} <LuArrowRight className="size-4" aria-hidden />
+                </a>
+              </p>
+            ) : null}
           </div>
           <aside className="h-fit space-y-4 lg:sticky lg:top-24">
             <div className="rounded-3xl bg-cream p-6">
@@ -420,6 +476,10 @@ export function IndustryPage({ industryId, region, listing }: { industryId: stri
                 {t.alert}
               </a>
             </div>
+            {/* Ukesbrevet er på norsk. */}
+            {locale === 'nb' ? (
+              <NewsletterSignup industry={industryId} region={region} sourcePath={region ? industryRegionPath(industryId, region) : `/bransjer/${industrySlugNb(industryId)}`} />
+            ) : null}
           </aside>
         </Wrap>
       </section>

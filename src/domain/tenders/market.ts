@@ -57,6 +57,8 @@ export function clearMarketCache(): void {
   specimenCache = null;
   boardCache.clear();
   listingCache.clear();
+  countyCache.clear();
+  comboCache = null;
 }
 
 export async function marketSnapshot(): Promise<MarketSnapshot> {
@@ -158,7 +160,7 @@ export async function marketSnapshot(): Promise<MarketSnapshot> {
     board: boardRows.map((r) => ({
       id: r.id,
       title: r.title,
-      buyerName: r.buyerName,
+      buyerName: r.buyerName ? displayBuyer(r.buyerName) : null,
       deadlineAt: r.deadlineAt,
       deadlineTimeKnown: r.deadlineTimeKnown,
       place: (r.regionCodes[0] && REGION_NAME.get(r.regionCodes[0])) || r.placeText || null,
@@ -167,7 +169,7 @@ export async function marketSnapshot(): Promise<MarketSnapshot> {
     latest: latestRows.map((r) => ({
       id: r.id,
       title: r.title,
-      buyerName: r.buyerName,
+      buyerName: r.buyerName ? displayBuyer(r.buyerName) : null,
       deadlineAt: r.deadlineAt,
       deadlineTimeKnown: r.deadlineTimeKnown,
       place: (r.regionCodes[0] && REGION_NAME.get(r.regionCodes[0])) || r.placeText || null,
@@ -232,7 +234,7 @@ export async function boardFor(f: BoardFilter): Promise<{ rows: BoardRow[]; open
     rows: rows.map((r) => ({
       id: r.id,
       title: r.title,
-      buyerName: r.buyerName,
+      buyerName: r.buyerName ? displayBuyer(r.buyerName) : null,
       deadlineAt: r.deadlineAt,
       deadlineTimeKnown: r.deadlineTimeKnown,
       place: (f.region && REGION_NAME.get(f.region)) || (r.regionCodes[0] && REGION_NAME.get(r.regionCodes[0])) || r.placeText || null,
@@ -399,7 +401,7 @@ export async function noticeSpecimen(): Promise<NoticeSpecimen | null> {
     const candidate: NoticeSpecimen = {
       id: r.id,
       title: r.title,
-      buyerName: r.buyerName,
+      buyerName: r.buyerName ? displayBuyer(r.buyerName) : null,
       deadlineAt: r.deadlineAt,
       deadlineTimeKnown: r.deadlineTimeKnown,
       estimatedValue: r.estimatedValue,
@@ -419,4 +421,65 @@ export async function noticeSpecimen(): Promise<NoticeSpecimen | null> {
   }
   specimenCache = { at: Date.now(), value: pick };
   return pick;
+}
+
+// ---------------------------------------------------------------------------
+// Fylkessidene (/fylker og /fylker/<fylke>) og nettstedskartet
+// ---------------------------------------------------------------------------
+export interface CountyOverview {
+  open: number;
+  /** Bransjer med åpne anbud i fylket, flest først. */
+  industries: { id: string; name: string; n: number }[];
+  /** Oppdragsgivere med flest åpne anbud i fylket. */
+  buyers: { name: string; n: number }[];
+  /** Nærmeste frister. */
+  rows: BoardRow[];
+}
+const countyCache = new Map<string, { at: number; value: CountyOverview }>();
+
+export async function countyOverview(region: string): Promise<CountyOverview> {
+  const hit = countyCache.get(region);
+  if (hit && Date.now() - hit.at < 5 * 60_000) return hit.value;
+  const sql = systemSql();
+  const open = statusCondition(sql, 'open');
+  const industryRows = (await sql`
+    select i as id, count(*)::int as n
+    from tenders t, unnest(t.industry_ids) as i
+    where not t.is_sample and ${open} and ${region}::text = any(t.region_codes)
+    group by i order by n desc
+  `) as unknown as { id: string; n: number }[];
+  const buyerRows = (await sql`
+    select min(t.buyer_name) as name, count(*)::int as n
+    from tenders t
+    where not t.is_sample and ${open} and ${region}::text = any(t.region_codes) and coalesce(t.buyer_name, '') <> ''
+    group by lower(trim(t.buyer_name)) order by n desc, 1 limit 8
+  `) as unknown as { name: string; n: number }[];
+  const board = await boardFor({ industry: null, region });
+  const names = new Map(INDUSTRIES.map((i) => [i.id, i.name]));
+  const value: CountyOverview = {
+    open: board.open,
+    industries: industryRows.filter((r) => names.has(r.id)).map((r) => ({ id: r.id, name: names.get(r.id)!, n: r.n })),
+    buyers: buyerRows.map((b) => ({ name: displayBuyer(b.name), n: b.n })),
+    rows: board.rows,
+  };
+  countyCache.set(region, { at: Date.now(), value });
+  return value;
+}
+
+/** Åpne anbud per bransje og fylke (til nettstedskartet og lenkene mellom sidene). Mellomlagres i fem minutter. */
+let comboCache: { at: number; value: Map<string, number> } | null = null;
+
+export async function industryRegionCounts(): Promise<Map<string, number>> {
+  if (comboCache && Date.now() - comboCache.at < 5 * 60_000) return comboCache.value;
+  const sql = systemSql();
+  const open = statusCondition(sql, 'open');
+  const rows = (await sql`
+    select i as industry, rc as region, count(*)::int as n
+    from tenders t, unnest(t.industry_ids) as i, unnest(t.region_codes) as rc
+    where not t.is_sample and ${open}
+    group by i, rc
+  `) as unknown as { industry: string; region: string; n: number }[];
+  const value = new Map(rows.map((r) => [`${r.industry}|${r.region}`, r.n]));
+  comboCache = { at: Date.now(), value };
+  return value;
 }

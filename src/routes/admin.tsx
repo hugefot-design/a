@@ -4,6 +4,9 @@ import { audit } from '@/lib/audit';
 import { enqueueJob } from '@/lib/jobs';
 import { listOrganizations, listUsers, organizationDetail, systemHealth } from '@/domain/admin/admin';
 import { adminOverview } from '@/domain/admin/overview';
+import { visitStats } from '@/domain/admin/visits';
+import { linkedinPost, weeklyTopics } from '@/domain/admin/linkedin';
+import { INDUSTRY_BY_ID, REGION_BY_CODE } from '@/domain/reference';
 import { setManualPlan, verifyStripePrices, type PriceCheck } from '@/domain/billing/stripe';
 import { PLANS, type PlanId } from '@/domain/billing/plans';
 import { CONNECTORS } from '@/connectors';
@@ -15,6 +18,8 @@ import { HttpError } from '@/server/http';
 import { render } from '@/server/render';
 import type { Router } from '@/server/router';
 import { AdminOverviewPage } from '@/ui/pages/admin-overview';
+import { AdminVisitsPage } from '@/ui/pages/admin-visits';
+import { AdminLinkedinPage } from '@/ui/pages/admin-linkedin';
 import {
   AdminHealthPage,
   AdminImportsPage,
@@ -53,6 +58,17 @@ const SENSITIVE = { sensitive: true } as const;
 
 export function registerAdminRoutes(router: Router): void {
   router.get('/admin', 'admin', async (ctx) => render(ctx, <AdminOverviewPage o={await adminOverview()} />, { title: 'Admin – oversikt' }));
+
+  router.get('/admin/besok', 'admin', async (ctx) => render(ctx, <AdminVisitsPage v={await visitStats()} />, { title: 'Besøk' }));
+
+  router.get('/admin/linkedin', 'admin', async (ctx) => {
+    const b = ctx.query.get('bransje');
+    const f = ctx.query.get('fylke');
+    const industry = b && INDUSTRY_BY_ID.has(b) ? b : null;
+    const region = f && REGION_BY_CODE.has(f) ? f : null;
+    const [post, topics] = await Promise.all([linkedinPost(industry, region), weeklyTopics()]);
+    return render(ctx, <AdminLinkedinPage industry={industry} region={region} post={post} topics={topics} />, { title: 'LinkedIn' });
+  });
 
   router.get('/admin/brukere', 'admin', async (ctx) => {
     const q = (ctx.query.get('q') ?? '').trim().slice(0, 100);

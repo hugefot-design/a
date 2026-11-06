@@ -28,6 +28,10 @@ export interface RenderOptions {
   status?: number;
   noindex?: boolean;
   bodyClass?: string;
+  /** Kanonisk adresse for sider som bare finnes på norsk (f.eks. /fylker/oslo). Oversatte sider får den automatisk. */
+  canonical?: string;
+  /** Strukturerte data (schema.org), f.eks. brødsmuler. */
+  jsonLd?: unknown[];
 }
 
 function uiValue(ctx: RequestContext): UiContextValue {
@@ -122,6 +126,8 @@ export function renderHtml(ctx: RequestContext, element: ReactNode, opts: Render
 <meta name="description" content="${escapeHtml(description)}">
 ${noindex ? '<meta name="robots" content="noindex, nofollow">' : ''}
 ${noindex || (opts.status ?? 200) !== 200 ? '' : alternates(ctx)}
+${!noindex && (opts.status ?? 200) === 200 && opts.canonical && !isMarketing(ctx.path) ? `<link rel="canonical" href="${escapeHtml(env.APP_URL.replace(/\/$/, '') + opts.canonical)}">` : ''}
+${opts.jsonLd?.length && (opts.status ?? 200) === 200 ? `<script type="application/ld+json" nonce="${ctx.nonce}">${JSON.stringify(opts.jsonLd).replace(/</g, '\\u003c')}</script>` : ''}
 ${noindex || (opts.status ?? 200) !== 200 ? '' : socialMeta(ctx, title, description)}
 <meta name="theme-color" content="#060e1b">
 <link rel="icon" href="/favicon.ico" sizes="48x48">

@@ -12,13 +12,14 @@ import { ErrorPage, FeatureLockedPage } from '@/ui/pages/system';
 import { HttpError, homePath, json, parseCookies, redirect, safeRedirectPath, serializeCookie, wantsJson, type RequestContext } from './http';
 import { decodeFlash, FLASH_COOKIE, redirectWith } from './flash';
 import { ADMIN_REVERIFY_MS, SENSITIVE_REVERIFY_MS, verifiedWithin } from '@/domain/auth/mfa';
+import { isBot, recordPageView, trafficSource } from '@/domain/admin/visits';
 import { render } from './render';
 import { serveStatic } from './static';
 import { canonicalRedirect } from './canonical';
 import { refreshLiveSourcesIfStale } from '@/domain/tenders/source-status';
 import { createElement } from 'react';
 import { messages, parseLocalePath } from '@/i18n';
-import type { Router } from './router';
+import type { Access, Router } from './router';
 
 const GUEST_CSRF_COOKIE = 'ar_csrf';
 const APP_ORIGIN = new URL(env.APP_URL).origin;
@@ -325,6 +326,19 @@ function errorResponse(ctx: RequestContext | null, status: number, message: stri
   });
 }
 
+/**
+ * Telles som et besøk: vellykket visning av en offentlig HTML-side for en som ikke er logget inn,
+ * ikke en robot og ikke en forhåndslasting. Se src/domain/admin/visits.ts (ingen personopplysninger).
+ */
+function countableView(ctx: RequestContext, access: Access | undefined, response: Response): boolean {
+  if (ctx.method !== 'GET' || response.status !== 200 || ctx.user) return false;
+  if (access !== 'public' && access !== 'guest') return false;
+  if (!(response.headers.get('content-type') ?? '').startsWith('text/html')) return false;
+  const purpose = String(ctx.req.headers['sec-purpose'] ?? ctx.req.headers.purpose ?? '');
+  if (/prefetch|prerender/i.test(purpose)) return false;
+  return !isBot(ctx.userAgent);
+}
+
 export function createApp(router: Router) {
   return async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const started = performance.now();
@@ -357,6 +371,9 @@ export function createApp(router: Router) {
       const response = await dispatch(ctx, router);
       status = response.status;
       await writeResponse(res, response, ctx, ctx.nonce, req.method === 'HEAD');
+      // Tell besøket etter at svaret er sendt, så det ikke gjør siden tregere.
+      const access = matchedRoute && matchedRoute !== 'method_not_allowed' ? matchedRoute.route.access : undefined;
+      if (countableView(ctx, access, response)) await recordPageView(url.pathname, trafficSource(req.headers.referer, url.searchParams.get('utm_source')));
     } catch (err) {
       const httpErr = err instanceof HttpError ? err : null;
       status = httpErr?.status ?? 500;

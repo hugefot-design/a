@@ -62,13 +62,13 @@ Målgruppe: små og mellomstore leverandører som lever av offentlige kontrakter
 ### 10 → 50
 
 - **Bransjeforeninger og leverandørnettverk:** tilby et gratis foredrag eller webinar, f.eks. «Lønner det seg å by? Slik regner dere på dagbøter, betalingsfrist og prisregulering». Hold det faglig, ikke et salgsmøte.
-- **Ukentlig «Ukens anbud i bransjen»** på LinkedIn og e-post, laget fra appens egne data (offentlige kunngjøringer). Tydelig avmelding.
+- **Ukentlig «Ukens anbud i bransjen»** på LinkedIn og e-post, laget fra appens egne data (offentlige kunngjøringer). Tydelig avmelding. Bygget 6.11.2026: ukesbrev uten konto og LinkedIn-tekst i admin; mål effekten under Admin → Besøk.
 - **Henvisninger:** be fornøyde pilotkunder om én introduksjon. Kundesitater bare med skriftlig samtykke og ordrett gjengitt – ingen oppdiktede omtaler eller tall.
 - **Anbudspartnere som vekstmotor:** når kunder ber om underleverandører, inviter underleverandørene til å publisere profil. Vurder selv om partnerprofil skal være gratis for å bygge nettverket raskere (i dag krever den Start).
 
 ### 50 → 100
 
-- **Søkesider per bransje og fylke** (bygget på `/bransjer`) med ekte, oppdaterte tall fra databasen.
+- **Søkesider per bransje og fylke** – bygget 6.11.2026: `/fylker/<fylke>` og `/bransjer/<bransje>/<fylke>` med ekte, oppdaterte anbud (se DRIFT.md del 6d).
 - **Samarbeid med regnskapsbyråer og anbudsrådgivere** som anbefaler verktøyet til egne kunder.
 - **Kundecaser** med samtykke: før/etter med kundens egne tall.
 - **Måling:** kostnad per ny kunde (bare tid), konvertering, frafall per plan, og hvilke funksjoner som brukes før oppgradering til Bedrift.

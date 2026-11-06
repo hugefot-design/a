@@ -689,6 +689,7 @@ export function PrivacyPage() {
             ['Fakturering og bokføring', 'Rettslig forpliktelse (art. 6 nr. 1 c), bokføringsloven'],
             ['Svare på henvendelser', 'Berettiget interesse (art. 6 nr. 1 f)'],
             ['Publisere partnerprofil', 'Samtykke (art. 6 nr. 1 a). Kan trekkes tilbake når som helst ved å skjule profilen.'],
+            ['Ukesbrevet «Ukens anbud» til de som har meldt seg på uten konto', 'Samtykke (art. 6 nr. 1 a), gitt ved påmelding og bekreftet med lenke i e-post. Trekkes tilbake med avmeldingslenken i hver e-post.'],
             ['Vise offentlige kunngjøringer', 'Berettiget interesse i å gjøre offentlig publiserte kunngjøringer tilgjengelige (art. 6 nr. 1 f)'],
           ]}
         />
@@ -697,7 +698,13 @@ export function PrivacyPage() {
     {
       id: 'markedsforing',
       title: 'Markedsføring',
-      body: () => <p>Vi sender ikke markedsføring på e-post uten samtykke. E-postene vi sender, gjelder tjenesten du bruker.</p>,
+      body: () => (
+        <p>
+          Vi sender ikke markedsføring på e-post uten samtykke. Ukesbrevet «Ukens anbud» får bare de som har meldt seg på og bekreftet adressen sin via en
+          lenke i e-post. Hver utsending har en avmeldingslenke, og når du melder deg av, sletter vi adressen. Ellers gjelder e-postene vi sender, tjenesten
+          du bruker.
+        </p>
+      ),
     },
     {
       id: 'kunngjoringer',
@@ -1065,8 +1072,10 @@ export function CookiesPage() {
       title: 'Ingen sporing eller reklame',
       body: () => (
         <p>
-          Vi bruker ikke analyseverktøy, sporing, reklame eller informasjonskapsler fra tredjeparter. Skrifttypene ligger hos oss, så nettleseren din kontakter ikke
-          andre tjenester når du besøker sidene.
+          Vi bruker ikke analyseverktøy fra andre, sporing, reklame eller informasjonskapsler fra tredjeparter. Skrifttypene ligger hos oss, så nettleseren din
+          kontakter ikke andre tjenester når du besøker sidene. Vi teller besøk på de offentlige sidene selv, uten informasjonskapsler: bare dato, side og hvilken
+          nettside besøket kom fra (domenet, for eksempel google.com). Vi lagrer ikke IP-adresse eller annen informasjon om deg, så tellingen kan ikke knyttes
+          til deg. Innloggede brukere telles ikke.
         </p>
       ),
     },

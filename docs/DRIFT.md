@@ -191,6 +191,20 @@ selv at det kan ta fra noen dager til noen uker, og at ikonet ikke er garantert.
 (filen `google89c7bd88….html` serveres av `src/server/static.ts`). **Ikke fjern den** – da mister eieren
 bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
 
+## 6d. Vekst: Google-sider, ukesbrev, besøkstelling og LinkedIn
+
+- **Norske adresser og fylkessider.** Bransjesidene ligger på `/bransjer/renhold`, `/bransjer/vakthold` osv. (gamle
+  `/bransjer/cleaning` sendes videre med 301). Hvert fylke har `/fylker/<fylke>`, og hver bransje i hvert fylke
+  `/bransjer/<bransje>/<fylke>`. Sider med færre enn 3 åpne anbud har `noindex` og står ikke i `sitemap.xml`
+  (`MIN_OPEN_FOR_INDEXING` i `src/domain/slugs.ts`). De engelske, svenske og danske sidene er uendret.
+- **Ukesbrevet «Ukens anbud».** Påmelding uten konto på bransje- og fylkessidene, dobbel bekreftelse, sendes mandag fra
+  kl. 07 med nye anbud siste uke (oppgaven `weekly`), ettklikks-avmelding som sletter adressen. Resend gratis tillater
+  et begrenset antall e-poster per dag; med mange påmeldte må planen hos Resend vurderes (koster penger – avklar med eier).
+- **Besøk (Admin → Besøk).** Teller sidevisninger på offentlige sider uten informasjonskapsler og uten IP: dato, side og
+  kilde. Innloggede brukere og roboter telles ikke. Lenker med `utm_source=…` vises med det navnet.
+- **LinkedIn (Admin → LinkedIn).** Ferdig tekst med ukens største nye anbud for valgt bransje/fylke, med lenke
+  `utm_source=linkedin`. Les gjennom og post selv.
+
 ## 7. Utrulling og tilbakerulling
 
 - **Migreringer er bare fremover og kjøres før ny kode tar trafikk** (`preDeployCommand`). Migreringene 0006–0010 legger til kolonner, tabeller, indekser og tilgangsregler, retter referansedata (NUTS-koder for fylker og frister på eksisterende kunngjøringer) og strammer inn rettighetene til webapp-rollen. Ingen tabeller eller kolonner slettes, så forrige versjon av koden på denne grenen fungerer mot det nye skjemaet. Å gå helt tilbake til den opprinnelige koden fra zip-filen etter 0007 er ikke støttet – tilgangsmodellen er strengere nå.

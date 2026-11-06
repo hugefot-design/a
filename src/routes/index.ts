@@ -3,6 +3,7 @@ import { registerAdminRoutes } from './admin';
 import { registerApiRoutes } from './api';
 import { registerAuthRoutes } from './auth';
 import { registerMfaRoutes } from './mfa';
+import { registerNewsletterRoutes } from './newsletter';
 import { registerAccountRoutes } from './app/account';
 import { registerBidRoutes } from './app/bids';
 import { registerCompetitorRoutes } from './app/competitors';
@@ -15,6 +16,7 @@ import { registerWebhookRoutes } from './webhooks';
 export function buildRouter(): Router {
   const router = new Router();
   registerPublicRoutes(router);
+  registerNewsletterRoutes(router);
   registerApiRoutes(router);
   registerWebhookRoutes(router);
   registerAuthRoutes(router);

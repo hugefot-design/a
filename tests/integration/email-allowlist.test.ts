@@ -13,8 +13,9 @@ const saved = { provider: env.EMAIL_PROVIDER, key: env.RESEND_API_KEY, list: env
 const sentTo: string[] = [];
 let realFetch: typeof fetch;
 const RUN = randomUUID().slice(0, 8);
-const ALLOWED = `eier-${RUN}@example.com`;
-const BLOCKED = `kunde-${RUN}@example.com`;
+// Fiktive adresser, men ikke på reserverte testdomener (de stoppes alltid, se testen under).
+const ALLOWED = `eier-${RUN}@testfirma-anbudradar.no`;
+const BLOCKED = `kunde-${RUN}@annenkunde-anbudradar.no`;
 
 before(() => {
   realFetch = globalThis.fetch;
@@ -46,4 +47,18 @@ test('e-post til testmottaker sendes; til andre stoppes uten kall til Resend', a
   assert.match(b.lastError ?? '', /testlisten/);
   await deliverEmail(blocked!);
   assert.deepEqual(sentTo, [ALLOWED], 'stoppet e-post prøves ikke på nytt');
+});
+
+test('adresser på reserverte testdomener (example.com o.l.) sendes aldri, heller ikke uten testliste', async () => {
+  Object.assign(env, { EMAIL_ALLOWED_RECIPIENTS: undefined });
+  const before = sentTo.length;
+  const id = await queueEmail({ to: `test-${RUN}@example.com`, subject: 'Test', html: '<p>Hei</p>', text: 'Hei', kind: 'admin_alert' });
+  await deliverEmail(id!);
+  assert.equal(sentTo.length, before, 'Resend ble ikke kalt');
+  const s = await statusOf(id!);
+  assert.equal(s.status, 'failed');
+  assert.match(s.lastError ?? '', /reservert domene/);
+  const real = await queueEmail({ to: `kunde-${RUN}@ekte-kunde-anbudradar.no`, subject: 'Test', html: '<p>Hei</p>', text: 'Hei', kind: 'admin_alert' });
+  await deliverEmail(real!);
+  assert.equal(sentTo.at(-1), `kunde-${RUN}@ekte-kunde-anbudradar.no`, 'uten testliste går vanlige adresser til Resend');
 });

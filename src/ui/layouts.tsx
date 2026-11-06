@@ -187,7 +187,14 @@ function PublicFooter() {
           <Logo inverse />
           <p className="text-[14px] leading-relaxed text-white/60">{fill(m.footer.about, { sources: sourcesText(m, liveSources) })}</p>
         </div>
-        <FooterNav title={m.footer.product} links={['/funksjoner', '/bransjer', '/priser'].map((href) => ({ href: lp(href), label: labels[href]! }))} />
+        <FooterNav
+          title={m.footer.product}
+          links={[
+            ...['/funksjoner', '/bransjer', '/priser'].map((href) => ({ href: lp(href), label: labels[href]! })),
+            // Fylkessidene finnes bare på norsk.
+            ...(locale === 'nb' ? [{ href: '/fylker', label: 'Anbud per fylke' }] : []),
+          ]}
+        />
         <FooterNav title={m.footer.company} links={['/om', '/kontakt'].map((href) => ({ href: lp(href), label: labels[href]! }))} />
         <div className="space-y-2">
           <FooterNav title={m.footer.legal} links={LEGAL_DOCS.map((d) => ({ href: d.href, label: legal[d.href.slice(1)] ?? d.label }))} />
@@ -527,6 +534,8 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
 // ---------------------------------------------------------------------------
 const ADMIN_NAV = [
   { href: '/admin', label: 'Oversikt' },
+  { href: '/admin/besok', label: 'Besøk' },
+  { href: '/admin/linkedin', label: 'LinkedIn' },
   { href: '/admin/brukere', label: 'Brukere' },
   { href: '/admin/organisasjoner', label: 'Organisasjoner' },
   { href: '/admin/importer', label: 'Importer' },

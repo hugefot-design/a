@@ -9,8 +9,8 @@
 import { env } from '@/lib/env';
 
 /** Versjonen av vilkårene og databehandleravtalen. Lagres på brukeren ved registrering. */
-export const LEGAL_VERSION = '2026-11-03';
-export const LEGAL_UPDATED = new Date('2026-11-03T00:00:00Z');
+export const LEGAL_VERSION = '2026-11-06';
+export const LEGAL_UPDATED = new Date('2026-11-06T00:00:00Z');
 
 export interface CompanyInfo {
   name: string;
@@ -148,4 +148,6 @@ export const RETENTION: RetentionRule[] = [
   { what: 'Tekniske logger for henting av kunngjøringer', how: '90 til 365 dager (inneholder ikke personopplysninger utover det kildene publiserer).' },
   { what: 'Bevis på at vilkårene er godtatt (versjon og tidspunkt)', how: 'Så lenge kontoen finnes.' },
   { what: 'Regnskapsopplysninger (fakturaer i Stripe)', how: 'Så lenge bokføringsloven krever (normalt 5 år).' },
+  { what: 'Påmelding til ukesbrevet «Ukens anbud» (e-postadresse, bransje, fylke og når du bekreftet)', how: 'Til du melder deg av – da slettes den med en gang. Ubekreftede påmeldinger slettes etter 7 dager.' },
+  { what: 'Besøkstelling (antall sidevisninger per dag, side og kilde – ingen opplysninger om deg)', how: '25 måneder.' },
 ];

@@ -19,8 +19,12 @@ Grunnlag for personvernerklæringen og databehandleravtaler. Ikke juridisk rådg
 | Kalkyler per anbud | Lønnsomhetsanalyse | `tender_calculations` |
 | Partnerprofil (publiseres bare med samtykke; tidspunkt og tekstversjon lagres) | Anbudspartnere | `partner_profiles` |
 | Partnerforespørsler med kontaktpersonens navn og e-post | Formidle kontakt (mottakerens kontaktinfo deles bare ved godkjenning) | `partner_requests` |
+| Påmelding til ukesbrevet «Ukens anbud»: e-post, bransje, fylke, tidspunkt for bekreftet samtykke og samtykkeversjon | Ukesbrev uten konto (samtykke, dobbel bekreftelse) | `newsletter_subscribers` |
+| Passkeys: bare offentlig nøkkel, navn på enheten, teller | Totrinnsinnlogging | `webauthn_credentials` |
 
 Ikke lagret: kortnummer (håndteres av Stripe), IP-adresser i klartekst, sporingskapsler, tredjeparts analyseverktøy.
+
+Besøkstelling (`page_views_daily`): bare dato, side og kilde (f.eks. «google») per sidevisning – ingen IP, informasjonskapsler eller nettleserdata, og innloggede brukere telles ikke. Ikke personopplysninger.
 
 Kunngjøringsdata er offentlige, men kan inneholde navn på kontaktpersoner og leverandører. De lagres slik kilden publiserer dem.
 
@@ -38,6 +42,9 @@ Kunngjøringsdata er offentlige, men kan inneholde navn på kontaktpersoner og l
 | Forsøkslogg for Doffin-XML (ingen persondata) | 180 dager |
 | Gamle invitasjoner | 90 dager |
 | Partnerforespørsler | Ubesvarte 180 dager, avslåtte/trukne 12 måneder, godtatte 24 måneder |
+| Ukesbrev: ubekreftede påmeldinger | 7 dager (bekreftede slettes straks ved avmelding) |
+| Besøkstelling (ingen persondata) | 25 måneder |
+| Utløpte innloggings- og passkey-utfordringer | 1 dag / straks |
 
 Regler: `applyRetention()` i `src/domain/ops/tasks.ts`.
 

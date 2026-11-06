@@ -3,6 +3,8 @@
  * de andre språkene har et prefiks og engelske adresser (/en/pricing, /de/pricing).
  * Appen etter innlogging, e-poster og de juridiske dokumentene er på norsk.
  */
+import { industryIdFromSlug, industrySlugNb } from '@/domain/slugs';
+
 /** Bare språk som er ferdig oversatt, står her. Flere språk: se docs/SPRAK.md. */
 export const LOCALES = ['nb', 'en', 'sv', 'da'] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -54,7 +56,7 @@ export function localePath(locale: Locale, href: string): string {
   const m = /^([^?#]*)([?#].*)?$/.exec(href);
   const path = m?.[1] || '/';
   const rest = m?.[2] ?? '';
-  const industry = INDUSTRY_PAGE.exec(path)?.[1];
+  const industry = industryIdFromSlug(INDUSTRY_PAGE.exec(path)?.[1]);
   if (industry) return `/${locale}/industries/${industry}${rest}`;
   const slug = SLUGS[path];
   if (slug === undefined) return href;
@@ -67,7 +69,11 @@ export function localePath(locale: Locale, href: string): string {
  */
 export function parseLocalePath(pathname: string): { locale: Locale; path: string | null } {
   const ind = /^\/([a-z]{2})\/industries\/([a-z-]+)\/?$/.exec(pathname);
-  if (ind && isLocale(ind[1]) && ind[1] !== DEFAULT_LOCALE) return { locale: ind[1], path: `/bransjer/${ind[2]}` };
+  if (ind && isLocale(ind[1]) && ind[1] !== DEFAULT_LOCALE) {
+    // Den norske adressen er felles nøkkel for alle språk (/en/industries/cleaning → /bransjer/renhold).
+    const id = industryIdFromSlug(ind[2]);
+    return { locale: ind[1], path: id ? `/bransjer/${industrySlugNb(id)}` : null };
+  }
   const m = /^\/([a-z]{2})(?:\/([^/]*))?\/?$/.exec(pathname);
   const prefix = m?.[1];
   if (!m || !isLocale(prefix) || prefix === DEFAULT_LOCALE) {

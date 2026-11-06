@@ -3,6 +3,7 @@
  * illustrasjonene av appen (merket «Eksempel») og den mørke avslutningen.
  * Alt som vises som fakta, kommer fra databasen. Illustrasjoner er tydelig merket.
  */
+import { industrySlugNb } from '@/domain/slugs';
 import type { ReactNode } from 'react';
 import { LuArrowRight, LuBell, LuCheck, LuCircleAlert, LuFileText, LuSparkles } from 'react-icons/lu';
 import type { BoardRow, MarketSnapshot } from '@/domain/tenders/market';
@@ -315,7 +316,7 @@ export function IndustryTiles({ industries, limit }: { industries: MarketSnapsho
         return (
           <li key={i.id} className={cn('reveal', idx % 3 === 1 && 'delay-1', idx % 3 === 2 && 'delay-2')}>
             <a
-              href={lp(`/bransjer/${i.id}`)}
+              href={lp(`/bransjer/${industrySlugNb(i.id)}`)}
               className="card-lift group flex h-full items-center gap-4 rounded-2xl border border-line bg-white p-4 text-night no-underline sm:p-5"
             >
               <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-night text-signal">

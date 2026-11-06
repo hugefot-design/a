@@ -11,6 +11,7 @@ import { ingestEinnsyn } from '@/connectors/einnsyn';
 import { recomputeMatchesForTenders } from '@/domain/matching/service';
 import { reconcileStripeSubscriptions } from '@/domain/billing/stripe';
 import { generateWeeklySummaries, runNotificationCycle } from '@/domain/notifications/engine';
+import { sendWeeklyNewsletters } from '@/domain/newsletter/newsletter';
 
 export const SCHEDULED_TASKS = ['ingest-ted', 'ingest-doffin', 'enrich-doffin', 'ingest-einnsyn', 'notifications', 'emails', 'weekly', 'retention', 'refresh-matches', 'reconcile-stripe'] as const;
 export type ScheduledTask = (typeof SCHEDULED_TASKS)[number];
@@ -44,6 +45,13 @@ export async function applyRetention(): Promise<Record<string, number>> {
        or (status = 'accepted' and coalesce(responded_at, created_at) < now() - interval '730 days')
     returning 1
   `);
+  // Besøkstelling (ingen personopplysninger) i 25 måneder, så man kan sammenligne med samme måned i fjor.
+  await run('page_views_daily', sql`delete from page_views_daily where day < (now() at time zone 'Europe/Oslo')::date - interval '25 months' returning 1`);
+  // Ukesbrev: ubekreftede påmeldinger slettes etter 7 dager.
+  await run('newsletter_unconfirmed', sql`delete from newsletter_subscribers where confirmed_at is null and created_at < now() - interval '7 days' returning 1`);
+  // Utløpte innloggings- og passkey-utfordringer.
+  await run('login_challenges', sql`delete from login_challenges where expires_at < now() - interval '1 day' returning 1`);
+  await run('webauthn_challenges', sql`delete from webauthn_challenges where expires_at < now() returning 1`);
   log.info('retention_applied', out);
   return out;
 }
@@ -78,7 +86,7 @@ async function runUnlocked(task: ScheduledTask, trigger: 'schedule' | 'manual' |
     case 'emails':
       return { sent: await deliverPendingEmails(200) };
     case 'weekly':
-      return { summaries: await generateWeeklySummaries() };
+      return { summaries: await generateWeeklySummaries(), newsletters: await sendWeeklyNewsletters() };
     case 'retention':
       return applyRetention();
     case 'reconcile-stripe':

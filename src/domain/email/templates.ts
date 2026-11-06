@@ -37,12 +37,14 @@ interface LayoutOptions {
   preheader?: string;
   footer?: string;
   unsubscribeUrl?: string;
+  /** Teksten på avmeldingslenken (standard: «Meld av varsel-e-post»). */
+  unsubscribeLabel?: string;
 }
 
 function layout(heading: string, bodyHtml: string, opts: LayoutOptions = {}): string {
   const footer = opts.footer ?? 'Du får denne e-posten fordi du har en konto hos AnbudRadar.';
   const unsubscribe = opts.unsubscribeUrl
-    ? ` <a href="${esc(opts.unsubscribeUrl)}" style="color:${C.muted}">Meld av varsel-e-post</a>.`
+    ? ` <a href="${esc(opts.unsubscribeUrl)}" style="color:${C.muted}">${esc(opts.unsubscribeLabel ?? 'Meld av varsel-e-post')}</a>.`
     : '';
   return `<!doctype html><html lang="nb"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${esc(heading)}</title></head>
 <body style="margin:0;padding:0;background:${C.bg};font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${C.text};-webkit-text-size-adjust:100%">
@@ -146,6 +148,65 @@ export function securityNoticeTemplate(opts: {
   );
   const text = `Hei ${opts.name},\n\n${opts.intro}\n\n${opts.details.map(([l, v]) => `${l}: ${v}`).join('\n')}\n\nVar dette deg? Da trenger du ikke gjøre noe.\n\nVar det ikke deg? Logg ut alle enheter her (gjelder i 7 dager), og bytt passord etterpå:\n${opts.revokeUrl}${textFooter()}`;
   return { subject: opts.subject, html, text };
+}
+
+// ---------------------------------------------------------------------------
+// Ukesbrevet «Ukens anbud» (uten konto, dobbel bekreftelse)
+// ---------------------------------------------------------------------------
+export function newsletterConfirmTemplate(topic: string, confirmUrl: string): Rendered {
+  const subject = 'Bekreft påmeldingen til Ukens anbud';
+  const html = layout(
+    subject,
+    `<p>Du (eller noen som skrev inn adressen din) ba om å få <strong>Ukens anbud – ${esc(topic)}</strong> på e-post hver mandag.</p>
+     ${button(confirmUrl, 'Bekreft påmeldingen')}
+     ${note('Ba du ikke om dette? Da kan du se bort fra e-posten – du blir ikke påmeldt, og adressen slettes etter 7 dager.')}`,
+    { preheader: 'Ett klikk, så får du ukens nye anbud hver mandag.', footer: 'Du får denne e-posten fordi adressen ble skrevet inn på anbudradar.com.' },
+  );
+  const text = `Du (eller noen som skrev inn adressen din) ba om å få Ukens anbud – ${topic} hver mandag.\n\nBekreft her:\n${confirmUrl}\n\nBa du ikke om dette, kan du se bort fra e-posten. Du blir ikke påmeldt.${textFooter()}`;
+  return { subject, html, text };
+}
+
+export interface NewsletterItem {
+  title: string;
+  url: string;
+  meta: string;
+}
+
+export function weeklyNewsletterTemplate(opts: {
+  topic: string;
+  week: number;
+  items: NewsletterItem[];
+  moreCount: number;
+  listUrl: string;
+  signupUrl: string;
+  unsubscribeUrl: string;
+}): Rendered {
+  const subject = `Ukens anbud: ${opts.topic} (uke ${opts.week})`;
+  const n = opts.items.length + opts.moreCount;
+  const intro = n === 1 ? '1 nytt offentlig anbud siste uke.' : `${n} nye offentlige anbud siste uke.`;
+  const rows = opts.items
+    .map(
+      (i) => `<tr><td style="padding:12px 0;border-bottom:1px solid ${C.line}">
+        <a href="${esc(i.url)}" style="font-weight:700;color:${C.navy};text-decoration:none;font-size:15px;line-height:1.35">${esc(i.title)}</a>
+        <div style="margin-top:4px;font-size:13px;color:${C.muted}">${esc(i.meta)}</div></td></tr>`,
+    )
+    .join('');
+  const html = layout(
+    `Ukens anbud: ${opts.topic}`,
+    `<p>${esc(intro)}${opts.moreCount ? ` Her er de ${opts.items.length} med nærmest frist.` : ''}</p>
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
+     ${button(opts.listUrl, 'Se alle åpne anbud')}
+     <p style="margin:8px 0 0">Vil du ha beskjed med én gang nye anbud kommer – og bare de som passer bedriften din?
+       <a href="${esc(opts.signupUrl)}" style="color:${C.accent};font-weight:700">Prøv AnbudRadar gratis</a>.</p>`,
+    {
+      preheader: intro,
+      footer: 'Du får Ukens anbud fordi du meldte deg på og bekreftet adressen på anbudradar.com. Kunngjøringene er offentlige og hentet fra Doffin og TED.',
+      unsubscribeUrl: opts.unsubscribeUrl,
+      unsubscribeLabel: 'Meld av Ukens anbud',
+    },
+  );
+  const text = `Ukens anbud: ${opts.topic} (uke ${opts.week})\n\n${intro}\n\n${opts.items.map((i) => `- ${i.title}\n  ${i.meta}\n  ${i.url}`).join('\n\n')}\n\nSe alle åpne anbud: ${opts.listUrl}\nPrøv AnbudRadar gratis: ${opts.signupUrl}\n\n--\n${senderLine()}\nMeld av Ukens anbud: ${opts.unsubscribeUrl}`;
+  return { subject, html, text };
 }
 
 export function invitationTemplate(orgName: string, inviterName: string, link: string): Rendered {

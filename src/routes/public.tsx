@@ -3,14 +3,16 @@ import { systemSql } from '@/lib/db';
 import { env, isProd } from '@/lib/env';
 import { rateLimit } from '@/lib/rate-limit';
 import { queueEmail } from '@/lib/email';
-import { industryListing, marketSnapshot, noticeSpecimen, parseBoardFilter } from '@/domain/tenders/market';
+import { countyOverview, industryListing, industryRegionCounts, marketSnapshot, noticeSpecimen } from '@/domain/tenders/market';
+import { industryIdFromSlug, industryRegionPath, industrySlugNb, MIN_OPEN_FOR_INDEXING, regionCodeFromSlug, regionPath, REGION_SLUG } from '@/domain/slugs';
+import { CountiesPage, CountyPage } from '@/ui/pages/counties';
 import { fill } from '@/i18n/format';
-import { INDUSTRIES } from '@/domain/reference';
+import { INDUSTRIES, REGION_BY_CODE, REGIONS } from '@/domain/reference';
 import { LOCALES, localePath, MARKETING_PATHS, messages } from '@/i18n';
 import { contactNotificationTemplate } from '@/domain/email/templates';
 import { zodErrors } from '@/domain/auth/auth';
 import { companyInfo, isPlaceholder, LEGAL_DOCS } from '@/domain/legal/legal';
-import { HttpError, text, type RequestContext } from '@/server/http';
+import { HttpError, redirect, text, type RequestContext } from '@/server/http';
 import { audit } from '@/lib/audit';
 import { verifyUnsubscribeToken } from '@/domain/email/unsubscribe';
 import { MessagePage, UnsubscribePage } from '@/ui/pages/auth';
@@ -34,6 +36,33 @@ import {
 import { formStr } from './helpers';
 
 
+/** «12 åpne offentlige anbud» / «1 åpent offentlig anbud». */
+function openText(n: number): string {
+  return n === 1 ? '1 åpent offentlig anbud' : `${n.toLocaleString('nb-NO')} åpne offentlige anbud`;
+}
+
+/** «Bygg og anlegg» → «bygg og anlegg», men «IT og programvare» beholdes. */
+function lowerFirst(name: string): string {
+  const first = name.split(' ')[0] ?? '';
+  return first.length > 1 && first === first.toUpperCase() ? name : name.charAt(0).toLowerCase() + name.slice(1);
+}
+
+/** Behold kilden (utm_source) når en gammel adresse sendes videre, så besøkstellingen blir riktig. */
+function withUtm(ctx: RequestContext, path: string): string {
+  const utm = ctx.query.get('utm_source');
+  return utm ? `${path}?utm_source=${encodeURIComponent(utm.slice(0, 40))}` : path;
+}
+
+/** Brødsmuler for Google (schema.org/BreadcrumbList). */
+function breadcrumbs(items: [name: string, path: string][]) {
+  const base = env.APP_URL.replace(/\/$/, '');
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map(([name, path], i) => ({ '@type': 'ListItem', position: i + 1, name, item: base + path })),
+  };
+}
+
 export function registerPublicRoutes(router: Router): void {
   router.get('/', 'public', async (ctx) => {
     const t = messages(ctx.locale);
@@ -46,18 +75,66 @@ export function registerPublicRoutes(router: Router): void {
   router.get('/bransjer', 'public', async (ctx) => {
     const market = await marketSnapshot();
     const counts = Object.fromEntries(market.industries.map((i) => [i.id, i.n]));
-    return render(ctx, <IndustriesPage counts={counts} />, { title: messages(ctx.locale).meta.industries });
+    return render(ctx, <IndustriesPage counts={counts} regions={market.regions} />, { title: messages(ctx.locale).meta.industries });
   });
   // Én side per bransje med åpne anbud (ekte data) – god å bli funnet på i søkemotorer.
+  // Norsk adresse er /bransjer/renhold; gamle engelske adresser og ?fylke= sendes videre (301).
   router.get('/bransjer/:id', 'public', async (ctx) => {
     const t = messages(ctx.locale);
-    const filter = parseBoardFilter(ctx.params.id ?? null, ctx.query.get('fylke'));
-    if (!filter.industry) throw new HttpError(404, t.errors.notFound);
-    const listing = await industryListing(filter.industry, filter.region);
-    const name = t.industries.names[filter.industry]?.name ?? filter.industry;
-    return render(ctx, <IndustryPage industryId={filter.industry} region={filter.region} listing={listing} />, {
+    const industry = industryIdFromSlug(ctx.params.id);
+    if (!industry) throw new HttpError(404, t.errors.notFound);
+    const fylke = ctx.query.get('fylke');
+    const region = fylke && Object.hasOwn(REGION_SLUG, fylke) ? fylke : null;
+    if (ctx.locale === 'nb' && (ctx.params.id !== industrySlugNb(industry) || region)) {
+      return redirect(withUtm(ctx, region ? industryRegionPath(industry, region) : `/bransjer/${industrySlugNb(industry)}`), 301);
+    }
+    const listing = await industryListing(industry, region);
+    const name = t.industries.names[industry]?.name ?? industry;
+    return render(ctx, <IndustryPage industryId={industry} region={region} listing={listing} />, {
       title: fill(t.industries.pageTitle, { industry: name }),
       description: fill(t.industries.pageDescription, { industry: name }),
+    });
+  });
+  // Bransje i ett fylke (bare norsk): /bransjer/renhold/trondelag. Tynne sider (få anbud) holdes utenfor Google.
+  router.get('/bransjer/:id/:fylke', 'public', async (ctx) => {
+    const t = messages(ctx.locale);
+    const industry = industryIdFromSlug(ctx.params.id);
+    const region = regionCodeFromSlug(ctx.params.fylke);
+    if (!industry || !region || ctx.locale !== 'nb') throw new HttpError(404, t.errors.notFound);
+    const path = industryRegionPath(industry, region);
+    if (ctx.params.id !== industrySlugNb(industry)) return redirect(withUtm(ctx, path), 301);
+    const listing = await industryListing(industry, region);
+    const name = t.industries.names[industry]?.name ?? industry;
+    const county = REGION_BY_CODE.get(region)!.name;
+    return render(ctx, <IndustryPage industryId={industry} region={region} listing={listing} />, {
+      title: `Anbud: ${name} i ${county}`,
+      description: `${openText(listing.open)} innen ${lowerFirst(name)} i ${county}, med frister og oppdragsgivere. Oppdateres flere ganger i døgnet fra Doffin og TED. Få varsel om nye anbud.`,
+      canonical: path,
+      noindex: listing.open < MIN_OPEN_FOR_INDEXING,
+      jsonLd: [breadcrumbs([['Bransjer', '/bransjer'], [name, `/bransjer/${industrySlugNb(industry)}`], [county, path]])],
+    });
+  });
+  router.get('/fylker', 'public', async (ctx) => {
+    if (ctx.locale !== 'nb') throw new HttpError(404, messages(ctx.locale).errors.notFound);
+    const market = await marketSnapshot();
+    return render(ctx, <CountiesPage regions={market.regions} open={market.open} />, {
+      title: 'Offentlige anbud per fylke',
+      description: 'Åpne offentlige anbud i alle fylker – Oslo, Akershus, Vestland, Trøndelag og resten av landet – med frister og oppdragsgivere. Oppdateres flere ganger i døgnet fra Doffin og TED.',
+      canonical: '/fylker',
+      jsonLd: [breadcrumbs([['Fylker', '/fylker']])],
+    });
+  });
+  router.get('/fylker/:fylke', 'public', async (ctx) => {
+    const region = regionCodeFromSlug(ctx.params.fylke);
+    if (!region || ctx.locale !== 'nb') throw new HttpError(404, messages(ctx.locale).errors.notFound);
+    const overview = await countyOverview(region);
+    const county = REGION_BY_CODE.get(region)!.name;
+    return render(ctx, <CountyPage region={region} overview={overview} />, {
+      title: `Offentlige anbud i ${county}`,
+      description: `${openText(overview.open)} i ${county} akkurat nå, fordelt på bransjer, med frister og oppdragsgivere. Oppdateres flere ganger i døgnet fra Doffin og TED.`,
+      canonical: regionPath(region),
+      noindex: overview.open === 0,
+      jsonLd: [breadcrumbs([['Fylker', '/fylker'], [county, regionPath(region)]])],
     });
   });
   router.get('/om', 'public', async (ctx) => render(ctx, <AboutPage company={companyInfo()} />, { title: messages(ctx.locale).meta.about }));
@@ -140,9 +217,16 @@ export function registerPublicRoutes(router: Router): void {
   router.post('/avmeld', 'public', (ctx) => unsubscribe(ctx, true), { csrf: false });
 
   router.get('/sitemap.xml', 'public', async () => {
-    // Markedssidene på alle språk, og de juridiske dokumentene (bare norsk).
-    const pages = [...MARKETING_PATHS, ...INDUSTRIES.map((i) => `/bransjer/${i.id}`)];
-    const urls = [...LOCALES.flatMap((l) => pages.map((path) => localePath(l, path))), ...LEGAL_DOCS.map((d) => d.href)];
+    // Markedssidene på alle språk, de juridiske dokumentene, og (bare norsk) fylkessidene og bransje per fylke
+    // når det er nok åpne anbud til at siden er nyttig.
+    const pages = [...MARKETING_PATHS, ...INDUSTRIES.map((i) => `/bransjer/${industrySlugNb(i.id)}`)];
+    const combos = await industryRegionCounts();
+    const norwegianOnly = [
+      '/fylker',
+      ...REGIONS.map((r) => regionPath(r.code)),
+      ...INDUSTRIES.flatMap((i) => REGIONS.filter((r) => (combos.get(`${i.id}|${r.code}`) ?? 0) >= MIN_OPEN_FOR_INDEXING).map((r) => industryRegionPath(i.id, r.code))),
+    ];
+    const urls = [...LOCALES.flatMap((l) => pages.map((path) => localePath(l, path))), ...norwegianOnly, ...LEGAL_DOCS.map((d) => d.href)];
     const base = env.APP_URL.replace(/\/$/, '');
     const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${base}${u}</loc></url>`).join('')}</urlset>`;
     return text(body, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } });
