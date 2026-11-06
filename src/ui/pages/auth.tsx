@@ -76,6 +76,40 @@ export function RegisterPage({ values = {}, errors = {}, next }: { values?: Reco
   );
 }
 
+/** Steg to i innloggingen: koden fra kode-appen (eller en reservekode). */
+export function TwoFactorLoginPage({ challenge, error }: { challenge: string; error?: string }) {
+  const { m, lp } = useUi();
+  const t = m.auth.mfa;
+  return (
+    <AuthLayout title={t.title} intro={t.intro}>
+      <PostForm action={lp('/logg-inn/kode')} className="space-y-4">
+        {error ? <Alert tone="danger">{error}</Alert> : null}
+        <input type="hidden" name="challenge" value={challenge} />
+        <Field label={t.code} htmlFor="code">
+          <Input
+            id="code"
+            name="code"
+            inputMode="text"
+            autoComplete="one-time-code"
+            autoFocus
+            required
+            maxLength={20}
+            className="text-center font-mono text-[22px] tracking-[0.3em]"
+            invalid={Boolean(error)}
+          />
+        </Field>
+        <Button type="submit" className="w-full" busyLabel={t.busy}>
+          {t.submit}
+        </Button>
+        <p className="text-[13px] text-muted">{t.recoveryHint}</p>
+        <p className="text-center text-[14px]">
+          <a href={lp('/logg-inn')}>{t.back}</a>
+        </p>
+      </PostForm>
+    </AuthLayout>
+  );
+}
+
 export function ForgotPasswordPage({ sent = false }: { sent?: boolean }) {
   const { m, lp } = useUi();
   const t = m.auth.forgot;

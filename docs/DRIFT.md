@@ -136,6 +136,21 @@ Sjekk deretter **Admin → Kilder**: en kilde markeres «verifisert» først nå
   Kontroller at `schema_migrations` har alle migreringene, og at antall rader i `organizations`, `subscriptions` og `tenders` stemmer.
 - **Opplastede filer** ligger i Supabase Storage og er ikke med i databasekopien. Dokumentene kan lastes opp på nytt av kundene, men vurder periodisk kopi av bøtta.
 
+## 6b. Totrinnsinnlogging
+
+- **Påkrevd for administratorer.** Første gang en administrator går til `/admin` etter innlogging, sendes hen til
+  `/konto/totrinn` for å skanne QR-koden med en kode-app (Google Authenticator, Microsoft Authenticator, 1Password).
+  Deretter kreves koden ved hver innlogging. Vanlige brukere kan slå det på under **Innstillinger**.
+- **Reservekoder:** 10 engangskoder vises én gang ved oppsett. Lagre dem i passordbehandleren.
+- **Mistet telefonen og reservekodene?** Logg inn i Supabase (SQL-editoren) og slå av totrinn for kontoen, så kan
+  den settes opp på nytt ved neste innlogging:
+  ```sql
+  update users set totp_secret_enc = null, totp_enabled_at = null, totp_last_step = null where email = 'din@epost.no';
+  delete from user_recovery_codes where user_id = (select id from users where email = 'din@epost.no');
+  ```
+- **SESSION_SECRET** brukes også til å kryptere hemmelighetene. Byttes den, må alle med totrinnsinnlogging sette det opp
+  på nytt (kjør SQL-en over for dem, eller for alle).
+
 ## 7. Utrulling og tilbakerulling
 
 - **Migreringer er bare fremover og kjøres før ny kode tar trafikk** (`preDeployCommand`). Migreringene 0006–0010 legger til kolonner, tabeller, indekser og tilgangsregler, retter referansedata (NUTS-koder for fylker og frister på eksisterende kunngjøringer) og strammer inn rettighetene til webapp-rollen. Ingen tabeller eller kolonner slettes, så forrige versjon av koden på denne grenen fungerer mot det nye skjemaet. Å gå helt tilbake til den opprinnelige koden fra zip-filen etter 0007 er ikke støttet – tilgangsmodellen er strengere nå.

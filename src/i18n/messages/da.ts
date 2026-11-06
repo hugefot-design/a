@@ -395,6 +395,20 @@ export const da: Messages = {
       title: 'Alle offentlige udbud. Kun dem, der passer til dig.',
       points: ['Besked, når et udbud passer til virksomheden', 'AI-resuméer med kilde', 'Påmindelse før fristen'],
     },
+    mfa: {
+      title: 'Indtast koden',
+      intro: 'Åbn kodeappen på telefonen (for eksempel Google Authenticator), og indtast den sekscifrede kode til AnbudRadar.',
+      code: 'Kode',
+      submit: 'Log ind',
+      busy: 'Tjekker …',
+      recoveryHint: 'Har du ikke telefonen? Indtast en af reservekoderne i stedet.',
+      back: 'Tilbage til log ind',
+      errors: {
+        invalid: 'Koden er forkert. Du har {n} forsøg tilbage.',
+        expired: 'Login tog for lang tid. Log ind igen.',
+        tooMany: 'For mange forkerte koder. Log ind igen.',
+      },
+    },
     login: {
       title: 'Log ind',
       noAccount: 'Har du ikke en konto? {link}.',

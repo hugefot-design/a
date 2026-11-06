@@ -117,3 +117,11 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 - **Planer og priser (endret 6. november 2026 etter ønske fra eier):** Start 299, Profesjonell 699, Bedrift 1 490 og Enterprise fra 4 990 kr/mnd eks. mva. Bedrift har 150 AI-analyser og 50 AI-utkast per måned, Enterprise inntil 25 brukere, 500 analyser og 200 utkast. Begrunnelse og regnestykke: [PRISER.md](PRISER.md)
   (settes manuelt i admin). Future Opportunities bare i Enterprise – se [FUTURE_OPPORTUNITIES.md](FUTURE_OPPORTUNITIES.md).
 - **Stripe** er fortsatt ikke testet mot en ekte testkonto (mangler testnøkkel); betalingsflyten er testet mot simulert Stripe.
+
+## Totrinnsinnlogging (6. november 2026)
+
+- Kode-app (TOTP, RFC 6238) med QR-kode, 10 reservekoder (hash), kryptert hemmelighet (AES-256-GCM), maks 5 forsøk per
+  innlogging, utfordringen gjelder i 10 minutter, og samme kode kan ikke brukes to ganger.
+- **Påkrevd for administratorer** (`/admin` sender til oppsettet til det er gjort). Valgfritt for kunder (Innstillinger).
+- Tester: `tests/unit/totp.test.ts` (inkl. testvektorene i RFC 6238), `tests/integration/mfa.test.ts`, `admin-login.test.ts`.
+- Gjenoppretting og drift: [DRIFT.md](DRIFT.md#6b-totrinnsinnlogging).

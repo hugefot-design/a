@@ -395,6 +395,20 @@ export const sv: Messages = {
       title: 'Alla offentliga upphandlingar. Bara de som passar dig.',
       points: ['Besked när en upphandling passar företaget', 'AI-sammanfattningar med källa', 'Påminnelse före sista dag'],
     },
+    mfa: {
+      title: 'Ange koden',
+      intro: 'Öppna kodappen i telefonen (till exempel Google Authenticator) och ange den sexsiffriga koden för AnbudRadar.',
+      code: 'Kod',
+      submit: 'Logga in',
+      busy: 'Kontrollerar …',
+      recoveryHint: 'Har du inte telefonen? Ange en av reservkoderna i stället.',
+      back: 'Tillbaka till inloggning',
+      errors: {
+        invalid: 'Koden stämmer inte. Du har {n} försök kvar.',
+        expired: 'Inloggningen tog för lång tid. Logga in igen.',
+        tooMany: 'För många felaktiga koder. Logga in igen.',
+      },
+    },
     login: {
       title: 'Logga in',
       noAccount: 'Har du inget konto? {link}.',

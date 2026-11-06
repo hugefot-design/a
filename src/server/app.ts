@@ -230,6 +230,11 @@ async function dispatch(ctx: RequestContext, router: Router): Promise<Response> 
         throw new HttpError(401, 'Du må være innlogget.');
       }
       if (route.access === 'admin' && !ctx.user.isPlatformAdmin) throw new HttpError(404, 'Siden finnes ikke.');
+      // Admin-panelet krever totrinnsinnlogging. Uten den sendes administratoren til oppsettet.
+      if (route.access === 'admin' && !ctx.user.totpEnabled) {
+        if (ctx.method === 'GET') return redirect(`/konto/totrinn?neste=${encodeURIComponent(ctx.path + ctx.url.search)}`);
+        throw new HttpError(403, 'Admin krever totrinnsinnlogging.');
+      }
       ctx.org = await loadOrgContext(ctx.user);
       if (route.access === 'org') {
         if (!ctx.org) return redirect('/app/onboarding');

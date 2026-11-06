@@ -1123,6 +1123,7 @@ export function SecurityPage() {
           items={[
             'Passord lagres med scrypt og unik salt – aldri i klartekst.',
             'Innloggingsforsøk begrenses per IP-adresse og per konto, og kontoen låses midlertidig etter gjentatte feil.',
+            'Totrinnsinnlogging med kode-app kan slås på under Innstillinger, og er påkrevd for AnbudRadars egne administratorer. Hemmeligheten lagres kryptert, og reservekodene bare som hash.',
             'Økter utløper etter 30 dager uten bruk, og du kan logge ut alle andre økter under Innstillinger.',
             'Eiere og administratorer styrer hvem i organisasjonen som har tilgang, og med hvilken rolle.',
           ]}

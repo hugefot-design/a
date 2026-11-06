@@ -19,7 +19,7 @@ import { mapDoffinHit, setDoffinDownloadDeps, type DoffinHit } from '../../src/c
 import { enrichDoffinXml, enrichmentOverview, selectEnrichmentCandidates } from '../../src/connectors/doffin-enrich';
 import { runScheduledTask } from '../../src/domain/ops/tasks';
 import { finishImportRun, ingestNotices, startImportRun } from '../../src/domain/tenders/ingest';
-import { clientFor, createAccount, startServer, tenderIdFor } from '../helpers';
+import { clientFor, createAccount, startServer, tenderIdFor, makeAdmin } from '../helpers';
 
 const RUN = randomUUID().slice(0, 6).replace(/[a-f]/g, '7');
 const id = (n: number) => `2026-${RUN}${n}`;
@@ -237,7 +237,7 @@ test('admin → Datakilder viser berikelsen med siste problemer (bare for plattf
   const server = await startServer();
   try {
     const admin = await createAccount();
-    await systemSql()`update users set is_platform_admin = true where id = ${admin.user.id}`;
+    await makeAdmin(admin.user.id);
     const page = await (await clientFor(server.base, admin)).get('/admin/kilder');
     assert.equal(page.status, 200);
     assert.match(page.body, /Doffin: full kunngjøring \(eForms-XML\)/);

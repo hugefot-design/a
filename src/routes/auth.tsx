@@ -22,6 +22,9 @@ import { redirectWith } from '@/server/flash';
 import { homePath, redirect, safeRedirectPath, serializeCookie, type RequestContext } from '@/server/http';
 import { render } from '@/server/render';
 import { messages, translateAuthErrors } from '@/i18n';
+import { fill } from '@/i18n/format';
+import { createLoginChallenge, verifyLoginChallenge } from '@/domain/auth/mfa';
+import { systemSql } from '@/lib/db';
 import type { Router } from '@/server/router';
 import {
   ForgotPasswordPage,
@@ -30,6 +33,7 @@ import {
   MessagePage,
   RegisterPage,
   ResetPasswordPage,
+  TwoFactorLoginPage,
 } from '@/ui/pages/auth';
 
 function str(form: FormData, key: string): string {
@@ -61,8 +65,37 @@ export function registerAuthRoutes(router: Router): void {
       const error = result.reason === 'locked' ? t.auth.login.errors.locked : result.reason === 'rate_limited' ? t.auth.login.errors.rateLimited : t.auth.login.errors.invalid;
       return render(ctx, <LoginPage email={email} error={error} next={next} />, { title: t.meta.login, status: result.reason === 'invalid' ? 401 : 429 });
     }
+    // Totrinnsinnlogging: riktig passord gir bare en kortvarig utfordring – økten lages når koden er riktig.
+    if (result.user.totpEnabled) {
+      const challenge = await createLoginChallenge(result.user.id, next ?? null);
+      return render(ctx, <TwoFactorLoginPage challenge={challenge} />, { title: messages(ctx.locale).meta.login, noindex: true });
+    }
     await startSession(ctx, result.user.id);
     return redirect(next ?? homePath(result.user));
+  });
+
+  router.post('/logg-inn/kode', 'guest', async (ctx) => {
+    const t = messages(ctx.locale);
+    const form = await ctx.form();
+    const challenge = str(form, 'challenge');
+    if (!(await rateLimit(`mfa:ip:${ctx.ipHash}`, 30, 15 * 60))) {
+      return render(ctx, <LoginPage error={t.auth.login.errors.rateLimited} />, { title: t.meta.login, status: 429 });
+    }
+    const res = await verifyLoginChallenge(challenge, str(form, 'code'), ctx.ipHash);
+    if (!res.ok) {
+      if (res.reason === 'invalid') {
+        return render(ctx, <TwoFactorLoginPage challenge={challenge} error={fill(t.auth.mfa.errors.invalid, { n: res.attemptsLeft ?? 0 })} />, {
+          title: t.meta.login,
+          status: 401,
+          noindex: true,
+        });
+      }
+      return render(ctx, <LoginPage error={res.reason === 'too_many' ? t.auth.mfa.errors.tooMany : t.auth.mfa.errors.expired} />, { title: t.meta.login, status: 401 });
+    }
+    const [user] = (await systemSql()`select is_platform_admin from users where id = ${res.userId}`) as unknown as { isPlatformAdmin: boolean }[];
+    await startSession(ctx, res.userId);
+    const next = res.nextPath ? safeRedirectPath(res.nextPath, '') || undefined : undefined;
+    return redirect(next ?? homePath(user ?? null));
   });
 
   router.get('/registrer', 'guest', async (ctx) =>

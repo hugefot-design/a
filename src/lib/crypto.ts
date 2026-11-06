@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, createHmac, hkdfSync, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { env } from './env';
 
 export function randomToken(bytes = 32): string {
@@ -62,4 +62,28 @@ let dummyHash: string | null = null;
 export async function dummyPasswordCheck(password: string): Promise<void> {
   dummyHash ??= await hashPassword('dummy-password-for-timing');
   await verifyPassword(password, dummyHash);
+}
+
+// ---------------------------------------------------------------------------
+// Kryptering av hemmeligheter i databasen (TOTP): AES-256-GCM med nøkkel avledet fra SESSION_SECRET.
+// Format: v1.<iv>.<tag>.<chiffertekst> (base64url). Byttes SESSION_SECRET, må totrinnsinnlogging
+// settes opp på nytt (se docs/DRIFT.md).
+// ---------------------------------------------------------------------------
+function secretKey(): Buffer {
+  return Buffer.from(hkdfSync('sha256', env.SESSION_SECRET, 'anbudradar', 'totp-secret-v1', 32));
+}
+
+export function encryptSecret(plain: string): string {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', secretKey(), iv);
+  const enc = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
+  return ['v1', iv.toString('base64url'), cipher.getAuthTag().toString('base64url'), enc.toString('base64url')].join('.');
+}
+
+export function decryptSecret(stored: string): string {
+  const [v, iv, tag, data] = stored.split('.');
+  if (v !== 'v1' || !iv || !tag || !data) throw new Error('Ukjent format');
+  const decipher = createDecipheriv('aes-256-gcm', secretKey(), Buffer.from(iv, 'base64url'));
+  decipher.setAuthTag(Buffer.from(tag, 'base64url'));
+  return Buffer.concat([decipher.update(Buffer.from(data, 'base64url')), decipher.final()]).toString('utf8');
 }

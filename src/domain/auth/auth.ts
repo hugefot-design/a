@@ -66,6 +66,7 @@ interface UserRow {
   emailVerifiedAt: Date | null;
   isPlatformAdmin: boolean;
   currentOrgId: string | null;
+  totpEnabled?: boolean;
 }
 
 function toAuthUser(row: UserRow): AuthUser {
@@ -76,6 +77,7 @@ function toAuthUser(row: UserRow): AuthUser {
     emailVerified: row.emailVerifiedAt !== null,
     isPlatformAdmin: row.isPlatformAdmin,
     currentOrgId: row.currentOrgId,
+    totpEnabled: Boolean(row.totpEnabled),
   };
 }
 
@@ -106,7 +108,8 @@ export async function getSession(token: string): Promise<SessionLookup | null> {
   const row = first(
     (await sql`
       select s.id as session_id, s.csrf_token, s.last_seen_at, s.created_at as session_created_at,
-             u.id, u.email, u.name, u.email_verified_at, u.is_platform_admin, u.current_org_id, u.password_changed_at
+             u.id, u.email, u.name, u.email_verified_at, u.is_platform_admin, u.current_org_id, u.password_changed_at,
+             (u.totp_enabled_at is not null) as totp_enabled
       from sessions s join users u on u.id = s.user_id
       where s.token_hash = ${sha256Hex(token)} and s.expires_at > now()
     `) as unknown as (UserRow & {
@@ -186,7 +189,8 @@ export async function authenticate(emailRaw: string, password: string, ipHash: s
   const sql = appSql();
   const row = first(
     (await sql`
-      select id, email, name, email_verified_at, is_platform_admin, current_org_id, password_hash, locked_until
+      select id, email, name, email_verified_at, is_platform_admin, current_org_id, password_hash, locked_until,
+        (totp_enabled_at is not null) as totp_enabled
       from users where email = ${email}
     `) as unknown as (UserRow & { passwordHash: string; lockedUntil: Date | null })[],
   );

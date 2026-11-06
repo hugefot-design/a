@@ -30,6 +30,7 @@ const SLUGS: Record<string, string> = {
   '/kontakt': 'contact',
   '/registrer': 'register',
   '/logg-inn': 'login',
+  '/logg-inn/kode': 'login-code',
   '/glemt-passord': 'forgot-password',
 };
 const FROM_SLUG = new Map(Object.entries(SLUGS).map(([path, slug]) => [slug, path]));

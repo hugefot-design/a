@@ -404,6 +404,20 @@ export const en: Messages = {
       title: 'Every public tender. Only the ones that fit you.',
       points: ['An alert when a tender fits your business', 'AI summaries with sources', 'A reminder before the deadline'],
     },
+    mfa: {
+      title: 'Enter the code',
+      intro: 'Open the authenticator app on your phone (for example Google Authenticator) and enter the six-digit code for AnbudRadar.',
+      code: 'Code',
+      submit: 'Log in',
+      busy: 'Checking …',
+      recoveryHint: 'Don’t have your phone? Enter one of your recovery codes instead.',
+      back: 'Back to log in',
+      errors: {
+        invalid: 'The code is not correct. You have {n} attempts left.',
+        expired: 'The login took too long. Please log in again.',
+        tooMany: 'Too many wrong codes. Please log in again.',
+      },
+    },
     login: {
       title: 'Log in',
       noAccount: 'No account yet? {link}.',

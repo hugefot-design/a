@@ -17,6 +17,8 @@ import { recomputeMatchesForTenders } from '../src/domain/matching/service';
 import type { NormalizedNotice } from '../src/domain/tenders/normalize';
 import type { PlanId } from '../src/domain/billing/plans';
 import type { AuthUser } from '../src/server/http';
+import { encryptSecret } from '../src/lib/crypto';
+import { currentStep, totpAt } from '../src/lib/totp';
 
 if (!env.DATABASE_URL.includes('_test')) throw new Error('Testene skal bare kjøre mot en *_test-database (NODE_ENV=test).');
 
@@ -219,4 +221,37 @@ export async function tenderIdFor(source: string, sourceNoticeId: string): Promi
   const rows = (await systemSql()`select tender_id from tender_sources where source = ${source} and source_notice_id = ${sourceNoticeId}`) as unknown as { tenderId: string }[];
   if (!rows[0]) throw new Error(`Fant ikke anbud for ${source}/${sourceNoticeId}`);
   return rows[0].tenderId;
+}
+
+// ---------------------------------------------------------------------------
+// Totrinnsinnlogging i testene
+// ---------------------------------------------------------------------------
+/** Fast testhemmelighet (base32). Bare i testene. */
+export const TEST_TOTP_SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
+
+/** Slår på totrinnsinnlogging for en bruker med testhemmeligheten. */
+export async function enableTestMfa(userId: string): Promise<void> {
+  await systemSql()`update users set totp_secret_enc = ${encryptSecret(TEST_TOTP_SECRET)}, totp_enabled_at = now(), totp_last_step = null where id = ${userId}`;
+}
+
+/** Gjør brukeren til plattform-administrator – med totrinnsinnlogging, slik det kreves i virkeligheten. */
+export async function makeAdmin(userId: string, opts: { mfa?: boolean } = {}): Promise<void> {
+  await systemSql()`update users set is_platform_admin = true where id = ${userId}`;
+  if (opts.mfa !== false) await enableTestMfa(userId);
+}
+
+/**
+ * En gyldig kode akkurat nå. Nullstiller «siste brukte steg» først, så flere innlogginger i samme
+ * 30-sekunders vindu går i testene (gjentaksvernet testes for seg i mfa.test.ts).
+ */
+export async function testTotpCode(userId: string): Promise<string> {
+  await systemSql()`update users set totp_last_step = null where id = ${userId}`;
+  return totpAt(TEST_TOTP_SECRET, currentStep());
+}
+
+/** Henter utfordringen fra kodesiden etter riktig passord. */
+export function challengeFrom(body: string): string {
+  const m = /name="challenge" value="([^"]+)"/.exec(body);
+  if (!m) throw new Error('Fant ikke kodesiden');
+  return m[1]!;
 }

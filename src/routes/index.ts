@@ -2,6 +2,7 @@ import { Router } from '@/server/router';
 import { registerAdminRoutes } from './admin';
 import { registerApiRoutes } from './api';
 import { registerAuthRoutes } from './auth';
+import { registerMfaRoutes } from './mfa';
 import { registerAccountRoutes } from './app/account';
 import { registerBidRoutes } from './app/bids';
 import { registerCompetitorRoutes } from './app/competitors';
@@ -17,6 +18,7 @@ export function buildRouter(): Router {
   registerApiRoutes(router);
   registerWebhookRoutes(router);
   registerAuthRoutes(router);
+  registerMfaRoutes(router);
   registerCoreAppRoutes(router);
   registerAccountRoutes(router);
   registerBidRoutes(router);

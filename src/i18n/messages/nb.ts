@@ -351,6 +351,20 @@ export const nb = {
       title: 'Alle offentlige anbud. Bare de som passer deg.',
       points: ['Varsel når et anbud passer bedriften', 'AI-sammendrag med kilde', 'Påminnelse før fristen'],
     },
+    mfa: {
+      title: 'Skriv inn koden',
+      intro: 'Åpne kode-appen på telefonen (for eksempel Google Authenticator) og skriv inn den sekssifrede koden for AnbudRadar.',
+      code: 'Kode',
+      submit: 'Logg inn',
+      busy: 'Sjekker …',
+      recoveryHint: 'Har du ikke telefonen? Skriv inn en av reservekodene i stedet.',
+      back: 'Tilbake til innlogging',
+      errors: {
+        invalid: 'Koden stemmer ikke. Du har {n} forsøk igjen.',
+        expired: 'Innloggingen tok for lang tid. Logg inn på nytt.',
+        tooMany: 'For mange feil koder. Logg inn på nytt.',
+      },
+    },
     login: {
       title: 'Logg inn',
       noAccount: 'Har du ikke konto? {link}.',

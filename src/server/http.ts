@@ -11,6 +11,8 @@ export interface AuthUser {
   emailVerified: boolean;
   isPlatformAdmin: boolean;
   currentOrgId: string | null;
+  /** Totrinnsinnlogging er slått på (påkrevd for administratorer for å bruke /admin). */
+  totpEnabled: boolean;
 }
 
 export interface Membership {

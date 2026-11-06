@@ -1,6 +1,6 @@
 import type { InvitationRow, MemberRow } from '@/domain/org/org';
 import { useUi } from '../../context';
-import { Alert, Badge, Button, Field, Input, PageHeader, Panel, PanelHeader, PostForm, Select, Tabs } from '../../components';
+import { Alert, Badge, Button, buttonVariants, Field, Input, PageHeader, Panel, PanelHeader, PostForm, Select, Tabs } from '../../components';
 import { AppShell } from '../../layouts';
 import { formatDate, relativeTime } from '../../format';
 
@@ -56,6 +56,20 @@ export function SettingsPage(p: SettingsProps) {
               </Field>
               <Button size="sm">Bytt passord</Button>
             </PostForm>
+          </Panel>
+          <Panel>
+            <PanelHeader
+              title="Totrinnsinnlogging"
+              description="En kode fra telefonen i tillegg til passordet. Da hjelper det ikke å kjenne passordet alene."
+            />
+            <div className="flex flex-wrap items-center justify-between gap-3 p-5">
+              <span className={user?.totpEnabled ? 'text-[14px] font-semibold text-ok' : 'text-[14px] text-muted'}>
+                {user?.totpEnabled ? 'Slått på' : user?.isPlatformAdmin ? 'Påkrevd for administratorer' : 'Ikke slått på'}
+              </span>
+              <a href="/konto/totrinn" className={buttonVariants({ size: 'sm', variant: user?.totpEnabled ? 'secondary' : 'primary' })}>
+                {user?.totpEnabled ? 'Administrer' : 'Slå på'}
+              </a>
+            </div>
           </Panel>
           <Panel className="lg:col-span-2">
             <PanelHeader
