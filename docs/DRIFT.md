@@ -141,6 +141,9 @@ Sjekk deretter **Admin → Kilder**: en kilde markeres «verifisert» først nå
 - **Påkrevd for administratorer.** Første gang en administrator går til `/admin` etter innlogging, sendes hen til
   `/konto/totrinn` for å skanne QR-koden med en kode-app (Google Authenticator, Microsoft Authenticator, 1Password).
   Deretter kreves koden ved hver innlogging. Vanlige brukere kan slå det på under **Innstillinger**.
+- **Admin er usynlig for andre.** `/admin` svarer «Siden finnes ikke» for alle som ikke er logget inn som administrator
+  – det finnes ingen egen innloggingsside for admin, og `robots.txt` nevner ikke admin. Logg inn på den vanlige
+  innloggingssiden; administratorer havner i admin-panelet derfra.
 - **Ny bekreftelse i admin.** Hver økt husker når totrinn sist ble bekreftet (`sessions.mfa_verified_at`). Admin-panelet
   ber om ny kode (eller passkey) etter **12 timer**, og viktige endringer – admin-tilgang, plan, datakilder, filimport,
   legge til/fjerne passkey – krever bekreftelse de siste **15 minuttene** (`/konto/bekreft`). Rutene er merket
@@ -165,6 +168,24 @@ Sjekk deretter **Admin → Kilder**: en kilde markeres «verifisert» først nå
   ```
 - **SESSION_SECRET** brukes også til å kryptere hemmelighetene og signere «logg ut alle»-lenkene. Byttes den, må alle
   med totrinnsinnlogging sette det opp på nytt (kjør SQL-en over for dem, eller for alle), og gamle lenker slutter å virke.
+
+## 6c. Synlig i Google (søkeresultat og ikon)
+
+Nettsiden har alt Google trenger: ikon i flere størrelser (`/favicon.ico` 16–48 px, `/favicon-96x96.png`, `/icon-192.png`,
+`/favicon.svg`), `sitemap.xml`, `robots.txt` og én fast adresse (www, http og onrender.com sendes til
+`https://anbudradar.com`). Ikonet og nye sider vises i Google først når Google har lest forsiden på nytt – Google sier
+selv at det kan ta fra noen dager til noen uker, og at ikonet ikke er garantert. Slik går det raskere:
+
+1. Gå til [Google Search Console](https://search.google.com/search-console) → **Legg til eiendom** →
+   **Nettadresseprefiks** → `https://anbudradar.com`.
+2. Velg bekreftelsesmåten **HTML-tag** og kopier bare koden mellom `content="` og `"` (den er ikke hemmelig).
+3. Render → webapp-tjenesten → **Environment** → legg til `GOOGLE_SITE_VERIFICATION` = koden → lagre og oppdater.
+   Når siden er oppdatert, står koden i forsiden som `<meta name="google-site-verification">`.
+4. Tilbake i Search Console → **Bekreft**.
+5. **Nettstedskart** → send inn `sitemap.xml`.
+6. **Inspeksjon av nettadresse** → `https://anbudradar.com/` → **Be om indeksering**.
+
+(Alternativ: eiendomstypen **Domene** med en `TXT`-post for `@` hos Namecheap, slik e-postpostene i del 0 ble lagt inn.)
 
 ## 7. Utrulling og tilbakerulling
 

@@ -248,11 +248,13 @@ async function dispatch(ctx: RequestContext, router: Router): Promise<Response> 
     case 'user':
     case 'org':
     case 'admin': {
+      // Admin-panelet skal ikke synes for andre: verken en innloggingsside eller et hint om at det finnes.
+      // Administratorer logger inn på den vanlige innloggingssiden og havner i admin derfra.
+      if (route.access === 'admin' && !ctx.user?.isPlatformAdmin) throw new HttpError(404, 'Siden finnes ikke.');
       if (!ctx.user) {
         if (ctx.method === 'GET') return redirect(`/logg-inn?neste=${encodeURIComponent(ctx.path + ctx.url.search)}`);
         throw new HttpError(401, 'Du må være innlogget.');
       }
-      if (route.access === 'admin' && !ctx.user.isPlatformAdmin) throw new HttpError(404, 'Siden finnes ikke.');
       // Admin-panelet krever totrinnsinnlogging. Uten den sendes administratoren til oppsettet.
       if (route.access === 'admin' && !ctx.user.totpEnabled) {
         if (ctx.method === 'GET') return redirect(`/konto/totrinn?neste=${encodeURIComponent(ctx.path + ctx.url.search)}`);

@@ -113,7 +113,7 @@ test('innlogging med passkey: falsk side og gjenbruk avvises, riktig enhet logge
   const phish = await l.post('/logg-inn/kode', { challenge, passkey: JSON.stringify(key.authenticate(first, { origin: 'https://anbudradar-login.example' })) }, { from: '/logg-inn' });
   assert.equal(phish.status, 401);
   assert.match(phish.body.replaceAll('<!-- -->', ''), /Passkeyen ble ikke godkjent\. Du har 4 forsøk igjen/);
-  assert.equal((await l.get('/admin')).status, 303, 'ikke logget inn');
+  assert.equal((await l.get('/konto/totrinn')).status, 303, 'ikke logget inn');
 
   // Utfordringen er brukt opp: et gyldig svar på den gamle virker ikke (gjentak).
   const replay = await l.post('/logg-inn/kode', { challenge, passkey: JSON.stringify(key.authenticate(first)) }, { from: '/logg-inn' });

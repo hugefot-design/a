@@ -121,7 +121,7 @@ test('mange feil koder gir pause for kontoen (også med riktig kode) og et varse
   const pw = await other.post('/logg-inn', { email: admin.email, password: admin.password }, { from: '/logg-inn' });
   const login = await other.post('/logg-inn/kode', { challenge: challengeFrom(pw.body), code: await testTotpCode(admin.user.id) }, { from: '/logg-inn' });
   assert.equal(login.status, 429);
-  assert.equal((await other.get('/admin')).status, 303, 'ikke logget inn');
+  assert.equal((await other.get('/konto/totrinn')).status, 303, 'ikke logget inn');
   const mails = await outbox(admin.user.id, 'security_mfa_failures');
   assert.equal(mails.length, 1, 'ett varsel, ikke ett per forsøk');
   assert.match(mails[0]!.textBody, /passordet ditt kan være kjent/i);
@@ -179,8 +179,8 @@ test('«logg ut alle enheter»: lenken gjør ingenting før knappen trykkes, så
   const done = await guest.post('/konto/logg-ut-overalt', { token }, { csrf: csrfFrom(page.body) });
   assert.equal(done.status, 200);
   assert.match(done.body.replaceAll('<!-- -->', ''), /2 innlogginger ble avsluttet/);
-  assert.equal((await a.get('/admin')).status, 303);
-  assert.equal((await b.get('/admin')).status, 303);
+  assert.equal((await a.get('/konto/totrinn')).status, 303, 'logget ut');
+  assert.equal((await b.get('/konto/totrinn')).status, 303, 'logget ut');
   const [log] = (await systemSql()`select metadata from audit_logs where action = 'auth.sessions_revoked' and actor_user_id = ${admin.user.id}`) as unknown as { metadata: { via: string } }[];
   assert.equal(log?.metadata.via, 'email_link');
 });

@@ -110,7 +110,13 @@ test('beskyttede sider krever innlogging, og admin krever plattform-admin', asyn
   const r = await anon.get('/app/anbud');
   assert.equal(r.status, 303);
   assert.match(r.location ?? '', /^\/logg-inn/);
-  assert.equal((await anon.get('/admin')).status, 303);
+  // Admin-panelet synes ikke for besøkende: ingen innloggingsside, bare «finnes ikke».
+  for (const path of ['/admin', '/admin/brukere', '/admin/helse?stripe=1']) {
+    const res = await anon.get(path);
+    assert.equal(res.status, 404, path);
+    assert.doesNotMatch(res.body, /logg-inn\?neste=%2Fadmin/);
+  }
+  assert.doesNotMatch((await anon.get('/robots.txt')).body, /admin/i, 'robots.txt nevner ikke admin');
 
   const acc = await createAccount();
   const c = new Client(server.base);

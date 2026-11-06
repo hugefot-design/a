@@ -34,6 +34,7 @@ Hver oppgave gjøres i leverandørens kontrollpanel. Nøkler og passord legges *
 - [ ] Databehandleravtaler med Supabase, Render, Resend, Stripe og Anthropic
 - [ ] Protokoll over behandlingsaktiviteter (art. 30) og intern rutine for brudd på personopplysningssikkerheten
 - [ ] Kontaktadresse med databehandleravtale (Google Workspace eller e-post på eget domene) i stedet for gratis Gmail
+- [ ] Google Search Console: bekreft nettstedet, send inn `sitemap.xml` og be om indeksering av forsiden (se DRIFT.md del 6c). Ikonet i søkeresultatet kommer etter at Google har lest forsiden på nytt
 - [ ] MVA-oppsett avklart med regnskapsfører (fast sats eller Stripe Tax)
 - [ ] Selskapsinformasjon i `COMPANY_*`
 
