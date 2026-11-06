@@ -118,6 +118,19 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   (settes manuelt i admin). Future Opportunities bare i Enterprise – se [FUTURE_OPPORTUNITIES.md](FUTURE_OPPORTUNITIES.md).
 - **Stripe** er fortsatt ikke testet mot en ekte testkonto (mangler testnøkkel); betalingsflyten er testet mot simulert Stripe.
 
+## Vekst uten annonser (6. november 2026)
+
+- **Google-sider:** norske adresser (`/bransjer/renhold`), 15 fylkessider (`/fylker/<fylke>`) og bransje per fylke
+  (`/bransjer/<bransje>/<fylke>`) med ekte åpne anbud. Live: nettstedskartet har 208 adresser (16 fylkessider og 110
+  bransje-per-fylke-sider med minst 3 åpne anbud). Tynnere sider har `noindex`.
+- **Ukesbrevet «Ukens anbud»** uten konto (dobbel bekreftelse, mandag kl. 07, ettklikks-avmelding). **VERIFISERT live:**
+  påmelding på anbudradar.com → bekreftelses-e-post levert fra `varsler@anbudradar.com` til Resends testadresse.
+- **E-post til alle:** testlisten fjernet etter godkjenning fra eier; reserverte testdomener sendes aldri.
+- **Admin → Besøk** (uten informasjonskapsler/IP) og **Admin → LinkedIn** (ferdig tekst med ukens største nye anbud).
+- **IKKE VERIFISERT:** første ordinære utsending av ukesbrevet (skjer mandag morgen), effekt i Google (tar dager–uker),
+  og hvor mange e-poster per dag Resend-kontoen tillater ved mange påmeldte.
+- Søkesider bare på norsk; AI er fortsatt av i produksjon (eiers valg: vent).
+
 ## Totrinnsinnlogging og passkeys (6. november 2026)
 
 - Kode-app (TOTP, RFC 6238) med QR-kode, 10 reservekoder (hash), kryptert hemmelighet (AES-256-GCM), maks 5 forsøk per
