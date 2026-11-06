@@ -51,7 +51,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     name: 'Gratis',
     priceNok: 0,
     tagline: 'Smak på produktet med ekte anbud fra Doffin og TED.',
-    features: ['Ekte anbud fra Doffin og TED', '5 søk per dag', '3 lagrede anbud', '1 AI-sammendrag per måned', 'Ingen automatiske varsler'],
+    features: ['Ekte anbud fra Doffin og TED', '5 søk per dag', '3 lagrede anbud', '1 AI-sammendrag per måned'],
     entitlements: {
       plan: 'free',
       searchesPerDay: 5,
@@ -78,7 +78,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
   starter: {
     id: 'starter',
     name: 'Start',
-    priceNok: 199,
+    priceNok: 299,
     tagline: 'For deg som vil følge med på egne bransjer.',
     features: [
       'Søk med filtre for bransje, sted, verdi og frist',
@@ -114,7 +114,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
   professional: {
     id: 'professional',
     name: 'Profesjonell',
-    priceNok: 499,
+    priceNok: 699,
     tagline: 'For bedrifter som leverer tilbud jevnlig.',
     features: [
       'Avansert søk med naturlig språk, CPV og ekskluderinger',
@@ -151,7 +151,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
   business: {
     id: 'business',
     name: 'Bedrift',
-    priceNok: 999,
+    priceNok: 1490,
     tagline: 'For team som jobber med tilbud sammen.',
     features: [
       'Alt i Profesjonell',
@@ -161,7 +161,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       'Tilbudsarbeidsflate med AI-assistent',
       'Innsikt i tildelinger og konkurrenter',
       'Utvidet statistikk',
-      '250 AI-analyser og 100 AI-utkast per måned',
+      '150 AI-analyser og 50 AI-utkast per måned',
     ],
     entitlements: {
       plan: 'business',
@@ -170,12 +170,12 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       maxBookmarks: UNLIMITED,
       maxSavedSearches: 100,
       alerts: 'full',
-      aiAnalysesPerMonth: 250,
+      aiAnalysesPerMonth: 150,
       aiFullAnalysis: true,
       documentUpload: true,
       matching: true,
       bidAssistant: true,
-      aiBidDraftsPerMonth: 100,
+      aiBidDraftsPerMonth: 50,
       competitorIntel: true,
       advancedAnalytics: true,
       maxMembers: 10,
@@ -189,14 +189,14 @@ export const PLANS: Record<PlanId, PlanInfo> = {
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
-    priceNok: null,
-    tagline: 'For større virksomheter. Pris etter avtale.',
+    priceNok: 4990,
+    tagline: 'For større virksomheter som vil se prosjektene tidlig.',
     features: [
       'Alt i Bedrift',
       'Future Opportunities: planlagte anskaffelser og politiske saker før de blir anbud',
       'Følg prosjekter og få varsel når de utlyses',
-      'Avtalte grenser for brukere og AI-bruk',
-      'Prioritert støtte og fakturaavtale',
+      'Inntil 25 brukere, 500 AI-analyser og 200 AI-utkast per måned',
+      'Prioritert støtte og betaling med faktura',
     ],
     entitlements: {
       plan: 'enterprise',
@@ -205,15 +205,15 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       maxBookmarks: UNLIMITED,
       maxSavedSearches: UNLIMITED,
       alerts: 'full',
-      aiAnalysesPerMonth: 2000,
+      aiAnalysesPerMonth: 500,
       aiFullAnalysis: true,
       documentUpload: true,
       matching: true,
       bidAssistant: true,
-      aiBidDraftsPerMonth: 1000,
+      aiBidDraftsPerMonth: 200,
       competitorIntel: true,
       advancedAnalytics: true,
-      maxMembers: 100,
+      maxMembers: 25,
       profitCalculator: true,
       profitAI: true,
       partnerListing: true,

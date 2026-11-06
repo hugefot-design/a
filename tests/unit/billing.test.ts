@@ -72,14 +72,15 @@ test('webhook-signatur verifiseres, og forfalskninger avvises', () => {
   assert.throws(() => verifyStripeSignature(tampered, `t=${t},v1=${sig}`, secret, 300, t), /Ugyldig signatur/);
 });
 
-test('planene har riktige navn og priser (Start 199, Profesjonell 499, Bedrift 999 kr/mnd)', async () => {
+test('planene har riktige navn og priser (Start 299, Profesjonell 699, Bedrift 1490, Enterprise 4990 kr/mnd)', async () => {
   const { PLANS } = await import('../../src/domain/billing/plans');
   assert.deepEqual(
-    (['starter', 'professional', 'business'] as const).map((p) => [PLANS[p].name, PLANS[p].priceNok]),
+    (['starter', 'professional', 'business', 'enterprise'] as const).map((p) => [PLANS[p].name, PLANS[p].priceNok]),
     [
-      ['Start', 199],
-      ['Profesjonell', 499],
-      ['Bedrift', 999],
+      ['Start', 299],
+      ['Profesjonell', 699],
+      ['Bedrift', 1490],
+      ['Enterprise', 4990],
     ],
   );
 });
@@ -103,9 +104,9 @@ test('prisene i Stripe kontrolleres mot planene (beløp, valuta, intervall)', as
   const { env } = await import('../../src/lib/env');
   const realFetch = globalThis.fetch;
   const prices: Record<string, Record<string, unknown>> = {
-    [env.STRIPE_PRICE_STARTER!]: { active: true, currency: 'nok', unit_amount: 19900, type: 'recurring', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } },
-    [env.STRIPE_PRICE_PROFESSIONAL!]: { active: true, currency: 'nok', unit_amount: 49000, type: 'recurring', recurring: { interval: 'month', interval_count: 1 } },
-    [env.STRIPE_PRICE_BUSINESS!]: { active: true, currency: 'eur', unit_amount: 99900, type: 'recurring', recurring: { interval: 'year', interval_count: 1 } },
+    [env.STRIPE_PRICE_STARTER!]: { active: true, currency: 'nok', unit_amount: 29900, type: 'recurring', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } },
+    [env.STRIPE_PRICE_PROFESSIONAL!]: { active: true, currency: 'nok', unit_amount: 69000, type: 'recurring', recurring: { interval: 'month', interval_count: 1 } },
+    [env.STRIPE_PRICE_BUSINESS!]: { active: true, currency: 'eur', unit_amount: 149000, type: 'recurring', recurring: { interval: 'year', interval_count: 1 } },
   };
   globalThis.fetch = (async (input: string | URL | Request) => {
     const id = decodeURIComponent(String(input).split('/prices/')[1] ?? '');
@@ -118,7 +119,7 @@ test('prisene i Stripe kontrolleres mot planene (beløp, valuta, intervall)', as
       ['professional', false],
       ['business', false],
     ]);
-    assert.match(checks[1]!.problems.join(' '), /490 kr, forventet 499 kr/);
+    assert.match(checks[1]!.problems.join(' '), /690 kr, forventet 699 kr/);
     assert.match(checks[2]!.problems.join(' '), /EUR|eur/);
     assert.match(checks[2]!.problems.join(' '), /månedlig/);
   } finally {

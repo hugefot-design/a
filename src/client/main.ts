@@ -206,3 +206,52 @@ document.querySelectorAll<HTMLTextAreaElement>('textarea[data-count]').forEach((
   });
   window.addEventListener('scroll', hide, { passive: true });
 })();
+
+// ---------------------------------------------------------------------------
+// Nettsiden: toppmenyen strammes inn ved rulling, seksjoner glir inn, tall teller opp.
+// Alt innhold er synlig uten JavaScript; dette er bare pynt.
+// ---------------------------------------------------------------------------
+(() => {
+  const header = document.querySelector<HTMLElement>('.site-header');
+  if (header) {
+    const onScroll = () => header.classList.toggle('is-scrolled', window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }
+
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const items = document.querySelectorAll<HTMLElement>('.reveal');
+  if (!items.length || !('IntersectionObserver' in window)) return;
+
+  const countUp = (root: HTMLElement) => {
+    root.querySelectorAll<HTMLElement>('[data-count]').forEach((el) => {
+      const target = Number(el.dataset.count);
+      const finalText = el.textContent ?? '';
+      if (!Number.isFinite(target) || target <= 0 || reduce) return;
+      const fmt = new Intl.NumberFormat(document.documentElement.lang || 'nb');
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / 1200);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = t < 1 ? fmt.format(Math.round(target * eased)) : finalText;
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  };
+
+  document.documentElement.classList.add('reveal-ready');
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const el = entry.target as HTMLElement;
+        el.classList.add('is-in');
+        countUp(el);
+        io.unobserve(el);
+      }
+    },
+    { threshold: 0.12, rootMargin: '0px 0px -40px 0px' },
+  );
+  items.forEach((el) => io.observe(el));
+})();

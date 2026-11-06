@@ -3,6 +3,7 @@ import { LuCheck } from 'react-icons/lu';
 import { PAID_PLANS, PLANS, type PlanId } from '@/domain/billing/plans';
 import { buttonVariants, cn, Logo, Panel } from '../components';
 import { AppShell } from '../layouts';
+import { useUi } from '../context';
 
 const ORDER: PlanId[] = ['free', 'starter', 'professional', 'business', 'enterprise'];
 
@@ -102,25 +103,39 @@ export function LimitReachedPage({ kind, used, limit }: { kind: 'search' | 'book
 }
 
 export function ErrorPage({ status, message, requestId }: { status: number; message: string; requestId: string }) {
-  const title =
-    status === 404 ? 'Vi fant ikke siden' : status === 403 ? 'Ingen tilgang' : status === 401 ? 'Du må logge inn' : status === 413 ? 'Filen er for stor' : 'Noe gikk galt';
+  const { locale, m, lp } = useUi();
+  // Bare 404 er oversatt (f.eks. /en/finnes-ikke); resten av feilsidene hører til appen og er på norsk.
+  const translated = locale !== 'nb' && status === 404;
+  const title = translated
+    ? m.meta.notFound
+    : status === 404
+      ? 'Vi fant ikke siden'
+      : status === 403
+        ? 'Ingen tilgang'
+        : status === 401
+          ? 'Du må logge inn'
+          : status === 413
+            ? 'Filen er for stor'
+            : 'Noe gikk galt';
   return (
     <div className="flex min-h-screen flex-col bg-paper">
       <header className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6">
-        <a href="/" className="no-underline">
+        <a href={lp('/')} className="no-underline">
           <Logo />
         </a>
       </header>
       <main id="innhold" className="mx-auto w-full max-w-xl flex-1 px-4 pt-10 sm:px-6">
-        <p className="num text-[13px] font-semibold text-muted">Feil {status}</p>
+        <p className="num text-[13px] font-semibold text-muted">{translated ? status : `Feil ${status}`}</p>
         <h1 className="mt-1 font-serif text-[30px] font-semibold text-navy-900">{title}</h1>
         <p className="mt-3 text-[15px] text-ink">{message}</p>
         <div className="mt-6 flex flex-wrap gap-2">
-          <a href="/app" className={buttonVariants({ variant: 'primary' })}>
-            Til oversikten
-          </a>
-          <a href="/" className={buttonVariants({ variant: 'secondary' })}>
-            Til forsiden
+          {translated ? null : (
+            <a href="/app" className={buttonVariants({ variant: 'primary' })}>
+              Til oversikten
+            </a>
+          )}
+          <a href={lp('/')} className={buttonVariants({ variant: translated ? 'primary' : 'secondary' })}>
+            {translated ? m.errors.home : 'Til forsiden'}
           </a>
         </div>
         {status >= 500 ? (

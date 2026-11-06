@@ -3,6 +3,8 @@ import {
   LuBell,
   LuBookmark,
   LuBuilding2,
+  LuCheck,
+  LuGlobe,
   LuCalculator,
   LuChartBar,
   LuHandshake,
@@ -22,79 +24,127 @@ import { useUi } from './context';
 import { Alert, Button, buttonVariants, cn, CsrfField, FlashMessage, Logo, PostForm } from './components';
 import { formatDate, sourcesPhrase } from './format';
 import { companyConfigured, companyInfo, LEGAL_DOCS } from '@/domain/legal/legal';
+import { isTranslatedPath, LOCALE_INFO, LOCALES, localePath, messages, sourcesText } from '@/i18n';
+import { fill } from '@/i18n/format';
+import { RadarDecor } from './site';
 
 // ---------------------------------------------------------------------------
 // Offentlige sider
 // ---------------------------------------------------------------------------
-const PUBLIC_NAV = [
-  { href: '/funksjoner', label: 'Funksjoner' },
-  { href: '/bransjer', label: 'Bransjer' },
-  { href: '/priser', label: 'Priser' },
-  { href: '/om', label: 'Om oss' },
-];
+const PUBLIC_NAV = ['/funksjoner', '/bransjer', '/priser', '/om'] as const;
 
-export function PublicLayout({ children, heroDark = false }: { children: ReactNode; heroDark?: boolean }) {
-  const { user, path } = useUi();
+function useNavLabels() {
+  const { m } = useUi();
+  return { '/funksjoner': m.nav.features, '/bransjer': m.nav.industries, '/priser': m.nav.pricing, '/om': m.nav.about, '/kontakt': m.nav.contact } as Record<string, string>;
+}
+
+/** Språkvelger: samme side på et annet språk. Fungerer uten JavaScript. */
+function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
+  const { locale, path, search, m } = useUi();
+  const target = isTranslatedPath(path) ? path : '/';
+  return (
+    <details className="relative">
+      <summary
+        className={cn(
+          'flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-full px-2.5 text-[13px] font-semibold uppercase [&::-webkit-details-marker]:hidden',
+          dark ? 'text-white/85 hover:bg-white/10 hover:text-white' : 'text-navy-900 hover:bg-navy-50',
+        )}
+        aria-label={m.nav.language}
+      >
+        <LuGlobe className="size-4" aria-hidden />
+        <span className={cn('font-mono text-[12px] tracking-[0.08em]', dark && 'hidden sm:inline')}>{locale === 'nb' ? 'no' : locale}</span>
+      </summary>
+      <ul className="absolute right-0 top-11 z-50 max-h-[70vh] w-52 overflow-y-auto rounded-2xl border border-line bg-white p-1.5 shadow-xl">
+        {LOCALES.map((l) => (
+          <li key={l}>
+            <a
+              href={localePath(l, target) + (target === path ? search : '')}
+              hrefLang={l}
+              lang={l}
+              aria-current={l === locale ? 'true' : undefined}
+              className={cn('flex items-center justify-between rounded-xl px-3 py-1.5 text-[14px] text-navy-900 no-underline hover:bg-navy-50', l === locale && 'font-semibold')}
+            >
+              {LOCALE_INFO[l].name}
+              {l === locale ? <LuCheck className="size-4 text-navy-700" aria-hidden /> : null}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+/** Når nettleseren foretrekker et annet språk vi har: en diskret lenke øverst, på det språket. */
+function LanguageSuggestion() {
+  const { suggestLocale, path, search } = useUi();
+  if (!suggestLocale) return null;
+  const t = messages(suggestLocale);
+  return (
+    <div className="bg-signal text-night" lang={suggestLocale}>
+      <p className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-[13px] font-medium sm:px-6">
+        <LuGlobe className="size-4" aria-hidden />
+        {t.nav.suggest}
+        <a href={localePath(suggestLocale, path) + search} hrefLang={suggestLocale} className="font-bold text-night underline">
+          {t.nav.suggestAction} →
+        </a>
+      </p>
+    </div>
+  );
+}
+
+export function PublicLayout({ children }: { children: ReactNode; heroDark?: boolean }) {
+  const { user, path, m, lp } = useUi();
+  const labels = useNavLabels();
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <a href="#innhold" className="sr-only-focusable absolute left-3 top-3 z-50 rounded bg-white px-3 py-2 text-navy-900">
-        Hopp til innhold
+        {m.nav.skip}
       </a>
-      <header
-        className={cn(
-          'sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:backdrop-saturate-150',
-          heroDark ? 'border-b border-white/10 bg-navy-950/90' : 'border-b border-line bg-white/90',
-        )}
-      >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6">
-          <a href="/" className="no-underline" aria-label="AnbudRadar – til forsiden">
-            <Logo inverse={heroDark} />
+      <LanguageSuggestion />
+      <header className="site-header sticky top-0 z-40 text-white">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+          <a href={lp('/')} className="no-underline" aria-label={m.nav.home}>
+            <Logo inverse />
           </a>
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Hovedmeny">
-            {PUBLIC_NAV.map((item) => (
+          <nav className="hidden items-center gap-1 md:flex" aria-label={m.nav.mainMenu}>
+            {PUBLIC_NAV.map((href) => (
               <a
-                key={item.href}
-                href={item.href}
-                aria-current={path === item.href ? 'page' : undefined}
+                key={href}
+                href={lp(href)}
+                aria-current={path === href || path.startsWith(`${href}/`) ? 'page' : undefined}
                 className={cn(
-                  'rounded-md px-3 py-2 text-[14px] font-semibold no-underline',
-                  heroDark ? 'text-navy-100 hover:bg-white/10 hover:text-white' : 'text-muted hover:text-navy-900',
-                  path === item.href && (heroDark ? 'text-white' : 'text-navy-900'),
+                  'rounded-full px-3.5 py-2 text-[14px] font-medium no-underline transition-colors',
+                  path === href || path.startsWith(`${href}/`) ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white',
                 )}
               >
-                {item.label}
+                {labels[href]}
               </a>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <LanguageSwitcher dark />
             {user ? (
-              <a href={user.isPlatformAdmin ? '/admin' : '/app'} className={buttonVariants({ variant: heroDark ? 'inverse' : 'primary', size: 'sm' })}>
-                {user.isPlatformAdmin ? 'Til admin' : 'Til appen'}
+              <a href={user.isPlatformAdmin ? '/admin' : '/app'} className="btn-signal !px-4 !py-2 !text-[14px]">
+                {user.isPlatformAdmin ? m.nav.toAdmin : m.nav.toApp}
               </a>
             ) : (
               <>
-                <a
-                  href="/logg-inn"
-                  className={cn('hidden px-2 text-[14px] font-semibold no-underline sm:inline', heroDark ? 'text-white' : 'text-navy-900')}
-                >
-                  Logg inn
+                <a href={lp('/logg-inn')} className="hidden px-3 text-[14px] font-medium text-white/80 no-underline hover:text-white sm:inline">
+                  {m.nav.login}
                 </a>
-                <a href="/registrer" className={buttonVariants({ variant: heroDark ? 'inverse' : 'primary', size: 'sm' })}>
-                  Prøv gratis
+                <a href={lp('/registrer')} className="btn-signal !px-4 !py-2 !text-[14px]">
+                  {m.nav.start}
                 </a>
               </>
             )}
             <details className="relative md:hidden">
-              <summary
-                className={cn('flex size-9 cursor-pointer list-none items-center justify-center rounded-md', heroDark ? 'text-white' : 'text-navy-900')}
-                aria-label="Meny"
-              >
+              <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-full text-white hover:bg-white/10" aria-label={m.nav.menu}>
                 <LuMenu className="size-5" />
               </summary>
-              <div className="absolute right-0 top-11 w-56 rounded-lg border border-line bg-white p-2 shadow-lg">
-                {[...PUBLIC_NAV, { href: '/kontakt', label: 'Kontakt' }, ...(user ? [] : [{ href: '/logg-inn', label: 'Logg inn' }])].map((item) => (
-                  <a key={item.href} href={item.href} className="block rounded-md px-3 py-2 text-[14px] font-semibold text-navy-900 no-underline hover:bg-navy-50">
-                    {item.label}
+              <div className="absolute right-0 top-11 w-60 rounded-2xl border border-line bg-white p-2 shadow-xl">
+                {[...PUBLIC_NAV, '/kontakt', ...(user ? [] : ['/logg-inn'])].map((href) => (
+                  <a key={href} href={lp(href)} className="block rounded-xl px-3 py-2.5 text-[15px] font-semibold text-navy-900 no-underline hover:bg-navy-50">
+                    {href === '/logg-inn' ? m.nav.login : labels[href]}
                   </a>
                 ))}
               </div>
@@ -112,10 +162,10 @@ export function PublicLayout({ children, heroDark = false }: { children: ReactNo
 
 function FooterNav({ title, links }: { title: string; links: { href: string; label: string }[] }) {
   return (
-    <nav aria-label={title} className="space-y-2 text-[14px]">
-      <p className="font-semibold text-navy-900">{title}</p>
+    <nav aria-label={title} className="space-y-2.5 text-[14px]">
+      <p className="font-semibold text-white">{title}</p>
       {links.map((l) => (
-        <a key={l.href} className="block text-muted no-underline hover:text-navy-900" href={l.href}>
+        <a key={l.href} className="block text-white/60 no-underline transition-colors hover:text-white" href={l.href}>
           {l.label}
         </a>
       ))}
@@ -124,41 +174,42 @@ function FooterNav({ title, links }: { title: string; links: { href: string; lab
 }
 
 function PublicFooter() {
-  const { liveSources } = useUi();
+  const { liveSources, m, lp, path, locale } = useUi();
+  const labels = useNavLabels();
   const company = companyInfo();
+  const legal = m.footer.legalDocs as Record<string, string>;
+  const target = isTranslatedPath(path) ? path : '/';
   return (
-    <footer className="border-t border-line bg-paper print:hidden">
-      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-        <div className="col-span-2 max-w-sm space-y-3 lg:col-span-1">
-          <Logo />
-          <p className="text-[14px] text-muted">
-            Kunngjøringer hentes fra {sourcesPhrase(liveSources)}. Kildelenken følger alltid med, så du kan sjekke originalen.
-          </p>
+    <footer className="night print:hidden">
+      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-10 px-4 pb-10 pt-16 sm:px-6 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+        <div className="col-span-2 max-w-sm space-y-4 lg:col-span-1">
+          <Logo inverse />
+          <p className="text-[14px] leading-relaxed text-white/60">{fill(m.footer.about, { sources: sourcesText(m, liveSources) })}</p>
         </div>
-        <FooterNav
-          title="Produkt"
-          links={[
-            { href: '/funksjoner', label: 'Funksjoner' },
-            { href: '/bransjer', label: 'Bransjer' },
-            { href: '/priser', label: 'Priser' },
-          ]}
-        />
-        <FooterNav
-          title="Selskap"
-          links={[
-            { href: '/om', label: 'Om oss' },
-            { href: '/kontakt', label: 'Kontakt' },
-          ]}
-        />
-        <FooterNav title="Juridisk" links={LEGAL_DOCS} />
+        <FooterNav title={m.footer.product} links={['/funksjoner', '/bransjer', '/priser'].map((href) => ({ href: lp(href), label: labels[href]! }))} />
+        <FooterNav title={m.footer.company} links={['/om', '/kontakt'].map((href) => ({ href: lp(href), label: labels[href]! }))} />
+        <div className="space-y-2">
+          <FooterNav title={m.footer.legal} links={LEGAL_DOCS.map((d) => ({ href: d.href, label: legal[d.href.slice(1)] ?? d.label }))} />
+          {m.footer.legalNote ? <p className="pt-1 text-[12px] text-white/45">{m.footer.legalNote}</p> : null}
+        </div>
       </div>
-      <div className="border-t border-line">
-        <div className="mx-auto max-w-6xl space-y-1 px-4 py-4 text-[12px] text-muted sm:px-6">
-          <p>
-            © {new Date().getFullYear()} AnbudRadar
-            {companyConfigured(company) ? ` · Levert av ${company.name}, org.nr. ${company.orgNumber}, ${company.address}` : ''}
-          </p>
-          <p>TED-data © Den europeiske union. Doffin driftes av Direktoratet for forvaltning og økonomistyring (DFØ).</p>
+      <div className="border-t border-white/10">
+        <div className="mx-auto max-w-7xl space-y-3 px-4 py-6 text-[12px] text-white/45 sm:px-6">
+          <nav aria-label={m.footer.languages} className="flex flex-wrap gap-x-3 gap-y-1">
+            {LOCALES.map((l) => (
+              <a key={l} href={localePath(l, target)} hrefLang={l} lang={l} className={cn('no-underline transition-colors hover:text-white', l === locale ? 'font-semibold text-white' : 'text-white/50')}>
+                {LOCALE_INFO[l].name}
+              </a>
+            ))}
+          </nav>
+          <div className="space-y-1">
+            <p>
+              © {new Date().getFullYear()} AnbudRadar
+              {companyConfigured(company) ? ` · ${fill(m.footer.deliveredBy, { name: company.name, orgNumber: company.orgNumber, address: company.address })}` : ''}
+            </p>
+            <p>{m.footer.credit}</p>
+            {m.footer.translated ? <p>{m.footer.translated}</p> : null}
+          </div>
         </div>
       </div>
     </footer>
@@ -169,23 +220,45 @@ function PublicFooter() {
 // Innlogging / registrering
 // ---------------------------------------------------------------------------
 export function AuthLayout({ children, title, intro }: { children: ReactNode; title: string; intro?: ReactNode }) {
+  const { m, lp, path } = useUi();
   return (
-    <div className="flex min-h-screen flex-col bg-paper">
-      <header className="mx-auto flex w-full max-w-6xl items-center px-4 py-5 sm:px-6">
-        <a href="/" className="no-underline" aria-label="AnbudRadar – til forsiden">
-          <Logo />
-        </a>
-      </header>
-      <main id="innhold" className="flex flex-1 items-start justify-center px-4 pb-16 pt-4 sm:pt-10">
-        <div className="w-full max-w-md">
-          <h1 className="font-serif text-[28px] font-semibold leading-tight text-navy-900">{title}</h1>
-          {intro ? <div className="mt-2 text-[15px] text-muted">{intro}</div> : null}
-          <div className="mt-6 rounded-lg border border-line bg-white p-6 sm:p-7">
-            <FlashMessage />
-            {children}
+    <div className="flex min-h-screen bg-white">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center justify-between px-5 py-5 sm:px-10">
+          <a href={lp('/')} className="no-underline" aria-label={m.nav.home}>
+            <Logo />
+          </a>
+          {/* Bare innlogging og registrering er oversatt – ikke onboarding i appen. */}
+          {isTranslatedPath(path) ? <LanguageSwitcher /> : null}
+        </header>
+        <main id="innhold" className="flex flex-1 items-start justify-center px-5 pb-16 pt-4 sm:px-10 sm:pt-10 lg:items-center lg:pt-0">
+          <div className="w-full max-w-[27rem]">
+            <h1 className="text-[32px] font-[780] leading-[1.08] tracking-[-0.03em] text-night sm:text-[36px]">{title}</h1>
+            {intro ? <div className="mt-3 text-[15px] leading-relaxed text-muted">{intro}</div> : null}
+            <div className="mt-8">
+              <FlashMessage />
+              {children}
+            </div>
           </div>
+        </main>
+      </div>
+      <aside className="night relative hidden w-[44%] max-w-[680px] flex-col justify-center overflow-hidden lg:flex">
+        <div className="dot-grid absolute inset-0 opacity-50" aria-hidden />
+        <RadarDecor className="absolute -right-40 top-1/2 w-[560px] -translate-y-1/2 opacity-80" />
+        <div className="relative max-w-md px-12 xl:px-16">
+          <p className="text-[34px] font-[780] leading-[1.05] tracking-[-0.035em] text-white xl:text-[40px]">{m.auth.side.title}</p>
+          <ul className="mt-8 space-y-3.5">
+            {m.auth.side.points.map((x) => (
+              <li key={x} className="flex items-center gap-3 text-[16px] text-white/85">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-signal/15 text-signal">
+                  <LuCheck className="size-3.5" aria-hidden strokeWidth={3} />
+                </span>
+                {x}
+              </li>
+            ))}
+          </ul>
         </div>
-      </main>
+      </aside>
     </div>
   );
 }

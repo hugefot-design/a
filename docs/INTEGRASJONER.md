@@ -80,7 +80,7 @@ npm run ingest -- --source doffin --enrich --limit 10            # last ned og l
 ## Stripe
 
 1. Opprett konto (norsk selskap), og jobb i **testmodus** først.
-2. Lag ett produkt med tre månedlige priser i NOK: 199 (Start), 499 (Profesjonell), 999 (Bedrift). Sett `STRIPE_PRICE_*`. Kontroller deretter under **Admin → Helse → Priser i Stripe** at pris-ID-ene er aktive, i NOK, månedlige og har riktig beløp (kontrollen leser bare).
+2. Lag ett produkt med tre månedlige priser i NOK: 299 (Start), 699 (Profesjonell), 1490 (Bedrift). Enterprise (fra 4 990) settes opp manuelt i admin. Sett `STRIPE_PRICE_*`. Kontroller deretter under **Admin → Helse → Priser i Stripe** at pris-ID-ene er aktive, i NOK, månedlige og har riktig beløp (kontrollen leser bare).
    Prisene på nettsiden er eks. mva. – avklar med regnskapsfører om dere skal bruke Stripe Tax eller legge mva. på prisene.
 3. Webhook-endepunkt: `https://din-domene.no/api/webhooks/stripe` med hendelsene
    `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, `customer.subscription.resumed`, `invoice.paid`, `invoice.payment_succeeded`, `invoice.payment_failed`, `charge.refunded`, `charge.dispute.created`.

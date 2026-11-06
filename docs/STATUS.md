@@ -114,6 +114,6 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 - **Misbruksvern:** prøveperioden gis én gang per bruker (før kunne man få ny ved å opprette ny organisasjon);
   søke- og AI-grensen gjelder også per bruker på tvers av organisasjoner; maks 5 organisasjoner per bruker;
   lås mot samtidige forespørsler.
-- **Planer og priser uendret:** Start 199, Profesjonell 499, Bedrift 999 kr/mnd, Enterprise etter avtale
+- **Planer og priser (endret 6. november 2026 etter ønske fra eier):** Start 299, Profesjonell 699, Bedrift 1 490 og Enterprise fra 4 990 kr/mnd eks. mva. Bedrift har 150 AI-analyser og 50 AI-utkast per måned, Enterprise inntil 25 brukere, 500 analyser og 200 utkast. Begrunnelse og regnestykke: [PRISER.md](PRISER.md)
   (settes manuelt i admin). Future Opportunities bare i Enterprise – se [FUTURE_OPPORTUNITIES.md](FUTURE_OPPORTUNITIES.md).
 - **Stripe** er fortsatt ikke testet mot en ekte testkonto (mangler testnøkkel); betalingsflyten er testet mot simulert Stripe.

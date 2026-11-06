@@ -15,6 +15,8 @@ import { render } from './render';
 import { serveStatic } from './static';
 import { canonicalRedirect } from './canonical';
 import { refreshLiveSourcesIfStale } from '@/domain/tenders/source-status';
+import { createElement } from 'react';
+import { messages, parseLocalePath } from '@/i18n';
 import type { Router } from './router';
 
 const GUEST_CSRF_COOKIE = 'ar_csrf';
@@ -94,6 +96,7 @@ function createContext(req: IncomingMessage, url: URL, maxBodyBytes: number): Re
     url,
     method: (req.method ?? 'GET').toUpperCase(),
     path: url.pathname,
+    locale: 'nb',
     params: {},
     query: url.searchParams,
     requestId: randomUUID(),
@@ -279,8 +282,8 @@ function errorResponse(ctx: RequestContext | null, status: number, message: stri
     });
   }
   if (!ctx) return new Response(message, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-  return render(ctx, ErrorPage({ status, message, requestId: ctx.requestId }), {
-    title: status === 404 ? 'Fant ikke siden' : 'Noe gikk galt',
+  return render(ctx, createElement(ErrorPage, { status, message, requestId: ctx.requestId }), {
+    title: status === 404 ? messages(ctx.locale).meta.notFound : 'Noe gikk galt',
     status,
     noindex: true,
   });
@@ -306,9 +309,15 @@ export function createApp(router: Router) {
         status = res.statusCode;
         return;
       }
-      const matchedRoute = router.match((req.method ?? 'GET').toUpperCase(), url.pathname);
+      // /en/pricing → samme rute som /priser, med engelsk tekst. Ukjent side bak et språkprefiks gir 404.
+      const loc = parseLocalePath(url.pathname);
+      const routePath = loc.path ?? url.pathname;
+      const matchedRoute = loc.path === null ? null : router.match((req.method ?? 'GET').toUpperCase(), routePath);
       const limitMb = matchedRoute && matchedRoute !== 'method_not_allowed' ? (matchedRoute.route.maxBodyMb ?? 1) : 1;
       ctx = createContext(req, url, limitMb * 1024 * 1024);
+      ctx.locale = loc.locale;
+      ctx.path = routePath;
+      if (loc.path === null) throw new HttpError(404, messages(loc.locale).errors.notFound);
       const response = await dispatch(ctx, router);
       status = response.status;
       await writeResponse(res, response, ctx, ctx.nonce, req.method === 'HEAD');

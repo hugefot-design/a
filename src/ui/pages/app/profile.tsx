@@ -236,10 +236,21 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
   );
 }
 
-export function OnboardingOrgPage({ errors = {}, values = {} }: { errors?: Errors; values?: Values }) {
+export function OnboardingOrgPage({
+  errors = {},
+  values = {},
+  carry,
+}: {
+  errors?: Errors;
+  values?: Values;
+  /** Bransje og fylke fra forsiden, som tas med videre til profilen. */
+  carry?: { industry: string | null; region: string | null };
+}) {
   return (
     <AuthLayout title="Om bedriften" intro="Steg 1 av 2. Vi oppretter en organisasjon som dere kan dele med kolleger.">
       <PostForm action="/app/onboarding/organisasjon" className="space-y-4">
+        {carry?.industry ? <input type="hidden" name="bransje" value={carry.industry} /> : null}
+        {carry?.region ? <input type="hidden" name="fylke" value={carry.region} /> : null}
         <Field label="Firmanavn" htmlFor="name" error={errors.name}>
           <Input id="name" name="name" required defaultValue={str(values, 'name')} invalid={Boolean(errors.name)} autoComplete="organization" />
         </Field>

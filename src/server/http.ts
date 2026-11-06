@@ -35,11 +35,15 @@ export interface Flash {
   message: string;
 }
 
+import type { Locale } from '@/i18n/locales';
+
 export interface RequestContext {
   req: IncomingMessage;
   url: URL;
   method: string;
   path: string;
+  /** Språket på de offentlige sidene (fra adressen, f.eks. /en/pricing). Norsk ellers. */
+  locale: Locale;
   params: Record<string, string>;
   query: URLSearchParams;
   requestId: string;

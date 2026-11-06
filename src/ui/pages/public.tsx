@@ -1,237 +1,257 @@
+/**
+ * Undersidene: funksjoner, priser, bransjer (oversikt og én side per bransje), om oss og kontakt.
+ * Samme uttrykk som forsiden: mørk topp, lyse seksjoner med luft, gul handling.
+ */
 import type { ReactNode } from 'react';
 import type { IconType } from 'react-icons';
-import { LuBellRing, LuCalculator, LuChartColumn, LuFileSearch, LuHandshake, LuListChecks, LuMail, LuRadar, LuSearch, LuX } from 'react-icons/lu';
-import { INDUSTRIES, CPV_DIVISIONS } from '@/domain/reference';
-import { PAID_PLANS, PLANS, type PlanId } from '@/domain/billing/plans';
-import type { NoticeSpecimen } from '@/domain/tenders/market';
+import {
+  LuArrowRight,
+  LuBellRing,
+  LuCalculator,
+  LuChartColumn,
+  LuCheck,
+  LuDatabase,
+  LuEye,
+  LuFileSearch,
+  LuGauge,
+  LuHandshake,
+  LuListChecks,
+  LuMail,
+  LuMapPin,
+  LuRadar,
+  LuSearch,
+  LuShieldCheck,
+  LuTelescope,
+} from 'react-icons/lu';
+import { INDUSTRIES } from '@/domain/reference';
+import { PLANS, type PlanId } from '@/domain/billing/plans';
+import type { IndustryListing, NoticeSpecimen } from '@/domain/tenders/market';
 import { companyConfigured } from '@/domain/legal/legal';
 import { useUi } from '../context';
-import { Alert, Button, buttonVariants, cn, Field, Input, PostForm, Textarea } from '../components';
+import { Alert, Button, cn, Field, Input, PostForm, Textarea } from '../components';
 import { PublicLayout } from '../layouts';
-import { formatDate, formatInt, sourcesPhrase } from '../format';
-import { CheckList, Container, CtaBand, FaqList, faqItems, IconChip, INDUSTRY_ICONS, PageHero, PlanCards, SectionHeading } from '../marketing';
-
+import { sourcesText, type Locale, type Messages } from '@/i18n';
+import { clockTime, dayOfMonth, fill, int, money, monthShort, plural, pluralTemplate, rich } from '@/i18n/format';
+import { FaqList, faqItems, INDUSTRY_ICONS } from '../marketing';
+import { H2, IndustryTiles, Kicker, NightHero, SignalCta, Wrap } from '../site';
 import { NoticeExample } from './notice-example';
 
 export { HomePage } from './home';
 export { CookiesPage, DpaPage, PrivacyPage, SecurityPage, SubprocessorsPage, TermsPage } from './legal';
 
+function Check({ dark = false }: { dark?: boolean }) {
+  return (
+    <span className={cn('mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full', dark ? 'bg-signal/15 text-signal' : 'bg-night text-signal')}>
+      <LuCheck className="size-3" aria-hidden strokeWidth={3} />
+    </span>
+  );
+}
+
+function Points({ items, dark = false, className }: { items: string[]; dark?: boolean; className?: string }) {
+  return (
+    <ul className={cn('space-y-2.5', className)}>
+      {items.map((x) => (
+        <li key={x} className={cn('flex gap-2.5 text-[15px] leading-snug', dark ? 'text-white/85' : 'text-ink')}>
+          <Check dark={dark} />
+          <span>{x}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 // ---------------------------------------------------------------------------
-const FEATURES: { icon: IconType; title: string; text: string; points: string[] }[] = [
-  {
-    icon: LuSearch,
-    title: 'Finn anbud',
-    text: 'Søk i offentlige kunngjøringer med filtre for bransje, fylke, kommune, verdi, frist, oppdragsgiver, status og CPV-kode.',
-    points: [
-      'Skriv som du snakker: «renhold i Trøndelag over 1 million med frist om minst 3 uker»',
-      'Se alltid hvordan søket ble tolket – ingenting skjer skjult',
-      'Lagre søk og få e-post når nye anbud passer',
-      'Ekskluder ord, bransjer og CPV-koder dere ikke vil se',
-    ],
-  },
-  {
-    icon: LuFileSearch,
-    title: 'Forstå anbudet',
-    text: 'AI leser kunngjøringen og konkurransegrunnlaget dere laster opp, og lager en strukturert oversikt med kildehenvisning for hver opplysning.',
-    points: [
-      'Sammendrag på enkel norsk og hva som skal kjøpes',
-      'Krav, kvalifikasjoner, sertifiseringer og økonomiske krav',
-      'Tildelingskriterier, varighet, risikoer og spørsmål å avklare',
-      'Sitater kontrolleres mot dokumentet; det som mangler, står som mangel',
-    ],
-  },
-  {
-    icon: LuRadar,
-    title: 'Rangering mot profilen',
-    text: 'Hvert anbud får en relevansscore fra 0 til 100 basert på bedriftsprofilen. Scoren viser samsvar – ikke sjansen for å vinne.',
-    points: ['Begrunnelse for scoren', 'Mangler og avvik, f.eks. sertifiseringer dere ikke har registrert', 'Krav som kan stoppe dere', 'Anbefalte neste steg'],
-  },
-  {
-    icon: LuBellRing,
-    title: 'Varsler',
-    text: 'Få beskjed om det som betyr noe, så ofte dere vil.',
-    points: ['Nye treff og nye anbud i lagrede søk', 'Påminnelser 7, 3 og 1 dag før fristen', 'Endringer og avlysninger i anbud dere følger', 'Ukesoversikt på mandager'],
-  },
-  {
-    icon: LuChartColumn,
-    title: 'Konkurrenter og tildelinger',
-    text: 'Se hvem som vinner kontraktene i bransjene deres, og hvem som kjøper mest – basert på publiserte tildelinger.',
-    points: ['Leverandører med flest tildelinger', 'Oppdragsgivere og hva de kjøper', 'Følg konkurrenter og få varsel når de vinner', 'Dekningen vises alltid; vi anslår aldri priser'],
-  },
-  {
-    icon: LuListChecks,
-    title: 'Tilbudsarbeid',
-    text: 'Et felles arbeidsområde for tilbudet, med godkjenning før noe sendes.',
-    points: [
-      'Sjekkliste fra standardpunkter og kravene i dokumentene',
-      'Tekstutkast fra bedriftsprofilen – AI finner aldri på erfaring eller tall',
-      'Sammenligning av utkastet mot kravene',
-      'Eksport til Word og godkjenning i teamet',
-    ],
-  },
-  {
-    icon: LuCalculator,
-    title: 'Lønner det seg? (Profit Intelligence)',
-    text: 'Regn på oppdraget med deres egne kostnader før dere bruker tid på tilbudet. Hvert tall viser om det kommer fra dokumentet, fra dere, fra AI eller fra kalkulatoren.',
-    points: [
-      'Selvkost, minstepris, prisintervall og margin ved oppdragsgivers verdi – med formel for hvert tall',
-      'Dagbøter, betalingsfrist, prisregulering og garantier med dokument, side og sitat – og hva de kan koste',
-      'Kapasitet: bemanning, eksisterende kontrakter og utstyr mot det oppdraget krever',
-      'Anbefaling: Vurder å by, Undersøk nærmere eller Høy risiko – med begrunnelse, ikke vinnersjanse',
-    ],
-  },
-  {
-    icon: LuHandshake,
-    title: 'Anbudspartnere',
-    text: 'Finn bedrifter som kan dekke det dere mangler – sertifisering, utstyr eller kapasitet – og bli funnet selv.',
-    points: [
-      'Profilen vises bare når dere publiserer den med samtykke',
-      'Kontaktinfo deles bare når mottakeren godtar',
-      'Innebygd sperre mot samarbeid mellom bedrifter som kan levere alene (konkurranseloven)',
-      'Del aldri priser eller tilbudsstrategi – det minner vi om i hver forespørsel',
-    ],
-  },
-];
+// Funksjoner
+// ---------------------------------------------------------------------------
+/** Ikonene til funksjonene, i samme rekkefølge som m.features.items. */
+const FEATURE_ICONS: IconType[] = [LuSearch, LuFileSearch, LuGauge, LuBellRing, LuChartColumn, LuListChecks, LuCalculator, LuHandshake];
 
 export function FeaturesPage({ specimen }: { specimen: NoticeSpecimen | null }) {
-  const { user, trialDays } = useUi();
+  const { user, m, lp } = useUi();
+  const t = m.features;
   return (
     <PublicLayout>
-      <PageHero
-        eyebrow="Funksjoner"
-        title="Alt fra kunngjøring til ferdig tilbud"
-        lead="Hver funksjon er laget for å spare tid – uten å gjette på noe. Fakta fra kilden står alltid atskilt fra AI-tolkningen."
-      >
-        <div className="mt-8 flex flex-wrap gap-3">
-          <a href={user ? '/app' : '/registrer'} className={buttonVariants({ size: 'lg' })}>
-            {user ? 'Til appen' : `Prøv gratis i ${trialDays} dager`}
+      <NightHero eyebrow={t.eyebrow} title={t.title} lead={t.lead}>
+        <div className="mt-9 flex flex-wrap gap-3">
+          <a href={user ? '/app' : lp('/registrer')} className="btn-signal">
+            {user ? m.nav.toApp : m.nav.start} <LuArrowRight className="size-4" aria-hidden />
           </a>
-          <a href="/priser" className={buttonVariants({ variant: 'secondary', size: 'lg' })}>
-            Se priser
+          <a href={lp('/priser')} className="btn-ghost-light">
+            {m.home.seePrices}
           </a>
         </div>
-      </PageHero>
-      {specimen ? <NoticeExample s={specimen} /> : null}
-      <section className="py-16 sm:py-24">
-        <Container>
-          <div className="grid gap-5 md:grid-cols-2">
-            {FEATURES.map((f) => (
-              <article key={f.title} className="lift rounded-2xl border border-line bg-white p-6 sm:p-7">
-                <div className="flex items-center gap-3">
-                  <IconChip icon={f.icon} />
-                  <h2 className="text-[20px] font-semibold text-navy-900">{f.title}</h2>
-                </div>
-                <p className="mt-3 text-[15px] leading-relaxed text-muted">{f.text}</p>
-                <CheckList className="mt-5 text-[15px]" items={f.points} />
-              </article>
-            ))}
-          </div>
-          <section className="mt-10 rounded-2xl border border-dashed border-line-strong bg-paper p-6 sm:p-8">
-            <h2 className="font-serif text-[22px] font-semibold text-navy-900">Det AnbudRadar ikke gjør</h2>
-            <ul className="mt-4 grid gap-4 text-[15px] text-muted md:grid-cols-3">
-              {[
-                'Vi sender ikke inn tilbud. Det gjør dere selv i oppdragsgivers system.',
-                'Vi gir ikke juridisk rådgivning. Konkurransegrunnlaget gjelder alltid.',
-                'Vi dikter ikke opp frister, beløp, krav eller konkurrenter. Mangler vises som mangler.',
-              ].map((t) => (
-                <li key={t} className="flex gap-3">
-                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-muted ring-1 ring-line">
-                    <LuX className="size-3" aria-hidden strokeWidth={3} />
+      </NightHero>
+      <section className="bg-white py-24 sm:py-28">
+        <Wrap>
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {t.items.map((f, i) => {
+              const Icon = FEATURE_ICONS[i] ?? LuRadar;
+              return (
+                <li key={f.title} className={cn('reveal card-lift flex flex-col rounded-3xl border border-line bg-white p-6', i % 4 === 1 && 'delay-1', i % 4 === 2 && 'delay-2', i % 4 === 3 && 'delay-3')}>
+                  <span className="flex size-11 items-center justify-center rounded-xl bg-night text-signal">
+                    <Icon className="size-5" aria-hidden strokeWidth={1.8} />
                   </span>
-                  {t}
+                  <h2 className="mt-5 text-[19px] font-[720] leading-tight tracking-[-0.015em] text-night">{f.title}</h2>
+                  <p className="mt-2 text-[15px] leading-relaxed text-muted">{f.text}</p>
+                  <Points items={f.points} className="mt-5" />
                 </li>
-              ))}
-            </ul>
-          </section>
-        </Container>
+              );
+            })}
+          </ul>
+        </Wrap>
       </section>
-      <CtaBand
-        title="Se hvilke anbud som passer dere."
-        lead="Fyll ut bedriftsprofilen på et par minutter, og få anbudene rangert med begrunnelse."
-        primary={user ? { href: '/app', label: 'Til appen' } : { href: '/registrer', label: `Prøv gratis i ${trialDays} dager` }}
-        secondary={{ href: '/priser', label: 'Se priser' }}
+      {specimen ? <NoticeExample s={specimen} /> : null}
+      <section className="night relative overflow-hidden py-20 sm:py-24">
+        <Wrap className="relative grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1.2fr)_auto]">
+          <div className="reveal max-w-2xl">
+            <Kicker dark>{t.enterpriseEyebrow}</Kicker>
+            <H2 dark className="mt-4">
+              {t.enterpriseTitle}
+            </H2>
+            <p className="mt-5 text-[18px] leading-relaxed text-white/70">{t.enterpriseText}</p>
+          </div>
+          <a href={`${lp('/priser')}#enterprise`} className="btn-ghost-light reveal delay-1 justify-self-start">
+            <LuTelescope className="size-4" aria-hidden /> {t.enterpriseCta}
+          </a>
+        </Wrap>
+      </section>
+      <SignalCta
+        title={t.ctaTitle}
+        lead={t.ctaLead}
+        primary={user ? { href: '/app', label: m.nav.toApp } : { href: lp('/registrer'), label: m.nav.start }}
+        secondary={{ href: lp('/priser'), label: m.home.seePrices }}
       />
     </PublicLayout>
   );
 }
 
 // ---------------------------------------------------------------------------
-const MATRIX: [string, (p: (typeof PLANS)['starter']['entitlements']) => ReactNode][] = [
-  ['Ekte anbud fra Doffin og TED', () => '✓'],
-  ['Søk per dag', (e) => (e.searchesPerDay >= 1_000_000 ? 'Ubegrenset' : formatInt(e.searchesPerDay))],
-  ['Søk med filtre og naturlig språk', () => '✓'],
-  ['Avansert søk (CPV, oppdragsgiver, ekskluderinger)', (e) => (e.advancedSearch ? '✓' : '–')],
-  ['Lagrede anbud', (e) => (e.maxBookmarks >= 1_000_000 ? 'Ubegrenset' : formatInt(e.maxBookmarks))],
-  ['Automatiske varsler', (e) => (e.alerts === 'none' ? '–' : '✓')],
-  ['Lagrede søk med e-postvarsel', (e) => (e.maxSavedSearches >= 1_000_000 ? 'Ubegrenset' : e.maxSavedSearches ? formatInt(e.maxSavedSearches) : '–')],
-  ['Fristvarsler og endringsvarsler', (e) => (e.alerts === 'full' ? '✓' : '–')],
-  ['AI-analyser per måned', (e) => formatInt(e.aiAnalysesPerMonth)],
-  ['Full analyse med kildehenvisning og dokumentopplasting', (e) => (e.aiFullAnalysis ? '✓' : 'Kort sammendrag')],
-  ['Personlig rangering med begrunnelse', (e) => (e.matching ? '✓' : '–')],
-  ['Tilbudsarbeid med AI-utkast', (e) => (e.bidAssistant ? `${e.aiBidDraftsPerMonth} utkast/mnd` : '–')],
-  ['Konkurrent- og tildelingsinnsikt', (e) => (e.competitorIntel ? '✓' : '–')],
-  ['Lønnsomhetskalkulator med kontraktsvilkår og kapasitet', (e) => (e.profitCalculator ? '✓' : '–')],
-  ['AI-analyse av lønnsomhet og kontraktsrisiko', (e) => (e.profitAI ? '✓' : '–')],
-  ['Partnerprofil (bli funnet som anbudspartner)', (e) => (e.partnerListing ? '✓' : '–')],
-  ['Søk etter anbudspartnere', (e) => (e.partnerSearch ? '✓' : '–')],
-  ['Future Opportunities: prosjekter før de blir anbud', (e) => (e.futureOpportunities ? '✓' : '–')],
-  ['Brukere', (e) => formatInt(e.maxMembers)],
+// Priser
+// ---------------------------------------------------------------------------
+type Ent = (typeof PLANS)['starter']['entitlements'];
+type MatrixKey = keyof Messages['pricing']['matrix'];
+const UNLIMITED = 1_000_000;
+const MATRIX: [MatrixKey, (e: Ent, m: Messages, l: Locale) => ReactNode][] = [
+  ['realTenders', () => '✓'],
+  ['searchesPerDay', (e, m, l) => (e.searchesPerDay >= UNLIMITED ? m.pricing.unlimited : int(l, e.searchesPerDay))],
+  ['filters', () => '✓'],
+  ['advancedSearch', (e) => (e.advancedSearch ? '✓' : '–')],
+  ['bookmarks', (e, m, l) => (e.maxBookmarks >= UNLIMITED ? m.pricing.unlimited : int(l, e.maxBookmarks))],
+  ['alerts', (e) => (e.alerts === 'none' ? '–' : '✓')],
+  ['savedSearches', (e, m, l) => (e.maxSavedSearches >= UNLIMITED ? m.pricing.unlimited : e.maxSavedSearches ? int(l, e.maxSavedSearches) : '–')],
+  ['deadlineAlerts', (e) => (e.alerts === 'full' ? '✓' : '–')],
+  ['aiAnalyses', (e, _m, l) => int(l, e.aiAnalysesPerMonth)],
+  ['fullAnalysis', (e, m) => (e.aiFullAnalysis ? '✓' : m.pricing.shortSummary)],
+  ['matching', (e) => (e.matching ? '✓' : '–')],
+  ['bidAssistant', (e, m, l) => (e.bidAssistant ? fill(m.pricing.draftsPerMonth, { n: int(l, e.aiBidDraftsPerMonth) }) : '–')],
+  ['competitorIntel', (e) => (e.competitorIntel ? '✓' : '–')],
+  ['profitCalculator', (e) => (e.profitCalculator ? '✓' : '–')],
+  ['profitAI', (e) => (e.profitAI ? '✓' : '–')],
+  ['partnerListing', (e) => (e.partnerListing ? '✓' : '–')],
+  ['partnerSearch', (e) => (e.partnerSearch ? '✓' : '–')],
+  ['futureOpportunities', (e) => (e.futureOpportunities ? '✓' : '–')],
+  ['members', (e, _m, l) => int(l, e.maxMembers)],
 ];
+const CARD_PLANS: PlanId[] = ['free', 'starter', 'professional', 'business'];
+const COMPARE: PlanId[] = ['free', 'starter', 'professional', 'business', 'enterprise'];
 
-const COMPARE: PlanId[] = ['free', ...PAID_PLANS, 'enterprise'];
+function PlanCard({ id }: { id: PlanId }) {
+  const { m, lp, locale } = useUi();
+  const plan = PLANS[id];
+  const text = m.plans[id];
+  const featured = id === 'professional';
+  return (
+    <article
+      className={cn(
+        'relative flex flex-col rounded-3xl p-7',
+        featured ? 'night text-white shadow-[0_40px_90px_-40px_rgba(6,14,27,0.9)] ring-1 ring-signal/40' : 'border border-line bg-white text-night shadow-[0_24px_60px_-45px_rgba(6,14,27,0.5)]',
+      )}
+    >
+      {featured ? <span className="absolute right-6 top-6 rounded-full bg-signal px-2.5 py-1 text-[12px] font-bold text-night">{m.pricing.recommended}</span> : null}
+      <h2 className={cn('text-[20px] font-[740] tracking-[-0.015em]', featured ? 'text-white' : 'text-night')}>{text.name}</h2>
+      <p className={cn('mt-1 min-h-[2.75rem] text-[14px] leading-snug', featured ? 'text-white/65' : 'text-muted')}>{text.tagline}</p>
+      <p className="mt-6 flex items-baseline gap-1.5">
+        <span className={cn('text-[52px] font-[800] leading-none tracking-[-0.045em]', featured ? 'text-white' : 'text-night')}>{int(locale, plan.priceNok ?? 0)}</span>
+        <span className={cn('text-[15px] font-semibold', featured ? 'text-white/80' : 'text-night')}>{m.pricing.perMonth}</span>
+      </p>
+      <p className={cn('mt-1 text-[12.5px]', featured ? 'text-white/50' : 'text-muted')}>{m.pricing.exVat}</p>
+      <a href={lp('/registrer')} className={cn('mt-6 w-full', featured ? 'btn-signal' : id === 'free' ? 'btn-outline-dark' : 'btn-dark')}>
+        {id === 'free' ? m.pricing.startFree : m.pricing.startTrial}
+      </a>
+      <Points items={text.features} dark={featured} className="mt-7" />
+    </article>
+  );
+}
 
 export function PricingPage() {
-  const { user, liveSources, trialDays } = useUi();
+  const { user, liveSources, trialDays, m, locale, lp } = useUi();
+  const t = m.pricing;
+  const days = plural(locale, m.units.days, trialDays);
+  const ent = m.plans.enterprise;
   return (
     <PublicLayout>
-      <PageHero
-        eyebrow="Priser"
-        title="Enkle priser. Ingen binding."
-        lead={`Alle priser er per organisasjon per måned, eks. mva. ${trialDays} dagers gratis prøveperiode med Profesjonell – uten kort.`}
-      />
-      <section className="py-16 sm:py-24">
-        <Container>
-          <h2 className="sr-only">Planer</h2>
-          <PlanCards />
-          <div className="mt-10 grid grid-cols-1 gap-8 border-y border-line py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto] lg:items-center">
+      <NightHero eyebrow={t.eyebrow} title={t.title} lead={t.lead}>
+        <p className="mt-6 inline-flex items-center gap-2 text-[15px] text-white/70">
+          <LuCheck className="size-4 text-signal" aria-hidden /> {fill(t.trial, { days })}
+        </p>
+      </NightHero>
+      <section className="relative bg-cream pb-20">
+        <Wrap className="relative -top-10">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {CARD_PLANS.map((id) => (
+              <PlanCard key={id} id={id} />
+            ))}
+          </div>
+          <article id="enterprise" className="night mt-4 grid scroll-mt-24 grid-cols-1 gap-8 rounded-3xl p-7 text-white sm:p-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] lg:items-center">
             <div>
-              <p className="font-mono text-[12px] font-medium uppercase tracking-[0.12em] text-navy-600">Enterprise · pris etter avtale</p>
-              <h3 className="mt-2 text-[24px] font-[740] leading-tight tracking-[-0.02em] text-navy-950">Se prosjektene før de blir anbud.</h3>
+              <Kicker dark>{ent.name}</Kicker>
+              <h2 className="mt-3 text-[26px] font-[760] leading-tight tracking-[-0.025em] text-white">{m.features.enterpriseTitle}</h2>
+              <p className="mt-2 text-[15px] text-white/65">{ent.tagline}</p>
             </div>
-            <CheckList className="text-[14px]" items={PLANS.enterprise.features.slice(1, 4)} />
-            <a href="/kontakt" className={buttonVariants({ variant: 'secondary' })}>
-              Kontakt oss
-            </a>
+            <Points items={ent.features} dark />
+            <div className="lg:text-right">
+              <p className="text-[14px] text-white/60">{t.enterpriseFrom}</p>
+              <p className="flex items-baseline gap-1.5 lg:justify-end">
+                <span className="text-[44px] font-[800] leading-none tracking-[-0.04em]">{int(locale, PLANS.enterprise.priceNok ?? 0)}</span>
+                <span className="text-[15px] font-semibold text-white/80">{t.perMonth}</span>
+              </p>
+              <p className="mt-1 text-[12.5px] text-white/50">{t.exVat}</p>
+              <a href={lp('/kontakt')} className="btn-signal mt-5">
+                {t.contactUs}
+              </a>
+            </div>
+          </article>
+        </Wrap>
+      </section>
+      <section className="bg-white py-20 sm:py-24">
+        <Wrap>
+          <div className="reveal">
+            <Kicker>{t.compareEyebrow}</Kicker>
+            <H2 className="mt-4">{t.compareTitle}</H2>
           </div>
-          <p className="mt-6 text-[14px] text-muted">
-            Gratis uten kort: {PLANS.free.features.slice(0, 4).join(' · ')}. <a href="/registrer">Opprett konto</a>.
-          </p>
-
-          <div className="mt-20">
-            <SectionHeading eyebrow="Detaljer">Sammenlign planer</SectionHeading>
-          </div>
-          <div className="scroll-x mt-8 rounded-2xl border border-line bg-white">
-            <table className="w-full min-w-[760px] text-[14px]">
+          <p className="mt-6 text-[13px] text-muted md:hidden">{t.swipe}</p>
+          <div className="scroll-x mt-4 overflow-hidden rounded-3xl border border-line bg-white md:mt-10">
+            <table className="w-full min-w-[820px] text-[14px]">
               <thead>
-                <tr className="border-b border-line bg-paper text-left">
-                  <th className="px-4 py-3.5 font-semibold">Funksjon</th>
+                <tr className="border-b border-line bg-cream text-left">
+                  <th className="sticky left-0 z-10 bg-cream px-5 py-4 font-semibold text-night">{t.feature}</th>
                   {COMPARE.map((id) => (
-                    <th key={id} className={cn('px-4 py-3.5 text-center font-semibold', id === 'professional' && 'text-navy-900')}>
-                      {PLANS[id].name}
-                      <span className="num block text-[12px] font-normal text-muted">
-                        {PLANS[id].priceNok ? `${PLANS[id].priceNok} kr/mnd` : id === 'free' ? '0 kr' : 'Etter avtale'}
+                    <th key={id} className={cn('px-4 py-4 text-center font-semibold', id === 'professional' ? 'bg-night text-white' : 'text-night')}>
+                      {m.plans[id].name}
+                      <span className={cn('num block text-[12px] font-normal', id === 'professional' ? 'text-white/60' : 'text-muted')}>
+                        {PLANS[id].priceNok ? fill(t.priceMonthly, { price: int(locale, PLANS[id].priceNok!) }) : t.priceFree}
                       </span>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {MATRIX.map(([label, fn]) => (
-                  <tr key={label} className="border-b border-line last:border-0 hover:bg-navy-50/50">
-                    <td className="px-4 py-3">{label}</td>
+                {MATRIX.map(([key, fn]) => (
+                  <tr key={key} className="border-b border-line last:border-0">
+                    <td className="sticky left-0 z-10 max-w-[11rem] bg-white px-5 py-3.5 text-ink shadow-[1px_0_0_var(--color-line)] sm:max-w-none">{t.matrix[key]}</td>
                     {COMPARE.map((id) => (
-                      <td key={id} className={cn('num px-4 py-3 text-center', id === 'professional' && 'bg-navy-50/40')}>
-                        {fn(PLANS[id].entitlements)}
+                      <td key={id} className={cn('num px-4 py-3.5 text-center text-night', id === 'professional' && 'bg-signal/[0.07] font-semibold')}>
+                        {fn(PLANS[id].entitlements, m, locale)}
                       </td>
                     ))}
                   </tr>
@@ -239,120 +259,197 @@ export function PricingPage() {
               </tbody>
             </table>
           </div>
-        </Container>
+        </Wrap>
       </section>
-      <section className="border-t border-line bg-paper py-16 sm:py-24">
-        <Container className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-          <SectionHeading eyebrow="Spørsmål" lead={<>Finner du ikke svaret? <a href="/kontakt">Kontakt oss</a>.</>}>
-            Vanlige spørsmål
-          </SectionHeading>
-          <FaqList
-            items={[
-              ...faqItems({ trialDays, sources: sourcesPhrase(liveSources, true) }),
-              ['Hva teller som en AI-analyse?', 'Hver ny analyse av en kunngjøring. Analyser som allerede finnes for samme innhold, teller ikke.'],
-            ]}
-          />
-        </Container>
+      <section className="border-t border-line bg-cream py-20 sm:py-24">
+        <Wrap className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+          <div className="reveal">
+            <Kicker>{t.faqEyebrow}</Kicker>
+            <H2 className="mt-4">{t.faqTitle}</H2>
+            <p className="mt-4 text-[17px] text-muted">{rich(t.faqLead, { contact: <a href={lp('/kontakt')}>{t.contactUs}</a> })}</p>
+          </div>
+          <FaqList items={[...faqItems(m, { days, sources: sourcesText(m, liveSources, true) }), [m.faq.ai.q, m.faq.ai.a]]} />
+        </Wrap>
       </section>
-      <CtaBand
-        title={`Prøv alt i Profesjonell i ${trialDays} dager.`}
-        lead="Ingen kort, og ingenting trekkes automatisk når prøveperioden er over."
-        primary={user ? { href: '/app', label: 'Til appen' } : { href: '/registrer', label: 'Start prøveperiode' }}
-        secondary={{ href: '/funksjoner', label: 'Se funksjoner' }}
+      <SignalCta
+        title={fill(t.ctaTitle, { days })}
+        lead={t.ctaLead}
+        primary={user ? { href: '/app', label: m.nav.toApp } : { href: lp('/registrer'), label: m.nav.start }}
+        secondary={{ href: lp('/funksjoner'), label: t.ctaFeatures }}
       />
     </PublicLayout>
   );
 }
 
 // ---------------------------------------------------------------------------
-export function IndustriesPage() {
-  const { user, trialDays } = useUi();
+// Bransjer
+// ---------------------------------------------------------------------------
+export function IndustriesPage({ counts }: { counts: Record<string, number> }) {
+  const { user, m, lp } = useUi();
+  const t = m.industries;
+  const all = INDUSTRIES.map((i) => ({ id: i.id, name: i.name, n: counts[i.id] ?? 0 })).sort((a, b) => b.n - a.n);
   return (
     <PublicLayout>
-      <PageHero
-        eyebrow="Bransjer"
-        title="Anbud for deres bransje"
-        lead="Bransjene kobles til CPV-kodene oppdragsgiverne bruker i kunngjøringene. Dere kan i tillegg legge inn egne CPV-koder og nøkkelord i profilen."
+      <NightHero eyebrow={t.eyebrow} title={t.title} lead={t.lead} />
+      <section className="bg-cream py-20 sm:py-24">
+        <Wrap>
+          <IndustryTiles industries={all} />
+        </Wrap>
+      </section>
+      <SignalCta
+        title={t.ctaTitle}
+        lead={t.ctaLead}
+        primary={user ? { href: '/app', label: m.nav.toApp } : { href: lp('/registrer'), label: m.nav.start }}
+      />
+    </PublicLayout>
+  );
+}
+
+/** Registrering som sender brukeren videre med bransje og fylke ferdig utfylt i profilen. */
+function signupWith(lp: (href: string) => string, next: string): string {
+  return lp(`/registrer?neste=${encodeURIComponent(next)}`);
+}
+
+export function IndustryPage({ industryId, region, listing }: { industryId: string; region: string | null; listing: IndustryListing }) {
+  const { user, m, lp, locale } = useUi();
+  const t = m.industries;
+  const ref = INDUSTRIES.find((i) => i.id === industryId)!;
+  const name = t.names[industryId]?.name ?? ref.name;
+  const Icon = INDUSTRY_ICONS[industryId] ?? LuRadar;
+  const q = new URLSearchParams({ bransje: industryId, ...(region ? { fylke: region } : {}) });
+  const alertHref = user ? '/app/onboarding' : signupWith(lp, `/app/onboarding?${q}`);
+  const base = lp(`/bransjer/${industryId}`);
+  return (
+    <PublicLayout>
+      <NightHero
+        eyebrow={
+          <a href={lp('/bransjer')} className="text-signal no-underline hover:text-white">
+            {t.back}
+          </a>
+        }
+        title={
+          <span className="flex items-center gap-4">
+            <span className="hidden size-14 shrink-0 items-center justify-center rounded-2xl bg-signal text-night sm:flex">
+              <Icon className="size-7" aria-hidden strokeWidth={1.8} />
+            </span>
+            {name}
+          </span>
+        }
+        lead={t.names[industryId]?.description ?? ref.description}
       >
-        <ul className="mt-8 flex flex-wrap gap-2">
-          {INDUSTRIES.map((i) => (
-            <li key={i.id}>
-              <a href={`#${i.id}`} className="inline-flex rounded-full border border-line bg-white px-3 py-1 text-[13px] font-semibold text-navy-800 no-underline hover:border-navy-300">
-                {i.name}
+        <div className="mt-8 flex flex-wrap items-center gap-4">
+          <span className="glass inline-flex items-center gap-2.5 rounded-full px-3.5 py-2 text-[14px] text-white/90">
+            <span className="live-dot" aria-hidden />
+            {rich(pluralTemplate(locale, t.open, listing.open), { n: <strong className="font-semibold text-white">{int(locale, listing.open)}</strong> })}
+          </span>
+          <a href={alertHref} className="btn-signal">
+            <LuBellRing className="size-4" aria-hidden /> {t.alert}
+          </a>
+        </div>
+      </NightHero>
+      <section className="bg-white py-14 sm:py-20">
+        <Wrap className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0">
+            <nav aria-label={m.home.radar} className="flex flex-wrap gap-2">
+              <a
+                href={base}
+                className={cn('rounded-full border px-3.5 py-1.5 text-[14px] font-semibold no-underline', !region ? 'border-night bg-night text-white' : 'border-line bg-white text-night hover:border-night')}
+              >
+                {t.allRegions}
               </a>
-            </li>
-          ))}
-        </ul>
-      </PageHero>
-      <section className="py-16 sm:py-24">
-        <Container>
-          <div className="grid gap-5 md:grid-cols-2">
-            {INDUSTRIES.map((i) => (
-              <article key={i.id} id={i.id} className="lift scroll-mt-24 rounded-2xl border border-line bg-white p-6">
-                <div className="flex items-center gap-3">
-                  <IconChip icon={INDUSTRY_ICONS[i.id] ?? LuRadar} />
-                  <h2 className="text-[19px] font-semibold text-navy-900">{i.name}</h2>
-                </div>
-                <p className="mt-3 text-[15px] text-ink">{i.description}</p>
-                <p className="mt-4 text-[12px] font-semibold uppercase tracking-wide text-muted">CPV-grupper</p>
-                <ul className="mt-2 flex flex-wrap gap-1.5">
-                  {i.cpvPrefixes.map((p) => (
-                    <li key={p} className="rounded-md bg-paper px-2 py-0.5 text-[12px] text-muted ring-1 ring-line">
-                      <span className="num font-semibold text-navy-800">{p}</span>
-                      {p.length === 2 && CPV_DIVISIONS[p] ? ` ${CPV_DIVISIONS[p]}` : ''}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-4 text-[13px] text-muted">Typiske ord: {i.keywords.slice(0, 6).join(', ')}</p>
-              </article>
-            ))}
+              {listing.regions.map((r) => (
+                <a
+                  key={r.code}
+                  href={`${base}?fylke=${r.code}`}
+                  className={cn(
+                    'rounded-full border px-3.5 py-1.5 text-[14px] font-semibold no-underline',
+                    region === r.code ? 'border-night bg-night text-white' : 'border-line bg-white text-night hover:border-night',
+                  )}
+                >
+                  {r.name} <span className={cn('font-normal', region === r.code ? 'text-white/60' : 'text-muted')}>{int(locale, r.n)}</span>
+                </a>
+              ))}
+            </nav>
+            <h2 className="mt-10 text-[22px] font-[740] tracking-[-0.02em] text-night">{t.listTitle}</h2>
+            {listing.rows.length ? (
+              <ol className="mt-5 space-y-3">
+                {listing.rows.map((r) => (
+                  <li key={r.id}>
+                    <a
+                      href={user ? `/app/anbud/${r.id}` : signupWith(lp, `/app/anbud/${r.id}`)}
+                      className="card-lift group grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-4 rounded-2xl border border-line bg-white p-4 text-night no-underline sm:grid-cols-[4.25rem_minmax(0,1fr)_auto] sm:p-5"
+                    >
+                      <span className="flex flex-col items-center justify-center rounded-xl bg-cream py-2 text-center">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{monthShort(locale, r.deadlineAt)}</span>
+                        <span className="text-[22px] font-[780] leading-none">{dayOfMonth(r.deadlineAt)}</span>
+                        {r.deadlineTimeKnown ? <span className="mt-0.5 font-mono text-[11px] text-muted">{clockTime(locale, r.deadlineAt)}</span> : null}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[16px] font-semibold leading-snug group-hover:underline">{r.title}</span>
+                        <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13.5px] text-muted">
+                          {r.buyerName ? <span className="truncate">{r.buyerName}</span> : null}
+                          {r.place ? (
+                            <span className="inline-flex items-center gap-1">
+                              <LuMapPin className="size-3.5" aria-hidden />
+                              {r.place}
+                            </span>
+                          ) : null}
+                          {r.estimatedValue ? <span>{fill(t.value, { value: money(locale, r.estimatedValue, r.currency) })}</span> : null}
+                        </span>
+                      </span>
+                      <span className="hidden items-center gap-1 text-[14px] font-semibold text-night sm:inline-flex">
+                        {t.see} <LuArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-5 rounded-2xl border border-dashed border-line-strong p-6 text-[15px] text-muted">{t.none}</p>
+            )}
           </div>
-        </Container>
+          <aside className="h-fit space-y-4 lg:sticky lg:top-24">
+            <div className="rounded-3xl bg-cream p-6">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">{t.cpvGroups}</p>
+              <p className="mt-2 font-mono text-[15px] text-night">{ref.cpvPrefixes.join(' · ')}</p>
+              <p className="mt-5 text-[14px] leading-relaxed text-muted">{fill(t.keywords, { words: ref.keywords.slice(0, 8).join(', ') })}</p>
+            </div>
+            <div className="night rounded-3xl p-6">
+              <p className="text-[18px] font-[720] leading-snug text-white">{t.ctaTitle}</p>
+              <a href={alertHref} className="btn-signal mt-5 w-full">
+                {t.alert}
+              </a>
+            </div>
+          </aside>
+        </Wrap>
       </section>
-      <CtaBand
-        title="Se anbudene i deres bransje."
-        lead="Velg bransje, område og størrelse i profilen – så rangerer vi kunngjøringene for dere."
-        primary={user ? { href: '/app', label: 'Til appen' } : { href: '/registrer', label: `Prøv gratis i ${trialDays} dager` }}
-      />
     </PublicLayout>
   );
 }
 
 // ---------------------------------------------------------------------------
+// Om oss og kontakt
+// ---------------------------------------------------------------------------
+const VALUE_ICONS: IconType[] = [LuEye, LuShieldCheck, LuGauge, LuDatabase];
+
 export function AboutPage({ company }: { company: { name: string; orgNumber: string; address: string; email: string } }) {
-  const { liveSources } = useUi();
+  const { liveSources, m, lp, user } = useUi();
+  const t = m.about;
   return (
     <PublicLayout>
-      <PageHero
-        eyebrow="Om oss"
-        title="Om AnbudRadar"
-        lead="Offentlige anskaffelser er et stort marked, men det tar tid å finne de riktige konkurransene og forstå hva som kreves."
-      />
-      <section className="py-16 sm:py-20">
-        <Container className="grid gap-12 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <div className="space-y-5 text-[17px] leading-relaxed text-ink">
-            <p>Små og mellomstore bedrifter har sjelden egne folk til å lese kunngjøringer hver dag.</p>
-            <p>
-              AnbudRadar gjør det enklere: vi henter kunngjøringer fra {sourcesPhrase(liveSources)}, viser hvilke som passer bedriften og hjelper dere å forstå kravene – med
-              kildehenvisning, slik at dere alltid kan sjekke originalen.
-            </p>
-            <h2 className="pt-4 font-serif text-[24px] font-semibold text-navy-900">Prinsippene våre</h2>
-            <CheckList
-              className="text-[16px]"
-              items={[
-                'Vi viser fakta fra kilden atskilt fra AI-tolkning.',
-                'Vi dikter aldri opp frister, beløp, krav eller konkurrenter. Det som mangler, sier vi at mangler.',
-                'Relevansscoren viser samsvar med profilen – ikke sjansen for å vinne.',
-                'Dere eier dataene deres og kan eksportere eller slette dem når som helst.',
-              ]}
-            />
+      <NightHero eyebrow={t.eyebrow} title={t.title} lead={t.lead} />
+      <section className="bg-white py-20 sm:py-24">
+        <Wrap className="grid gap-12 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
+          <div className="reveal space-y-6 text-[20px] leading-relaxed text-ink sm:text-[22px]">
+            <p>{t.p1}</p>
+            <p>{fill(t.p2, { sources: sourcesText(m, liveSources) })}</p>
           </div>
-          <aside className="h-fit rounded-2xl border border-line bg-paper p-6">
-            <h2 className="text-[17px] font-semibold text-navy-900">Selskapet</h2>
+          <aside className="reveal delay-1 h-fit rounded-3xl bg-cream p-7">
+            <h2 className="text-[17px] font-semibold text-night">{t.companyTitle}</h2>
             {companyConfigured(company) ? (
               <>
                 <p className="mt-3 text-[15px] leading-relaxed text-ink">
-                  {company.name}, org.nr. {company.orgNumber}
+                  {fill(t.companyLine, { name: company.name, orgNumber: company.orgNumber })}
                   <br />
                   {company.address}
                 </p>
@@ -362,51 +459,72 @@ export function AboutPage({ company }: { company: { name: string; orgNumber: str
               </>
             ) : (
               // Firmaopplysningene (COMPANY_*) er ikke lagt inn ennå – vis ikke plassholdere som ekte opplysninger.
-              <a href="/kontakt" className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold">
-                <LuMail className="size-4" aria-hidden /> Kontakt oss
+              <a href={lp('/kontakt')} className="btn-dark mt-5">
+                <LuMail className="size-4" aria-hidden /> {m.pricing.contactUs}
               </a>
             )}
           </aside>
-        </Container>
+        </Wrap>
       </section>
+      <section className="bg-cream py-20 sm:py-24">
+        <Wrap>
+          <H2 className="reveal">{t.valuesTitle}</H2>
+          <ul className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {t.values.map((v, i) => {
+              const Icon = VALUE_ICONS[i] ?? LuEye;
+              return (
+                <li key={v.title} className={cn('reveal rounded-3xl border border-line bg-white p-6', i === 1 && 'delay-1', i === 2 && 'delay-2', i === 3 && 'delay-3')}>
+                  <span className="flex size-11 items-center justify-center rounded-xl bg-night text-signal">
+                    <Icon className="size-5" aria-hidden strokeWidth={1.8} />
+                  </span>
+                  <h3 className="mt-5 text-[18px] font-[720] text-night">{v.title}</h3>
+                  <p className="mt-2 text-[15px] leading-relaxed text-muted">{v.text}</p>
+                </li>
+              );
+            })}
+          </ul>
+        </Wrap>
+      </section>
+      <SignalCta title={m.features.ctaTitle} lead={m.features.ctaLead} primary={user ? { href: '/app', label: m.nav.toApp } : { href: lp('/registrer'), label: m.nav.start }} />
     </PublicLayout>
   );
 }
 
 export function ContactPage({ sent = false, errors = {}, values = {} }: { sent?: boolean; errors?: Record<string, string>; values?: Record<string, string> }) {
+  const { m, lp } = useUi();
+  const t = m.contact;
   return (
     <PublicLayout>
-      <PageHero eyebrow="Kontakt" title="Snakk med oss" lead="Spørsmål om produktet, Enterprise-avtaler eller data? Skriv til oss, så svarer vi på e-post." />
-      <section className="py-16 sm:py-20">
-        <Container className="max-w-2xl">
+      <NightHero eyebrow={t.eyebrow} title={t.title} lead={t.lead} />
+      <section className="bg-cream pb-24">
+        <Wrap className="relative -top-10 max-w-2xl">
           {sent ? (
-            <Alert tone="ok" title="Takk for meldingen">
-              Vi svarer så snart vi kan.
+            <Alert tone="ok" title={t.thanksTitle}>
+              {t.thanksText}
             </Alert>
           ) : (
-            <PostForm action="/kontakt" className="space-y-4 rounded-2xl border border-line bg-white p-6 shadow-[0_20px_50px_-35px_rgba(15,35,64,0.5)] sm:p-8">
+            <PostForm action={lp('/kontakt')} className="space-y-4 rounded-3xl border border-line bg-white p-6 shadow-[0_30px_70px_-45px_rgba(6,14,27,0.6)] sm:p-9">
               <div className="hidden" aria-hidden>
-                <label htmlFor="website">Ikke fyll ut dette feltet</label>
+                <label htmlFor="website">{t.honeypot}</label>
                 <input id="website" name="website" tabIndex={-1} autoComplete="off" />
               </div>
-              <Field label="Navn" htmlFor="c-name" error={errors.name}>
+              {t.replyLanguage ? <p className="text-[14px] text-muted">{t.replyLanguage}</p> : null}
+              <Field label={t.name} htmlFor="c-name" error={errors.name}>
                 <Input id="c-name" name="name" required maxLength={120} defaultValue={values.name} autoComplete="name" />
               </Field>
-              <Field label="E-post" htmlFor="c-email" error={errors.email}>
+              <Field label={t.email} htmlFor="c-email" error={errors.email}>
                 <Input id="c-email" name="email" type="email" required maxLength={254} defaultValue={values.email} autoComplete="email" />
               </Field>
-              <Field label="Melding" htmlFor="c-msg" error={errors.message}>
+              <Field label={t.message} htmlFor="c-msg" error={errors.message}>
                 <Textarea id="c-msg" name="message" rows={6} required maxLength={5000} defaultValue={values.message} />
               </Field>
-              <p className="text-[13px] text-muted">
-                Vi bruker opplysningene bare til å svare deg. Se <a href="/personvern">personvernerklæringen</a>.
-              </p>
+              <p className="text-[13px] text-muted">{rich(t.privacy, { link: <a href="/personvern">{t.privacyLink}</a> })}</p>
               <Button type="submit" size="lg">
-                Send melding
+                {t.send}
               </Button>
             </PostForm>
           )}
-        </Container>
+        </Wrap>
       </section>
     </PublicLayout>
   );

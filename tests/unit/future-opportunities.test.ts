@@ -56,7 +56,7 @@ test('søkenøkkel: side og sortering teller ikke, standardlisten er ikke et sø
   assert.ok(searchKey(sanitizeQuery({}), 'byggeoppdrag i Trøndelag'), 'fritekst teller som søk');
 });
 
-test('planer: gratisgrensene og Future Opportunities bare i Enterprise; prisene er uendret', () => {
+test('planer: gratisgrensene og Future Opportunities bare i Enterprise; prisene og AI-grensene', () => {
   const free = PLANS.free.entitlements;
   assert.equal(free.searchesPerDay, 5);
   assert.equal(free.maxBookmarks, 3);
@@ -66,5 +66,14 @@ test('planer: gratisgrensene og Future Opportunities bare i Enterprise; prisene 
   for (const id of ['starter', 'professional', 'business', 'enterprise'] as const) assert.equal(PLANS[id].entitlements.searchesPerDay, UNLIMITED);
   for (const id of ['free', 'starter', 'professional', 'business'] as const) assert.equal(PLANS[id].entitlements.futureOpportunities, false, id);
   assert.equal(PLANS.enterprise.entitlements.futureOpportunities, true);
-  assert.deepEqual([PLANS.starter.priceNok, PLANS.professional.priceNok, PLANS.business.priceNok, PLANS.enterprise.priceNok], [199, 499, 999, null]);
+  assert.deepEqual([PLANS.starter.priceNok, PLANS.professional.priceNok, PLANS.business.priceNok, PLANS.enterprise.priceNok], [299, 699, 1490, 4990]);
+  // AI-grensene holder kostnaden under prisen også om en kunde bruker alt (se docs/PRISER.md).
+  assert.deepEqual(
+    (['professional', 'business', 'enterprise'] as const).map((id) => [PLANS[id].entitlements.aiAnalysesPerMonth, PLANS[id].entitlements.aiBidDraftsPerMonth]),
+    [
+      [60, 0],
+      [150, 50],
+      [500, 200],
+    ],
+  );
 });

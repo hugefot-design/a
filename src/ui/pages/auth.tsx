@@ -1,25 +1,28 @@
 import { Alert, Button, buttonVariants, Checkbox, Field, Input, PostForm } from '../components';
 import { useUi } from '../context';
 import { AuthLayout } from '../layouts';
+import { plural, rich } from '@/i18n/format';
 
 type Errors = Record<string, string>;
 
 export function LoginPage({ email = '', error, next }: { email?: string; error?: string; next?: string }) {
+  const { m, lp } = useUi();
+  const t = m.auth.login;
   return (
-    <AuthLayout title="Logg inn" intro={<>Har du ikke konto? <a href="/registrer">Opprett en gratis prøvekonto</a>.</>}>
-      <PostForm action={`/logg-inn${next ? `?neste=${encodeURIComponent(next)}` : ''}`} className="space-y-4">
+    <AuthLayout title={t.title} intro={rich(t.noAccount, { link: <a href={lp('/registrer')}>{t.createLink}</a> })}>
+      <PostForm action={`${lp('/logg-inn')}${next ? `?neste=${encodeURIComponent(next)}` : ''}`} className="space-y-4">
         {error ? <Alert tone="danger">{error}</Alert> : null}
-        <Field label="E-post" htmlFor="email">
+        <Field label={t.email} htmlFor="email">
           <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={email} invalid={Boolean(error)} />
         </Field>
-        <Field label="Passord" htmlFor="password">
+        <Field label={t.password} htmlFor="password">
           <Input id="password" name="password" type="password" autoComplete="current-password" required invalid={Boolean(error)} />
         </Field>
-        <Button type="submit" className="w-full" busyLabel="Logger inn …">
-          Logg inn
+        <Button type="submit" className="w-full" busyLabel={t.busy}>
+          {t.submit}
         </Button>
         <p className="text-center text-[14px]">
-          <a href="/glemt-passord">Glemt passordet?</a>
+          <a href={lp('/glemt-passord')}>{t.forgot}</a>
         </p>
       </PostForm>
     </AuthLayout>
@@ -27,42 +30,46 @@ export function LoginPage({ email = '', error, next }: { email?: string; error?:
 }
 
 export function RegisterPage({ values = {}, errors = {}, next }: { values?: Record<string, string>; errors?: Errors; next?: string }) {
-  const { trialDays } = useUi();
+  const { trialDays, m, lp, locale } = useUi();
+  const t = m.auth.register;
+  const doc = (href: string, label: string) => (
+    <a href={href} target="_blank" rel="noopener">
+      {label}
+    </a>
+  );
   return (
     <AuthLayout
-      title="Opprett konto"
+      title={t.title}
       intro={
         <>
-          {`Du får ${trialDays} dager med alle funksjoner i Profesjonell. Ingen kortinformasjon trengs. Har du konto? `}
-          <a href="/logg-inn">Logg inn</a>.
+          {rich(t.intro, { days: plural(locale, m.units.days, trialDays), link: <a href={lp('/logg-inn')}>{t.loginLink}</a> })}
+          {t.languageNote ? <span className="mt-2 block text-[13px]">{t.languageNote}</span> : null}
         </>
       }
     >
-      <PostForm action={`/registrer${next ? `?neste=${encodeURIComponent(next)}` : ''}`} className="space-y-4">
-        <Field label="Navn" htmlFor="name" error={errors.name}>
+      <PostForm action={`${lp('/registrer')}${next ? `?neste=${encodeURIComponent(next)}` : ''}`} className="space-y-4">
+        <Field label={t.name} htmlFor="name" error={errors.name}>
           <Input id="name" name="name" autoComplete="name" required defaultValue={values.name} invalid={Boolean(errors.name)} />
         </Field>
-        <Field label="Jobb-e-post" htmlFor="email" error={errors.email}>
+        <Field label={t.email} htmlFor="email" error={errors.email}>
           <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={values.email} invalid={Boolean(errors.email)} />
         </Field>
-        <Field label="Passord" htmlFor="password" hint="Minst 10 tegn. En setning du husker fungerer godt." error={errors.password}>
+        <Field label={t.password} htmlFor="password" hint={t.passwordHint} error={errors.password}>
           <Input id="password" name="password" type="password" autoComplete="new-password" required minLength={10} invalid={Boolean(errors.password)} />
         </Field>
         <div>
           <Checkbox
             name="acceptTerms"
-            label={
-              <>
-                Jeg godtar <a href="/vilkar" target="_blank" rel="noopener">vilkårene</a> og{' '}
-                <a href="/databehandleravtale" target="_blank" rel="noopener">databehandleravtalen</a> på vegne av virksomheten, og har lest{' '}
-                <a href="/personvern" target="_blank" rel="noopener">personvernerklæringen</a>.
-              </>
-            }
+            label={rich(t.terms, {
+              terms: doc('/vilkar', t.termsLink),
+              dpa: doc('/databehandleravtale', t.dpaLink),
+              privacy: doc('/personvern', t.privacyLink),
+            })}
           />
           {errors.acceptTerms ? <p className="mt-1 text-[13px] font-medium text-danger">{errors.acceptTerms}</p> : null}
         </div>
-        <Button type="submit" className="w-full" busyLabel="Oppretter konto …">
-          Opprett konto
+        <Button type="submit" className="w-full" busyLabel={t.busy}>
+          {t.submit}
         </Button>
       </PostForm>
     </AuthLayout>
@@ -70,24 +77,26 @@ export function RegisterPage({ values = {}, errors = {}, next }: { values?: Reco
 }
 
 export function ForgotPasswordPage({ sent = false }: { sent?: boolean }) {
+  const { m, lp } = useUi();
+  const t = m.auth.forgot;
   return (
-    <AuthLayout title="Glemt passord" intro="Skriv inn e-postadressen din, så sender vi en lenke for å velge nytt passord.">
+    <AuthLayout title={t.title} intro={t.intro}>
       {sent ? (
-        <Alert tone="ok" title="Sjekk e-posten din">
-          Hvis det finnes en konto med denne adressen, har vi sendt en lenke. Lenken gjelder i 1 time.
+        <Alert tone="ok" title={t.sentTitle}>
+          {t.sentText}
         </Alert>
       ) : (
-        <PostForm action="/glemt-passord" className="space-y-4">
-          <Field label="E-post" htmlFor="email">
+        <PostForm action={lp('/glemt-passord')} className="space-y-4">
+          <Field label={t.email} htmlFor="email">
             <Input id="email" name="email" type="email" autoComplete="email" required />
           </Field>
-          <Button type="submit" className="w-full" busyLabel="Sender …">
-            Send lenke
+          <Button type="submit" className="w-full" busyLabel={t.busy}>
+            {t.submit}
           </Button>
         </PostForm>
       )}
       <p className="mt-4 text-center text-[14px]">
-        <a href="/logg-inn">Tilbake til innlogging</a>
+        <a href={lp('/logg-inn')}>{t.back}</a>
       </p>
     </AuthLayout>
   );

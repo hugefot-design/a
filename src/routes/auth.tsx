@@ -21,6 +21,7 @@ import { acceptInvitation, findInvitation } from '@/domain/org/org';
 import { redirectWith } from '@/server/flash';
 import { homePath, redirect, safeRedirectPath, serializeCookie, type RequestContext } from '@/server/http';
 import { render } from '@/server/render';
+import { messages, translateAuthErrors } from '@/i18n';
 import type { Router } from '@/server/router';
 import {
   ForgotPasswordPage,
@@ -45,7 +46,7 @@ async function startSession(ctx: RequestContext, userId: string): Promise<void> 
 
 export function registerAuthRoutes(router: Router): void {
   router.get('/logg-inn', 'guest', async (ctx) =>
-    render(ctx, <LoginPage next={ctx.query.get('neste') ?? undefined} />, { title: 'Logg inn' }),
+    render(ctx, <LoginPage next={ctx.query.get('neste') ?? undefined} />, { title: messages(ctx.locale).meta.login }),
   );
 
   router.post('/logg-inn', 'guest', async (ctx) => {
@@ -56,29 +57,26 @@ export function registerAuthRoutes(router: Router): void {
     const next = requested && safeRedirectPath(requested, '') ? requested : undefined;
     const result = await authenticate(email, str(form, 'password'), ctx.ipHash);
     if (!result.ok) {
-      const error =
-        result.reason === 'locked'
-          ? 'Kontoen er midlertidig låst etter for mange mislykkede forsøk. Prøv igjen om 15 minutter, eller tilbakestill passordet.'
-          : result.reason === 'rate_limited'
-            ? 'For mange forsøk. Vent litt og prøv igjen.'
-            : 'Feil e-post eller passord.';
-      return render(ctx, <LoginPage email={email} error={error} next={next} />, { title: 'Logg inn', status: result.reason === 'invalid' ? 401 : 429 });
+      const t = messages(ctx.locale);
+      const error = result.reason === 'locked' ? t.auth.login.errors.locked : result.reason === 'rate_limited' ? t.auth.login.errors.rateLimited : t.auth.login.errors.invalid;
+      return render(ctx, <LoginPage email={email} error={error} next={next} />, { title: t.meta.login, status: result.reason === 'invalid' ? 401 : 429 });
     }
     await startSession(ctx, result.user.id);
     return redirect(next ?? homePath(result.user));
   });
 
   router.get('/registrer', 'guest', async (ctx) =>
-    render(ctx, <RegisterPage next={ctx.query.get('neste') ?? undefined} />, { title: 'Opprett konto' }),
+    render(ctx, <RegisterPage next={ctx.query.get('neste') ?? undefined} />, { title: messages(ctx.locale).meta.register }),
   );
 
   router.post('/registrer', 'guest', async (ctx) => {
     const form = await ctx.form();
     const values = { name: str(form, 'name'), email: str(form, 'email') };
     const next = ctx.query.get('neste') ?? undefined;
+    const t = messages(ctx.locale);
     if (!(await rateLimit(`register:${ctx.ipHash}`, 10, 3600))) {
-      return render(ctx, <RegisterPage values={values} errors={{ email: 'For mange registreringer fra denne adressen. Prøv igjen senere.' }} next={next} />, {
-        title: 'Opprett konto',
+      return render(ctx, <RegisterPage values={values} errors={{ email: t.auth.errors.tooMany }} next={next} />, {
+        title: t.meta.register,
         status: 429,
       });
     }
@@ -89,11 +87,11 @@ export function registerAuthRoutes(router: Router): void {
       acceptTerms: form.get('acceptTerms') ?? undefined,
     });
     if (!parsed.success) {
-      return render(ctx, <RegisterPage values={values} errors={zodErrors(parsed.error)} next={next} />, { title: 'Opprett konto', status: 422 });
+      return render(ctx, <RegisterPage values={values} errors={translateAuthErrors(t, zodErrors(parsed.error))} next={next} />, { title: t.meta.register, status: 422 });
     }
     const result = await registerUser(parsed.data, ctx.ipHash);
     if (!result.ok) {
-      return render(ctx, <RegisterPage values={values} errors={result.errors} next={next} />, { title: 'Opprett konto', status: 422 });
+      return render(ctx, <RegisterPage values={values} errors={translateAuthErrors(t, result.errors)} next={next} />, { title: t.meta.register, status: 422 });
     }
     await startSession(ctx, result.user.id);
     return redirectWith(ctx, safeRedirectPath(next, '/app/onboarding'), 'success', 'Kontoen er opprettet. Vi har sendt deg en e-post for å bekrefte adressen.');
@@ -108,12 +106,12 @@ export function registerAuthRoutes(router: Router): void {
     return redirect('/');
   });
 
-  router.get('/glemt-passord', 'public', async (ctx) => render(ctx, <ForgotPasswordPage />, { title: 'Glemt passord' }));
+  router.get('/glemt-passord', 'public', async (ctx) => render(ctx, <ForgotPasswordPage />, { title: messages(ctx.locale).meta.forgot }));
 
   router.post('/glemt-passord', 'public', async (ctx) => {
     const form = await ctx.form();
     await requestPasswordReset(str(form, 'email'), ctx.ipHash);
-    return render(ctx, <ForgotPasswordPage sent />, { title: 'Glemt passord' });
+    return render(ctx, <ForgotPasswordPage sent />, { title: messages(ctx.locale).meta.forgot });
   });
 
   router.get('/tilbakestill-passord', 'public', async (ctx) => {

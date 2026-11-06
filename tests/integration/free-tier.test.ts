@@ -102,7 +102,7 @@ test('låste funksjoner gir oppgraderingssiden med planene', async () => {
   assert.match(page.body, /Velg Profesjonell/);
   const billing = await c.get('/app/abonnement');
   assert.match(billing.body, /Søk i dag/);
-  assert.match(billing.body, /Pris etter avtale/);
+  assert.match(billing.body.replaceAll('<!-- -->', ''), /4\s990<\/span> <span[^>]*>kr\/mnd/);
   const dash = await c.get('/app');
   assert.match(dash.body, /Gratisplanen/);
 });

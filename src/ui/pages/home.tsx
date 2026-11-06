@@ -1,216 +1,192 @@
 /**
- * Forsiden – kort med vilje: ett tall, en fristtavle, tre punkter og én oppfordring.
- * Bygd på ekte data fra databasen – ingen oppdiktede kunder, omtaler eller tall:
- * tallet i toppen og fristtavla er åpne kunngjøringer fra Doffin og TED akkurat nå.
- * Detaljene (en markert kunngjøring, alle funksjoner, priser og spørsmål) står på undersidene.
+ * Forsiden. Mørk topp med en radar over Norge der punktene er åpne anbud per fylke akkurat nå,
+ * og kort med de nyeste ekte anbudene. Deretter oppdragsgivere med åpne anbud (ekte), tre steg og
+ * et vindu fra appen (merket «Eksempel»), bransjer med ekte antall og en avslutning med neste frist.
+ * Ingen oppdiktede kunder, omtaler eller tall.
  */
 import type { ReactNode } from 'react';
-import { LuArrowRight } from 'react-icons/lu';
+import { LuArrowRight, LuCheck } from 'react-icons/lu';
 import { PAID_PLANS, PLANS } from '@/domain/billing/plans';
 import type { MarketSnapshot } from '@/domain/tenders/market';
+import type { Locale } from '@/i18n';
+import { sourcesText } from '@/i18n';
+import { clockTime, fill, int, osloDay, plural, pluralTemplate, rich, weekdayShort } from '@/i18n/format';
 import { useUi } from '../context';
-import { buttonVariants, cn } from '../components';
+import { cn } from '../components';
 import { PublicLayout } from '../layouts';
-import { formatInt, sourcesPhrase } from '../format';
-import { Container } from '../marketing';
+import { AnalysisMock, BuyerTicker, ExampleTag, FinalCta, H2, IndustryTiles, Kicker, MatchVisual, ProfileVisual, Radar, ReminderVisual, TenderPing, Wrap } from '../site';
 
-const TZ = 'Europe/Oslo';
-const isoDay = new Intl.DateTimeFormat('en-CA', { timeZone: TZ });
-const weekdayDate = new Intl.DateTimeFormat('nb-NO', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: TZ });
-const clock = new Intl.DateTimeFormat('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
-const longDay = new Intl.DateTimeFormat('nb-NO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ });
-const shortDate = new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short', timeZone: TZ });
-
-const time = (d: Date) => clock.format(d).replace(':', '.');
-
-/** Fristen slik den står på tavla: «I dag 12.00», «I morgen», «fre. 07.11». */
-export function boardWhen(deadline: Date, timeKnown: boolean, now = new Date()): { day: string; time: string | null } {
-  const d = isoDay.format(deadline);
-  const day =
-    d === isoDay.format(now) ? 'I dag' : d === isoDay.format(new Date(now.getTime() + 86_400_000)) ? 'I morgen' : weekdayDate.format(deadline).replace(/\.$/, '');
-  return { day, time: timeKnown ? time(deadline) : null };
-}
-
-/** «om 2 timer», «om 3 dager» – til avslutningen. */
-function until(deadline: Date, now = new Date()): string {
-  const ms = deadline.getTime() - now.getTime();
-  const h = Math.round(ms / 3_600_000);
-  if (h < 1) return 'om under en time';
-  if (h < 36) return `om ${h} ${h === 1 ? 'time' : 'timer'}`;
-  const days = Math.round(ms / 86_400_000);
-  return `om ${days} dager`;
+/** Fristen kort: «I dag 12.00», «I morgen», «fre. 07.11» (brukes også i eksempelkunngjøringen). */
+export function boardWhen(
+  deadline: Date,
+  timeKnown: boolean,
+  now = new Date(),
+  locale: Locale = 'nb',
+  words = { today: 'I dag', tomorrow: 'I morgen' },
+): { day: string; time: string | null } {
+  const d = osloDay(deadline);
+  const day = d === osloDay(now) ? words.today : d === osloDay(new Date(now.getTime() + 86_400_000)) ? words.tomorrow : weekdayShort(locale, deadline);
+  return { day, time: timeKnown ? clockTime(locale, deadline) : null };
 }
 
 export function Mono({ children, className }: { children: ReactNode; className?: string }) {
   return <span className={cn('font-mono text-[12px] font-medium uppercase tracking-[0.12em]', className)}>{children}</span>;
 }
 
-function StartButton({ className }: { className?: string }) {
-  const { user, trialDays } = useUi();
-  return (
-    <a href={user ? '/app' : '/registrer'} className={cn(buttonVariants({ size: 'lg' }), className)}>
-      {user ? 'Til appen' : `Prøv gratis i ${trialDays} dager`} <LuArrowRight className="size-4" aria-hidden />
-    </a>
-  );
-}
-
 // ---------------------------------------------------------------------------
-// Toppen: dagens tall og fristtavla
-// ---------------------------------------------------------------------------
-function Hero({ m }: { m: MarketSnapshot }) {
-  const { user } = useUi();
-  const fetched = m.lastFetched ?? m.lastIngested;
+function Hero({ market }: { market: MarketSnapshot }) {
+  const { user, m, locale, lp, trialDays, liveSources } = useUi();
+  const t = m.home;
   return (
-    <section>
-      <Container className="grid grid-cols-1 gap-12 pb-16 pt-12 sm:pb-20 sm:pt-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-center lg:gap-16 lg:pb-24 lg:pt-20">
+    <section className="night relative overflow-hidden">
+      <div className="dot-grid absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_70%_40%,#000_20%,transparent_70%)]" aria-hidden />
+      <Wrap className="relative grid grid-cols-1 items-center gap-14 pb-20 pt-14 sm:pt-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-10 lg:pb-28 lg:pt-24">
         <div className="min-w-0">
-          <Mono className="text-muted">
-            <span className="whitespace-nowrap">{longDay.format(m.at)}</span>
-            {fetched ? (
-              <>
-                {' · '}
-                <span className="whitespace-nowrap">
-                  sist hentet {isoDay.format(fetched) === isoDay.format(m.at) ? '' : `${shortDate.format(fetched)} `}kl. {time(fetched)}
-                </span>
-              </>
-            ) : null}
-          </Mono>
-          <h1 className="mt-5 text-[40px] font-[760] leading-[1.02] tracking-[-0.035em] text-navy-950 sm:text-[54px] lg:text-[60px]">
-            {m.open > 0 ? (
-              <>
-                <span className="hl">{formatInt(m.open)}</span> offentlige anbud er åpne i Norge akkurat nå.
-              </>
-            ) : (
-              'Offentlige anbud i Norge, samlet på ett sted.'
-            )}
+          {market.open > 0 ? (
+            <p className="glass slide-in inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 text-[13.5px] font-medium text-white/90">
+              <span className="live-dot" aria-hidden />
+              {rich(pluralTemplate(locale, t.live, market.open), { n: <strong className="font-semibold text-white">{int(locale, market.open)}</strong> })}
+            </p>
+          ) : null}
+          <h1 className="mt-7 text-[44px] font-[800] leading-[0.98] tracking-[-0.04em] text-white sm:text-[64px] lg:text-[76px]">
+            <span className="block">{t.title1}</span>
+            <span className="text-gradient-signal block pb-1">{t.title2}</span>
           </h1>
-          <p className="mt-6 max-w-[31rem] text-[18px] leading-relaxed text-muted">
-            AnbudRadar leser alle sammen og viser bedriften din de som passer – med frist, krav og lenke til kunngjøringen.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <StartButton />
-            <a href="/priser" className={buttonVariants({ variant: 'ghost', size: 'lg' })}>
-              Se priser
+          <p className="mt-7 max-w-[34rem] text-[18px] leading-relaxed text-white/70 sm:text-[19px]">{fill(t.lead, { sources: sourcesText(m, liveSources) })}</p>
+          <div className="mt-9 flex flex-wrap items-center gap-3">
+            <a href={user ? '/app' : lp('/registrer')} className="btn-signal">
+              {user ? m.nav.toApp : m.nav.start} <LuArrowRight className="size-4" aria-hidden />
+            </a>
+            <a href="#slik" className="btn-ghost-light">
+              {t.how}
             </a>
           </div>
-          {user ? null : <p className="mt-4 text-[13px] text-muted">Uten kort. Ingenting trekkes automatisk.</p>}
+          {user ? null : (
+            <p className="mt-5 flex items-center gap-2 text-[14px] text-white/55">
+              <LuCheck className="size-4 text-signal" aria-hidden />
+              {fill(t.note, { days: plural(locale, m.units.days, trialDays) })}
+            </p>
+          )}
         </div>
-        <Fristtavla rows={m.board} now={m.at} />
-      </Container>
+        <div className="relative mx-auto w-full max-w-[540px] lg:mr-0">
+          <Radar regions={market.regions} className="mx-auto w-full max-w-[340px] sm:max-w-none" />
+          {market.latest.length ? (
+            <div className="relative mt-6 space-y-3 sm:px-8 lg:absolute lg:-bottom-8 lg:-right-10 lg:mt-0 lg:w-[290px] lg:px-0">
+              {market.latest.map((row, i) => (
+                <TenderPing key={row.id} t={row} delay={350 + i * 260} className={cn(i === 1 && 'lg:-translate-x-6', i === 2 && 'lg:-translate-x-2')} />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </Wrap>
     </section>
   );
 }
 
-function Fristtavla({ rows, now }: { rows: MarketSnapshot['board']; now: Date }) {
+function Steps() {
+  const { m } = useUi();
+  const t = m.home.steps;
+  const visuals = [<ProfileVisual key="p" />, <MatchVisual key="m" />, <ReminderVisual key="r" />];
   return (
-    <figure className="min-w-0">
-      <div className="board overflow-hidden rounded-2xl bg-board text-board-text shadow-[0_30px_70px_-35px_rgba(11,22,38,0.9)]">
-        <div className="flex items-center justify-between gap-3 border-b border-board-line px-5 py-3.5">
-          <Mono className="text-board-amber">Frister</Mono>
-          <Mono className="text-board-dim">kl. {time(now)}</Mono>
+    <section id="slik" className="scroll-mt-16 bg-white py-24 sm:py-32">
+      <Wrap>
+        <div className="reveal max-w-2xl">
+          <Kicker>{t.eyebrow}</Kicker>
+          <H2 className="mt-4">{t.title}</H2>
         </div>
-        {rows.length ? (
-          <ol className="divide-y divide-board-line">
-            {rows.map((r, i) => {
-              const when = boardWhen(r.deadlineAt, r.deadlineTimeKnown, now);
-              return (
-                <li key={r.id} className="board-row grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-4 px-5 py-3.5 sm:grid-cols-[7.5rem_minmax(0,1fr)]" style={{ animationDelay: `${i * 70}ms` }}>
-                  <div className="font-mono text-[13px] leading-snug text-board-amber">
-                    <span className="block font-medium uppercase">{when.day}</span>
-                    {when.time ? <span className="block text-board-amber/80">kl. {when.time}</span> : null}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-[14px] font-semibold leading-snug text-board-text">{r.title}</p>
-                    <p className="mt-0.5 truncate text-[13px] leading-snug text-board-dim">
-                      {r.buyerName ?? 'Oppdragsgiver ikke oppgitt'}
-                      {r.place ? ` · ${r.place}` : ''}
-                    </p>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        ) : (
-          <p className="px-5 py-10 text-[14px] text-board-dim">Ingen åpne frister akkurat nå. Tavla fylles når neste henting er ferdig.</p>
-        )}
-        <div className="flex items-center justify-between gap-3 border-t border-board-line px-5 py-3">
-          <Mono className="text-board-dim">Doffin · TED</Mono>
-          <a href="/registrer" className="inline-flex items-center gap-1 text-[13px] font-semibold text-board-amber no-underline hover:text-white">
-            Se alle i appen <LuArrowRight className="size-3.5" aria-hidden />
-          </a>
-        </div>
-      </div>
-      <figcaption className="mt-3 text-[13px] text-muted">Ekte kunngjøringer, sortert etter frist.</figcaption>
-    </figure>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Tre punkter – alt som står her, gjør appen i dag
-// ---------------------------------------------------------------------------
-function Points() {
-  const { liveSources } = useUi();
-  const points = [
-    { title: 'Alt på ett sted', text: `Kunngjøringer fra ${sourcesPhrase(liveSources)} hentes automatisk flere ganger i døgnet.` },
-    { title: 'Bare det som passer', text: 'Fortell hva dere leverer og hvor. Hvert anbud får en score fra 0 til 100, med begrunnelse.' },
-    { title: 'Aldri for sent', text: 'Påminnelse 7, 3 og 1 dag før fristen for anbudene dere har lagret.' },
-  ];
-  return (
-    <section className="border-t border-line bg-paper">
-      <Container>
-        <h2 className="sr-only">Hva AnbudRadar gjør</h2>
-        <ul className="grid grid-cols-1 md:grid-cols-3">
-          {points.map((p, i) => (
-            <li
-              key={p.title}
-              className={cn('py-8 md:px-8 md:py-14', i > 0 && 'border-t border-line md:border-l md:border-t-0', i === 0 && 'md:pl-0', i === points.length - 1 && 'md:pr-0')}
-            >
-              <Mono className="text-navy-600">0{i + 1}</Mono>
-              <h3 className="mt-3 text-[20px] font-[720] leading-tight tracking-[-0.015em] text-navy-950">{p.title}</h3>
-              <p className="mt-2 max-w-[22rem] text-[15px] leading-relaxed text-muted">{p.text}</p>
+        <ol className="mt-14 grid grid-cols-1 gap-5 lg:grid-cols-3">
+          {t.items.map((s, i) => (
+            <li key={s.title} className={cn('reveal flex flex-col overflow-hidden rounded-3xl border border-line bg-cream', i === 1 && 'delay-1', i === 2 && 'delay-2')}>
+              <div className="relative border-b border-line bg-[radial-gradient(circle_at_30%_20%,#fff,transparent_70%)] px-6 pb-6 pt-12">
+                <span className="absolute right-4 top-4">
+                  <ExampleTag>{t.example}</ExampleTag>
+                </span>
+                <div className="flex min-h-[11.5rem] flex-col justify-center">{visuals[i]}</div>
+              </div>
+              <div className="flex flex-1 flex-col p-6 sm:p-7">
+                <span className="flex size-9 items-center justify-center rounded-full bg-night font-mono text-[14px] font-medium text-signal">{i + 1}</span>
+                <h3 className="mt-4 text-[22px] font-[740] leading-tight tracking-[-0.02em] text-night">{s.title}</h3>
+                <p className="mt-2 text-[16px] leading-relaxed text-muted">{s.text}</p>
+              </div>
             </li>
           ))}
-        </ul>
-      </Container>
+        </ol>
+      </Wrap>
     </section>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Avslutning
-// ---------------------------------------------------------------------------
-function Closing({ m }: { m: MarketSnapshot }) {
-  const next = m.board[0];
-  const from = Math.min(...PAID_PLANS.map((p) => PLANS[p].priceNok ?? Number.POSITIVE_INFINITY));
+function Product() {
+  const { m, lp } = useUi();
+  const t = m.home.product;
   return (
-    <section className="border-t border-line">
-      <Container className="flex flex-col items-start gap-8 py-16 sm:py-24 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-2xl">
-          <h2 className="text-[34px] font-[760] leading-[1.04] tracking-[-0.03em] text-navy-950 sm:text-[48px]">
-            {next ? (
-              <>
-                Neste frist går ut <span className="hl">{until(next.deadlineAt, m.at)}</span>.
-              </>
-            ) : (
-              'Kom i gang på et par minutter.'
-            )}
-          </h2>
-          <p className="mt-4 text-[16px] leading-relaxed text-muted">
-            Gratis å starte. Betalte planer fra {formatInt(from)} kr/mnd eks. mva., uten binding. <a href="/priser">Se priser</a>
-          </p>
+    <section className="night relative overflow-hidden py-24 sm:py-32">
+      <Wrap className="relative grid grid-cols-1 items-center gap-14 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
+        <div className="reveal min-w-0">
+          <Kicker dark>{t.eyebrow}</Kicker>
+          <H2 dark className="mt-4">
+            {t.title}
+          </H2>
+          <p className="mt-6 max-w-lg text-[18px] leading-relaxed text-white/70">{t.lead}</p>
+          <ul className="mt-8 space-y-3.5">
+            {t.points.map((x) => (
+              <li key={x} className="flex items-center gap-3 text-[16px] text-white/90">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-signal/15 text-signal">
+                  <LuCheck className="size-3.5" aria-hidden strokeWidth={3} />
+                </span>
+                {x}
+              </li>
+            ))}
+          </ul>
+          <a href={lp('/funksjoner')} className="mt-9 inline-flex items-center gap-2 text-[16px] font-semibold text-signal no-underline hover:text-white">
+            {t.more} <LuArrowRight className="size-4" aria-hidden />
+          </a>
         </div>
-        <StartButton className="shrink-0" />
-      </Container>
+        <div className="reveal delay-1 min-w-0">
+          <div className="float-slow">
+            <AnalysisMock />
+          </div>
+        </div>
+      </Wrap>
+    </section>
+  );
+}
+
+function Industries({ market }: { market: MarketSnapshot }) {
+  const { m, lp } = useUi();
+  const t = m.home.industries;
+  if (!market.industries.length) return null;
+  return (
+    <section className="bg-cream py-24 sm:py-32">
+      <Wrap>
+        <div className="reveal flex flex-wrap items-end justify-between gap-6">
+          <div className="max-w-2xl">
+            <Kicker>{t.eyebrow}</Kicker>
+            <H2 className="mt-4">{t.title}</H2>
+            <p className="mt-4 text-[18px] text-muted">{t.lead}</p>
+          </div>
+          <a href={lp('/bransjer')} className="btn-outline-dark">
+            {t.all} <LuArrowRight className="size-4" aria-hidden />
+          </a>
+        </div>
+        <div className="mt-12">
+          <IndustryTiles industries={market.industries} limit={9} />
+        </div>
+      </Wrap>
     </section>
   );
 }
 
 export function HomePage({ market }: { market: MarketSnapshot }) {
+  const from = Math.min(...PAID_PLANS.map((p) => PLANS[p].priceNok ?? Number.POSITIVE_INFINITY));
   return (
     <PublicLayout>
-      <Hero m={market} />
-      <Points />
-      <Closing m={market} />
+      <Hero market={market} />
+      <BuyerTicker buyers={market.topBuyers} />
+      <Steps />
+      <Product />
+      <Industries market={market} />
+      <FinalCta next={market.board[0]?.deadlineAt ?? null} now={market.at} fromPrice={from} />
     </PublicLayout>
   );
 }

@@ -3,7 +3,10 @@ import { systemSql } from '@/lib/db';
 import { env, isProd } from '@/lib/env';
 import { rateLimit } from '@/lib/rate-limit';
 import { queueEmail } from '@/lib/email';
-import { marketSnapshot, noticeSpecimen } from '@/domain/tenders/market';
+import { industryListing, marketSnapshot, noticeSpecimen, parseBoardFilter } from '@/domain/tenders/market';
+import { fill } from '@/i18n/format';
+import { INDUSTRIES } from '@/domain/reference';
+import { LOCALES, localePath, MARKETING_PATHS, messages } from '@/i18n';
 import { contactNotificationTemplate } from '@/domain/email/templates';
 import { zodErrors } from '@/domain/auth/auth';
 import { companyInfo, isPlaceholder, LEGAL_DOCS } from '@/domain/legal/legal';
@@ -21,6 +24,7 @@ import {
   FeaturesPage,
   HomePage,
   IndustriesPage,
+  IndustryPage,
   PricingPage,
   PrivacyPage,
   SecurityPage,
@@ -32,16 +36,31 @@ import { formStr } from './helpers';
 
 export function registerPublicRoutes(router: Router): void {
   router.get('/', 'public', async (ctx) => {
+    const t = messages(ctx.locale);
+    return render(ctx, <HomePage market={await marketSnapshot()} />, { title: t.meta.homeTitle, description: t.meta.homeDescription });
+  });
+  router.get('/funksjoner', 'public', async (ctx) =>
+    render(ctx, <FeaturesPage specimen={await noticeSpecimen()} />, { title: messages(ctx.locale).meta.features }),
+  );
+  router.get('/priser', 'public', async (ctx) => render(ctx, <PricingPage />, { title: messages(ctx.locale).meta.pricing }));
+  router.get('/bransjer', 'public', async (ctx) => {
     const market = await marketSnapshot();
-    return render(ctx, <HomePage market={market} />, {
-      title: 'Offentlige anbud for norske bedrifter',
-      description: 'Finn, forstå og svar på offentlige anbud. AnbudRadar rangerer kunngjøringer etter hva bedriften leverer og forklarer kravene med kildehenvisning.',
+    const counts = Object.fromEntries(market.industries.map((i) => [i.id, i.n]));
+    return render(ctx, <IndustriesPage counts={counts} />, { title: messages(ctx.locale).meta.industries });
+  });
+  // Én side per bransje med åpne anbud (ekte data) – god å bli funnet på i søkemotorer.
+  router.get('/bransjer/:id', 'public', async (ctx) => {
+    const t = messages(ctx.locale);
+    const filter = parseBoardFilter(ctx.params.id ?? null, ctx.query.get('fylke'));
+    if (!filter.industry) throw new HttpError(404, t.errors.notFound);
+    const listing = await industryListing(filter.industry, filter.region);
+    const name = t.industries.names[filter.industry]?.name ?? filter.industry;
+    return render(ctx, <IndustryPage industryId={filter.industry} region={filter.region} listing={listing} />, {
+      title: fill(t.industries.pageTitle, { industry: name }),
+      description: fill(t.industries.pageDescription, { industry: name }),
     });
   });
-  router.get('/funksjoner', 'public', async (ctx) => render(ctx, <FeaturesPage specimen={await noticeSpecimen()} />, { title: 'Funksjoner' }));
-  router.get('/priser', 'public', async (ctx) => render(ctx, <PricingPage />, { title: 'Priser' }));
-  router.get('/bransjer', 'public', async (ctx) => render(ctx, <IndustriesPage />, { title: 'Bransjer' }));
-  router.get('/om', 'public', async (ctx) => render(ctx, <AboutPage company={companyInfo()} />, { title: 'Om oss' }));
+  router.get('/om', 'public', async (ctx) => render(ctx, <AboutPage company={companyInfo()} />, { title: messages(ctx.locale).meta.about }));
   router.get('/personvern', 'public', async (ctx) => render(ctx, <PrivacyPage />, { title: 'Personvernerklæring' }));
   router.get('/vilkar', 'public', async (ctx) => render(ctx, <TermsPage />, { title: 'Vilkår for bruk' }));
   router.get('/databehandleravtale', 'public', async (ctx) => render(ctx, <DpaPage />, { title: 'Databehandleravtale' }));
@@ -64,22 +83,23 @@ export function registerPublicRoutes(router: Router): void {
       ].join('\n'),
     );
   });
-  router.get('/kontakt', 'public', async (ctx) => render(ctx, <ContactPage />, { title: 'Kontakt' }));
+  router.get('/kontakt', 'public', async (ctx) => render(ctx, <ContactPage />, { title: messages(ctx.locale).meta.contact }));
 
   router.post('/kontakt', 'public', async (ctx) => {
+    const t = messages(ctx.locale);
     const form = await ctx.form();
     const values = { name: formStr(form, 'name', 200), email: formStr(form, 'email', 300), message: formStr(form, 'message', 6000) };
     // Honningkrukke: roboter fyller ut skjulte felt. Svar som om alt gikk bra.
-    if (formStr(form, 'website', 200)) return render(ctx, <ContactPage sent />, { title: 'Kontakt' });
-    if (!(await rateLimit(`contact:${ctx.ipHash}`, 5, 3600))) throw new HttpError(429, 'For mange meldinger. Prøv igjen senere.');
+    if (formStr(form, 'website', 200)) return render(ctx, <ContactPage sent />, { title: t.meta.contact });
+    if (!(await rateLimit(`contact:${ctx.ipHash}`, 5, 3600))) throw new HttpError(429, t.contact.errors.tooMany);
     const parsed = z
       .object({
-        name: z.string().trim().min(1, 'Skriv inn navnet ditt.').max(120),
-        email: z.string().trim().email('Skriv inn en gyldig e-postadresse.'),
-        message: z.string().trim().min(5, 'Skriv en melding.').max(5000),
+        name: z.string().trim().min(1, t.contact.errors.name).max(120),
+        email: z.string().trim().email(t.contact.errors.email),
+        message: z.string().trim().min(5, t.contact.errors.message).max(5000),
       })
       .safeParse(values);
-    if (!parsed.success) return render(ctx, <ContactPage errors={zodErrors(parsed.error)} values={values} />, { title: 'Kontakt', status: 422 });
+    if (!parsed.success) return render(ctx, <ContactPage errors={zodErrors(parsed.error)} values={values} />, { title: t.meta.contact, status: 422 });
     await systemSql()`
       insert into reports (kind, name, email, message, user_id) values ('contact', ${parsed.data.name}, ${parsed.data.email}, ${parsed.data.message}, ${ctx.user?.id ?? null})
     `;
@@ -87,7 +107,7 @@ export function registerPublicRoutes(router: Router): void {
       const tpl = contactNotificationTemplate(parsed.data.name, parsed.data.email, parsed.data.message);
       await queueEmail({ to: env.ADMIN_NOTIFICATION_EMAIL, ...tpl, kind: 'contact' });
     }
-    return render(ctx, <ContactPage sent />, { title: 'Kontakt' });
+    return render(ctx, <ContactPage sent />, { title: t.meta.contact });
   });
 
   // Avmelding fra varsel-e-post. POST uten CSRF-token er nødvendig for ettklikks-avmelding fra
@@ -120,7 +140,9 @@ export function registerPublicRoutes(router: Router): void {
   router.post('/avmeld', 'public', (ctx) => unsubscribe(ctx, true), { csrf: false });
 
   router.get('/sitemap.xml', 'public', async () => {
-    const urls = ['/', '/funksjoner', '/priser', '/bransjer', '/om', '/kontakt', ...LEGAL_DOCS.map((d) => d.href)];
+    // Markedssidene på alle språk, og de juridiske dokumentene (bare norsk).
+    const pages = [...MARKETING_PATHS, ...INDUSTRIES.map((i) => `/bransjer/${i.id}`)];
+    const urls = [...LOCALES.flatMap((l) => pages.map((path) => localePath(l, path))), ...LEGAL_DOCS.map((d) => d.href)];
     const base = env.APP_URL.replace(/\/$/, '');
     const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${base}${u}</loc></url>`).join('')}</urlset>`;
     return text(body, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } });

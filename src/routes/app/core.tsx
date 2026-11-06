@@ -1,3 +1,4 @@
+import { parseBoardFilter } from '@/domain/tenders/market';
 import { z } from 'zod';
 import { first } from '@/lib/db';
 import { env, integrationStatus } from '@/lib/env';
@@ -105,27 +106,36 @@ export function registerCoreAppRoutes(router: Router): void {
     '/app/onboarding',
     'user',
     async (ctx) => {
-      if (!ctx.org) return render(ctx, <OnboardingOrgPage />, { title: 'Kom i gang' });
+      // Bransje og fylke valgt på forsiden (?bransje=…&fylke=…) fylles inn i profilen.
+      const start = parseBoardFilter(ctx.query.get('bransje'), ctx.query.get('fylke'));
+      if (!ctx.org) return render(ctx, <OnboardingOrgPage carry={start} />, { title: 'Kom i gang' });
       if (ctx.org.onboardingCompleted) return redirect('/app');
       const profile = await ctx.tenant((tx) => getProfile(tx, ctx.org!.id));
-      return render(ctx, <OnboardingProfilePage values={profileToValues(profile, ctx.org.name)} />, { title: 'Bedriftsprofil' });
+      const values = profileToValues(profile, ctx.org.name);
+      if (start.industry && !(values.industries as string[] | undefined)?.length) values.industries = [start.industry];
+      if (start.region && !(values.regions as string[] | undefined)?.length) values.regions = [start.region];
+      return render(ctx, <OnboardingProfilePage values={values} />, { title: 'Bedriftsprofil' });
     },
   );
 
   router.post('/app/onboarding/organisasjon', 'user', async (ctx) => {
     const form = await ctx.form();
     const values = { name: formStr(form, 'name', 200), orgNumber: formStr(form, 'orgNumber', 30) };
+    const carry = parseBoardFilter(formStr(form, 'bransje', 40) || null, formStr(form, 'fylke', 10) || null);
     if (ctx.org) return redirect('/app/onboarding');
     const parsed = z.object({ name: z.string().trim().min(1, 'Skriv inn firmanavnet.').max(160), orgNumber: orgNumberSchema }).safeParse(values);
-    if (!parsed.success) return render(ctx, <OnboardingOrgPage errors={zodErrors(parsed.error)} values={values} />, { title: 'Kom i gang', status: 422 });
+    if (!parsed.success) return render(ctx, <OnboardingOrgPage errors={zodErrors(parsed.error)} values={values} carry={carry} />, { title: 'Kom i gang', status: 422 });
     if (!(await rateLimit(`create-org:${ctx.user!.id}`, 5, 3600))) throw new HttpError(429, 'For mange forsøk. Prøv igjen senere.');
     try {
       await createOrganization(ctx.user!, { name: parsed.data.name, orgNumber: parsed.data.orgNumber }, ctx.ipHash);
     } catch (err) {
-      if (err instanceof OrgLimitError) return render(ctx, <OnboardingOrgPage errors={{ name: err.message }} values={values} />, { title: 'Kom i gang', status: 422 });
+      if (err instanceof OrgLimitError) return render(ctx, <OnboardingOrgPage errors={{ name: err.message }} values={values} carry={carry} />, { title: 'Kom i gang', status: 422 });
       throw err;
     }
-    return redirect('/app/onboarding');
+    const q = new URLSearchParams();
+    if (carry.industry) q.set('bransje', carry.industry);
+    if (carry.region) q.set('fylke', carry.region);
+    return redirect(`/app/onboarding${q.size ? `?${q}` : ''}`);
   });
 
   router.post(

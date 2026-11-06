@@ -168,7 +168,9 @@ export function BillingPage(p: BillingProps) {
             <h3 className="text-[16px] font-semibold text-navy-900">{PLANS.enterprise.name}</h3>
             {org!.plan === 'enterprise' ? <Badge tone="ok">Din plan</Badge> : null}
           </div>
-          <p className="mt-2 text-[20px] font-semibold text-navy-900">Pris etter avtale</p>
+          <p className="mt-2 text-[20px] font-semibold text-navy-900">
+            <span className="num">{formatInt(PLANS.enterprise.priceNok)}</span> <span className="text-[13px] font-normal text-muted">kr/mnd eks. mva. · kontakt oss for oppstart</span>
+          </p>
           <p className="mt-1 text-[13px] text-muted">{PLANS.enterprise.tagline}</p>
           <ul className="mt-4 flex-1 space-y-1.5 text-[14px]">
             {PLANS.enterprise.features.map((f) => (
