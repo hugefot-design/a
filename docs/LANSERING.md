@@ -35,7 +35,7 @@ Hver oppgave gjøres i leverandørens kontrollpanel. Nøkler og passord legges *
 - [ ] Protokoll over behandlingsaktiviteter (art. 30) og intern rutine for brudd på personopplysningssikkerheten
 - [ ] Kontaktadresse med databehandleravtale (Google Workspace eller e-post på eget domene) i stedet for gratis Gmail
 - [x] Google Search Console: nettstedet bekreftet og indeksering av forsiden forespurt 6. november 2026 (se DRIFT.md del 6c)
-- [ ] Google Search Console: send inn `sitemap.xml`
+- [x] Google Search Console: `sitemap.xml` sendt inn 6. november 2026
 - [ ] MVA-oppsett avklart med regnskapsfører (fast sats eller Stripe Tax)
 - [ ] Selskapsinformasjon i `COMPANY_*`
 
