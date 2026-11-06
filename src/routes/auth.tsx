@@ -54,7 +54,7 @@ export function registerAuthRoutes(router: Router): void {
     const email = str(form, 'email');
     // Bare en gyldig «neste»-lenke huskes; ellers bestemmes målet av hvem som logger inn (admin → /admin).
     const requested = ctx.query.get('neste');
-    const next = requested && safeRedirectPath(requested, '') ? requested : undefined;
+    const next = requested ? safeRedirectPath(requested, '') || undefined : undefined;
     const result = await authenticate(email, str(form, 'password'), ctx.ipHash);
     if (!result.ok) {
       const t = messages(ctx.locale);

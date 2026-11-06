@@ -153,10 +153,23 @@ export function homePath(user: { isPlatformAdmin: boolean } | null | undefined):
   return user?.isPlatformAdmin ? '/admin' : '/app';
 }
 
+/**
+ * Bare stier på dette nettstedet er lov som mål for omdirigering (f.eks. «neste» etter innlogging).
+ * Nettlesere fjerner tabulator og linjeskift fra adresser og leser «\\» som «/», så «/<tab>/ondsinnet.no»
+ * og «/\\ondsinnet.no» ville blitt et annet nettsted. Derfor: avvis kontrolltegn og omvendt skråstrek,
+ * tolk adressen slik nettleseren gjør, og godta den bare om den fortsatt peker hit.
+ */
 export function safeRedirectPath(value: string | null | undefined, fallback = '/app'): string {
-  if (!value) return fallback;
-  if (!value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) return fallback;
-  return value;
+  if (!value || !value.startsWith('/')) return fallback;
+  if (/[\u0000-\u001f\u007f\\]/.test(value)) return fallback;
+  const base = 'https://anbudradar.invalid';
+  try {
+    const url = new URL(value, base);
+    if (url.origin !== base) return fallback;
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return fallback;
+  }
 }
 
 export function wantsJson(ctx: RequestContext): boolean {
