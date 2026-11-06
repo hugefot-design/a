@@ -20,6 +20,8 @@ import { weeklyOverviewJsonSchema, weeklyOverviewZ } from '@/domain/ai/schemas';
 import { mockWeeklyOverview } from '@/domain/ai/mock';
 import { deleteTenderDocument, uploadTenderDocument } from '@/domain/documents/documents';
 import { tenderRequirementScan } from '@/domain/documents/requirements-service';
+import { confirmAwardWin, learningSummary, loadResults, parseResultForm, saveResultFields, tenderResultInfo } from '@/domain/tenders/results';
+import { ResultsPage } from '@/ui/pages/app/results';
 import { isoWeek, loadDashboard } from '@/domain/dashboard';
 import type { MatchBreakdown } from '@/domain/matching/engine';
 import { redirectWith } from '@/server/flash';
@@ -237,7 +239,8 @@ export function registerCoreAppRoutes(router: Router): void {
       // Dokumentene leses bare når det finnes lest tekst (de fleste anbud har ingen opplastede dokumenter).
       const withDocuments = org.entitlements.documentUpload && extras.documents.some((d) => d.textStatus === 'extracted');
       const requirements = await tenderRequirementScan(tx, tender, withDocuments);
-      return { tender, extras, labels, analysis, fit, usage, profit, requirements };
+      const result = await tenderResultInfo(tx, org.id, tender);
+      return { tender, extras, labels, analysis, fit, usage, profit, requirements, result };
     });
     if (!data) throw new HttpError(404, 'Fant ikke kunngjøringen.');
     return render(
@@ -258,6 +261,7 @@ export function registerCoreAppRoutes(router: Router): void {
         aiQuota={{ used: data.usage.analyses, limit: data.usage.analysesLimit }}
         profit={data.profit}
         requirements={data.requirements}
+        result={data.result}
       />,
       { title: data.tender.title },
     );
@@ -353,11 +357,34 @@ export function registerCoreAppRoutes(router: Router): void {
 
   router.post('/app/lagret/:id', 'org', async (ctx) => {
     const { org } = requireOrg(ctx);
+    const id = param(ctx, 'id');
     const form = await ctx.form();
-    const ok = await ctx.tenant((tx) =>
-      updateBookmark(tx, org.id, param(ctx, 'id'), { status: formStr(form, 'status', 20), note: formStr(form, 'note', 2000).trim() || null }),
-    );
-    return redirectWith(ctx, safeRedirectPath(formStr(form, 'back', 300), '/app/lagret'), ok ? 'success' : 'error', ok ? 'Lagret.' : 'Kunne ikke oppdatere.');
+    const back = safeRedirectPath(formStr(form, 'back', 300), '/app/lagret');
+    // Resultatfeltene sendes bare fra resultatskjemaet; statusskjemaet i listen skal ikke tømme dem.
+    const result = form.get('resultForm') === '1' ? parseResultForm(form) : null;
+    if (result && !result.ok) return redirectWith(ctx, back, 'error', result.error);
+    const ok = await ctx.tenant(async (tx) => {
+      const updated = await updateBookmark(tx, org.id, id, { status: formStr(form, 'status', 20), note: formStr(form, 'note', 2000).trim() || null });
+      if (updated && result?.ok) await saveResultFields(tx, org.id, id, result.data);
+      return updated;
+    });
+    return redirectWith(ctx, back, ok ? 'success' : 'error', ok ? 'Lagret.' : 'Kunne ikke oppdatere.');
+  });
+
+  router.post('/app/lagret/:id/vunnet', 'org', async (ctx) => {
+    const { org } = requireOrg(ctx);
+    const id = param(ctx, 'id');
+    const form = await ctx.form();
+    const back = safeRedirectPath(formStr(form, 'back', 300), '/app/resultater');
+    const result = await ctx.tenant((tx) => confirmAwardWin(tx, org.id, id));
+    return redirectWith(ctx, back, result.ok ? 'success' : 'error', result.ok ? 'Registrert som vunnet. Gratulerer!' : result.error);
+  });
+
+  // ----------------------------------------------------- Resultater og læring
+  router.get('/app/resultater', 'org', async (ctx) => {
+    const { org } = requireOrg(ctx);
+    const { rows } = await ctx.tenant((tx) => loadResults(tx, org.id));
+    return render(ctx, <ResultsPage learning={learningSummary(rows)} rows={rows} />, { title: 'Resultater' });
   });
 
   // ------------------------------------------------------------- Lagrede søk

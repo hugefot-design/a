@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   LuBell,
   LuBookmark,
+  LuTrophy,
   LuBuilding2,
   LuCheck,
   LuGlobe,
@@ -335,6 +336,7 @@ function AppNav() {
       tag: org?.entitlements.futureOpportunities ? undefined : 'Enterprise',
     },
     { href: '/app/lagret', label: 'Lagrede anbud', icon: LuBookmark },
+    { href: '/app/resultater', label: 'Resultater', icon: LuTrophy },
     { href: '/app/sok', label: 'Lagrede søk', icon: LuSave },
     { href: '/app/lonnsomhet', label: 'Lønnsomhet', icon: LuCalculator },
     { href: '/app/tilbud', label: 'Tilbudsarbeid', icon: LuClipboardList },

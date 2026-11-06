@@ -230,7 +230,7 @@ export async function changeStatus(
       case 'mark_submitted':
         if (!confirmed) return { ok: false as const, error: 'Bekreft at tilbudet er lastet opp hos oppdragsgiver.' };
         await tx`update bid_workspaces set status = 'submitted', submitted_by = ${userId}, submitted_at = now() where id = ${workspaceId}`;
-        await tx`update bookmarks set status = 'submitted' where org_id = ${org.id} and tender_id = (select tender_id from bid_workspaces where id = ${workspaceId})`;
+        await tx`update bookmarks set status = 'submitted', submitted_at = coalesce(submitted_at, now()) where org_id = ${org.id} and tender_id = (select tender_id from bid_workspaces where id = ${workspaceId}) and status not in ('won', 'lost')`;
         break;
       case 'archive':
         await tx`update bid_workspaces set status = 'archived' where id = ${workspaceId}`;

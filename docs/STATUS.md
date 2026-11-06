@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 6. november 2026 (sikkerhetsgjennomgang og krav- og avvisningssjekk – se [VEIKART.md](VEIKART.md)).
+Sist oppdatert 6. november 2026 (sikkerhetsgjennomgang, krav- og avvisningssjekk og tilbudsresultat – se [VEIKART.md](VEIKART.md)).
 
 ## Testresultater
 
@@ -9,8 +9,8 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 152 av 152 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 6.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 146 av 146 bestått – 6.11.2026 |
+| Enhetstester | 158 av 158 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 6.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 149 av 149 bestått – 6.11.2026 |
 | Ende-til-ende i nettleser | 4 av 4 bestått – 6.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -173,3 +173,27 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   390 px.
 - **IKKE VERIFISERT:** treffsikkerhet på ekte konkurransegrunnlag fra Doffin (bare eksempel-PDF og konstruerte tekster er
   testet). Ikke rullet ut.
+
+## Tilbudsresultat og læring (6. november 2026)
+
+- **Registrering:** på anbudssiden (Status for dere) registreres deres pris, vinner, vinnerens pris og hva som avgjorde
+  (pris, kvalitet, ikke kvalifisert, avvist, annet) når statusen er «Tilbud levert», «Vunnet» eller «Ikke vunnet».
+  Tidspunkt for levert og avgjort lagres. «Levert» i tilbudsarbeidet setter også tidspunktet. Migrering `0019`
+  (nye, valgfrie kolonner på lagrede anbud – ingen eksisterende data endres).
+- **Tildelingen:** når tildelingskunngjøringen nevner organisasjonens org.nr., vises «Tildelingen nevner dere som vinner»
+  og «Dere» i tildelingslisten, med en knapp for å registrere seieren. Ingenting settes automatisk, og «Ikke vunnet»
+  foreslås aldri ut fra kunngjøringen. Varsler om tildeling lenker rett til resultatfeltene.
+- **Resultater** (ny side i menyen, alle planer): levert, vunnet, ikke vunnet, venter, vinnerandel; ventende tilbud med
+  tildelingen når den er publisert; «Pris: dere mot vinneren» og «Kalkylen mot resultatet» (median avvik, med kilde for
+  hver vinnerpris); hva som avgjorde; hvem som vant når dere ikke vant; oppdragsgivere. På anbudssiden vises tidligere
+  resultater hos samme oppdragsgiver.
+- **Ærlige tall:** vinnerpris fra tildelingsbrevet (registrert av kunden) brukes først. Verdien i
+  tildelingskunngjøringen brukes bare ved én vinner, samme valuta og ikke rammeavtale (der er den ofte et anslag).
+  Samme vinner fra TED og Doffin telles én gang.
+- **Tester:** `tests/unit/results.test.ts` (tallformat, sammenslåing av tildelinger, vinnerpris-regler, statistikk,
+  selskapsnavn) og `tests/integration/results.test.ts` (registrering og validering, statusskjemaet i listen tømmer ikke
+  resultatet, «vi vant» bare med riktig org.nr., en annen organisasjon kan verken se, endre eller bekrefte, eksporten
+  har resultatene). Mutasjonssjekk: fjernet vern i begge tilfeller ga feilende test. Visuell kontroll 1280 og 390 px uten
+  JavaScript-feil eller horisontal rulling.
+- **IKKE VERIFISERT:** med ekte kunder og ekte tildelinger i produksjon. Org.nr.-treff krever at kunden har lagt inn
+  organisasjonsnummer. Ikke rullet ut.

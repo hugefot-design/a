@@ -73,8 +73,16 @@ export async function listBookmarks(tx: Tx, orgId: string, status?: string): Pro
 
 export async function updateBookmark(tx: Tx, orgId: string, bookmarkId: string, data: { status: string; note: string | null }): Promise<boolean> {
   if (!(data.status in BOOKMARK_STATUSES)) return false;
+  // Tidspunkter for læring: når tilbudet ble levert og når resultatet kom. Uttrykkene ser radens gamle verdier,
+  // så tidspunktet beholdes når statusen ikke endres. «Vunnet/Ikke vunnet» fra skjemaet er satt av bedriften selv.
+  const decided = data.status === 'won' || data.status === 'lost';
   const rows = await tx`
-    update bookmarks set status = ${data.status}, note = ${data.note}
+    update bookmarks set
+      status = ${data.status},
+      note = ${data.note},
+      submitted_at = ${data.status === 'submitted' ? tx`coalesce(submitted_at, now())` : tx`submitted_at`},
+      decided_at = ${decided ? tx`case when status = ${data.status} then coalesce(decided_at, now()) else now() end` : tx`null`},
+      outcome_source = ${decided ? tx`case when status = ${data.status} then coalesce(outcome_source, 'bruker') else 'bruker' end` : tx`null`}
     where id = ${bookmarkId} and org_id = ${orgId} returning id
   `;
   return rows.length > 0;

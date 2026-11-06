@@ -15,6 +15,7 @@ import {
   buttonVariants,
   DefinitionList,
   Field,
+  Input,
   Panel,
   PanelHeader,
   PostForm,
@@ -29,6 +30,7 @@ import { daysUntil, formatDate, formatDateTime, formatInt, formatMoney, relative
 import { TenderProfitTeaser } from './profit';
 import type { Recommendation } from '@/domain/profit/recommendation';
 import { REQUIREMENT_KINDS, REQUIREMENT_LABELS, sourceLabel, type RequirementHit, type RequirementKind, type RequirementScan } from '@/domain/documents/requirements';
+import { OUTCOME_REASONS, type TenderResultInfo } from '@/domain/tenders/results';
 
 export interface TenderPageProps {
   tender: TenderDetail;
@@ -36,7 +38,17 @@ export interface TenderPageProps {
   sources: TenderSourceRow[];
   updates: { id: string; changeType: string; summary: string; detectedAt: Date }[];
   awards: { id: string; supplierId: string | null; supplierName: string; lotTitle: string | null; awardedValue: number | null; currency: string | null; awardDate: Date | null }[];
-  bookmark: { id: string; status: string; note: string | null } | null;
+  bookmark: {
+    id: string;
+    status: string;
+    note: string | null;
+    ourPrice?: number | null;
+    winningPrice?: number | null;
+    winnerName?: string | null;
+    outcomeReason?: string | null;
+    outcomeSource?: string | null;
+    decidedAt?: Date | null;
+  } | null;
   match: { score: number; breakdown: MatchBreakdown; excluded: boolean; computedAt: Date } | null;
   documents: { id: string; title: string; pageCount: number | null; textStatus: string; textError: string | null; orgId: string | null; createdAt: Date; sizeBytes: number | null }[];
   workspace: { id: string; status: string } | null;
@@ -47,6 +59,8 @@ export interface TenderPageProps {
   profit?: { recommendation: Recommendation; marginPct: number | null; updatedAt: Date } | null;
   /** Krav- og avvisningssjekk (ordsøk, ingen AI). */
   requirements?: RequirementScan | null;
+  /** Tilbudsresultat: tildelingen mot org.nr., kalkylens målpris og historikk hos oppdragsgiveren. */
+  result?: TenderResultInfo | null;
 }
 
 const SOURCE_NAMES: Record<string, string> = { ted: 'TED', doffin: 'Doffin', manual: 'Manuell import', sample: 'Eksempeldata' };
@@ -257,6 +271,11 @@ export function TenderPage(p: TenderPageProps) {
                     <div>
                       <p className="font-semibold text-navy-900">
                         {ent.competitorIntel && a.supplierId ? <a href={`/app/konkurrenter/leverandor/${a.supplierId}`}>{a.supplierName}</a> : a.supplierName}
+                        {a.supplierId && p.result?.ourSupplierIds.includes(a.supplierId) ? (
+                          <Badge tone="ok" className="ml-2" title="Organisasjonsnummeret i tildelingen er deres">
+                            Dere
+                          </Badge>
+                        ) : null}
                       </p>
                       {a.lotTitle ? <p className="text-[13px] text-muted">{a.lotTitle}</p> : null}
                     </div>
@@ -307,27 +326,10 @@ export function TenderPage(p: TenderPageProps) {
           </Panel>
           <FitPanel tenderId={t.id} fit={p.fit} canAssess={p.canAssessFit} aiConfigured={aiConfigured} quota={p.aiQuota} />
           <TenderProfitTeaser tenderId={t.id} badge={p.profit ?? null} enabled={ent.profitCalculator} />
-          {p.bookmark ? (
+          {p.bookmark ? <StatusPanel tenderId={t.id} bookmark={p.bookmark} result={p.result ?? null} awards={p.awards} /> : null}
+          {!p.bookmark && p.result?.buyerHistory ? (
             <Panel>
-              <PanelHeader title="Status for dere" />
-              <PostForm action={`/app/lagret/${p.bookmark.id}`} className="space-y-3 p-5">
-                <input type="hidden" name="back" value={`/app/anbud/${t.id}`} />
-                <Field label="Status" htmlFor="bm-status">
-                  <Select id="bm-status" name="status" defaultValue={p.bookmark.status}>
-                    {Object.entries(BOOKMARK_STATUSES).map(([k, v]) => (
-                      <option key={k} value={k}>
-                        {v}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label="Notat til teamet" htmlFor="bm-note">
-                  <Textarea id="bm-note" name="note" rows={3} maxLength={2000} defaultValue={p.bookmark.note ?? ''} />
-                </Field>
-                <Button size="sm" variant="secondary" type="submit">
-                  Lagre
-                </Button>
-              </PostForm>
+              <BuyerHistory history={p.result.buyerHistory} />
             </Panel>
           ) : null}
           <details className="rounded-lg border border-line bg-white">
@@ -541,6 +543,134 @@ function LotsPanel({ tender }: { tender: TenderDetail }) {
           </li>
         ))}
       </ol>
+    </Panel>
+  );
+}
+
+const DECIDED_OR_DELIVERED = new Set(['submitted', 'won', 'lost']);
+const plainNumber = (n: number | null | undefined) => (n === null || n === undefined ? '' : new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 2 }).format(n));
+
+function BuyerHistory({ history }: { history: NonNullable<TenderResultInfo['buyerHistory']> }) {
+  const label: Record<string, string> = { won: 'Vunnet', lost: 'Ikke vunnet', submitted: 'Venter' };
+  return (
+    <div className="px-5 py-4">
+      <h3 className="text-[14px] font-semibold text-navy-900">Erfaring med oppdragsgiveren</h3>
+      <p className="mt-1 text-[13px] text-muted">
+        {formatInt(history.delivered)} {history.delivered === 1 ? 'tilbud' : 'tilbud'} levert tidligere: {formatInt(history.won)} vunnet,{' '}
+        {formatInt(history.lost)} ikke vunnet{history.pending ? `, ${formatInt(history.pending)} venter` : ''}.
+      </p>
+      <ul className="mt-2 space-y-1.5 text-[13px]">
+        {history.recent.map((h) => (
+          <li key={h.tenderId}>
+            <a href={`/app/anbud/${h.tenderId}`} className="line-clamp-1">
+              {h.title}
+            </a>
+            <span className="text-muted">
+              {' '}
+              – {label[h.status] ?? h.status}
+              {h.reason ? ` (${OUTCOME_REASONS[h.reason]})` : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <a href="/app/resultater" className="mt-2 inline-block text-[13px]">
+        Alle resultater
+      </a>
+    </div>
+  );
+}
+
+function StatusPanel({
+  tenderId,
+  bookmark,
+  result,
+  awards,
+}: {
+  tenderId: string;
+  bookmark: NonNullable<TenderPageProps['bookmark']>;
+  result: TenderResultInfo | null;
+  awards: TenderPageProps['awards'];
+}) {
+  const delivered = DECIDED_OR_DELIVERED.has(bookmark.status);
+  const back = `/app/anbud/${tenderId}#resultat`;
+  const others = awards.filter((a) => !(a.supplierId && result?.ourSupplierIds.includes(a.supplierId)));
+  const firstWinner = others[0]?.supplierName ?? '';
+  return (
+    <Panel>
+      <div id="resultat" className="scroll-mt-24" />
+      <PanelHeader title="Status for dere" />
+      {result?.awardMentionsUs && bookmark.status !== 'won' ? (
+        <div className="border-b border-line bg-ok-soft px-5 py-3 text-[13.5px]">
+          <p className="font-semibold text-ok">Tildelingen nevner dere som vinner</p>
+          <p className="mt-0.5 text-ink">Organisasjonsnummeret deres står i tildelingskunngjøringen.</p>
+          <PostForm action={`/app/lagret/${bookmark.id}/vunnet`} className="mt-2">
+            <input type="hidden" name="back" value={back} />
+            <Button size="sm">Registrer som vunnet</Button>
+          </PostForm>
+        </div>
+      ) : bookmark.status === 'submitted' && awards.length ? (
+        <p className="border-b border-line bg-marker-soft px-5 py-2.5 text-[13px] text-ink">
+          Tildelingen er publisert ({others.map((a) => a.supplierName).slice(0, 3).join(', ') || 'se under'}). Registrer resultatet – det gjør
+          statistikken deres bedre.
+        </p>
+      ) : null}
+      <PostForm action={`/app/lagret/${bookmark.id}`} className="space-y-3 p-5">
+        <input type="hidden" name="back" value={back} />
+        <Field label="Status" htmlFor="bm-status">
+          <Select id="bm-status" name="status" defaultValue={bookmark.status}>
+            {Object.entries(BOOKMARK_STATUSES).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        {delivered ? (
+          <fieldset className="space-y-3 rounded-xl border border-line px-3 pb-3 pt-1">
+            <legend className="px-1 text-[13px] font-semibold text-navy-900">Resultat</legend>
+            <input type="hidden" name="resultForm" value="1" />
+            <Field
+              label="Deres pris (eks. mva.)"
+              htmlFor="r-our"
+              hint={result?.calcTargetPrice ? `Målpris i kalkylen: ${formatMoney(result.calcTargetPrice, 'NOK', false)}` : 'Prisen dere leverte.'}
+            >
+              <Input id="r-our" name="ourPrice" inputMode="decimal" maxLength={40} defaultValue={plainNumber(bookmark.ourPrice)} />
+            </Field>
+            {bookmark.status !== 'won' ? (
+              <>
+                <Field label="Vinner" htmlFor="r-winner" hint={bookmark.status === 'submitted' ? 'Fylles ut når tildelingsbrevet kommer.' : undefined}>
+                  <Input id="r-winner" name="winnerName" maxLength={200} defaultValue={bookmark.winnerName ?? ''} placeholder={firstWinner} />
+                </Field>
+                <Field label="Vinnerens pris (eks. mva.)" htmlFor="r-winning" hint="Står ofte i tildelingsbrevet.">
+                  <Input id="r-winning" name="winningPrice" inputMode="decimal" maxLength={40} defaultValue={plainNumber(bookmark.winningPrice)} />
+                </Field>
+              </>
+            ) : null}
+            <Field label="Hva avgjorde?" htmlFor="r-reason">
+              <Select id="r-reason" name="reason" defaultValue={bookmark.outcomeReason ?? ''}>
+                <option value="">Ikke valgt</option>
+                {Object.entries(OUTCOME_REASONS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            {bookmark.outcomeSource === 'tildeling' ? <p className="text-[12px] text-muted">«Vunnet» er bekreftet av tildelingskunngjøringen.</p> : null}
+          </fieldset>
+        ) : null}
+        <Field label="Notat til teamet" htmlFor="bm-note">
+          <Textarea id="bm-note" name="note" rows={3} maxLength={2000} defaultValue={bookmark.note ?? ''} />
+        </Field>
+        <Button size="sm" variant="secondary" type="submit">
+          Lagre
+        </Button>
+      </PostForm>
+      {result?.buyerHistory ? (
+        <div className="border-t border-line">
+          <BuyerHistory history={result.buyerHistory} />
+        </div>
+      ) : null}
     </Panel>
   );
 }

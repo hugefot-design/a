@@ -249,7 +249,8 @@ export async function generateUpdateAlerts(ents: Map<string, Entitlements>, pref
           tenderId: u.tenderId,
           title: u.title,
           body: u.summary,
-          url: `/app/anbud/${u.tenderId}`,
+          // Tildeling: rett til «Status for dere», der resultatet registreres.
+          url: u.changeType === 'awarded' ? `/app/anbud/${u.tenderId}#resultat` : `/app/anbud/${u.tenderId}`,
           dedupeKey: `upd:${u.id}`,
         });
       }
