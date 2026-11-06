@@ -41,7 +41,7 @@ function UsageRow({ label, used, limit }: { label: string; used: number; limit: 
 }
 
 export function BillingPage(p: BillingProps) {
-  const { org } = useUi();
+  const { org, user } = useUi();
   const b = org!.billing;
   const canManage = org!.role === 'owner' || org!.role === 'admin';
   return (
@@ -54,9 +54,15 @@ export function BillingPage(p: BillingProps) {
       ) : null}
       {p.checkout === 'avbrutt' ? <Alert tone="info" className="mb-5">Betalingen ble avbrutt. Ingenting er trukket.</Alert> : null}
       {!p.stripeConfigured ? (
-        <Alert tone="warning" className="mb-5" title="Betaling er ikke satt opp ennå">
-          Stripe-nøkler mangler i konfigurasjonen. Planer kan ikke kjøpes før administrator har lagt dem inn (se README).
-        </Alert>
+        user?.isPlatformAdmin ? (
+          <Alert tone="warning" className="mb-5" title="Betaling er ikke satt opp ennå">
+            Stripe-nøkler mangler i konfigurasjonen. Planer kan ikke kjøpes før de er lagt inn (se docs/INTEGRASJONER.md).
+          </Alert>
+        ) : (
+          <Alert tone="info" className="mb-5" title="Betaling åpner snart">
+            Prøveperioden og gratisplanen virker som vanlig. Vil du bestille en plan nå, <a href="/kontakt">kontakt oss</a>.
+          </Alert>
+        )
       ) : p.stripeTestMode ? (
         <Alert tone="info" className="mb-5">
           Stripe kjører i testmodus. Bruk testkort 4242 4242 4242 4242 – ingen ekte penger trekkes.
@@ -134,7 +140,7 @@ export function BillingPage(p: BillingProps) {
                 {current ? <Badge tone="ok">Din plan</Badge> : null}
               </div>
               <p className="mt-2">
-                <span className="num font-serif text-[30px] font-semibold text-navy-900">{plan.priceNok}</span>
+                <span className="num text-[30px] font-[780] tracking-[-0.03em] text-night">{formatInt(plan.priceNok)}</span>
                 <span className="text-[14px] text-muted"> kr/mnd</span>
               </p>
               <p className="mt-1 text-[13px] text-muted">{plan.tagline}</p>
@@ -169,7 +175,7 @@ export function BillingPage(p: BillingProps) {
             {org!.plan === 'enterprise' ? <Badge tone="ok">Din plan</Badge> : null}
           </div>
           <p className="mt-2 text-[20px] font-semibold text-navy-900">
-            <span className="num">{formatInt(PLANS.enterprise.priceNok)}</span> <span className="text-[13px] font-normal text-muted">kr/mnd eks. mva. · kontakt oss for oppstart</span>
+            <span className="num">{formatInt(PLANS.enterprise.priceNok)}</span> <span className="text-[14px] font-normal text-muted">kr/mnd</span>
           </p>
           <p className="mt-1 text-[13px] text-muted">{PLANS.enterprise.tagline}</p>
           <ul className="mt-4 flex-1 space-y-1.5 text-[14px]">

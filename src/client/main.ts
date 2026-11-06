@@ -78,6 +78,13 @@ document.addEventListener('click', (event) => {
     }
     return;
   }
+  // Mørk bakgrunn bak mobilmenyen: et klikk lukker menyen.
+  const closer = (event.target as HTMLElement).closest<HTMLElement>('[data-close-details]');
+  if (closer) {
+    const parent = closer.closest('details');
+    if (parent) parent.open = false;
+    return;
+  }
   // Lukk åpne menyer når man klikker utenfor.
   document.querySelectorAll<HTMLDetailsElement>('details[open]').forEach((d) => {
     if (!d.contains(event.target as Node) && !d.dataset.keepOpen) d.open = false;

@@ -283,18 +283,19 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       href={item.href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group flex items-center gap-3 rounded-md px-3 py-2 text-[14px] font-semibold no-underline',
-        active ? 'bg-white/10 text-white' : 'text-navy-200 hover:bg-white/5 hover:text-white',
+        'group relative flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium no-underline transition-colors focus-visible:outline-white',
+        active ? 'bg-white/[0.08] text-white' : 'text-white/60 hover:bg-white/[0.05] hover:text-white',
       )}
     >
-      <Icon className={cn('size-[18px] shrink-0', active ? 'text-marker' : 'text-navy-300 group-hover:text-white')} aria-hidden />
+      {active ? <span className="absolute -left-3 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-signal" aria-hidden /> : null}
+      <Icon className={cn('size-[18px] shrink-0', active ? 'text-signal' : 'text-white/45 group-hover:text-white')} aria-hidden />
       <span className="flex-1">{item.label}</span>
       {item.badge ? (
-        <span className="num rounded-full bg-marker px-1.5 text-[11px] font-bold text-navy-900" aria-label={`${item.badge} uleste`}>
+        <span className="num rounded-full bg-signal px-1.5 text-[11px] font-bold text-night" aria-label={`${item.badge} uleste`}>
           {item.badge > 99 ? '99+' : item.badge}
         </span>
       ) : null}
-      {item.tag ? <span className="rounded border border-white/20 px-1 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-navy-200">{item.tag}</span> : null}
+      {item.tag ? <span className="rounded-full border border-signal/40 px-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-signal/90">{item.tag}</span> : null}
     </a>
   );
 }
@@ -349,7 +350,7 @@ function OrgSwitcher() {
     return (
       <div className="min-w-0 px-3">
         <p className="truncate text-[13px] font-semibold text-white">{org.name}</p>
-        <p className="text-[12px] text-navy-300">{org.billing.label}</p>
+        <p className="text-[12px] text-white/50">{org.billing.label}</p>
       </div>
     );
   }
@@ -363,7 +364,7 @@ function OrgSwitcher() {
         name="orgId"
         defaultValue={org.id}
         data-autosubmit
-        className="w-full rounded-md border border-white/20 bg-navy-800 px-2 py-1.5 text-[13px] font-semibold text-white"
+        className="w-full rounded-xl border border-white/15 bg-night-700 px-2.5 py-1.5 text-[13px] font-semibold text-white"
       >
         {org.memberships.map((m) => (
           <option key={m.orgId} value={m.orgId}>
@@ -376,14 +377,14 @@ function OrgSwitcher() {
           Bytt
         </Button>
       </noscript>
-      <p className="mt-1 text-[12px] text-navy-300">{org.billing.label}</p>
+      <p className="mt-1 text-[12px] text-white/50">{org.billing.label}</p>
     </PostForm>
   );
 }
 
 function Sidebar() {
   return (
-    <div className="flex h-full flex-col gap-6 bg-navy-900 px-3 py-5">
+    <div className="night flex h-full flex-col gap-6 px-3 py-5">
       <a href="/app" className="px-3 no-underline" aria-label="AnbudRadar – oversikt">
         <Logo inverse />
       </a>
@@ -444,23 +445,25 @@ function AccountBanners() {
 export function AppShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   const { user } = useUi();
   return (
-    <div className="min-h-screen bg-paper lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+    <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[256px_minmax(0,1fr)]">
       <a href="#innhold" className="sr-only-focusable absolute left-3 top-3 z-50 rounded bg-white px-3 py-2 text-navy-900">
         Hopp til innhold
       </a>
-      <div className="hidden bg-navy-900 lg:block">
+      <div className="hidden bg-night lg:block">
         <aside className="sticky top-0 h-screen overflow-y-auto">
           <Sidebar />
         </aside>
       </div>
       <div className="min-w-0">
-        <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur">
+        {/* Ingen backdrop-filter her: det ville gjort at mobilmenyen (position: fixed) bare ble like høy som toppen. */}
+        <header className="sticky top-0 z-20 border-b border-line bg-white">
           <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
             <details className="relative lg:hidden">
-              <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-md text-navy-900 hover:bg-navy-50" aria-label="Meny">
+              <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-full text-night hover:bg-night/5" aria-label="Meny">
                 <LuMenu className="size-5" />
               </summary>
-              <div className="fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] overflow-y-auto shadow-xl">
+              <div className="fixed inset-0 z-30 bg-night/50" data-close-details aria-hidden />
+              <div className="fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] overflow-y-auto shadow-2xl">
                 <Sidebar />
               </div>
             </details>
@@ -474,7 +477,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
                 name="nl"
                 type="search"
                 placeholder="Søk, f.eks. «renhold i Trøndelag over 1 million»"
-                className="h-9 w-full rounded-md border border-line bg-paper pl-9 pr-3 text-[14px] placeholder:text-faint focus:border-navy-600 focus:bg-white focus:outline-none"
+                className="h-10 w-full rounded-full border border-line bg-cream pl-9 pr-4 text-[14px] placeholder:text-faint focus:border-night focus:bg-white focus:outline-none focus:ring-4 focus:ring-signal/25"
               />
             </form>
             <div className="ml-auto flex items-center gap-2">
@@ -483,7 +486,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
                 <CsrfField />
                 <button
                   type="submit"
-                  className="flex size-9 items-center justify-center rounded-md text-muted hover:bg-navy-50 hover:text-navy-900"
+                  className="flex size-9 items-center justify-center rounded-full text-muted hover:bg-night/5 hover:text-night"
                   title="Logg ut"
                 >
                   <LuLogOut className="size-[18px]" aria-hidden />
@@ -522,14 +525,14 @@ const ADMIN_NAV = [
 export function AdminShell({ children }: { children: ReactNode }) {
   const { path } = useUi();
   return (
-    <div className="min-h-screen bg-paper">
-      <header className="border-b border-navy-800 bg-navy-900">
+    <div className="min-h-screen bg-cream">
+      <header className="night border-b border-white/10">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
           <a href="/admin" className="no-underline">
             <Logo inverse />
           </a>
-          <span className="rounded bg-marker px-1.5 text-[12px] font-bold text-navy-900">Admin</span>
-          <a href="/app" className="ml-auto text-[13px] font-semibold text-navy-100 no-underline hover:text-white">
+          <span className="rounded-full bg-signal px-2 py-0.5 text-[12px] font-bold text-night">Admin</span>
+          <a href="/app" className="ml-auto text-[13px] font-semibold text-white/70 no-underline hover:text-white">
             Til appen
           </a>
         </div>
@@ -543,8 +546,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'block rounded-md px-3 py-1.5 text-[13px] font-semibold no-underline',
-                      active ? 'bg-white/15 text-white' : 'text-navy-200 hover:text-white',
+                      'block rounded-full px-3.5 py-1.5 text-[13px] font-semibold no-underline',
+                      active ? 'bg-white/[0.12] text-white' : 'text-white/60 hover:text-white',
                     )}
                   >
                     {item.label}

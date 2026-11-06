@@ -14,21 +14,23 @@ export function cn(...inputs: ClassValue[]): string {
 // Knapper
 // ---------------------------------------------------------------------------
 export const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-semibold no-underline transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold no-underline transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2',
   {
     variants: {
       variant: {
-        primary: 'bg-navy-900 text-white hover:bg-navy-800',
-        secondary: 'border border-line-strong bg-white text-navy-900 hover:border-navy-300 hover:bg-navy-50',
-        ghost: 'text-navy-800 hover:bg-navy-50',
+        primary: 'bg-night text-white hover:bg-night-700',
+        /** Den gule knappen fra nettsiden – til de viktigste handlingene (oppgradere, starte). */
+        signal: 'bg-signal text-night shadow-[0_8px_24px_-12px_rgba(245,178,16,0.9)] hover:bg-[#ffd36b]',
+        secondary: 'border border-line-strong bg-white text-night hover:border-night',
+        ghost: 'text-night hover:bg-night/5',
         danger: 'border border-danger/30 bg-white text-danger hover:bg-danger-soft',
-        inverse: 'bg-white text-navy-900 hover:bg-navy-50',
-        link: 'px-0 py-0 text-navy-700 underline hover:text-navy-900',
+        inverse: 'bg-white text-night hover:bg-cream',
+        link: 'px-0 py-0 text-navy-700 underline hover:text-night',
       },
       size: {
-        sm: 'h-8 px-3 text-[13px]',
-        md: 'h-10 px-4 text-[14px]',
-        lg: 'h-12 px-5 text-[15px]',
+        sm: 'h-8 px-3.5 text-[13px]',
+        md: 'h-10 px-5 text-[14px]',
+        lg: 'h-12 px-6 text-[15px]',
       },
     },
     defaultVariants: { variant: 'primary', size: 'md' },
@@ -177,14 +179,14 @@ export function Checkbox({ label, hint, className, ...rest }: React.InputHTMLAtt
 // Struktur
 // ---------------------------------------------------------------------------
 export function Panel({ children, className, as: As = 'section' }: { children: ReactNode; className?: string; as?: 'section' | 'div' | 'article' }) {
-  return <As className={cn('rounded-lg border border-line bg-white', className)}>{children}</As>;
+  return <As className={cn('rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(6,14,27,0.04)]', className)}>{children}</As>;
 }
 
 export function PanelHeader({ title, action, description }: { title: ReactNode; action?: ReactNode; description?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
       <div>
-        <h2 className="text-[15px] font-semibold text-navy-900">{title}</h2>
+        <h2 className="text-[15.5px] font-[680] tracking-[-0.01em] text-night">{title}</h2>
         {description ? <p className="mt-0.5 text-[13px] text-muted">{description}</p> : null}
       </div>
       {action}
@@ -206,7 +208,7 @@ export function PageHeader({
   return (
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0 max-w-3xl">
-        <h1 className="font-serif text-[26px] font-semibold leading-tight tracking-[-0.01em] text-navy-900 sm:text-[30px]">{title}</h1>
+        <h1 className="text-[28px] font-[780] leading-[1.08] tracking-[-0.03em] text-night sm:text-[34px]">{title}</h1>
         {description ? <p className="mt-2 text-[15px] text-muted">{description}</p> : null}
         {children}
       </div>
@@ -395,11 +397,11 @@ export function Tabs({ items }: { items: { href: string; label: ReactNode; activ
               aria-current={item.active ? 'page' : undefined}
               className={cn(
                 'inline-flex items-center gap-2 border-b-2 px-3 pb-2.5 pt-1 text-[14px] font-semibold no-underline',
-                item.active ? 'border-navy-900 text-navy-900' : 'border-transparent text-muted hover:text-navy-900',
+                item.active ? 'border-night text-night' : 'border-transparent text-muted hover:text-night',
               )}
             >
               {item.label}
-              {item.count !== undefined ? <span className="num rounded-full bg-navy-50 px-1.5 text-[12px] text-navy-800">{item.count}</span> : null}
+              {item.count !== undefined ? <span className={cn('num rounded-full px-1.5 text-[12px]', item.active ? 'bg-signal text-night' : 'bg-night/5 text-navy-800')}>{item.count}</span> : null}
             </a>
           </li>
         ))}
@@ -410,16 +412,16 @@ export function Tabs({ items }: { items: { href: string; label: ReactNode; activ
 
 /** Logo: radarbue som treffer en markert prikk. Egendesignet, ikke basert på andre merker. */
 export function Logo({ inverse = false, className }: { inverse?: boolean; className?: string }) {
-  const stroke = inverse ? '#ffffff' : '#0f2340';
+  const stroke = inverse ? '#ffffff' : '#060e1b';
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
       <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
         <path d="M5 27 A22 22 0 0 1 27 5" fill="none" stroke={stroke} strokeWidth="2.6" strokeLinecap="round" />
         <path d="M11 27 A16 16 0 0 1 27 11" fill="none" stroke={stroke} strokeWidth="2.6" strokeLinecap="round" opacity="0.55" />
         <path d="M17 27 A10 10 0 0 1 27 17" fill="none" stroke={stroke} strokeWidth="2.6" strokeLinecap="round" opacity="0.3" />
-        <circle cx="25.5" cy="25.5" r="3.6" fill="#ffe066" stroke={stroke} strokeWidth="1.4" />
+        <circle cx="25.5" cy="25.5" r="3.6" fill="#ffc845" stroke={stroke} strokeWidth="1.4" />
       </svg>
-      <span className={cn('text-[17px] font-bold tracking-[-0.01em]', inverse ? 'text-white' : 'text-navy-900')}>AnbudRadar</span>
+      <span className={cn('text-[17px] font-bold tracking-[-0.01em]', inverse ? 'text-white' : 'text-night')}>AnbudRadar</span>
     </span>
   );
 }

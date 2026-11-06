@@ -1,3 +1,4 @@
+import { displayBuyer } from '@/domain/tenders/market';
 import type { ReactNode } from 'react';
 import { LuBookmark, LuBookmarkCheck, LuBuilding2, LuCircleAlert, LuCircleCheck, LuCircleX, LuMapPin } from 'react-icons/lu';
 import { INDUSTRY_BY_ID, REGION_BY_CODE, STATUS_LABELS } from '@/domain/reference';
@@ -34,9 +35,20 @@ export function BookmarkButton({ tenderId, bookmarked, compact = false }: { tend
   );
 }
 
+/**
+ * Stedet i listene. Et anbud kan gjelde mange fylker; da står «Oslo + 12 fylker» (med alle i
+ * verktøytipset), så det er tydelig hvorfor anbudet dukker opp når man filtrerer på et annet fylke.
+ */
+export function placeLabel(place: string | null, regions: string[]): { label: string | null; all: string | null } {
+  const names = regions.map((r) => REGION_BY_CODE.get(r)?.name).filter((n): n is string => Boolean(n));
+  const nicePlace = place ? displayBuyer(place) : null;
+  if (names.length >= 3) return { label: `${names[0]} + ${names.length - 1} fylker`, all: names.join(', ') };
+  if (names.length === 2) return { label: names.join(', '), all: null };
+  return { label: nicePlace ?? names[0] ?? null, all: null };
+}
+
 export function TenderMeta({ buyer, place, regions }: { buyer: string | null; place: string | null; regions: string[] }) {
-  const regionNames = regions.map((r) => REGION_BY_CODE.get(r)?.name).filter(Boolean);
-  const location = place ?? (regionNames.length ? regionNames.join(', ') : null);
+  const { label: location, all } = placeLabel(place, regions);
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
       {buyer ? (
@@ -46,7 +58,7 @@ export function TenderMeta({ buyer, place, regions }: { buyer: string | null; pl
         </span>
       ) : null}
       {location ? (
-        <span className="inline-flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1.5" title={all ?? undefined}>
           <LuMapPin className="size-3.5 shrink-0" aria-hidden />
           {location}
         </span>
