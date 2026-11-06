@@ -23,7 +23,8 @@ export interface Rendered {
   text: string;
 }
 
-const C = { navy: '#0f2340', text: '#172033', muted: '#5a677d', line: '#dce2ea', bg: '#f5f7fa', accent: '#1d4ed8', warn: '#9a3412', warnBg: '#fff7ed' };
+/** Samme farger som nettsiden: natt-blått, radar-gult og varm bakgrunn. «accent» er en mørk gul som er lesbar på hvitt. */
+const C = { navy: '#060e1b', text: '#172033', muted: '#5a677d', line: '#e8e3d8', bg: '#fbf8f1', accent: '#9a6400', signal: '#ffc845', warn: '#9a3412', warnBg: '#fff7ed' };
 
 function senderLine(): string {
   const parts = [env.COMPANY_LEGAL_NAME, env.COMPANY_ORG_NUMBER && !env.COMPANY_ORG_NUMBER.startsWith('[') ? `org.nr. ${env.COMPANY_ORG_NUMBER}` : null, env.COMPANY_ADDRESS]
@@ -47,12 +48,12 @@ function layout(heading: string, bodyHtml: string, opts: LayoutOptions = {}): st
 <body style="margin:0;padding:0;background:${C.bg};font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${C.text};-webkit-text-size-adjust:100%">
 ${opts.preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(opts.preheader)}</div>` : ''}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg};padding:24px 12px"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid ${C.line};border-radius:10px">
-<tr><td style="padding:20px 28px;border-bottom:1px solid ${C.line}">
-  <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${C.accent};margin-right:8px;vertical-align:middle"></span><span style="font-weight:700;font-size:16px;color:${C.navy};vertical-align:middle">AnbudRadar</span>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid ${C.line};border-radius:16px;overflow:hidden">
+<tr><td style="padding:18px 28px;background:${C.navy};border-radius:16px 16px 0 0">
+  <img src="${esc(absoluteUrl('/icon-192.png'))}" width="28" height="28" alt="" style="display:inline-block;vertical-align:middle;border:0;margin-right:10px;border-radius:6px"><span style="font-weight:700;font-size:17px;color:#ffffff;vertical-align:middle;letter-spacing:-.01em">AnbudRadar</span>
 </td></tr>
-<tr><td style="padding:28px">
-<h1 style="font-size:21px;line-height:1.3;margin:0 0 16px;color:${C.navy}">${esc(heading)}</h1>
+<tr><td style="padding:30px 28px 28px">
+<h1 style="font-size:23px;line-height:1.25;margin:0 0 16px;color:${C.navy};letter-spacing:-.02em">${esc(heading)}</h1>
 <div style="font-size:15px;line-height:1.6">${bodyHtml}</div>
 </td></tr>
 <tr><td style="padding:18px 28px;border-top:1px solid ${C.line};font-size:12px;line-height:1.5;color:${C.muted}">${footer}${unsubscribe}<br>${esc(senderLine())}</td></tr>
@@ -60,8 +61,8 @@ ${opts.preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacit
 }
 
 function button(href: string, label: string): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0"><tr><td style="border-radius:6px;background:${C.navy}">
-<a href="${esc(href)}" style="display:inline-block;padding:12px 20px;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px">${esc(label)}</a></td></tr></table>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0"><tr><td style="border-radius:999px;background:${C.signal}">
+<a href="${esc(href)}" style="display:inline-block;padding:13px 24px;color:${C.navy};text-decoration:none;font-weight:700;font-size:15px;border-radius:999px">${esc(label)}</a></td></tr></table>`;
 }
 
 function note(text: string): string {
@@ -139,7 +140,7 @@ export function digestTemplate(heading: string, intro: string, items: DigestItem
   const list = items
     .map(
       (i) =>
-        `<tr><td style="padding:14px 0;border-bottom:1px solid #edf0f4">
+        `<tr><td style="padding:14px 0;border-bottom:1px solid ${C.line}">
           ${i.tag ? `<div style="font-size:12px;font-weight:600;color:${C.accent};text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">${esc(i.tag)}</div>` : ''}
           ${i.url ? `<a href="${esc(i.url)}" style="color:${C.navy};font-weight:600;text-decoration:none;font-size:15px">${esc(i.title)}</a>` : `<strong>${esc(i.title)}</strong>`}
           ${i.body ? `<div style="font-size:13px;color:${C.muted};margin-top:4px">${esc(i.body)}</div>` : ''}
