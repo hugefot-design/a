@@ -187,6 +187,10 @@ selv at det kan ta fra noen dager til noen uker, og at ikonet ikke er garantert.
 
 (Alternativ: eiendomstypen **Domene** med en `TXT`-post for `@` hos Namecheap, slik e-postpostene i del 0 ble lagt inn.)
 
+**Status 6. november 2026:** `https://anbudradar.com` er bekreftet i Search Console med metoden **HTML-fil**
+(filen `google89c7bd88….html` serveres av `src/server/static.ts`). **Ikke fjern den** – da mister eieren
+bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
+
 ## 7. Utrulling og tilbakerulling
 
 - **Migreringer er bare fremover og kjøres før ny kode tar trafikk** (`preDeployCommand`). Migreringene 0006–0010 legger til kolonner, tabeller, indekser og tilgangsregler, retter referansedata (NUTS-koder for fylker og frister på eksisterende kunngjøringer) og strammer inn rettighetene til webapp-rollen. Ingen tabeller eller kolonner slettes, så forrige versjon av koden på denne grenen fungerer mot det nye skjemaet. Å gå helt tilbake til den opprinnelige koden fra zip-filen etter 0007 er ikke støttet – tilgangsmodellen er strengere nå.
