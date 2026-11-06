@@ -4,21 +4,46 @@
  * - Hemmeligheten lagres kryptert (encryptSecret) og endres bare av eier-rollen (systemSql).
  * - Oppsett: en ventende hemmelighet vises som QR-kode og aktiveres først når en gyldig kode er tastet.
  * - Innlogging: etter riktig passord lages en kortvarig utfordring (10 min, maks 5 forsøk, engangs).
- *   Først når koden er riktig, opprettes økten. Samme kode kan ikke brukes to ganger (siste steg lagres).
+ *   Først når koden (eller en passkey, se passkeys.ts) er riktig, opprettes økten. Samme kode kan ikke
+ *   brukes to ganger (siste steg lagres).
  * - Reservekoder: 10 engangskoder, lagret som HMAC. Vises bare én gang.
+ * - Feil koder telles per bruker på tvers av innlogginger: 10 per 15 min eller 30 per døgn gir pause
+ *   (passkey virker fortsatt), og brukeren får et varsel på e-post.
+ * - Hver økt husker når totrinn sist ble bekreftet. Admin krever under 12 timer, viktige endringer
+ *   under 15 minutter (se /konto/bekreft).
  */
 import QRCode from 'qrcode';
 import { audit } from '@/lib/audit';
 import { systemSql } from '@/lib/db';
 import { decryptSecret, encryptSecret, hmacHex, randomToken, sha256Hex, verifyPassword } from '@/lib/crypto';
+import { hitRateLimit, rateLimitCount } from '@/lib/rate-limit';
 import { base32Encode, generateTotpSecret, otpauthUri, verifyTotp } from '@/lib/totp';
 import { randomBytes } from 'node:crypto';
+import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/server';
+import { authenticationOptions, removeAllPasskeys, verifyPasskey, type Binding } from './passkeys';
+import { notifySecurityEvent } from './security';
 
 export const CHALLENGE_TTL_MINUTES = 10;
 export const MAX_CODE_ATTEMPTS = 5;
 export const RECOVERY_CODE_COUNT = 10;
 /** En ventende hemmelighet gjenbrukes en stund, så QR-koden ikke endrer seg om siden lastes på nytt. */
 const PENDING_REUSE_MINUTES = 30;
+
+/** Admin-panelet ber om ny bekreftelse når det er mer enn 12 timer siden sist. */
+export const ADMIN_REVERIFY_MS = 12 * 60 * 60_000;
+/** Viktige endringer (tilganger, planer, datakilder, import, passkeys) krever bekreftelse de siste 15 minuttene. */
+export const SENSITIVE_REVERIFY_MS = 15 * 60_000;
+/** Feil koder per bruker før koden settes på pause. */
+export const CODE_FAILURES_PER_15_MIN = 10;
+export const CODE_FAILURES_PER_DAY = 30;
+
+/** Kode fra appen / reservekode, eller svaret fra en passkey (JSON fra nettleseren). */
+export type SecondFactorInput = { code: string } | { passkey: string };
+export type SecondFactorMethod = 'totp' | 'recovery' | 'passkey';
+export interface RequestInfo {
+  ipHash?: string;
+  userAgent?: string;
+}
 
 type Row = Record<string, unknown>;
 const first = <T>(rows: unknown): T | undefined => (rows as T[])[0];
@@ -88,7 +113,7 @@ export async function beginSetup(userId: string, account: string): Promise<{ sec
 export async function confirmSetup(
   userId: string,
   code: string,
-  ctx: { keepSessionId: string | null; ipHash?: string },
+  ctx: { keepSessionId: string | null } & RequestInfo,
 ): Promise<{ ok: true; recoveryCodes: string[] } | { ok: false; error: string }> {
   const sql = systemSql();
   const row = first<{ totpPendingEnc: string | null }>(await sql`select totp_pending_enc from users where id = ${userId}`);
@@ -102,10 +127,13 @@ export async function confirmSetup(
     where id = ${userId}
   `;
   const recoveryCodes = await storeRecoveryCodes(userId);
-  // Andre innlogginger (laget uten totrinn) logges ut.
-  if (ctx.keepSessionId) await sql`delete from sessions where user_id = ${userId} and id <> ${ctx.keepSessionId}`;
-  else await sql`delete from sessions where user_id = ${userId}`;
+  // Andre innlogginger (laget uten totrinn) logges ut. Denne økten har nettopp bevist koden.
+  if (ctx.keepSessionId) {
+    await sql`delete from sessions where user_id = ${userId} and id <> ${ctx.keepSessionId}`;
+    await markSessionVerified(ctx.keepSessionId);
+  } else await sql`delete from sessions where user_id = ${userId}`;
   await audit({ action: 'auth.mfa_enabled', actorUserId: userId, targetType: 'user', targetId: userId, ipHash: ctx.ipHash });
+  await notifySecurityEvent(userId, 'mfa_enabled', { userAgent: ctx.userAgent });
   return { ok: true, recoveryCodes };
 }
 
@@ -137,26 +165,67 @@ async function checkSecondFactor(userId: string, code: string): Promise<'totp' |
   return used.length ? 'recovery' : null;
 }
 
-export async function disableMfa(userId: string, password: string, code: string, ipHash?: string): Promise<{ ok: boolean; error?: string }> {
+// ---------------------------------------------------------------------------
+// Feil koder per bruker
+// ---------------------------------------------------------------------------
+const failKeys = (userId: string) => [`mfa-fail:15m:${userId}`, `mfa-fail:24h:${userId}`] as const;
+
+/** For mange feil koder nylig: koden sjekkes ikke (passkey virker fortsatt). */
+export async function codesPaused(userId: string): Promise<boolean> {
+  const [k15, k24] = failKeys(userId);
+  return (await rateLimitCount(k15, 15 * 60)) >= CODE_FAILURES_PER_15_MIN || (await rateLimitCount(k24, 86_400)) >= CODE_FAILURES_PER_DAY;
+}
+
+async function recordCodeFailure(userId: string, info: RequestInfo): Promise<void> {
+  const [k15, k24] = failKeys(userId);
+  const recent = await hitRateLimit(k15, 15 * 60);
+  await hitRateLimit(k24, 86_400);
+  // Varsle én gang når grensen nås: noen kan kjenne passordet.
+  if (recent === CODE_FAILURES_PER_15_MIN) await notifySecurityEvent(userId, 'mfa_failures', { userAgent: info.userAgent });
+}
+
+/** Kode eller reservekode, med pause etter for mange feil. */
+async function verifyCode(userId: string, code: string, info: RequestInfo): Promise<'totp' | 'recovery' | 'paused' | null> {
+  if (await codesPaused(userId)) return 'paused';
+  const factor = await checkSecondFactor(userId, code);
+  if (!factor) await recordCodeFailure(userId, info);
+  return factor;
+}
+
+async function verifySecondFactor(userId: string, input: SecondFactorInput, binding: Binding, info: RequestInfo): Promise<SecondFactorMethod | 'paused' | null> {
+  if ('passkey' in input) return (await verifyPasskey(userId, binding, input.passkey)) ? 'passkey' : null;
+  return verifyCode(userId, input.code, info);
+}
+
+export async function disableMfa(userId: string, password: string, code: string, info: RequestInfo = {}): Promise<{ ok: boolean; error?: string }> {
   const sql = systemSql();
   const row = first<{ passwordHash: string; isPlatformAdmin: boolean }>(await sql`select password_hash, is_platform_admin from users where id = ${userId}`);
   if (!row) return { ok: false, error: 'Fant ikke brukeren.' };
   if (row.isPlatformAdmin) return { ok: false, error: 'Administratorer må ha totrinnsinnlogging.' };
   if (!(await verifyPassword(password, row.passwordHash))) return { ok: false, error: 'Feil passord.' };
-  if (!(await checkSecondFactor(userId, code))) return { ok: false, error: 'Koden stemmer ikke.' };
+  const factor = await verifyCode(userId, code, info);
+  if (factor === 'paused') return { ok: false, error: 'For mange feil koder. Vent 15 minutter og prøv igjen.' };
+  if (!factor) return { ok: false, error: 'Koden stemmer ikke.' };
   await sql`
     update users set totp_secret_enc = null, totp_enabled_at = null, totp_last_step = null, totp_pending_enc = null, totp_pending_at = null
     where id = ${userId}
   `;
   await sql`delete from user_recovery_codes where user_id = ${userId}`;
-  await audit({ action: 'auth.mfa_disabled', actorUserId: userId, targetType: 'user', targetId: userId, ipHash });
+  await removeAllPasskeys(userId);
+  await sql`update sessions set mfa_verified_at = null where user_id = ${userId}`;
+  await audit({ action: 'auth.mfa_disabled', actorUserId: userId, targetType: 'user', targetId: userId, ipHash: info.ipHash });
+  await notifySecurityEvent(userId, 'mfa_disabled', { userAgent: info.userAgent });
   return { ok: true };
 }
 
-export async function regenerateRecoveryCodes(userId: string, code: string, ipHash?: string): Promise<{ ok: true; recoveryCodes: string[] } | { ok: false; error: string }> {
-  if ((await checkSecondFactor(userId, code)) !== 'totp') return { ok: false, error: 'Skriv inn en kode fra appen (ikke en reservekode).' };
+export async function regenerateRecoveryCodes(userId: string, code: string, info: RequestInfo = {}): Promise<{ ok: true; recoveryCodes: string[] } | { ok: false; error: string }> {
+  // Bare koder fra appen: en reservekode her ville blitt brukt opp uten grunn.
+  if (!/^\d{6}$/.test(code.replace(/\s/g, ''))) return { ok: false, error: 'Skriv inn den sekssifrede koden fra appen (ikke en reservekode).' };
+  const factor = await verifyCode(userId, code, info);
+  if (factor === 'paused') return { ok: false, error: 'For mange feil koder. Vent 15 minutter og prøv igjen.' };
+  if (factor !== 'totp') return { ok: false, error: 'Koden stemmer ikke. Prøv den nyeste koden i appen.' };
   const recoveryCodes = await storeRecoveryCodes(userId);
-  await audit({ action: 'auth.mfa_recovery_regenerated', actorUserId: userId, targetType: 'user', targetId: userId, ipHash });
+  await audit({ action: 'auth.mfa_recovery_regenerated', actorUserId: userId, targetType: 'user', targetId: userId, ipHash: info.ipHash });
   return { ok: true, recoveryCodes };
 }
 
@@ -174,25 +243,34 @@ export async function createLoginChallenge(userId: string, nextPath: string | nu
   return token;
 }
 
-export type ChallengeResult =
-  | { ok: true; userId: string; nextPath: string | null; usedRecovery: boolean }
-  | { ok: false; reason: 'expired' | 'invalid' | 'too_many'; attemptsLeft?: number };
+async function findChallenge(token: string): Promise<{ id: string; userId: string; nextPath: string | null; attempts: number } | undefined> {
+  if (!token || token.length > 100) return undefined;
+  return first(await systemSql()`select id, user_id, next_path, attempts from login_challenges where token_hash = ${sha256Hex(token)} and expires_at > now()`);
+}
 
-export async function verifyLoginChallenge(token: string, code: string, ipHash?: string): Promise<ChallengeResult> {
-  if (!token || token.length > 100) return { ok: false, reason: 'expired' };
-  const sql = systemSql();
-  const ch = first<{ id: string; userId: string; nextPath: string | null; attempts: number }>(
-    await sql`select id, user_id, next_path, attempts from login_challenges where token_hash = ${sha256Hex(token)} and expires_at > now()`,
-  );
+/** Valg for passkey på kodesiden, eller null om brukeren ikke har passkeys (eller utfordringen er ugyldig). */
+export async function loginPasskeyOptions(token: string): Promise<PublicKeyCredentialRequestOptionsJSON | null> {
+  const ch = await findChallenge(token);
+  return ch ? authenticationOptions(ch.userId, { loginChallengeId: ch.id }) : null;
+}
+
+export type ChallengeResult =
+  | { ok: true; userId: string; nextPath: string | null; method: SecondFactorMethod }
+  | { ok: false; reason: 'expired' | 'invalid' | 'too_many' | 'paused'; attemptsLeft?: number };
+
+export async function verifyLoginChallenge(token: string, input: SecondFactorInput, info: RequestInfo = {}): Promise<ChallengeResult> {
+  const ch = await findChallenge(token);
   if (!ch) return { ok: false, reason: 'expired' };
+  const sql = systemSql();
   if (ch.attempts >= MAX_CODE_ATTEMPTS) {
     await sql`delete from login_challenges where id = ${ch.id}`;
     return { ok: false, reason: 'too_many' };
   }
-  const factor = await checkSecondFactor(ch.userId, code);
-  if (!factor) {
+  const method = await verifySecondFactor(ch.userId, input, { loginChallengeId: ch.id }, info);
+  if (method === 'paused') return { ok: false, reason: 'paused' };
+  if (!method) {
     const [row] = (await sql`update login_challenges set attempts = attempts + 1 where id = ${ch.id} returning attempts`) as unknown as { attempts: number }[];
-    await audit({ action: 'auth.mfa_failed', actorUserId: ch.userId, targetType: 'user', targetId: ch.userId, ipHash });
+    await audit({ action: 'auth.mfa_failed', actorUserId: ch.userId, targetType: 'user', targetId: ch.userId, ipHash: info.ipHash, metadata: { passkey: 'passkey' in input } });
     const left = MAX_CODE_ATTEMPTS - (row?.attempts ?? MAX_CODE_ATTEMPTS);
     if (left <= 0) {
       await sql`delete from login_challenges where id = ${ch.id}`;
@@ -202,13 +280,56 @@ export async function verifyLoginChallenge(token: string, code: string, ipHash?:
   }
   await sql`delete from login_challenges where id = ${ch.id}`;
   await audit({
-    action: factor === 'recovery' ? 'auth.mfa_recovery_used' : 'auth.mfa_verified',
+    action: method === 'recovery' ? 'auth.mfa_recovery_used' : 'auth.mfa_verified',
     actorUserId: ch.userId,
     targetType: 'user',
     targetId: ch.userId,
-    ipHash,
+    ipHash: info.ipHash,
+    metadata: { method },
   });
-  return { ok: true, userId: ch.userId, nextPath: ch.nextPath, usedRecovery: factor === 'recovery' };
+  return { ok: true, userId: ch.userId, nextPath: ch.nextPath, method };
+}
+
+// ---------------------------------------------------------------------------
+// Ny bekreftelse i en økt (admin hver 12. time, viktige endringer innen 15 minutter)
+// ---------------------------------------------------------------------------
+export function verifiedWithin(verifiedAt: Date | null | undefined, maxAgeMs: number, now = Date.now()): boolean {
+  if (!verifiedAt) return false;
+  const age = now - verifiedAt.getTime();
+  return age >= -60_000 && age <= maxAgeMs;
+}
+
+export async function markSessionVerified(sessionId: string): Promise<void> {
+  await systemSql()`update sessions set mfa_verified_at = now() where id = ${sessionId}`;
+}
+
+/** Valg for passkey på bekreftelsessiden, eller null om brukeren ikke har passkeys. */
+export async function stepUpPasskeyOptions(userId: string, sessionId: string): Promise<PublicKeyCredentialRequestOptionsJSON | null> {
+  return authenticationOptions(userId, { sessionId });
+}
+
+export async function verifyStepUp(
+  userId: string,
+  sessionId: string,
+  input: SecondFactorInput,
+  info: RequestInfo = {},
+): Promise<{ ok: true; method: SecondFactorMethod } | { ok: false; reason: 'invalid' | 'paused' }> {
+  const method = await verifySecondFactor(userId, input, { sessionId }, info);
+  if (method === 'paused') return { ok: false, reason: 'paused' };
+  if (!method) {
+    await audit({ action: 'auth.mfa_failed', actorUserId: userId, targetType: 'user', targetId: userId, ipHash: info.ipHash, metadata: { stepUp: true, passkey: 'passkey' in input } });
+    return { ok: false, reason: 'invalid' };
+  }
+  await markSessionVerified(sessionId);
+  await audit({
+    action: method === 'recovery' ? 'auth.mfa_recovery_used' : 'auth.mfa_verified',
+    actorUserId: userId,
+    targetType: 'user',
+    targetId: userId,
+    ipHash: info.ipHash,
+    metadata: { stepUp: true, method },
+  });
+  return { ok: true, method };
 }
 
 /** Har brukeren slått på totrinnsinnlogging? (Brukes i innloggingen før økten lages.) */

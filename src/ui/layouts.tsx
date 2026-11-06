@@ -17,6 +17,7 @@ import {
   LuSearch,
   LuSettings,
   LuShield,
+  LuShieldCheck,
   LuTelescope,
   LuUsers,
 } from 'react-icons/lu';
@@ -219,8 +220,17 @@ function PublicFooter() {
 // ---------------------------------------------------------------------------
 // Innlogging / registrering
 // ---------------------------------------------------------------------------
-export function AuthLayout({ children, title, intro }: { children: ReactNode; title: string; intro?: ReactNode }) {
+/** Innhold i den mørke kolonnen ved siden av skjemaet. Standard er salgsteksten; sikkerhetssidene har sin egen. */
+export interface AuthSide {
+  title: string;
+  points: readonly string[];
+  /** Skjold over tittelen (sikkerhetssidene). */
+  secure?: boolean;
+}
+
+export function AuthLayout({ children, title, intro, side, eyebrow }: { children: ReactNode; title: string; intro?: ReactNode; side?: AuthSide; eyebrow?: ReactNode }) {
   const { m, lp, path } = useUi();
+  const panel = side ?? m.auth.side;
   return (
     <div className="flex min-h-screen bg-white">
       <div className="flex min-w-0 flex-1 flex-col">
@@ -233,6 +243,7 @@ export function AuthLayout({ children, title, intro }: { children: ReactNode; ti
         </header>
         <main id="innhold" className="flex flex-1 items-start justify-center px-5 pb-16 pt-4 sm:px-10 sm:pt-10 lg:items-center lg:pt-0">
           <div className="w-full max-w-[27rem]">
+            {eyebrow ? <div className="mb-4">{eyebrow}</div> : null}
             <h1 className="text-[32px] font-[780] leading-[1.08] tracking-[-0.03em] text-night sm:text-[36px]">{title}</h1>
             {intro ? <div className="mt-3 text-[15px] leading-relaxed text-muted">{intro}</div> : null}
             <div className="mt-8">
@@ -246,11 +257,16 @@ export function AuthLayout({ children, title, intro }: { children: ReactNode; ti
         <div className="dot-grid absolute inset-0 opacity-50" aria-hidden />
         <RadarDecor className="absolute -right-40 top-1/2 w-[560px] -translate-y-1/2 opacity-80" />
         <div className="relative max-w-md px-12 xl:px-16">
-          <p className="text-[34px] font-[780] leading-[1.05] tracking-[-0.035em] text-white xl:text-[40px]">{m.auth.side.title}</p>
+          {side?.secure ? (
+            <span className="mb-8 flex size-14 items-center justify-center rounded-2xl bg-signal/15 text-signal ring-1 ring-signal/30" aria-hidden>
+              <LuShieldCheck className="size-7" />
+            </span>
+          ) : null}
+          <p className="text-[34px] font-[780] leading-[1.05] tracking-[-0.035em] text-white xl:text-[40px]">{panel.title}</p>
           <ul className="mt-8 space-y-3.5">
-            {m.auth.side.points.map((x) => (
-              <li key={x} className="flex items-center gap-3 text-[16px] text-white/85">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-signal/15 text-signal">
+            {panel.points.map((x) => (
+              <li key={x} className="flex items-start gap-3 text-[16px] leading-snug text-white/85">
+                <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-signal/15 text-signal">
                   <LuCheck className="size-3.5" aria-hidden strokeWidth={3} />
                 </span>
                 {x}
@@ -532,9 +548,21 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <Logo inverse />
           </a>
           <span className="rounded-full bg-signal px-2 py-0.5 text-[12px] font-bold text-night">Admin</span>
-          <a href="/app" className="ml-auto text-[13px] font-semibold text-white/70 no-underline hover:text-white">
-            Til appen
-          </a>
+          <div className="ml-auto flex items-center gap-4 text-[13px] font-semibold">
+            <a href="/konto/totrinn" className="inline-flex items-center gap-1.5 text-white/70 no-underline hover:text-white" aria-label="Min innlogging: kode-app og Face ID">
+              <LuShieldCheck className="size-4" aria-hidden />
+              <span className="hidden sm:inline">Min innlogging</span>
+            </a>
+            <a href="/app" className="hidden text-white/70 no-underline hover:text-white sm:inline">
+              Til appen
+            </a>
+            <PostForm action="/logg-ut">
+              <button type="submit" className="inline-flex items-center gap-1.5 text-white/70 hover:text-white" aria-label="Logg ut">
+                <LuLogOut className="size-4" aria-hidden />
+                <span className="hidden sm:inline">Logg ut</span>
+              </button>
+            </PostForm>
+          </div>
         </div>
         <nav className="scroll-x mx-auto max-w-7xl px-2 sm:px-4" aria-label="Adminmeny">
           <ul className="flex min-w-max gap-1 pb-2">

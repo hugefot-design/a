@@ -83,7 +83,7 @@ function toAuthUser(row: UserRow): AuthUser {
 
 export async function createSession(
   userId: string,
-  meta: { userAgent?: string; ipHash?: string },
+  meta: { userAgent?: string; ipHash?: string; mfaVerified?: boolean },
 ): Promise<{ token: string; csrfToken: string; sessionId: string }> {
   const token = randomToken(32);
   const csrfToken = randomToken(24);
@@ -93,12 +93,16 @@ export async function createSession(
             ${(meta.userAgent ?? '').slice(0, 300)}, ${meta.ipHash ?? null})
     returning id
   `) as unknown as { id: string }[];
-  return { token, csrfToken, sessionId: rows[0]!.id };
+  const sessionId = rows[0]!.id;
+  // Økten ble laget etter riktig kode eller passkey: totrinn er bekreftet nå (settes bare av systemet).
+  if (meta.mfaVerified) await systemSql()`update sessions set mfa_verified_at = now() where id = ${sessionId}`;
+  return { token, csrfToken, sessionId };
 }
 
 export interface SessionLookup {
   sessionId: string;
   csrfToken: string;
+  mfaVerifiedAt: Date | null;
   user: AuthUser;
 }
 
@@ -107,7 +111,7 @@ export async function getSession(token: string): Promise<SessionLookup | null> {
   const sql = appSql();
   const row = first(
     (await sql`
-      select s.id as session_id, s.csrf_token, s.last_seen_at, s.created_at as session_created_at,
+      select s.id as session_id, s.csrf_token, s.last_seen_at, s.created_at as session_created_at, s.mfa_verified_at,
              u.id, u.email, u.name, u.email_verified_at, u.is_platform_admin, u.current_org_id, u.password_changed_at,
              (u.totp_enabled_at is not null) as totp_enabled
       from sessions s join users u on u.id = s.user_id
@@ -118,6 +122,7 @@ export async function getSession(token: string): Promise<SessionLookup | null> {
       lastSeenAt: Date;
       sessionCreatedAt: Date;
       passwordChangedAt: Date;
+      mfaVerifiedAt: Date | null;
     })[],
   );
   if (!row) return null;
@@ -133,7 +138,7 @@ export async function getSession(token: string): Promise<SessionLookup | null> {
       where id = ${row.sessionId}
     `;
   }
-  return { sessionId: row.sessionId, csrfToken: row.csrfToken, user: toAuthUser(row) };
+  return { sessionId: row.sessionId, csrfToken: row.csrfToken, mfaVerifiedAt: row.mfaVerifiedAt ?? null, user: toAuthUser(row) };
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {

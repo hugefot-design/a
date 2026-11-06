@@ -1,3 +1,4 @@
+import type { SecondFactorInput } from '@/domain/auth/mfa';
 import { HttpError, type RequestContext } from '@/server/http';
 import { isUuid } from '@/server/router';
 
@@ -10,6 +11,12 @@ export function param(ctx: RequestContext, name: string): string {
 export function formStr(form: FormData, key: string, max = 10_000): string {
   const v = form.get(key);
   return typeof v === 'string' ? v.slice(0, max) : '';
+}
+
+/** Andre steg fra et skjema: svaret fra en passkey (JSON), ellers kode eller reservekode. */
+export function secondFactorFrom(form: FormData): SecondFactorInput {
+  const passkey = formStr(form, 'passkey', 20_000);
+  return passkey ? { passkey } : { code: formStr(form, 'code', 20) };
 }
 
 export function formBool(form: FormData, key: string): boolean {

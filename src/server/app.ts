@@ -9,8 +9,9 @@ import { getSession, SESSION_COOKIE } from '@/domain/auth/auth';
 import { loadOrgContext } from '@/domain/org/org';
 import { FEATURE_LABELS } from '@/domain/billing/plans';
 import { ErrorPage, FeatureLockedPage } from '@/ui/pages/system';
-import { HttpError, homePath, parseCookies, redirect, serializeCookie, type RequestContext } from './http';
-import { decodeFlash, FLASH_COOKIE } from './flash';
+import { HttpError, homePath, json, parseCookies, redirect, safeRedirectPath, serializeCookie, wantsJson, type RequestContext } from './http';
+import { decodeFlash, FLASH_COOKIE, redirectWith } from './flash';
+import { ADMIN_REVERIFY_MS, SENSITIVE_REVERIFY_MS, verifiedWithin } from '@/domain/auth/mfa';
 import { render } from './render';
 import { serveStatic } from './static';
 import { canonicalRedirect } from './canonical';
@@ -154,7 +155,7 @@ async function loadAuth(ctx: RequestContext): Promise<void> {
   if (token) {
     const session = await getSession(token);
     if (session) {
-      ctx.session = { id: session.sessionId, csrfToken: session.csrfToken };
+      ctx.session = { id: session.sessionId, csrfToken: session.csrfToken, mfaVerifiedAt: session.mfaVerifiedAt };
       ctx.user = session.user;
     } else {
       ctx.responseCookies.push(serializeCookie(SESSION_COOKIE, '', { maxAge: 0, secure: isProd }));
@@ -204,6 +205,28 @@ async function checkCsrf(ctx: RequestContext): Promise<void> {
   }
 }
 
+/** Siden et skjema ble sendt fra, hvis den er på dette nettstedet. */
+function sameSiteReferer(ctx: RequestContext): string | null {
+  const referer = ctx.req.headers.referer;
+  if (!referer) return null;
+  try {
+    const url = new URL(referer);
+    return url.origin === APP_ORIGIN ? safeRedirectPath(url.pathname + url.search, '') || null : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Be om ny bekreftelse. Etter bekreftelsen sendes brukeren tilbake til siden (et skjema må sendes på nytt). */
+function stepUpResponse(ctx: RequestContext): Response {
+  const confirmUrl = (next: string) => `/konto/bekreft?neste=${encodeURIComponent(next)}`;
+  if (ctx.method === 'GET' || ctx.method === 'HEAD') return redirect(confirmUrl(ctx.path + ctx.url.search));
+  const back = sameSiteReferer(ctx) ?? homePath(ctx.user);
+  // Skript (f.eks. «legg til passkey») får adressen til bekreftelsessiden og sender brukeren dit.
+  if (wantsJson(ctx)) return json({ error: 'Bekreft at det er deg med kode eller passkey, og prøv igjen.', stepUp: confirmUrl(back) }, { status: 403 });
+  return redirectWith(ctx, confirmUrl(back), 'info', 'Bekreft at det er deg før du gjør denne endringen. Deretter kan du prøve igjen.');
+}
+
 async function dispatch(ctx: RequestContext, router: Router): Promise<Response> {
   const matched = router.match(ctx.method, ctx.path);
   if (matched === null) throw new HttpError(404, 'Siden finnes ikke.');
@@ -234,6 +257,12 @@ async function dispatch(ctx: RequestContext, router: Router): Promise<Response> 
       if (route.access === 'admin' && !ctx.user.totpEnabled) {
         if (ctx.method === 'GET') return redirect(`/konto/totrinn?neste=${encodeURIComponent(ctx.path + ctx.url.search)}`);
         throw new HttpError(403, 'Admin krever totrinnsinnlogging.');
+      }
+      // …og at totrinn er bekreftet nylig i denne økten: under 12 timer for admin, under 15 minutter
+      // for viktige endringer. Ellers: ny kode eller passkey på /konto/bekreft.
+      if (route.access === 'admin' || (route.sensitive && ctx.user.totpEnabled)) {
+        const maxAge = route.sensitive ? SENSITIVE_REVERIFY_MS : ADMIN_REVERIFY_MS;
+        if (!verifiedWithin(ctx.session?.mfaVerifiedAt, maxAge)) return stepUpResponse(ctx);
       }
       ctx.org = await loadOrgContext(ctx.user);
       if (route.access === 'org') {

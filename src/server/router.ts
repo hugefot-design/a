@@ -23,6 +23,11 @@ export interface RouteDef {
   feature?: Feature;
   /** Maks størrelse på forespørselskroppen i MB (standard 1). */
   maxBodyMb?: number;
+  /**
+   * Viktig endring (tilganger, planer, datakilder, import, passkeys): krever at totrinn er bekreftet
+   * de siste 15 minuttene i denne økten. Gjelder brukere med totrinn; admin krever det alltid.
+   */
+  sensitive?: boolean;
 }
 
 interface CompiledRoute extends RouteDef {

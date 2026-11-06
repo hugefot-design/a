@@ -114,6 +114,13 @@ test('admin krever totrinnsinnlogging; administratorer kan ikke slå det av, van
   assert.equal(blocked.location, '/konto/totrinn?neste=%2Fadmin');
   assert.match((await a.get('/konto/totrinn')).body, /Admin-panelet viser alle kundene/);
   await enableTestMfa(admin.user.id);
+  // Totrinn er på, men denne økten er ikke bekreftet med kode: først «bekreft at det er deg».
+  const confirm = await a.get('/admin');
+  assert.equal(confirm.status, 303);
+  assert.equal(confirm.location, '/konto/bekreft?neste=%2Fadmin');
+  const ok = await a.post('/konto/bekreft', { neste: '/admin', code: await testTotpCode(admin.user.id) }, { from: '/konto/bekreft?neste=%2Fadmin' });
+  assert.equal(ok.status, 303);
+  assert.equal(ok.location, '/admin');
   assert.equal((await a.get('/admin')).status, 200);
   const status = await a.get('/konto/totrinn');
   assert.match(status.body, /Administratorer må ha totrinnsinnlogging/);

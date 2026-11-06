@@ -221,6 +221,18 @@
     @apply pr-8;
   }
 
+  /* Stor kodeboks for totrinn: seks siffer med god luft og tydelig fokus i radar-gult. */
+  .code-input {
+    @apply block h-16 w-full rounded-2xl border border-line-strong bg-white text-center font-mono text-[30px] font-semibold text-night placeholder:text-line-strong;
+    @apply focus:border-night focus:outline-none focus:ring-4 focus:ring-signal/30;
+    letter-spacing: 0.42em;
+    /* Luften etter siste siffer veies opp, så tallene står midt i boksen. */
+    padding-left: 0.42em;
+  }
+  .code-input[aria-invalid="true"] {
+    @apply border-danger focus:ring-danger-soft;
+  }
+
   .prose-ar p { @apply my-2; }
   .prose-ar ul { @apply my-2 list-disc pl-5; }
   .prose-ar li { @apply my-1; }

@@ -45,6 +45,12 @@ async function sourceRows() {
   });
 }
 
+/**
+ * Viktige endringer: krever at totrinn er bekreftet de siste 15 minuttene (ellers /konto/bekreft).
+ * Resten av admin krever bekreftelse de siste 12 timene.
+ */
+const SENSITIVE = { sensitive: true } as const;
+
 export function registerAdminRoutes(router: Router): void {
   router.get('/admin', 'admin', async (ctx) => render(ctx, <AdminOverviewPage o={await adminOverview()} />, { title: 'Admin – oversikt' }));
 
@@ -62,7 +68,7 @@ export function registerAdminRoutes(router: Router): void {
     if (!row) throw new HttpError(404, 'Fant ikke brukeren.');
     await audit({ action: 'admin.role_changed', actorUserId: ctx.user!.id, targetType: 'user', targetId: id, metadata: { isPlatformAdmin: row.isPlatformAdmin } });
     return redirectWith(ctx, '/admin/brukere', 'success', 'Tilgangen er endret.');
-  });
+  }, SENSITIVE);
 
   router.get('/admin/organisasjoner', 'admin', async (ctx) => {
     const q = (ctx.query.get('q') ?? '').trim().slice(0, 100);
@@ -85,7 +91,7 @@ export function registerAdminRoutes(router: Router): void {
     const until = formStr(form, 'until', 20);
     await setManualPlan(ctx.user!.id, id, plan, until ? new Date(`${until}T23:59:59+01:00`) : null, note);
     return redirectWith(ctx, `/admin/organisasjoner/${id}`, 'success', 'Planen er satt.');
-  });
+  }, SENSITIVE);
 
   router.get('/admin/importer', 'admin', async (ctx) => {
     const runs = (await systemSql()`select * from import_runs order by started_at desc limit 50`) as never;
@@ -130,7 +136,7 @@ export function registerAdminRoutes(router: Router): void {
         `Import (${parsed.format}): ${stats.created} nye, ${stats.updated} oppdatert, ${stats.unchanged} uendret, ${stats.duplicates} duplikater, ${stats.errors} feil.`,
       );
     },
-    { maxBodyMb: 20 },
+    { maxBodyMb: 20, ...SENSITIVE },
   );
 
   router.get('/admin/kilder', 'admin', async (ctx) => {
@@ -145,7 +151,7 @@ export function registerAdminRoutes(router: Router): void {
     await systemSql()`update data_sources set enabled = ${enabled} where id = ${id!}`;
     await audit({ action: 'admin.source_updated', actorUserId: ctx.user!.id, targetType: 'data_source', targetId: id, metadata: { enabled } });
     return redirectWith(ctx, '/admin/kilder', 'success', 'Datakilden er oppdatert.');
-  });
+  }, SENSITIVE);
 
   router.get('/admin/ai', 'admin', async (ctx) => {
     const rows = (await systemSql()`

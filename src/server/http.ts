@@ -55,7 +55,8 @@ export interface RequestContext {
   userAgent: string;
   cookies: Record<string, string>;
   responseCookies: string[];
-  session: { id: string; csrfToken: string } | null;
+  /** mfaVerifiedAt: når totrinn sist ble bekreftet i denne økten (admin krever under 12 timer). */
+  session: { id: string; csrfToken: string; mfaVerifiedAt: Date | null } | null;
   user: AuthUser | null;
   org: OrgContext | null;
   csrfToken: string;

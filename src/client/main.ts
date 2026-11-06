@@ -3,6 +3,8 @@
  * enkelte handlinger raskere (bokmerker, autolagring) og legger til bekreftelser.
  */
 
+import { browserSupportsWebAuthn, startAuthentication, startRegistration, WebAuthnError } from '@simplewebauthn/browser';
+
 function csrfToken(form?: HTMLFormElement | null): string {
   const input = (form ?? document).querySelector<HTMLInputElement>('input[name="_csrf"]');
   return input?.value ?? '';
@@ -91,15 +93,16 @@ document.addEventListener('click', (event) => {
   });
 });
 
-// Kopier til utklippstavle.
+// Kopier til utklippstavle. Har knappen et ikon, byttes bare teksten i [data-label].
 document.addEventListener('click', async (event) => {
   const btn = (event.target as HTMLElement).closest<HTMLElement>('[data-copy]');
   if (!btn) return;
   try {
     await navigator.clipboard.writeText(btn.dataset.copy ?? '');
-    const old = btn.textContent;
-    btn.textContent = 'Kopiert';
-    setTimeout(() => (btn.textContent = old), 1500);
+    const target = btn.querySelector<HTMLElement>('[data-label]') ?? btn;
+    const old = target.textContent;
+    target.textContent = 'Kopiert';
+    setTimeout(() => (target.textContent = old), 1500);
   } catch {
     /* ignorer */
   }
@@ -212,6 +215,114 @@ document.querySelectorAll<HTMLTextAreaElement>('textarea[data-count]').forEach((
     show(slots[Math.min(Math.max(next, 0), slots.length - 1)]!);
   });
   window.addEventListener('scroll', hide, { passive: true });
+})();
+
+// ---------------------------------------------------------------------------
+// Totrinn: stor kodeboks og passkeys (Face ID / fingeravtrykk / sikkerhetsnøkkel).
+// ---------------------------------------------------------------------------
+// Kodeboksen tar bare sifre (også limt inn med mellomrom) og sender skjemaet når seks er skrevet.
+document.querySelectorAll<HTMLInputElement>('input[data-code-autosubmit]').forEach((input) => {
+  input.addEventListener('input', () => {
+    const digits = input.value.replace(/\D/g, '').slice(0, 6);
+    if (input.value !== digits) input.value = digits;
+    const form = input.form;
+    if (digits.length === 6 && form && form.dataset.sending !== 'true') {
+      form.dataset.sending = 'true';
+      form.requestSubmit(form.querySelector<HTMLButtonElement>('button[type="submit"]') ?? undefined);
+    }
+  });
+});
+// Et skjema med kode sendes bare én gang (ellers kan samme kode brukes to ganger og avvises).
+document.addEventListener(
+  'submit',
+  (event) => {
+    const form = event.target as HTMLFormElement;
+    if (!form.querySelector('input[data-code-autosubmit]')) return;
+    if (form.dataset.sent === 'true') event.preventDefault();
+    else if (!event.defaultPrevented) form.dataset.sent = 'true';
+  },
+  true,
+);
+
+// Tilbake-knappen kan vise siden fra hurtigbufferen: skjemaene skal kunne sendes igjen.
+window.addEventListener('pageshow', (event) => {
+  if (!event.persisted) return;
+  document.querySelectorAll<HTMLFormElement>('form[data-sent], form[data-sending]').forEach((form) => {
+    delete form.dataset.sent;
+    delete form.dataset.sending;
+  });
+  document.querySelectorAll<HTMLElement>('[data-busy]').forEach((el) => el.removeAttribute('data-busy'));
+});
+
+(() => {
+  const supported = browserSupportsWebAuthn();
+  const failText = (err: unknown, fallback: string) => {
+    if (err instanceof WebAuthnError && err.code === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED') return 'Denne enheten er allerede lagt til.';
+    if (err instanceof Error && err.name === 'ServerMessage') return err.message;
+    return fallback;
+  };
+  const showError = (el: HTMLElement | null, text?: string) => {
+    if (!el) return;
+    if (text) el.textContent = text;
+    el.hidden = false;
+  };
+
+  // Bekreft med passkey (innlogging og «bekreft at det er deg»). Valgene ligger i data-passkey-auth.
+  document.querySelectorAll<HTMLFormElement>('form[data-passkey-auth]').forEach((form) => {
+    if (!supported) return;
+    form.hidden = false;
+    const button = form.querySelector<HTMLButtonElement>('[data-passkey-start]');
+    const error = form.querySelector<HTMLElement>('[data-passkey-error]');
+    const field = form.querySelector<HTMLInputElement>('input[name="passkey"]');
+    button?.addEventListener('click', async () => {
+      if (!field || button.dataset.busy === 'true') return;
+      if (error) error.hidden = true;
+      button.setAttribute('data-busy', 'true');
+      try {
+        const optionsJSON = JSON.parse(form.dataset.passkeyAuth ?? '{}');
+        field.value = JSON.stringify(await startAuthentication({ optionsJSON }));
+        form.submit();
+      } catch (err) {
+        button.removeAttribute('data-busy');
+        showError(error, failText(err, error?.textContent ?? ''));
+      }
+    });
+  });
+
+  // Legg til passkey: hent valg fra serveren, spør enheten, send svaret med skjemaet.
+  document.querySelectorAll<HTMLFormElement>('form[data-passkey-register]').forEach((form) => {
+    if (!supported) return;
+    form.hidden = false;
+    document.querySelectorAll<HTMLElement>('[data-passkey-unsupported]').forEach((el) => (el.hidden = true));
+    const error = form.querySelector<HTMLElement>('[data-passkey-error]');
+    const field = form.querySelector<HTMLInputElement>('input[name="response"]');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (!field || !button || button.dataset.registering === 'true') return;
+      button.dataset.registering = 'true';
+      if (error) error.hidden = true;
+      try {
+        const res = await fetch(form.dataset.passkeyRegister!, {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'x-csrf-token': csrfToken(form) },
+        });
+        const data = (await res.json().catch(() => ({}))) as { error?: string; stepUp?: string };
+        if (data.stepUp) {
+          window.location.href = data.stepUp;
+          return;
+        }
+        if (!res.ok) throw Object.assign(new Error(data.error ?? 'Noe gikk galt. Last inn siden og prøv igjen.'), { name: 'ServerMessage' });
+        field.value = JSON.stringify(await startRegistration({ optionsJSON: data as never }));
+        form.submit();
+      } catch (err) {
+        delete button.dataset.registering;
+        // Vent til «jobber»-markeringen fra innsendingen er satt, og fjern den.
+        setTimeout(() => button.removeAttribute('data-busy'), 0);
+        showError(error, failText(err, 'Avbrutt, eller enheten svarte ikke. Prøv igjen.'));
+      }
+    });
+  });
 })();
 
 // ---------------------------------------------------------------------------

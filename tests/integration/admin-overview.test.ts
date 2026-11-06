@@ -9,7 +9,7 @@ import { closeDb, systemSql } from '../../src/lib/db';
 import { env } from '../../src/lib/env';
 import { BLOCKED_BY_ALLOWLIST } from '../../src/lib/email';
 import { adminOverview } from '../../src/domain/admin/overview';
-import { clientFor, createAccount, ingest, makeNotice, startServer, uniqueEmail, makeAdmin } from '../helpers';
+import { adminClientFor, createAccount, ingest, makeNotice, startServer, uniqueEmail, makeAdmin } from '../helpers';
 
 let server: Awaited<ReturnType<typeof startServer>>;
 const mutableEnv = env as unknown as Record<string, unknown>;
@@ -27,7 +27,7 @@ after(async () => {
 async function adminClient() {
   const acc = await createAccount();
   await makeAdmin(acc.user.id);
-  return { acc, c: await clientFor(server.base, acc) };
+  return { acc, c: await adminClientFor(server.base, acc) };
 }
 const text = (html: string) => html.replaceAll('<!-- -->', '');
 

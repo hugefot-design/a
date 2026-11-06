@@ -112,6 +112,42 @@ export function passwordChangedTemplate(name: string, resetUrl: string): Rendere
   return { subject, html, text: `Hei ${name},\n\nPassordet ditt ble endret. Var det ikke deg? Tilbakestill her: ${resetUrl}${textFooter()}` };
 }
 
+/**
+ * Sikkerhetsvarsel: innlogging i admin, mange feil koder, ny eller fjernet innloggingsmetode.
+ * Viser hva som skjedde, når og fra hvilken enhet, og en lenke som logger ut alle enheter.
+ */
+export function securityNoticeTemplate(opts: {
+  name: string;
+  subject: string;
+  heading: string;
+  intro: string;
+  details: [label: string, value: string][];
+  revokeUrl: string;
+  preheader?: string;
+}): Rendered {
+  const rows = opts.details
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding:9px 14px;border-bottom:1px solid ${C.line};color:${C.muted};font-size:13px;width:34%">${esc(label)}</td><td style="padding:9px 14px;border-bottom:1px solid ${C.line};font-weight:600;font-size:14px;color:${C.navy}">${esc(value)}</td></tr>`,
+    )
+    .join('');
+  const html = layout(
+    opts.heading,
+    `<p>Hei ${esc(opts.name)},</p><p>${esc(opts.intro)}</p>
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 6px;border:1px solid ${C.line};border-radius:12px;border-collapse:separate;overflow:hidden">${rows}</table>
+     <p style="margin:22px 0 0">Var dette deg? Da trenger du ikke gjøre noe.</p>
+     <div style="margin:14px 0 0;padding:16px 18px;border-radius:12px;background:${C.warnBg};border:1px solid #fed7aa">
+       <p style="margin:0;font-weight:700;color:${C.warn}">Var det ikke deg?</p>
+       <p style="margin:6px 0 0;font-size:14px">Logg ut alle enheter med knappen under, og bytt passord etterpå.</p>
+       ${button(opts.revokeUrl, 'Logg ut alle enheter')}
+       <p style="margin:0;font-size:12px;color:${C.muted}">Lenken gjelder i 7 dager.</p>
+     </div>`,
+    { preheader: opts.preheader ?? opts.intro, footer: 'Sikkerhetsvarsel for kontoen din hos AnbudRadar. Disse kan ikke meldes av.' },
+  );
+  const text = `Hei ${opts.name},\n\n${opts.intro}\n\n${opts.details.map(([l, v]) => `${l}: ${v}`).join('\n')}\n\nVar dette deg? Da trenger du ikke gjøre noe.\n\nVar det ikke deg? Logg ut alle enheter her (gjelder i 7 dager), og bytt passord etterpå:\n${opts.revokeUrl}${textFooter()}`;
+  return { subject: opts.subject, html, text };
+}
+
 export function invitationTemplate(orgName: string, inviterName: string, link: string): Rendered {
   const subject = `${inviterName} inviterte deg til ${orgName} på AnbudRadar`;
   const html = layout(

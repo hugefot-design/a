@@ -164,12 +164,25 @@ export async function createAccount(opts: { plan?: PlanId; verified?: boolean; p
   return { user, email, password, orgId };
 }
 
-/** Logger inn ved å opprette en sesjon direkte (unngår innloggingsgrensen per IP i testene). */
-export async function clientFor(base: string, account: TestAccount): Promise<Client> {
+/**
+ * Logger inn ved å opprette en sesjon direkte (unngår innloggingsgrensen per IP i testene).
+ * `mfaVerified`: økten er laget etter riktig kode, slik admin-panelet krever (bekreftet nå).
+ */
+export async function clientFor(base: string, account: TestAccount, opts: { mfaVerified?: boolean } = {}): Promise<Client> {
   const client = new Client(base);
-  const { token } = await createSession(account.user.id, { userAgent: 'test' });
+  const { token } = await createSession(account.user.id, { userAgent: 'test', mfaVerified: opts.mfaVerified });
   client.cookies.set(SESSION_COOKIE, token);
   return client;
+}
+
+/** Admin-økt slik den er rett etter innlogging med kode. */
+export function adminClientFor(base: string, account: TestAccount): Promise<Client> {
+  return clientFor(base, account, { mfaVerified: true });
+}
+
+/** Flytter tidspunktet for siste bekreftelse bakover i alle brukerens økter (for å teste 12 t / 15 min). */
+export async function ageMfaVerification(userId: string, minutes: number): Promise<void> {
+  await systemSql()`update sessions set mfa_verified_at = now() - make_interval(mins => ${minutes}) where user_id = ${userId}`;
 }
 
 /** Fiktiv kunngjøring i felles format. */

@@ -23,7 +23,9 @@ import { homePath, redirect, safeRedirectPath, serializeCookie, type RequestCont
 import { render } from '@/server/render';
 import { messages, translateAuthErrors } from '@/i18n';
 import { fill } from '@/i18n/format';
-import { createLoginChallenge, verifyLoginChallenge } from '@/domain/auth/mfa';
+import { createLoginChallenge, loginPasskeyOptions, verifyLoginChallenge } from '@/domain/auth/mfa';
+import { notifySecurityEvent } from '@/domain/auth/security';
+import { secondFactorFrom } from './helpers';
 import { systemSql } from '@/lib/db';
 import type { Router } from '@/server/router';
 import {
@@ -41,11 +43,21 @@ function str(form: FormData, key: string): string {
   return typeof v === 'string' ? v : '';
 }
 
-async function startSession(ctx: RequestContext, userId: string): Promise<void> {
-  const { token } = await createSession(userId, { userAgent: ctx.userAgent, ipHash: ctx.ipHash });
+async function startSession(ctx: RequestContext, userId: string, opts: { mfaVerified?: boolean } = {}): Promise<void> {
+  const { token } = await createSession(userId, { userAgent: ctx.userAgent, ipHash: ctx.ipHash, mfaVerified: opts.mfaVerified });
   ctx.responseCookies.push(
     serializeCookie(SESSION_COOKIE, token, { maxAge: SESSION_TTL_DAYS * 86400, secure: isProd, httpOnly: true, sameSite: 'Lax' }),
   );
+}
+
+/** Kodesiden, med passkey-knapp hvis brukeren har lagt til en. */
+async function codePage(ctx: RequestContext, challenge: string, error?: string, status = 200) {
+  const options = await loginPasskeyOptions(challenge);
+  return render(ctx, <TwoFactorLoginPage challenge={challenge} error={error} passkeyOptions={options ? JSON.stringify(options) : null} />, {
+    title: messages(ctx.locale).meta.login,
+    status,
+    noindex: true,
+  });
 }
 
 export function registerAuthRoutes(router: Router): void {
@@ -66,11 +78,10 @@ export function registerAuthRoutes(router: Router): void {
       return render(ctx, <LoginPage email={email} error={error} next={next} />, { title: t.meta.login, status: result.reason === 'invalid' ? 401 : 429 });
     }
     // Totrinnsinnlogging: riktig passord gir bare en kortvarig utfordring – økten lages når koden er riktig.
-    if (result.user.totpEnabled) {
-      const challenge = await createLoginChallenge(result.user.id, next ?? null);
-      return render(ctx, <TwoFactorLoginPage challenge={challenge} />, { title: messages(ctx.locale).meta.login, noindex: true });
-    }
+    if (result.user.totpEnabled) return codePage(ctx, await createLoginChallenge(result.user.id, next ?? null));
     await startSession(ctx, result.user.id);
+    // Administrator uten totrinn (må sette det opp før admin-panelet åpnes): varsle likevel.
+    if (result.user.isPlatformAdmin) await notifySecurityEvent(result.user.id, 'admin_login', { userAgent: ctx.userAgent, method: 'password_only' });
     return redirect(next ?? homePath(result.user));
   });
 
@@ -81,19 +92,19 @@ export function registerAuthRoutes(router: Router): void {
     if (!(await rateLimit(`mfa:ip:${ctx.ipHash}`, 30, 15 * 60))) {
       return render(ctx, <LoginPage error={t.auth.login.errors.rateLimited} />, { title: t.meta.login, status: 429 });
     }
-    const res = await verifyLoginChallenge(challenge, str(form, 'code'), ctx.ipHash);
+    const input = secondFactorFrom(form);
+    const res = await verifyLoginChallenge(challenge, input, { ipHash: ctx.ipHash, userAgent: ctx.userAgent });
     if (!res.ok) {
+      if (res.reason === 'paused') return codePage(ctx, challenge, t.auth.mfa.errors.paused, 429);
       if (res.reason === 'invalid') {
-        return render(ctx, <TwoFactorLoginPage challenge={challenge} error={fill(t.auth.mfa.errors.invalid, { n: res.attemptsLeft ?? 0 })} />, {
-          title: t.meta.login,
-          status: 401,
-          noindex: true,
-        });
+        const n = res.attemptsLeft ?? 0;
+        return codePage(ctx, challenge, fill('passkey' in input ? t.auth.mfa.errors.passkey : t.auth.mfa.errors.invalid, { n }), 401);
       }
       return render(ctx, <LoginPage error={res.reason === 'too_many' ? t.auth.mfa.errors.tooMany : t.auth.mfa.errors.expired} />, { title: t.meta.login, status: 401 });
     }
     const [user] = (await systemSql()`select is_platform_admin from users where id = ${res.userId}`) as unknown as { isPlatformAdmin: boolean }[];
-    await startSession(ctx, res.userId);
+    await startSession(ctx, res.userId, { mfaVerified: true });
+    if (user?.isPlatformAdmin) await notifySecurityEvent(res.userId, 'admin_login', { userAgent: ctx.userAgent, method: res.method });
     const next = res.nextPath ? safeRedirectPath(res.nextPath, '') || undefined : undefined;
     return redirect(next ?? homePath(user ?? null));
   });

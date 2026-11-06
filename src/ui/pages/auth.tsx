@@ -1,6 +1,7 @@
 import { Alert, Button, buttonVariants, Checkbox, Field, Input, PostForm } from '../components';
 import { useUi } from '../context';
 import { AuthLayout } from '../layouts';
+import { CodeInput, PasskeyForm, RecoveryCodeForm } from '../two-factor';
 import { plural, rich } from '@/i18n/format';
 
 type Errors = Record<string, string>;
@@ -76,36 +77,35 @@ export function RegisterPage({ values = {}, errors = {}, next }: { values?: Reco
   );
 }
 
-/** Steg to i innloggingen: koden fra kode-appen (eller en reservekode). */
-export function TwoFactorLoginPage({ challenge, error }: { challenge: string; error?: string }) {
+/**
+ * Steg to i innloggingen: passkey (Face ID / fingeravtrykk) hvis brukeren har det, ellers koden fra
+ * kode-appen. Reservekode ligger sammenfoldet under.
+ */
+export function TwoFactorLoginPage({ challenge, error, passkeyOptions }: { challenge: string; error?: string; passkeyOptions?: string | null }) {
   const { m, lp } = useUi();
   const t = m.auth.mfa;
+  const action = lp('/logg-inn/kode');
   return (
-    <AuthLayout title={t.title} intro={t.intro}>
-      <PostForm action={lp('/logg-inn/kode')} className="space-y-4">
-        {error ? <Alert tone="danger">{error}</Alert> : null}
+    <AuthLayout title={t.title} intro={t.intro} side={{ ...t.side, secure: true }}>
+      {error ? (
+        <Alert tone="danger" className="mb-5">
+          {error}
+        </Alert>
+      ) : null}
+      {passkeyOptions ? (
+        <PasskeyForm action={action} optionsJson={passkeyOptions} fields={{ challenge }} label={t.passkey} busyLabel={t.passkeyBusy} failedText={t.passkeyFailed} orText={t.or} />
+      ) : null}
+      <PostForm action={action} className="space-y-4">
         <input type="hidden" name="challenge" value={challenge} />
-        <Field label={t.code} htmlFor="code">
-          <Input
-            id="code"
-            name="code"
-            inputMode="text"
-            autoComplete="one-time-code"
-            autoFocus
-            required
-            maxLength={20}
-            className="text-center font-mono text-[22px] tracking-[0.3em]"
-            invalid={Boolean(error)}
-          />
-        </Field>
-        <Button type="submit" className="w-full" busyLabel={t.busy}>
+        <CodeInput label={t.code} invalid={Boolean(error)} autoFocus={!passkeyOptions} />
+        <Button type="submit" size="lg" className="w-full" busyLabel={t.busy}>
           {t.submit}
         </Button>
-        <p className="text-[13px] text-muted">{t.recoveryHint}</p>
-        <p className="text-center text-[14px]">
-          <a href={lp('/logg-inn')}>{t.back}</a>
-        </p>
       </PostForm>
+      <RecoveryCodeForm action={action} fields={{ challenge }} toggle={t.recoveryToggle} label={t.recoveryLabel} submit={t.recoverySubmit} busy={t.busy} />
+      <p className="mt-6 text-center text-[14px]">
+        <a href={lp('/logg-inn')}>{t.back}</a>
+      </p>
     </AuthLayout>
   );
 }

@@ -17,6 +17,8 @@ export type AuditAction =
   | 'auth.mfa_failed'
   | 'auth.mfa_recovery_used'
   | 'auth.mfa_recovery_regenerated'
+  | 'auth.passkey_added'
+  | 'auth.passkey_removed'
   | 'org.created'
   | 'org.updated'
   | 'org.member_invited'

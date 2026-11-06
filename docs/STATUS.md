@@ -118,10 +118,21 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   (settes manuelt i admin). Future Opportunities bare i Enterprise – se [FUTURE_OPPORTUNITIES.md](FUTURE_OPPORTUNITIES.md).
 - **Stripe** er fortsatt ikke testet mot en ekte testkonto (mangler testnøkkel); betalingsflyten er testet mot simulert Stripe.
 
-## Totrinnsinnlogging (6. november 2026)
+## Totrinnsinnlogging og passkeys (6. november 2026)
 
 - Kode-app (TOTP, RFC 6238) med QR-kode, 10 reservekoder (hash), kryptert hemmelighet (AES-256-GCM), maks 5 forsøk per
   innlogging, utfordringen gjelder i 10 minutter, og samme kode kan ikke brukes to ganger.
 - **Påkrevd for administratorer** (`/admin` sender til oppsettet til det er gjort). Valgfritt for kunder (Innstillinger).
 - Tester: `tests/unit/totp.test.ts` (inkl. testvektorene i RFC 6238), `tests/integration/mfa.test.ts`, `admin-login.test.ts`.
-- Gjenoppretting og drift: [DRIFT.md](DRIFT.md#6b-totrinnsinnlogging).
+- **Strengere admin (samme dag):** ny bekreftelse etter 12 timer, viktige endringer (tilganger, plan, datakilder,
+  filimport, passkeys) krever bekreftelse de siste 15 minuttene. Pause etter 10 feil koder på 15 min / 30 per døgn.
+- **Passkeys** (Face ID, fingeravtrykk, Windows Hello, sikkerhetsnøkkel) som andre steg i stedet for koden, via
+  `@simplewebauthn/server` og `/browser` (MIT, gratis, ingen ekstern tjeneste). Bare offentlig nøkkel lagres.
+- **Sikkerhetsvarsler på e-post** ved hver admin-innlogging, mange feil koder og endringer i innloggingsmåter, med
+  signert «logg ut alle enheter»-lenke (7 dager, krever et ekstra klikk).
+- Tester: `tests/integration/admin-stepup.test.ts`, `tests/integration/passkeys.test.ts` (programvare-autentikator som
+  signerer som en ekte enhet: falsk side, gjenbruk og kopiert nøkkel avvises) og `tests/e2e/admin-passkey.test.ts`
+  (Chromium med virtuell autentikator: legg til Face ID, logg inn og bekreft med den).
+- **IKKE VERIFISERT:** passkey på en ekte telefon/Mac mot produksjonsdomenet (krever eierens enhet), og at
+  varsel-e-posten kommer fram til eierens innboks i produksjon.
+- Gjenoppretting og drift: [DRIFT.md](DRIFT.md#6b-totrinnsinnlogging-passkeys-og-sikkerhetsvarsler).

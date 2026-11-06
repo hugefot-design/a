@@ -136,20 +136,35 @@ Sjekk deretter **Admin → Kilder**: en kilde markeres «verifisert» først nå
   Kontroller at `schema_migrations` har alle migreringene, og at antall rader i `organizations`, `subscriptions` og `tenders` stemmer.
 - **Opplastede filer** ligger i Supabase Storage og er ikke med i databasekopien. Dokumentene kan lastes opp på nytt av kundene, men vurder periodisk kopi av bøtta.
 
-## 6b. Totrinnsinnlogging
+## 6b. Totrinnsinnlogging, passkeys og sikkerhetsvarsler
 
 - **Påkrevd for administratorer.** Første gang en administrator går til `/admin` etter innlogging, sendes hen til
   `/konto/totrinn` for å skanne QR-koden med en kode-app (Google Authenticator, Microsoft Authenticator, 1Password).
   Deretter kreves koden ved hver innlogging. Vanlige brukere kan slå det på under **Innstillinger**.
+- **Ny bekreftelse i admin.** Hver økt husker når totrinn sist ble bekreftet (`sessions.mfa_verified_at`). Admin-panelet
+  ber om ny kode (eller passkey) etter **12 timer**, og viktige endringer – admin-tilgang, plan, datakilder, filimport,
+  legge til/fjerne passkey – krever bekreftelse de siste **15 minuttene** (`/konto/bekreft`). Rutene er merket
+  `sensitive: true`; grensene står i `src/domain/auth/mfa.ts`.
+- **Passkeys (Face ID / fingeravtrykk / sikkerhetsnøkkel)** kan legges til under **Min innlogging** (`/konto/totrinn`)
+  og brukes i stedet for koden. Krever at kode-appen er satt opp (reserve). Bare den offentlige nøkkelen lagres
+  (`webauthn_credentials`). Passkeys er knyttet til domenet i `APP_URL`: **bytter dere domene, slutter passkeys å
+  virke** (koden fra appen virker fortsatt) – be administratorene legge dem til på nytt.
+- **Feil koder:** 10 feil på 15 minutter (eller 30 på et døgn) gir pause for koden på kontoen, og eieren får e-post.
+  Passkey virker fortsatt i pausen.
+- **Sikkerhetsvarsler på e-post:** hver innlogging på en administratorkonto, mange feil koder, totrinn slått på/av,
+  passkey lagt til/fjernet. Hver e-post har en lenke (gyldig i 7 dager, signert med `SESSION_SECRET`) som logger ut
+  alle enheter etter et ekstra klikk. Så lenge `EMAIL_ALLOWED_RECIPIENTS` er satt, må administratorens e-post stå på
+  listen for at varslene skal komme fram (stoppede e-poster vises under **Admin → E-post**).
 - **Reservekoder:** 10 engangskoder vises én gang ved oppsett. Lagre dem i passordbehandleren.
 - **Mistet telefonen og reservekodene?** Logg inn i Supabase (SQL-editoren) og slå av totrinn for kontoen, så kan
   den settes opp på nytt ved neste innlogging:
   ```sql
   update users set totp_secret_enc = null, totp_enabled_at = null, totp_last_step = null where email = 'din@epost.no';
   delete from user_recovery_codes where user_id = (select id from users where email = 'din@epost.no');
+  delete from webauthn_credentials where user_id = (select id from users where email = 'din@epost.no');
   ```
-- **SESSION_SECRET** brukes også til å kryptere hemmelighetene. Byttes den, må alle med totrinnsinnlogging sette det opp
-  på nytt (kjør SQL-en over for dem, eller for alle).
+- **SESSION_SECRET** brukes også til å kryptere hemmelighetene og signere «logg ut alle»-lenkene. Byttes den, må alle
+  med totrinnsinnlogging sette det opp på nytt (kjør SQL-en over for dem, eller for alle), og gamle lenker slutter å virke.
 
 ## 7. Utrulling og tilbakerulling
 
