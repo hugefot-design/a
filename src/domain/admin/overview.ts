@@ -7,7 +7,7 @@
  */
 import { systemSql } from '@/lib/db';
 import { env, integrationStatus } from '@/lib/env';
-import { BLOCKED_BY_ALLOWLIST } from '@/lib/email';
+import { BLOCKED_BY_ALLOWLIST, BLOCKED_TEST_DOMAIN } from '@/lib/email';
 import { CONNECTORS } from '@/connectors';
 import { companyConfigured, companyInfo, contactIsGmail, isPlaceholder } from '@/domain/legal/legal';
 import { platformMetrics } from './admin';
@@ -172,7 +172,7 @@ export async function adminOverview(now = new Date()) {
       (select max(last_seen_at) from worker_heartbeats) as worker_seen_at,
       (select count(*)::int from jobs where status = 'failed' and coalesce(finished_at, created_at) > now() - interval '24 hours') as failed_jobs,
       (select count(*)::int from email_outbox where created_at > now() - interval '7 days' and status = 'failed'
-         and coalesce(last_error, '') <> ${BLOCKED_BY_ALLOWLIST}) as failed_emails,
+         and coalesce(last_error, '') not in (${BLOCKED_BY_ALLOWLIST}, ${BLOCKED_TEST_DOMAIN})) as failed_emails,
       (select count(*)::int from email_outbox where created_at > now() - interval '7 days' and status = 'failed'
          and last_error = ${BLOCKED_BY_ALLOWLIST}) as blocked_emails,
       (select count(*)::int from email_outbox where created_at > now() - interval '7 days' and status = 'sent') as sent_emails,

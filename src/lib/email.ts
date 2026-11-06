@@ -70,7 +70,25 @@ interface OutboxRow {
   headers: Record<string, string> | null;
 }
 
+/** Feilteksten for adresser på reserverte testdomener (sendes aldri). */
+export const BLOCKED_TEST_DOMAIN = 'Ikke sendt: testadresse på et reservert domene (f.eks. example.com).';
+
+/**
+ * Reserverte domener for testing og dokumentasjon (RFC 2606 og 6761): example.com/.org/.net og
+ * toppdomenene .test, .example, .invalid og .localhost. Kan aldri være ekte mottakere – e-post dit ville
+ * bare sprette tilbake og skade avsenderens omdømme.
+ */
+export function isReservedTestAddress(email: string): boolean {
+  const domain = (email.trim().toLowerCase().split('@')[1] ?? '').replace(/\.$/, '');
+  if (!domain) return true;
+  if (['example.com', 'example.org', 'example.net', 'localhost'].includes(domain)) return true;
+  return /\.(test|example|invalid|localhost)$/.test(domain) || /\.example\.(com|org|net)$/.test(domain);
+}
+
 async function sendViaProvider(row: OutboxRow): Promise<SendResult> {
+  if (env.EMAIL_PROVIDER === 'resend' && isReservedTestAddress(row.toEmail)) {
+    return { ok: false, provider: env.EMAIL_PROVIDER, error: BLOCKED_TEST_DOMAIN, permanent: true, blocked: true };
+  }
   if (!recipientAllowed(row.toEmail)) {
     return { ok: false, provider: env.EMAIL_PROVIDER, error: BLOCKED_BY_ALLOWLIST, permanent: true, blocked: true };
   }

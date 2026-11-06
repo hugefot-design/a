@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { recipientAllowed } from '../../src/lib/email';
+import { isReservedTestAddress, recipientAllowed } from '../../src/lib/email';
 
 test('testlisten: bare listede adresser (eller domener) får e-post; uten liste får alle', () => {
   const list = 'eier@firma.no, Test@Example.com ; @testbedrift.no';
@@ -12,4 +12,13 @@ test('testlisten: bare listede adresser (eller domener) får e-post; uten liste 
   assert.equal(recipientAllowed('noen@nottestbedrift.no', list), false, 'domenet må stemme helt');
   assert.equal(recipientAllowed('kunde@firma.no', undefined), true);
   assert.equal(recipientAllowed('kunde@firma.no', '  '), true);
+});
+
+test('reserverte testdomener får aldri ekte e-post', () => {
+  for (const a of ['test-1@example.com', 'X@EXAMPLE.ORG', 'a@example.net', 'a@sub.example.com', 'a@firma.test', 'a@noe.invalid', 'a@host.localhost', 'a@localhost', 'a@demo.example', 'uten-krøllalfa']) {
+    assert.equal(isReservedTestAddress(a), true, a);
+  }
+  for (const a of ['kunde@firma.no', 'hugefot@gmail.com', 'post@example.no', 'a@myexample.com', 'a@testbedrift.no', 'a@test.no']) {
+    assert.equal(isReservedTestAddress(a), false, a);
+  }
 });
