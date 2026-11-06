@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 2. november 2026 (Doffin-nedlasting, automatisk XML-berikelse, regelverk/klima på anbudssiden og nektelser i vilkårssøket lagt til samme dag).
+Sist oppdatert 6. november 2026 (sikkerhetsgjennomgang og krav- og avvisningssjekk – se [VEIKART.md](VEIKART.md)).
 
 ## Testresultater
 
@@ -9,9 +9,9 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 109 av 109 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) |
-| Integrasjonstester (ekte database, ekte HTTP) | 75 av 75 bestått |
-| Ende-til-ende i nettleser | 2 av 2 bestått |
+| Enhetstester | 152 av 152 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 6.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 146 av 146 bestått – 6.11.2026 |
+| Ende-til-ende i nettleser | 4 av 4 bestått – 6.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av anbudssiden (regelverk/klima) og Admin → Datakilder (XML-berikelse), 1280 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -67,8 +67,11 @@ Fremgangsmåte for hver: [INTEGRASJONER.md](INTEGRASJONER.md).
 - **Relevansscoren** er samsvar med profilen, ikke sannsynlighet for å vinne.
 - **Profit Intelligence:** ordsøket finner ord, ikke betydning («ingen dagbot» gir treff); kapasitet regnes per år, ikke per uke/sesong; sertifiseringer gjenkjennes fra en kjent liste; partnernettverket er tomt ved lansering.
 - **Sitatkontrollen** bekrefter at sitatet står i kilden – ikke at tolkningen er riktig.
+- **Krav- og avvisningssjekken** er ordsøk: den finner setninger med kjente kravord (avvisning, minstekrav, kvalifikasjonskrav,
+  befaring, «skal»/«må»), ikke betydning. Krav skrevet med andre ord fanges ikke opp, og noen treff kan være generelle.
+  Høyst 30 treff vises per kategori (alle telles), og høyst 10 dokumenter leses per anbud.
 - **Kun norsk (bokmål).**
-- **Ingen tofaktorinnlogging eller SSO** ennå.
+- **Ingen SSO** ennå (totrinn og passkeys finnes – se under).
 - **Juridiske tekster er utkast** og merket slik til `LEGAL_PAGES_REVIEWED=true`. Pakken består av vilkår,
   personvernerklæring, databehandleravtale, underleverandører, informasjonskapsler og sikkerhet; versjonen kunden
   godtar lagres ved registrering. Spørsmål og forbehold til advokaten står i [JURIDISK.md](JURIDISK.md).
@@ -149,3 +152,24 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 - **IKKE VERIFISERT:** passkey på en ekte telefon/Mac mot produksjonsdomenet (krever eierens enhet), og at
   varsel-e-posten kommer fram til eierens innboks i produksjon.
 - Gjenoppretting og drift: [DRIFT.md](DRIFT.md#6b-totrinnsinnlogging-passkeys-og-sikkerhetsvarsler).
+
+## Krav- og avvisningssjekk (6. november 2026)
+
+- **Hva:** panelet «Krav og avvisningsrisiko» på anbudssiden viser setninger om avvisning, minstekrav, befaring og
+  frister, kvalifikasjonskrav, tildelingskriterier og andre «skal»-krav – hver med kilde («Kunngjøringen»,
+  «Kunngjøringen (eget felt)» eller «Dokument.pdf, s. 4») og ordet som ga treffet uthevet. Ingen AI, så det virker også
+  når AI er av i produksjon.
+- **Kilder:** beskrivelsen i kunngjøringen, kvalifikasjons- og tildelingskriteriene fra eForms-feltene, og
+  konkurransegrunnlaget når kunden har lastet det opp (Profesjonell og Bedrift). Uten opplasting sier panelet tydelig at
+  bare kunngjøringen er sjekket.
+- **Sjekklisten (Bedrift):** «Legg i sjekklisten» (anbudssiden) og «Hent krav fra dokumentene» (tilbudsarbeidet) legger
+  kravene inn som punkter med kategori og kilde. Samme punkt legges aldri inn to ganger; høyst 100 om gangen; låst når
+  tilbudet er sendt inn; en annen organisasjon får 404. Migrering `0018` tillater kilden `krav` i sjekklisten.
+- **Rettet samtidig:** `\b` i JavaScript kjenner bare a–z, så `\bmå\b` traff aldri «må ha», men traff «måler». Gjaldt
+  reservelisten for kravsjekk av tilbudsutkast (`bids/ai.ts`) og testmodus-AI-en; nå avgrenset med æøå.
+- **Tester:** `tests/unit/requirements.test.ts` (kategorier, sider, innholdsfortegnelse, overskrifter, økonomi/vekting,
+  setningsdeling, 600 000 tegn under 2 s) og `tests/integration/requirements.test.ts` (anbudssiden med og uten dokument,
+  PDF med sidetall, sjekkliste uten duplikater, annen organisasjon, låst tilbud, plankrav). Visuell kontroll 1280 og
+  390 px.
+- **IKKE VERIFISERT:** treffsikkerhet på ekte konkurransegrunnlag fra Doffin (bare eksempel-PDF og konstruerte tekster er
+  testet). Ikke rullet ut.

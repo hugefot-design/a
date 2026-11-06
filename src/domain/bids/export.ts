@@ -17,7 +17,8 @@ export function toMarkdown(ws: Workspace, sections: Section[], checklist: Checkl
     lines.push(s.content.trim() || '_(tom)_', '');
   }
   lines.push('## Sjekkliste', '');
-  for (const c of checklist) lines.push(`- [${c.isDone ? 'x' : ' '}] ${c.label}`);
+  // Kilden (dokument og side) følger med, så kravet kan slås opp i konkurransegrunnlaget.
+  for (const c of checklist) lines.push(`- [${c.isDone ? 'x' : ' '}] ${c.label}${c.sourceRef ? ` (kilde: ${c.sourceRef})` : ''}`);
   return lines.join('\n') + '\n';
 }
 

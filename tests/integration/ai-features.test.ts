@@ -55,9 +55,9 @@ test('anbudssiden viser dokumentlenke, krav og kriterier fra kunngjøringen (ute
   assert.equal(page.status, 200);
   const t = text(page.body);
   assert.match(t, /Åpne konkurransedokumentene hos permalink\.mercell\.com/);
-  assert.match(t, /Krav og kriterier i kunngjøringen/);
+  assert.match(t, /Krav og avvisningsrisiko/);
   assert.match(t, /omsetning på minst 10 millioner kroner/);
-  assert.match(t, /Kvalitet\s*– 60 %/);
+  assert.match(t, /Kvalitet – vekt 60 %/);
   assert.match(t, /Spørsmålsfrist/);
   assert.match(t, /24 måneder/);
   // Matchforklaringen v2: omsetningskravet sammenlignes med profilen (som mangler omsetning).

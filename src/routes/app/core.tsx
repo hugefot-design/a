@@ -19,6 +19,7 @@ import { WEEKLY_OVERVIEW_SYSTEM } from '@/domain/ai/prompts';
 import { weeklyOverviewJsonSchema, weeklyOverviewZ } from '@/domain/ai/schemas';
 import { mockWeeklyOverview } from '@/domain/ai/mock';
 import { deleteTenderDocument, uploadTenderDocument } from '@/domain/documents/documents';
+import { tenderRequirementScan } from '@/domain/documents/requirements-service';
 import { isoWeek, loadDashboard } from '@/domain/dashboard';
 import type { MatchBreakdown } from '@/domain/matching/engine';
 import { redirectWith } from '@/server/flash';
@@ -233,7 +234,10 @@ export function registerCoreAppRoutes(router: Router): void {
       const fit = org.entitlements.matching ? await getLatestFitAssessment(tx, id, org.id) : null;
       const usage = await usageSummary(tx, org);
       const profit = org.entitlements.profitCalculator ? await calculationBadge(tx, org.id, id) : null;
-      return { tender, extras, labels, analysis, fit, usage, profit };
+      // Dokumentene leses bare når det finnes lest tekst (de fleste anbud har ingen opplastede dokumenter).
+      const withDocuments = org.entitlements.documentUpload && extras.documents.some((d) => d.textStatus === 'extracted');
+      const requirements = await tenderRequirementScan(tx, tender, withDocuments);
+      return { tender, extras, labels, analysis, fit, usage, profit, requirements };
     });
     if (!data) throw new HttpError(404, 'Fant ikke kunngjøringen.');
     return render(
@@ -253,6 +257,7 @@ export function registerCoreAppRoutes(router: Router): void {
         canAssessFit={org.entitlements.matching}
         aiQuota={{ used: data.usage.analyses, limit: data.usage.analysesLimit }}
         profit={data.profit}
+        requirements={data.requirements}
       />,
       { title: data.tender.title },
     );

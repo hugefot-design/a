@@ -100,6 +100,21 @@ export interface WorkspaceProps {
   draftQuota: { used: number; limit: number };
 }
 
+/** Merkelapp for hvor et punkt i sjekklisten kommer fra. */
+function checklistBadge(c: { source: string; category: string }): string {
+  if (c.source === 'ai') return 'AI';
+  if (c.source === 'standard') return 'Standard';
+  if (c.source === 'krav') return CHECKLIST_KRAV_LABELS[c.category] ?? 'Krav';
+  return 'Lagt til';
+}
+const CHECKLIST_KRAV_LABELS: Record<string, string> = {
+  avvisning: 'Avvisningsgrunn',
+  minstekrav: 'Minstekrav',
+  befaring: 'Frist / befaring',
+  kvalifikasjon: 'Kvalifikasjon',
+  innlevering: 'Krav til tilbudet',
+};
+
 export function BidWorkspacePage(p: WorkspaceProps) {
   const { org } = useUi();
   const actions = allowedActions(p.ws.status, org!.role);
@@ -169,12 +184,21 @@ export function BidWorkspacePage(p: WorkspaceProps) {
               title="Sjekkliste"
               description={`${done} av ${p.checklist.length} gjort. Standardpunkter er vanlige i norske anbud – bekreft dem mot konkurransegrunnlaget.`}
               action={
-                p.aiConfigured && !locked ? (
-                  <PostForm action={`${base}/sjekkliste/ai`}>
-                    <Button size="sm" variant="secondary" busyLabel="Leser kravene …">
-                      Hent krav med AI
-                    </Button>
-                  </PostForm>
+                !locked ? (
+                  <div className="flex flex-wrap gap-2">
+                    <PostForm action={`${base}/sjekkliste/krav`}>
+                      <Button size="sm" variant="secondary" busyLabel="Leser dokumentene …" title="Ordsøk i kunngjøringen og dokumentene – ingen AI">
+                        Hent krav fra dokumentene
+                      </Button>
+                    </PostForm>
+                    {p.aiConfigured ? (
+                      <PostForm action={`${base}/sjekkliste/ai`}>
+                        <Button size="sm" variant="secondary" busyLabel="Leser kravene …">
+                          Hent krav med AI
+                        </Button>
+                      </PostForm>
+                    ) : null}
+                  </div>
                 ) : null
               }
             />
@@ -195,7 +219,7 @@ export function BidWorkspacePage(p: WorkspaceProps) {
                   <div className="min-w-0 flex-1">
                     <p className={cn('text-[14px]', c.isDone && 'text-muted line-through')}>{c.label}</p>
                     <div className="mt-0.5 flex flex-wrap gap-1.5">
-                      <Badge tone={c.source === 'ai' ? 'ai' : 'outline'}>{c.source === 'ai' ? 'AI' : c.source === 'standard' ? 'Standard' : 'Lagt til'}</Badge>
+                      <Badge tone={c.source === 'ai' ? 'ai' : c.source === 'krav' && c.category === 'avvisning' ? 'danger' : 'outline'}>{checklistBadge(c)}</Badge>
                       {c.sourceRef ? <span className="text-[12px] text-muted">{c.sourceRef}</span> : null}
                     </div>
                   </div>

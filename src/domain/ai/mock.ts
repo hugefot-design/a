@@ -52,7 +52,7 @@ export function mockTenderAnalysis(sources: AnalysisSource[]): TenderAnalysis {
   const descSentences = sentences(notice?.pages.map((p) => p.text).join(' ') ?? '').filter((s) => !s.startsWith('Fiktiv kunngjøring'));
   const requirementHits = sources
     .flatMap((s) => s.pages.flatMap((p) => sentences(p.text).map((sentence) => ({ s, p, sentence }))))
-    .filter(({ sentence }) => /\b(må|skal|krav|påkrevd|kvalifikasjonskrav)\b/i.test(sentence))
+    .filter(({ sentence }) => /(?<![a-zæøå])(må|skal|krav|påkrevd|kvalifikasjonskrav)(?![a-zæøå])/i.test(sentence))
     .slice(0, 6);
   const certs = CERTIFICATIONS.filter((c) => c.patterns.some((re) => re.test(allText)))
     .map((c) => {
@@ -63,7 +63,7 @@ export function mockTenderAnalysis(sources: AnalysisSource[]): TenderAnalysis {
   const deadlineQuote = findLine(sources, /^tilbudsfrist:\s*\d/i) ?? findQuote(sources, /tilbudsfrist/i);
   const pct = findQuote(sources, /\d+\s*%/);
   const financial = findQuote(sources, /omsetning|kredittvurdering|egenkapital/i);
-  const duration = findQuote(sources, /\b(år|måneder)\b.*\b(opsjon|varighet|avtale)\b|\bopsjon\b/i);
+  const duration = findQuote(sources, /(?<![a-zæøå])(år|måneder)(?![a-zæøå]).*\b(opsjon|varighet|avtale)\b|\bopsjon\b/i);
   const ref = (q: { source_id: string; page: number | null; quote: string }) => ({ source_id: q.source_id, page: q.page, quote: q.quote });
   const category = (sentence: string) =>
     /kvalifikasjon|tillatelse|godkjen|registrert|qualif|experience|erfaring/i.test(sentence)
@@ -92,7 +92,7 @@ export function mockTenderAnalysis(sources: AnalysisSource[]): TenderAnalysis {
     contract_duration: duration ? { value: duration.sentence.slice(0, 200), source: ref(duration) } : { value: null, source: null },
     evaluation_criteria: pct ? [{ criterion: pct.sentence.slice(0, 200), weight: null, source: ref(pct) }] : [],
     rejection_risks: requirementHits
-      .filter(({ sentence }) => /\b(må|skal)\b/i.test(sentence))
+      .filter(({ sentence }) => /(?<![a-zæøå])(må|skal)(?![a-zæøå])/i.test(sentence))
       .slice(0, 3)
       .map(({ s, p, sentence }) => ({ text: `Kravet må dokumenteres: ${sentence}`, basis: 'tolkning' as const, source: { source_id: s.id, page: p.page, quote: sentence.slice(0, 180) } })),
     how_to_participate: ['Last ned konkurransegrunnlaget hos kilden.', 'Dokumenter kvalifikasjonskravene.', 'Lever tilbudet i oppdragsgivers system før fristen.'],

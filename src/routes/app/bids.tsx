@@ -15,6 +15,7 @@ import {
 import { draftSection, generateChecklist, generateStructure, reviewDraft } from '@/domain/bids/ai';
 import { toDocx, toMarkdown, toPrintHtml } from '@/domain/bids/export';
 import { usageSummary } from '@/domain/ai/usage';
+import { addRequirementsToChecklist, MAX_CHECKLIST_IMPORT } from '@/domain/documents/requirements-service';
 import { redirectWith } from '@/server/flash';
 import { HttpError, json, redirect } from '@/server/http';
 import { render } from '@/server/render';
@@ -100,6 +101,22 @@ export function registerBidRoutes(router: Router): void {
     const id = param(ctx, 'id');
     const result = await generateChecklist(org, user.id, id);
     return redirectWith(ctx, `/app/tilbud/${id}`, result.ok ? 'success' : 'error', result.ok ? `${result.count} punkter er lagt til fra kravene.` : result.error);
+  }, feature);
+
+  // Krav fra kunngjøringen og dokumentene (ordsøk, ingen AI). Må registreres før /sjekkliste/:itemId.
+  router.post('/app/tilbud/:id/sjekkliste/krav', 'org', async (ctx) => {
+    const { org } = requireOrg(ctx);
+    const id = param(ctx, 'id');
+    const result = await ctx.tenant((tx) => addRequirementsToChecklist(tx, org, id));
+    if (!result.ok && result.notFound) throw new HttpError(404, result.error);
+    if (!result.ok) return redirectWith(ctx, `/app/tilbud/${id}`, 'error', result.error);
+    if (!result.found) {
+      return redirectWith(ctx, `/app/tilbud/${id}`, 'info', 'Fant ingen krav med de vanlige ordene. Les konkurransegrunnlaget og legg til punkter selv.');
+    }
+    const parts = [result.added ? `${result.added} krav er lagt i sjekklisten.` : 'Ingen nye krav – alle står i sjekklisten fra før.'];
+    if (result.added && result.alreadyThere) parts.push(`${result.alreadyThere} sto der fra før.`);
+    if (result.capped) parts.push(`Høyst ${MAX_CHECKLIST_IMPORT} om gangen – trykk igjen for resten.`);
+    return redirectWith(ctx, `/app/tilbud/${id}`, 'success', parts.join(' '));
   }, feature);
 
   router.post('/app/tilbud/:id/struktur/ai', 'org', async (ctx) => {

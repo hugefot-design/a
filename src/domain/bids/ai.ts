@@ -148,7 +148,7 @@ export async function reviewDraft(org: OrgContext, userId: string, workspaceId: 
         .slice(0, 40)
     : (c.tender.description ?? '')
         .split(/(?<=[.!?])\s+/)
-        .filter((s) => /\b(må|skal|krav)\b/i.test(s))
+        .filter((s) => /(?<![a-zæøå])(må|skal|krav)(?![a-zæøå])/i.test(s))
         .slice(0, 20);
   if (!requirements.length) return { ok: false as const, error: 'Fant ingen krav å sammenligne med. Kjør AI-analysen av kunngjøringen først.' };
   const sectionText = sections.map((s) => `## ${s.title}\n${s.content}`).join('\n\n');

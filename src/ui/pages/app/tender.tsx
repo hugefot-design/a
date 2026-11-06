@@ -6,7 +6,7 @@ import type { StoredFitAssessment, StoredTenderAnalysis } from '@/domain/ai/anal
 import type { MatchBreakdown } from '@/domain/matching/engine';
 import type { RefCheck } from '@/domain/ai/sources';
 import { BOOKMARK_STATUSES } from '@/domain/tenders/bookmarks';
-import { eformsFacts, isEnvironmentNonCriterion, type EformsFacts } from '@/domain/tenders/eforms-facts';
+import { eformsFacts, type EformsFacts } from '@/domain/tenders/eforms-facts';
 import { useUi } from '../../context';
 import {
   Alert,
@@ -28,6 +28,7 @@ import { BookmarkButton, MatchExplanation, StatusBadge } from '../../tender';
 import { daysUntil, formatDate, formatDateTime, formatInt, formatMoney, relativeTime } from '../../format';
 import { TenderProfitTeaser } from './profit';
 import type { Recommendation } from '@/domain/profit/recommendation';
+import { REQUIREMENT_KINDS, REQUIREMENT_LABELS, sourceLabel, type RequirementHit, type RequirementKind, type RequirementScan } from '@/domain/documents/requirements';
 
 export interface TenderPageProps {
   tender: TenderDetail;
@@ -44,6 +45,8 @@ export interface TenderPageProps {
   canAssessFit: boolean;
   aiQuota: { used: number; limit: number };
   profit?: { recommendation: Recommendation; marginPct: number | null; updatedAt: Date } | null;
+  /** Krav- og avvisningssjekk (ordsøk, ingen AI). */
+  requirements?: RequirementScan | null;
 }
 
 const SOURCE_NAMES: Record<string, string> = { ted: 'TED', doffin: 'Doffin', manual: 'Manuell import', sample: 'Eksempeldata' };
@@ -223,7 +226,15 @@ export function TenderPage(p: TenderPageProps) {
 
           <DocumentsLinkPanel tender={t} />
 
-          <NoticeRequirementsPanel tender={t} />
+          {p.requirements ? (
+            <RequirementsPanel
+              scan={p.requirements}
+              workspaceId={ent.bidAssistant && p.workspace && p.workspace.status !== 'submitted' && p.workspace.status !== 'archived' ? p.workspace.id : null}
+              canUpload={ent.documentUpload}
+            />
+          ) : null}
+
+          <LotsPanel tender={t} />
 
           <AnalysisTeaser
             tenderId={t.id}
@@ -423,54 +434,113 @@ function regulationItems(ef: EformsFacts | null): { term: ReactNode; detail: Rea
   return items;
 }
 
-function NoticeRequirementsPanel({ tender }: { tender: TenderDetail }) {
-  // Klimakrav i spesifikasjonen og unntak er ikke tildelingskriterier – de vises under «Klima og miljø».
-  const awardCriteria = (tender.awardCriteria ?? []).filter((c) => !isEnvironmentNonCriterion(c.type));
-  if (!tender.selectionCriteria?.length && !awardCriteria.length && !tender.lots?.length) return null;
+/** Åpne fra start: de dyreste feilene (avvisning, minstekrav) og korte lister. */
+const OPEN_KINDS: RequirementKind[] = ['avvisning', 'minstekrav'];
+
+function HitText({ hit }: { hit: RequirementHit }) {
+  // Ordet som ga treffet uthevet, så brukeren ser hvorfor setningen er med.
+  const i = hit.match ? hit.text.indexOf(hit.match) : -1;
+  if (i < 0) return <>{hit.text}</>;
+  return (
+    <>
+      {hit.text.slice(0, i)}
+      <mark className="rounded bg-marker-soft px-0.5 text-ink">{hit.match}</mark>
+      {hit.text.slice(i + hit.match.length)}
+    </>
+  );
+}
+
+function RequirementsPanel({ scan, workspaceId, canUpload }: { scan: RequirementScan; workspaceId: string | null; canUpload: boolean }) {
+  const kinds = REQUIREMENT_KINDS.filter((k) => scan.counts[k] > 0);
+  const checked =
+    scan.documents > 0
+      ? `Sjekket kunngjøringen og ${scan.documents} ${scan.documents === 1 ? 'dokument' : 'dokumenter'} (${formatInt(scan.pages)} sider).`
+      : canUpload
+        ? 'Bare kunngjøringen er sjekket. Last opp konkurransegrunnlaget under «Dokumenter for analyse» for en full sjekk.'
+        : 'Bare kunngjøringen er sjekket. Sjekk av konkurransegrunnlaget (opplasting) er med i Profesjonell og Bedrift.';
   return (
     <Panel>
-      <PanelHeader title="Krav og kriterier i kunngjøringen" description="Ordrett fra kilden. Ingen AI er brukt i denne delen." />
-      <div className="space-y-5 px-5 py-4">
-        {tender.selectionCriteria?.length ? (
-          <section>
-            <h3 className="text-[14px] font-semibold text-navy-900">Kvalifikasjonskrav</h3>
-            <ul className="mt-2 list-disc space-y-2 pl-5 text-[14px] leading-relaxed">
-              {tender.selectionCriteria.map((c, i) => (
-                <li key={i} className="whitespace-pre-line">
-                  {c}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-        {awardCriteria.length ? (
-          <section>
-            <h3 className="text-[14px] font-semibold text-navy-900">Tildelingskriterier</h3>
-            <ul className="mt-2 space-y-1 text-[14px]">
-              {awardCriteria.map((c, i) => (
-                <li key={i}>
-                  {c.name}
-                  {c.weight ? <span className="num whitespace-nowrap font-semibold"> – {c.weight}</span> : null}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-        {tender.lots?.length ? (
-          <section>
-            <h3 className="text-[14px] font-semibold text-navy-900">Delkontrakter ({tender.lots.length})</h3>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-[14px]">
-              {tender.lots.map((l, i) => (
-                <li key={i}>
-                  {l.title ?? l.id ?? 'Uten tittel'}
-                  {l.estimatedValue !== null ? <span className="num text-muted"> – {formatMoney(l.estimatedValue, tender.currency, false)}</span> : null}
-                  {l.durationText ? <span className="text-muted">, {l.durationText}</span> : null}
-                </li>
-              ))}
-            </ol>
-          </section>
-        ) : null}
-      </div>
+      <div id="krav" className="scroll-mt-24" />
+      <PanelHeader
+        title="Krav og avvisningsrisiko"
+        description="Setninger om avvisning, minstekrav, kvalifikasjon og frister – med hvor de står. Ordsøk, ingen AI."
+        action={
+          workspaceId && kinds.some((k) => k !== 'tildeling') ? (
+            <PostForm action={`/app/tilbud/${workspaceId}/sjekkliste/krav`}>
+              <Button size="sm" variant="secondary" busyLabel="Legger inn …">
+                Legg i sjekklisten
+              </Button>
+            </PostForm>
+          ) : undefined
+        }
+      />
+      <p className={`border-b border-line px-5 py-2 text-[12.5px] ${scan.documents > 0 ? 'text-muted' : 'bg-marker-soft text-ink'}`}>{checked}</p>
+      {kinds.length ? (
+        <div className="divide-y divide-line">
+          {kinds.map((k) => {
+            const hits = scan.byKind[k];
+            const meta = REQUIREMENT_LABELS[k];
+            return (
+              <details key={k} open={OPEN_KINDS.includes(k) || scan.counts[k] <= 3} className="group">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 hover:bg-navy-50/50 [&::-webkit-details-marker]:hidden">
+                  <span className="flex items-center gap-2 text-[14px] font-semibold text-navy-900">
+                    <span aria-hidden className="inline-block w-3 text-muted transition-transform group-open:rotate-90">
+                      ›
+                    </span>
+                    {meta.label}
+                  </span>
+                  <Badge tone={k === 'avvisning' ? 'danger' : k === 'minstekrav' ? 'urgent' : 'neutral'}>{formatInt(scan.counts[k])}</Badge>
+                </summary>
+                <div className="px-5 pb-4">
+                  <p className="text-[12.5px] text-muted">{meta.hint}</p>
+                  <ul className="mt-3 space-y-3">
+                    {hits.map((h, i) => (
+                      <li key={i} className="border-l-2 border-line-strong pl-3">
+                        <p className="whitespace-pre-line text-[14px] leading-relaxed text-ink">
+                          <HitText hit={h} />
+                        </p>
+                        <p className="mt-0.5 text-[12px] text-muted">{sourceLabel(h)}</p>
+                      </li>
+                    ))}
+                  </ul>
+                  {scan.counts[k] > hits.length ? (
+                    <p className="mt-3 text-[12px] text-muted">
+                      Viser {hits.length} av {formatInt(scan.counts[k])}. Resten står i dokumentene.
+                    </p>
+                  ) : null}
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="px-5 py-4 text-[14px] text-muted">
+          Fant ingen setninger med de vanlige kravordene (avvisning, minstekrav, kvalifikasjonskrav, befaring). Det betyr ikke at det ikke finnes krav – les
+          konkurransegrunnlaget.
+        </p>
+      )}
+      <p className="border-t border-line px-5 py-2.5 text-[12px] text-muted">
+        Ordsøk finner ord, ikke betydning: noen punkter kan være generelle, og krav skrevet med andre ord fanges ikke opp. Les alltid hele
+        konkurransegrunnlaget før innlevering.
+      </p>
+    </Panel>
+  );
+}
+
+function LotsPanel({ tender }: { tender: TenderDetail }) {
+  if (!tender.lots?.length) return null;
+  return (
+    <Panel>
+      <PanelHeader title={`Delkontrakter (${tender.lots.length})`} description="Fra kunngjøringen." />
+      <ol className="list-decimal space-y-1 py-4 pl-10 pr-5 text-[14px]">
+        {tender.lots.map((l, i) => (
+          <li key={i}>
+            {l.title ?? l.id ?? 'Uten tittel'}
+            {l.estimatedValue !== null ? <span className="num text-muted"> – {formatMoney(l.estimatedValue, tender.currency, false)}</span> : null}
+            {l.durationText ? <span className="text-muted">, {l.durationText}</span> : null}
+          </li>
+        ))}
+      </ol>
     </Panel>
   );
 }
