@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 6. november 2026 (sikkerhetsgjennomgang, krav- og avvisningssjekk, tilbudsresultat, markedspris og kontraktsutløp – se [VEIKART.md](VEIKART.md)).
+Sist oppdatert 6. november 2026 (veikartpunkt 1–6: sikkerhet, kravsjekk, tilbudsresultat, markedspris, kontraktsutløp og forhåndsvurdering – se [VEIKART.md](VEIKART.md)).
 
 ## Testresultater
 
@@ -9,8 +9,8 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 166 av 166 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 6.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 154 av 154 bestått – 6.11.2026 |
+| Enhetstester | 169 av 169 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 6.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 157 av 157 bestått – 6.11.2026 |
 | Ende-til-ende i nettleser | 4 av 4 bestått – 6.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -240,3 +240,19 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   før det ble rundet av. Fanget av integrasjonstesten.
 - **Ikke bygget ennå:** varsel når en kontrakt i bransjen nærmer seg utløp (krever ny varselinnstilling, så kunden selv
   styrer det). **IKKE VERIFISERT:** hvor mange tildelinger i produksjon som har varighet og dato. Ikke rullet ut.
+
+## Forhåndsvurdering av treff (6. november 2026)
+
+- **Hva:** hvert treff får «Verdt å se på», «Sjekk først» eller «Passer trolig ikke» med grunnene, alvorligst først:
+  frist (mot profilens «minst dager til frist»), krav dere ikke oppfyller (fra matchingen), obligatorisk befaring,
+  kostbare vilkår nevnt i kunngjøringen (dagbøter, garantier/sikkerhetsstillelse, erstatningsansvar – nektelser teller
+  ikke), opplysninger som mangler og høy usikkerhet. Kravsetninger om avvisning/minstekrav vises som informasjon.
+- **Hvor:** søkeresultater og «Beste treff» på Oversikt (med matching: merkelapp og viktigste grunn), og øverst i
+  «Passer det for oss?» på anbudssiden (alle planer – uten matching vurderes frist og kunngjøring).
+- **Uten AI og uten lagring:** regnes ut når siden vises, fra kunngjøringen og profilen. Ingen nye kolonner, ingen
+  endring av eksisterende data. Tåler eldre lagrede matchforklaringer.
+- **Tester:** `tests/unit/screening.test.ts` (signaler, nektelser, rekkefølge, alle tre vurderinger, eldre data) og
+  `tests/integration/screening.test.ts` (anbudssiden, søk og Oversikt med matching, Start-plan uten merkelapper).
+  Visuell kontroll 1280 og 390 px.
+- **Begrensning:** bygger bare på kunngjøringen – konkurransegrunnlaget kan ha flere krav (det står under vurderingen).
+  Ikke rullet ut.

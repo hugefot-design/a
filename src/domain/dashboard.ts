@@ -2,6 +2,7 @@ import { first, type Tx } from '@/lib/db';
 import { isProd } from '@/lib/env';
 import type { OrgContext } from '@/server/http';
 import { statusCondition, type TenderListItem } from '@/domain/tenders/queries';
+import { screenRow, type ScreenableRow } from '@/domain/matching/screening';
 
 export interface DashboardData {
   newMatches: number;
@@ -37,7 +38,11 @@ export function isoWeek(d = new Date()): string {
 
 export async function loadDashboard(tx: Tx, org: OrgContext): Promise<DashboardData> {
   const profile = first(
-    (await tx`select industries, regions from company_profiles where org_id = ${org.id}`) as unknown as { industries: string[]; regions: string[] }[],
+    (await tx`select industries, regions, min_days_to_deadline from company_profiles where org_id = ${org.id}`) as unknown as {
+      industries: string[];
+      regions: string[];
+      minDaysToDeadline: number;
+    }[],
   );
   const industries = profile?.industries ?? [];
   const regions = (profile?.regions ?? []).filter((r) => r !== 'ALL');
@@ -57,12 +62,16 @@ export async function loadDashboard(tx: Tx, org: OrgContext): Promise<DashboardD
 
   const topMatches = org.entitlements.matching
     ? ((await tx`
-        select ${LIST_COLUMNS(tx, org.id)}, m.score
+        select ${LIST_COLUMNS(tx, org.id)}, m.score, t.description, m.breakdown as match_breakdown, m.excluded as match_excluded
         from match_results m join tenders t on t.id = m.tender_id
         where m.org_id = ${org.id} and not m.excluded and (${open} or t.lifecycle = 'planned') ${sampleFilter}
         order by m.score desc, t.deadline_at asc nulls last
         limit 6
-      `) as unknown as TenderListItem[])
+      `) as unknown as (TenderListItem & ScreenableRow)[]).map(({ description, matchBreakdown, matchExcluded, ...item }) => ({
+        ...item,
+        // Forhåndsvurdering: frist, krav, befaring og vilkår – samme regel som på anbudssiden.
+        screening: screenRow({ description, matchBreakdown, matchExcluded, deadlineAt: item.deadlineAt, score: item.score }, profile?.minDaysToDeadline ?? 10),
+      }))
     : [];
 
   const deadlines = (await tx`

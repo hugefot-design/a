@@ -21,6 +21,14 @@ import { mockWeeklyOverview } from '@/domain/ai/mock';
 import { deleteTenderDocument, uploadTenderDocument } from '@/domain/documents/documents';
 import { tenderRequirementScan } from '@/domain/documents/requirements-service';
 import { confirmAwardWin, learningSummary, loadResults, parseResultForm, saveResultFields, tenderResultInfo } from '@/domain/tenders/results';
+import { noticeSignals, screenTender } from '@/domain/matching/screening';
+import type { Tx } from '@/lib/db';
+
+/** Profilens «minst antall dager til frist» (standard 10 når profilen mangler). */
+async function profileMinDays(tx: Tx, orgId: string): Promise<number> {
+  const [row] = (await tx`select min_days_to_deadline from company_profiles where org_id = ${orgId}`) as unknown as { minDaysToDeadline: number }[];
+  return row?.minDaysToDeadline ?? 10;
+}
 import { ResultsPage } from '@/ui/pages/app/results';
 import { isoWeek, loadDashboard } from '@/domain/dashboard';
 import type { MatchBreakdown } from '@/domain/matching/engine';
@@ -192,7 +200,8 @@ export function registerCoreAppRoutes(router: Router): void {
     }
     const matching = org.entitlements.matching;
     const results = await ctx.tenant(async (tx) => {
-      const r = await searchTenders(tx, effective, { orgId: org.id, matching });
+      const minDays = matching ? await profileMinDays(tx, org.id) : undefined;
+      const r = await searchTenders(tx, effective, { orgId: org.id, matching, screenMinDays: minDays });
       if (effective.page === 1) {
         await tx`
           insert into search_events (org_id, industries, regions, has_keyword, used_nl, result_count)
@@ -240,7 +249,15 @@ export function registerCoreAppRoutes(router: Router): void {
       const withDocuments = org.entitlements.documentUpload && extras.documents.some((d) => d.textStatus === 'extracted');
       const requirements = await tenderRequirementScan(tx, tender, withDocuments);
       const result = await tenderResultInfo(tx, org.id, tender);
-      return { tender, extras, labels, analysis, fit, usage, profit, requirements, result };
+      // Forhåndsvurdering (uten AI): frist, krav, befaring og vilkår i kunngjøringen + treffet mot profilen.
+      const m = org.entitlements.matching ? extras.match : null;
+      const screening = screenTender({
+        match: m ? { score: m.score, excluded: m.excluded, breakdown: m.breakdown as MatchBreakdown } : null,
+        deadlineAt: tender.deadlineAt,
+        minDaysToDeadline: await profileMinDays(tx, org.id),
+        signals: noticeSignals(tender.description),
+      });
+      return { tender, extras, labels, analysis, fit, usage, profit, requirements, result, screening };
     });
     if (!data) throw new HttpError(404, 'Fant ikke kunngjøringen.');
     return render(
@@ -262,6 +279,7 @@ export function registerCoreAppRoutes(router: Router): void {
         profit={data.profit}
         requirements={data.requirements}
         result={data.result}
+        screening={data.screening}
       />,
       { title: data.tender.title },
     );

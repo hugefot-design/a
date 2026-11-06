@@ -25,13 +25,14 @@ import {
   Textarea,
 } from '../../components';
 import { AppShell } from '../../layouts';
-import { BookmarkButton, MatchExplanation, StatusBadge } from '../../tender';
+import { BookmarkButton, MatchExplanation, ScreeningBadge, ScreeningPoints, StatusBadge } from '../../tender';
 import { daysUntil, formatDate, formatDateTime, formatInt, formatMoney, relativeTime } from '../../format';
 import { TenderProfitTeaser } from './profit';
 import type { Recommendation } from '@/domain/profit/recommendation';
 import { REQUIREMENT_KINDS, REQUIREMENT_LABELS, sourceLabel, type RequirementHit, type RequirementKind, type RequirementScan } from '@/domain/documents/requirements';
 import { OUTCOME_REASONS, type TenderResultInfo } from '@/domain/tenders/results';
 import { expectedEnd } from '@/domain/competitors/expiry';
+import type { Screening } from '@/domain/matching/screening';
 
 export interface TenderPageProps {
   tender: TenderDetail;
@@ -62,6 +63,8 @@ export interface TenderPageProps {
   requirements?: RequirementScan | null;
   /** Tilbudsresultat: tildelingen mot org.nr., kalkylens målpris og historikk hos oppdragsgiveren. */
   result?: TenderResultInfo | null;
+  /** Forhåndsvurdering uten AI (frist, krav, befaring, vilkår og treff mot profilen). */
+  screening?: Screening | null;
 }
 
 const SOURCE_NAMES: Record<string, string> = { ted: 'TED', doffin: 'Doffin', manual: 'Manuell import', sample: 'Eksempeldata' };
@@ -312,6 +315,16 @@ export function TenderPage(p: TenderPageProps) {
           </Panel>
           <Panel>
             <PanelHeader title="Passer det for oss?" />
+            {p.screening ? (
+              <div id="forhandsvurdering" className="space-y-2.5 border-b border-line px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[13px] font-semibold text-navy-900">Forhåndsvurdering</p>
+                  <ScreeningBadge screening={p.screening} />
+                </div>
+                <ScreeningPoints screening={p.screening} />
+                <p className="text-[11.5px] text-muted">Uten AI: frist, treffet mot profilen og ordsøk i kunngjøringen. Konkurransegrunnlaget kan ha flere krav.</p>
+              </div>
+            ) : null}
             <div className="p-5">
               {!ent.matching ? (
                 <p className="text-[14px] text-muted">

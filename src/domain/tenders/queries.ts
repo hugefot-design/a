@@ -1,4 +1,5 @@
 import type postgres from 'postgres';
+import { screenRow, type Screening, type ScreenableRow } from '@/domain/matching/screening';
 import type { EformsSourceSummary } from './eforms-facts';
 import { first, type Db, type Tx } from '@/lib/db';
 import { isProd } from '@/lib/env';
@@ -26,6 +27,8 @@ export interface TenderListItem {
   score: number | null;
   bookmarked: boolean;
   firstSeenAt: Date;
+  /** Forhåndsvurdering (bare når organisasjonen har matching). */
+  screening?: Screening | null;
 }
 
 type Fragment = postgres.PendingQuery<postgres.Row[]>;
@@ -108,9 +111,10 @@ function orderBy(sql: Db, q: TenderQuery, matching: boolean): Fragment {
 export async function searchTenders(
   tx: Tx,
   q: TenderQuery,
-  opts: { orgId: string; matching: boolean; pageSize?: number },
+  opts: { orgId: string; matching: boolean; pageSize?: number; /** Profilens minste antall dager til frist – gir forhåndsvurdering per treff. */ screenMinDays?: number },
 ): Promise<{ items: TenderListItem[]; total: number; page: number; totalPages: number }> {
   const pageSize = opts.pageSize ?? PAGE_SIZE;
+  const screen = opts.matching && opts.screenMinDays !== undefined;
   const where = buildConditions(tx, q);
   const offset = (q.page - 1) * pageSize;
   const [countRow] = (await tx`select count(*)::int as total from tenders t where ${where}`) as unknown as { total: number }[];
@@ -121,15 +125,22 @@ export async function searchTenders(
            (select coalesce(array_agg(distinct s.source), '{}') from tender_sources s where s.tender_id = t.id) as sources,
            ${opts.matching ? tx`m.score` : tx`null::int`} as score,
            (b.id is not null) as bookmarked
+           ${screen ? tx`, t.description, m.breakdown as match_breakdown, m.excluded as match_excluded` : tx``}
     from tenders t
     left join match_results m on m.tender_id = t.id and m.org_id = ${opts.orgId}
     left join bookmarks b on b.tender_id = t.id and b.org_id = ${opts.orgId}
     where ${where}
     order by ${orderBy(tx, q, opts.matching)}
     limit ${pageSize} offset ${offset}
-  `) as unknown as TenderListItem[];
+  `) as unknown as (TenderListItem & ScreenableRow)[];
   const total = countRow?.total ?? 0;
-  return { items, total, page: q.page, totalPages: Math.max(1, Math.ceil(total / pageSize)) };
+  const out = screen
+    ? items.map(({ description, matchBreakdown, matchExcluded, ...item }) => ({
+        ...item,
+        screening: screenRow({ description, matchBreakdown, matchExcluded, deadlineAt: item.deadlineAt, score: item.score }, opts.screenMinDays!),
+      }))
+    : items;
+  return { items: out, total, page: q.page, totalPages: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
 export interface TenderDetail {

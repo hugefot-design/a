@@ -1,9 +1,10 @@
 import { displayBuyer } from '@/domain/tenders/market';
 import type { ReactNode } from 'react';
-import { LuBookmark, LuBookmarkCheck, LuBuilding2, LuCircleAlert, LuCircleCheck, LuCircleX, LuMapPin } from 'react-icons/lu';
+import { LuBookmark, LuBookmarkCheck, LuBuilding2, LuCircleAlert, LuCircleCheck, LuCircleX, LuInfo, LuMapPin } from 'react-icons/lu';
 import { INDUSTRY_BY_ID, REGION_BY_CODE, STATUS_LABELS } from '@/domain/reference';
 import type { TenderListItem } from '@/domain/tenders/queries';
 import type { MatchBreakdown } from '@/domain/matching/engine';
+import type { PointTone, Screening, ScreeningVerdict } from '@/domain/matching/screening';
 import { Badge, cn, CsrfField, DeadlineChip, SampleBadge, ScoreBar, SourceTag } from './components';
 import { formatMoney } from './format';
 
@@ -67,6 +68,38 @@ export function TenderMeta({ buyer, place, regions }: { buyer: string | null; pl
   );
 }
 
+const VERDICT_TONE: Record<ScreeningVerdict, 'ok' | 'urgent' | 'danger'> = { se_paa: 'ok', sjekk: 'urgent', passer_ikke: 'danger' };
+const POINT_ICON: Record<PointTone, ReactNode> = {
+  stop: <LuCircleX className="size-4 text-danger" aria-hidden />,
+  warn: <LuCircleAlert className="size-4 text-urgent" aria-hidden />,
+  info: <LuInfo className="size-4 text-muted" aria-hidden />,
+  ok: <LuCircleCheck className="size-4 text-ok" aria-hidden />,
+};
+
+/** Forhåndsvurderingen som merkelapp (farge + tekst, aldri bare farge). */
+export function ScreeningBadge({ screening }: { screening: Screening }) {
+  return (
+    <Badge tone={VERDICT_TONE[screening.verdict]} title="Forhåndsvurdering uten AI: frist, krav, befaring og vilkår i kunngjøringen">
+      {screening.label}
+    </Badge>
+  );
+}
+
+/** Alle punktene i forhåndsvurderingen, alvorligst først. */
+export function ScreeningPoints({ screening, limit }: { screening: Screening; limit?: number }) {
+  const points = limit ? screening.points.slice(0, limit) : screening.points;
+  return (
+    <ul className="space-y-1.5">
+      {points.map((p) => (
+        <li key={p.text} className="flex gap-2 text-[13px] leading-snug text-ink">
+          <span className="mt-0.5 shrink-0">{POINT_ICON[p.tone]}</span>
+          <span>{p.text}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function TenderRow({ item, showScore }: { item: TenderListItem; showScore: boolean }) {
   return (
     <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start">
@@ -79,6 +112,14 @@ export function TenderRow({ item, showScore }: { item: TenderListItem; showScore
           {item.isSample ? <SampleBadge /> : null}
         </div>
         <TenderMeta buyer={item.buyerName} place={item.placeText} regions={item.regionCodes} />
+        {item.screening ? (
+          <div className="flex flex-wrap items-start gap-2 pt-0.5">
+            <ScreeningBadge screening={item.screening} />
+            {item.screening.points[0] && item.screening.points[0].tone !== 'info' && item.screening.points[0].tone !== 'ok' ? (
+              <span className="min-w-0 flex-1 text-[12.5px] leading-snug text-muted">{item.screening.points[0].text}</span>
+            ) : null}
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
           {item.industryIds.slice(0, 2).map((i) => (
             <Badge key={i} tone="neutral">
