@@ -31,6 +31,7 @@ import { TenderProfitTeaser } from './profit';
 import type { Recommendation } from '@/domain/profit/recommendation';
 import { REQUIREMENT_KINDS, REQUIREMENT_LABELS, sourceLabel, type RequirementHit, type RequirementKind, type RequirementScan } from '@/domain/documents/requirements';
 import { OUTCOME_REASONS, type TenderResultInfo } from '@/domain/tenders/results';
+import { expectedEnd } from '@/domain/competitors/expiry';
 
 export interface TenderPageProps {
   tender: TenderDetail;
@@ -265,6 +266,7 @@ export function TenderPage(p: TenderPageProps) {
           {p.awards.length ? (
             <Panel>
               <PanelHeader title="Tildeling" description="Fra tildelingskunngjøringen hos kilden." />
+              <ExpiryNote tender={t} awards={p.awards} radar={ent.competitorIntel} />
               <ul className="divide-y divide-line">
                 {p.awards.map((a) => (
                   <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-[14px]">
@@ -544,6 +546,32 @@ function LotsPanel({ tender }: { tender: TenderDetail }) {
         ))}
       </ol>
     </Panel>
+  );
+}
+
+/** Når kontrakten trolig utløper – et anslag med grunnlag, aldri gjettet (se domain/competitors/expiry). */
+function ExpiryNote({ tender, awards, radar }: { tender: TenderDetail; awards: TenderPageProps['awards']; radar: boolean }) {
+  const dates = awards.map((a) => a.awardDate).filter((d): d is Date => d !== null);
+  const awardDate = dates.length ? new Date(Math.min(...dates.map((d) => new Date(d).getTime()))) : null;
+  const est = expectedEnd({ contractEnd: tender.contractEnd, contractStart: tender.contractStart, durationMonths: tender.durationMonths, awardDate });
+  if (!est) return null;
+  return (
+    <p className="border-b border-line bg-paper px-5 py-2.5 text-[13px] text-ink">
+      Kontrakten utløper trolig <span className="num font-semibold">{formatDate(est.end)}</span>
+      <span className="text-muted">
+        {' – '}
+        {est.basis === 'oppgitt'
+          ? 'sluttdato oppgitt i kunngjøringen'
+          : `beregnet fra ${tender.contractStart ? 'oppstart' : 'tildelingsdato'} ${formatDate(est.start)} + ${formatInt(est.durationMonths)} mnd`}
+        , uten eventuelle opsjoner.
+      </span>
+      {radar ? (
+        <>
+          {' '}
+          <a href="/app/konkurrenter/utlop">Flere kontrakter som utløper</a>
+        </>
+      ) : null}
+    </p>
   );
 }
 

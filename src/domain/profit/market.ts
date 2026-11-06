@@ -117,7 +117,7 @@ async function rowsFor(tx: Tx, prefix: string, excludeTenderId: string): Promise
       select distinct on (a.tender_id, coalesce(s.org_number, lower(a.supplier_name)), coalesce(lower(a.lot_title), ''))
         a.tender_id, t.title, t.buyer_name, a.supplier_name, a.awarded_value::float8 as value,
         coalesce(a.currency, t.currency) as currency, coalesce(a.award_date, t.published_at::date) as award_date,
-        t.duration_months, t.is_framework
+        t.duration_months::float8 as duration_months, t.is_framework
       from contract_awards a
       join tenders t on t.id = a.tender_id
       left join suppliers s on s.id = a.supplier_id

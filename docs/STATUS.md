@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 6. november 2026 (sikkerhetsgjennomgang, krav- og avvisningssjekk, tilbudsresultat og markedspris – se [VEIKART.md](VEIKART.md)).
+Sist oppdatert 6. november 2026 (sikkerhetsgjennomgang, krav- og avvisningssjekk, tilbudsresultat, markedspris og kontraktsutløp – se [VEIKART.md](VEIKART.md)).
 
 ## Testresultater
 
@@ -9,8 +9,8 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 164 av 164 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 6.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 152 av 152 bestått – 6.11.2026 |
+| Enhetstester | 166 av 166 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 6.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 154 av 154 bestått – 6.11.2026 |
 | Ende-til-ende i nettleser | 4 av 4 bestått – 6.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -222,3 +222,21 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   håndregnede tall, for bred CPV, erfaring fra Resultater). Visuell kontroll 1280 og 390 px.
 - **IKKE VERIFISERT:** hvor mange tildelinger med verdi som finnes per bransje i produksjon (mange
   tildelingskunngjøringer oppgir ikke verdi; Doffins søk gir aldri verdi). Ikke rullet ut.
+
+## Kontraktsutløp-radar (6. november 2026)
+
+- **Hva:** «Kontrakter som utløper» under Konkurrenter (Bedrift): tildelte kontrakter som trolig utløper innen 6, 12 eller
+  24 måneder – og de som utløp de siste tre månedene, fordi de ofte utlyses på nytt nå. Hver rad viser oppdragsgiver,
+  hvem som har kontrakten i dag, tildelt verdi og grunnlaget for anslaget. Filtrert på bransjene og fylkene i profilen,
+  eller valgfri bransje/fylke/hele landet.
+- **Anbudssiden (alle planer):** tildelte anbud viser «Kontrakten utløper trolig …» med grunnlaget.
+- **Anslaget:** sluttdato fra kunngjøringen når den finnes, ellers oppstart (eller tildelingsdato) + varighet. Opsjoner om
+  forlengelse står sjelden i dataene og er ikke med – det står på siden. Uten dato eller varighet gjettes det ikke, og
+  siden viser hvor mange kontrakter vi kan anslå utløp for.
+- **Tester:** `tests/unit/expiry.test.ts` (månedsregning ved månedsslutt og skuddår, grunnlag, ingen gjetning) og
+  `tests/integration/expiry.test.ts` (rekkefølge, periode, nylig utløpt, uten varighet, profilfilter, alle bransjer,
+  plankrav, anbudssiden). Visuell kontroll 1280 og 390 px.
+- **Funnet underveis:** `duration_months` er desimaltall i databasen, og `make_interval` krever heltall – siden ga feil
+  før det ble rundet av. Fanget av integrasjonstesten.
+- **Ikke bygget ennå:** varsel når en kontrakt i bransjen nærmer seg utløp (krever ny varselinnstilling, så kunden selv
+  styrer det). **IKKE VERIFISERT:** hvor mange tildelinger i produksjon som har varighet og dato. Ikke rullet ut.

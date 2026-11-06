@@ -12,11 +12,35 @@ import { redirectWith } from '@/server/flash';
 import { HttpError } from '@/server/http';
 import { render } from '@/server/render';
 import type { Router } from '@/server/router';
-import { AuthorityPage, CompetitorsPage, SupplierPage } from '@/ui/pages/app/competitors';
+import { AuthorityPage, CompetitorsPage, ExpiryPage, SupplierPage } from '@/ui/pages/app/competitors';
+import { expiringContracts } from '@/domain/competitors/expiry';
+import { INDUSTRY_BY_ID, REGION_BY_CODE } from '@/domain/reference';
 import { param, requireOrg } from '../helpers';
 
 export function registerCompetitorRoutes(router: Router): void {
   const feature = { feature: 'competitorIntel' as const };
+
+  // Kontraktsutløp-radar: tildelte kontrakter som trolig utløper – før de blir nye konkurranser.
+  router.get('/app/konkurrenter/utlop', 'org', async (ctx) => {
+    const { org } = requireOrg(ctx);
+    const mnd = Number(ctx.query.get('mnd'));
+    const months = [6, 12, 24].includes(mnd) ? mnd : 12;
+    // Ukjente verdier i adressen blir «alle», så filteret som vises alltid er det som brukes.
+    const b = ctx.query.get('bransje') ?? 'mine';
+    const f = ctx.query.get('fylke') ?? 'mine';
+    const bransje = b === 'mine' || INDUSTRY_BY_ID.has(b) ? b : 'alle';
+    const fylke = f === 'mine' || REGION_BY_CODE.has(f) ? f : 'alle';
+    const data = await ctx.tenant(async (tx) => {
+      const profile = first((await tx`select industries, regions from company_profiles where org_id = ${org.id}`) as unknown as { industries: string[]; regions: string[] }[]);
+      const mine = { industries: profile?.industries ?? [], regions: (profile?.regions ?? []).filter((r) => r !== 'ALL') };
+      const industries = bransje === 'mine' ? mine.industries : INDUSTRY_BY_ID.has(bransje) ? [bransje] : null;
+      const regions = fylke === 'mine' ? mine.regions : REGION_BY_CODE.has(fylke) ? [fylke] : null;
+      return { ...(await expiringContracts(tx, { industries, regions, monthsAhead: months })), mine };
+    });
+    return render(ctx, <ExpiryPage rows={data.rows} coverage={data.coverage} filter={{ months, bransje, fylke }} mine={data.mine} />, {
+      title: 'Kontrakter som utløper',
+    });
+  }, feature);
 
   router.get('/app/konkurrenter', 'org', async (ctx) => {
     const { org } = requireOrg(ctx);

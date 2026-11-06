@@ -1,6 +1,9 @@
 import { CPV_DIVISIONS } from '@/domain/reference';
 import type { SupplierSummary } from '@/domain/competitors/competitors';
-import { Alert, Badge, Button, EmptyState, Input, PageHeader, Panel, PanelHeader, PostForm, SampleBadge, Stat } from '../../components';
+import { Alert, Badge, Button, EmptyState, Input, LinkButton, PageHeader, Panel, PanelHeader, PostForm, SampleBadge, Select, Stat } from '../../components';
+import type { ExpiringContract } from '@/domain/competitors/expiry';
+import { monthsUntil } from '@/domain/competitors/expiry';
+import { INDUSTRIES, REGIONS } from '@/domain/reference';
 import { AppShell } from '../../layouts';
 import { StatusBadge } from '../../tender';
 import { formatDate, formatInt, formatMoney } from '../../format';
@@ -77,7 +80,15 @@ export function CompetitorsPage({
 }) {
   return (
     <AppShell wide>
-      <PageHeader title="Konkurrenter og tildelinger" description="Hvem vinner kontraktene i bransjene deres, og hvem kjøper mest." />
+      <PageHeader
+        title="Konkurrenter og tildelinger"
+        description="Hvem vinner kontraktene i bransjene deres, og hvem kjøper mest."
+        actions={
+          <LinkButton href="/app/konkurrenter/utlop" variant="secondary" size="sm">
+            Kontrakter som utløper
+          </LinkButton>
+        }
+      />
       <CoverageNote c={coverage} />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-6">
@@ -262,6 +273,136 @@ export function AuthorityPage({
       </Panel>
       <p className="mt-4 text-[12px] text-muted">
         <Badge tone="outline">Merk</Badge> Tallene gjelder kunngjøringer som finnes i AnbudRadar, ikke alle oppdragsgiverens innkjøp.
+      </p>
+    </AppShell>
+  );
+}
+
+function untilLabel(end: Date, now: Date): { text: string; tone: 'urgent' | 'marker' | 'neutral' | 'outline' } {
+  const m = monthsUntil(end, now);
+  if (end.getTime() < now.getTime()) return { text: m === 0 ? 'utløpt nylig' : `utløpt for ${-m} mnd siden`, tone: 'outline' };
+  if (m <= 3) return { text: m <= 0 ? 'under 1 mnd' : `om ${m} mnd`, tone: 'urgent' };
+  if (m <= 9) return { text: `om ${m} mnd`, tone: 'marker' };
+  return { text: `om ${m} mnd`, tone: 'neutral' };
+}
+
+/** Kontraktsutløp-radar (Bedrift): tildelte kontrakter som trolig utløper, med dagens leverandør. */
+export function ExpiryPage({
+  rows,
+  coverage,
+  filter,
+  mine,
+  now = new Date(),
+}: {
+  rows: ExpiringContract[];
+  coverage: { awarded: number; withEnd: number };
+  filter: { months: number; bransje: string; fylke: string };
+  mine: { industries: string[]; regions: string[] };
+  now?: Date;
+}) {
+  return (
+    <AppShell wide>
+      <a href="/app/konkurrenter" className="mb-4 inline-block text-[13px] font-semibold text-muted no-underline hover:text-navy-900">
+        Konkurrenter
+      </a>
+      <PageHeader
+        title="Kontrakter som utløper"
+        description="Tildelte kontrakter som trolig utløper snart – nye konkurranser før de utlyses, og hvem som har kontrakten i dag."
+      />
+      <Panel className="mb-6">
+        <form method="get" action="/app/konkurrenter/utlop" className="flex flex-wrap items-end gap-3 px-5 py-4">
+          <label className="space-y-1.5 text-[13px] font-semibold text-ink">
+            <span className="block">Utløper innen</span>
+            <Select name="mnd" defaultValue={String(filter.months)}>
+              <option value="6">6 måneder</option>
+              <option value="12">12 måneder</option>
+              <option value="24">24 måneder</option>
+            </Select>
+          </label>
+          <label className="space-y-1.5 text-[13px] font-semibold text-ink">
+            <span className="block">Bransje</span>
+            <Select name="bransje" defaultValue={filter.bransje}>
+              <option value="mine">{mine.industries.length ? 'Bransjene i profilen' : 'Bransjene i profilen (ingen valgt)'}</option>
+              <option value="alle">Alle bransjer</option>
+              {INDUSTRIES.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label className="space-y-1.5 text-[13px] font-semibold text-ink">
+            <span className="block">Fylke</span>
+            <Select name="fylke" defaultValue={filter.fylke}>
+              <option value="mine">{mine.regions.length ? 'Fylkene i profilen' : 'Fylkene i profilen (hele landet)'}</option>
+              <option value="alle">Hele landet</option>
+              {REGIONS.map((r) => (
+                <option key={r.code} value={r.code}>
+                  {r.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <Button variant="secondary" size="md" type="submit">
+            Vis
+          </Button>
+        </form>
+        <p className="border-t border-line px-5 py-2.5 text-[12.5px] text-muted">
+          Vi kan anslå utløp for {formatInt(coverage.withEnd)} av {formatInt(coverage.awarded)} tildelte kontrakter med dette utvalget – resten mangler
+          sluttdato, varighet eller dato i kunngjøringene.
+        </p>
+      </Panel>
+      <Panel>
+        {rows.length ? (
+          <ul className="divide-y divide-line">
+            {rows.map((r) => {
+              const until = untilLabel(r.expectedEnd, now);
+              return (
+                <li key={r.tenderId} className="grid gap-3 px-5 py-4 sm:grid-cols-[150px_minmax(0,1fr)]">
+                  <div>
+                    <p className="num text-[15px] font-semibold text-navy-900">{formatDate(r.expectedEnd)}</p>
+                    <Badge tone={until.tone} className="mt-1">
+                      {until.text}
+                    </Badge>
+                  </div>
+                  <div className="min-w-0">
+                    <a href={`/app/anbud/${r.tenderId}`} className="font-semibold">
+                      {r.title}
+                    </a>
+                    <p className="mt-0.5 text-[13.5px] text-ink">
+                      {r.authorityId ? <a href={`/app/konkurrenter/oppdragsgiver/${r.authorityId}`}>{r.buyerName ?? 'Ukjent oppdragsgiver'}</a> : (r.buyerName ?? 'Ukjent oppdragsgiver')}
+                      {' · '}
+                      <span className="text-muted">Har kontrakten:</span>{' '}
+                      {r.suppliers.map((sup, i) => (
+                        <span key={`${sup.name}-${i}`}>
+                          {i ? ', ' : ''}
+                          {sup.id ? <a href={`/app/konkurrenter/leverandor/${sup.id}`}>{sup.name}</a> : sup.name}
+                        </span>
+                      ))}
+                    </p>
+                    <p className="mt-0.5 text-[12.5px] text-muted">
+                      {r.basis === 'oppgitt'
+                        ? 'Sluttdato oppgitt i kunngjøringen'
+                        : `Beregnet: ${r.startDate ? `oppstart ${formatDate(r.startDate)}` : `tildelt ${formatDate(r.awardDate)}`} + ${formatInt(r.durationMonths)} mnd`}
+                      {r.value !== null ? ` · tildelt ${formatMoney(r.value, r.currency)}` : ''}
+                      {r.isFramework ? ' · rammeavtale' : ''}
+                      {r.durationText ? ` · varighet i kunngjøringen: ${r.durationText}` : ''}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <EmptyState title="Ingen kontrakter med anslått utløp i perioden">
+            Prøv en lengre periode, alle bransjer eller hele landet. Mange tildelingskunngjøringer mangler varighet eller sluttdato.
+          </EmptyState>
+        )}
+      </Panel>
+      <p className="mt-4 text-[12.5px] text-muted">
+        Utløpet er et anslag: sluttdato fra kunngjøringen når den finnes, ellers oppstart (eller tildelingsdato) pluss varighet. Opsjoner om
+        forlengelse står sjelden i dataene, så mange kontrakter varer lenger. Kontrakter som utløp de siste tre månedene er med, fordi de ofte
+        utlyses på nytt nå.
       </p>
     </AppShell>
   );
