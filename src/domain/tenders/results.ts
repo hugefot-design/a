@@ -146,7 +146,8 @@ export async function tenderResultInfo(
   const ourOrgNumber = await orgNumberOf(tx, orgId);
   const awards = distinctAwards(await awardsFor(tx, [tender.id]), ourOrgNumber);
   const calc = first(
-    (await tx`select (result->>'targetPrice')::float8 as target from tender_calculations where org_id = ${orgId} and tender_id = ${tender.id}`) as unknown as {
+    // Kalkylen lagres som et øyeblikksbilde ({ version, calc: { targetPrice, … } }) – målprisen ligger under «calc».
+    (await tx`select (result->'calc'->>'targetPrice')::float8 as target from tender_calculations where org_id = ${orgId} and tender_id = ${tender.id}`) as unknown as {
       target: number | null;
     }[],
   );
@@ -367,7 +368,7 @@ export async function loadResults(tx: Tx, orgId: string): Promise<{ rows: Result
     select b.id as bookmark_id, b.tender_id, t.title, t.buyer_name, t.authority_id, b.status,
            b.our_price::float8 as our_price, b.winning_price::float8 as winning_price, b.winner_name, b.outcome_reason as reason,
            b.outcome_source, b.decided_at, b.submitted_at, t.deadline_at, t.is_framework, t.currency,
-           (c.result->>'targetPrice')::float8 as calc_target_price
+           (c.result->'calc'->>'targetPrice')::float8 as calc_target_price
     from bookmarks b
     join tenders t on t.id = b.tender_id
     left join tender_calculations c on c.org_id = b.org_id and c.tender_id = b.tender_id

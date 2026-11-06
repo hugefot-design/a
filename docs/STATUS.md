@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 6. november 2026 (sikkerhetsgjennomgang, krav- og avvisningssjekk og tilbudsresultat – se [VEIKART.md](VEIKART.md)).
+Sist oppdatert 6. november 2026 (sikkerhetsgjennomgang, krav- og avvisningssjekk, tilbudsresultat og markedspris – se [VEIKART.md](VEIKART.md)).
 
 ## Testresultater
 
@@ -9,8 +9,8 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 158 av 158 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 6.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 149 av 149 bestått – 6.11.2026 |
+| Enhetstester | 164 av 164 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 6.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 152 av 152 bestått – 6.11.2026 |
 | Ende-til-ende i nettleser | 4 av 4 bestått – 6.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -197,3 +197,28 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   JavaScript-feil eller horisontal rulling.
 - **IKKE VERIFISERT:** med ekte kunder og ekte tildelinger i produksjon. Org.nr.-treff krever at kunden har lagt inn
   organisasjonsnummer. Ikke rullet ut.
+
+## Markedspris fra tidligere tildelinger (6. november 2026)
+
+- **Hva:** panelet «Markedspris fra tidligere tildelinger» under Lønnsomhet viser hva lignende kontrakter faktisk ble
+  tildelt for: median og midterste halvdel per år (totalt når varigheten mangler), antall tildelinger og listen med
+  oppdragsgiver, vinner, verdi, verdi per år og dato. Minstepris, målpris og en testpris («Hva om vi byr …?») plasseres
+  i fordelingen («lavere enn 56 % av tildelingene») – det er prissimuleringen.
+- **Lignende = samme CPV**, så spesifikt som datagrunnlaget tillater (5, 4 eller 3 siffer; går et nivå opp ved under 8
+  tildelinger). For brede koder (f.eks. 45000000 bygg og anlegg) sammenlignes ikke.
+- **Ærlige tall:** bare verdier fra tildelingskunngjøringer, siste fem år. Rammeavtaler (verdien er ofte et tak),
+  annen valuta og tildelinger uten verdi holdes utenfor og telles opp. Samme vinner fra TED og Doffin telles én gang.
+  Ingen statistikk på færre enn tre; under åtte merkes «Få – tolk med forsiktighet». Anbefalingen endres ikke av
+  markedsdata (den bygger fortsatt bare på kalkyle, risiko, kapasitet og kvalifikasjoner).
+- **Erfaring:** hvor målprisen i tidligere kalkyler lå mot det som vant (fra Resultater) vises i panelet.
+- **Rettet samtidig (fra punkt 3):** målprisen ble lest fra feil sted i lagrede kalkyler (`result->'calc'`), så
+  «Kalkylen mot resultatet» og hjelpeteksten «Målpris i kalkylen» ville aldri vist noe. Funnet av den nye
+  integrasjonstesten; ikke rullet ut.
+- **Diagram:** fordelingen tegnes som prikker (tidligere tildelinger, dempet) med bånd for midterste halvdel, strek for
+  median og ruter for egne priser (fremhevet). Fargene er kjørt gjennom dataviz-validatoren; tall finnes også som tabell
+  og i verktøytips (mus og piltaster).
+- **Tester:** `tests/unit/market.test.ts` (kvartiler, CPV-nivåer og -valg mot lagrede prefikser, utelatelser, per år,
+  prisposisjon, akse) og `tests/integration/market.test.ts` (ekte side med tildelinger, kalkyle og testpris med
+  håndregnede tall, for bred CPV, erfaring fra Resultater). Visuell kontroll 1280 og 390 px.
+- **IKKE VERIFISERT:** hvor mange tildelinger med verdi som finnes per bransje i produksjon (mange
+  tildelingskunngjøringer oppgir ikke verdi; Doffins søk gir aldri verdi). Ikke rullet ut.

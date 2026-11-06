@@ -196,3 +196,121 @@ export function RankedBars({ rows, noun }: { rows: { label: string; n: number }[
     </ul>
   );
 }
+
+/** Runde akseverdier for et vilkårlig intervall (ikke fra 0), f.eks. 1,5 – 2 – 2,5 – 3 mill. */
+export function niceRange(lo: number, hi: number, intervals = 4): { start: number; end: number; ticks: number[] } {
+  let a = Math.min(lo, hi);
+  let b = Math.max(lo, hi);
+  if (!(b > a)) {
+    const pad = Math.max(1, Math.abs(a) * 0.1);
+    a -= pad;
+    b += pad;
+  }
+  const rough = (b - a) / intervals;
+  const pow = 10 ** Math.floor(Math.log10(rough));
+  const step = [1, 2, 2.5, 5, 10].map((f) => f * pow).find((s) => s >= rough) ?? 10 * pow;
+  const start = Math.floor(a / step) * step;
+  const end = Math.ceil(b / step) * step;
+  const ticks: number[] = [];
+  for (let i = 0; start + i * step <= end + step / 2; i++) ticks.push(start + i * step);
+  return { start, end, ticks };
+}
+
+/**
+ * Fordeling på én akse med fremhevede markører («emphasis»): tidligere verdier som dempede prikker (marine 300),
+ * den midterste halvdelen som et svakt bånd, medianen som en tynn strek, og egne verdier som ruter i marine 600
+ * med navn over. Prikkene er bevisst grå (kontekst, ikke en egen serie) og har lav kontrast mot hvitt – alle tall
+ * står derfor i tabellen ved siden av og i verktøytipset. Ruter i stedet for prikker gir form i tillegg til farge.
+ * Validert med dataviz-validatoren: marine 600 mot marine 300 har ΔE 28,6 ved fargesvakt syn.
+ */
+export function StripChart({
+  points,
+  band,
+  markers,
+  summary,
+  axisLabel,
+}: {
+  points: { value: number; tip: string }[];
+  band: { p25: number; median: number; p75: number } | null;
+  markers: { label: string; value: number; tip: string }[];
+  /** Tilgjengelig navn: hele poenget i én setning. */
+  summary: string;
+  /** Får høyeste aksetall med, så hele aksen kan bruke samme enhet (f.eks. «0,6 mill.» … «1,2 mill.»). */
+  axisLabel: (n: number, axisMax: number) => string;
+}) {
+  const all = [...points.map((p) => p.value), ...markers.map((m) => m.value)];
+  if (!all.length) return null;
+  const { start, end, ticks } = niceRange(Math.min(...all), Math.max(...all));
+  const pos = (v: number) => ((v - start) / (end - start)) * 100;
+  const sortedMarkers = [...markers].sort((a, b) => a.value - b.value);
+  const place = (p: number) => (p < 12 ? 'translate-x-0' : p > 88 ? '-translate-x-full' : '-translate-x-1/2');
+  return (
+    <div
+      data-chart
+      tabIndex={0}
+      role="img"
+      aria-label={summary}
+      className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-navy-600 focus-visible:ring-offset-2"
+    >
+      <div className="mx-2">
+        {/* Navn over de egne markørene – én rad per markør, så de aldri kolliderer. */}
+        {sortedMarkers.map((m) => (
+          <div key={m.label} className="relative h-5" aria-hidden>
+            <span className={cn('absolute whitespace-nowrap text-[12px] font-semibold text-ink', place(pos(m.value)))} style={{ left: `${pos(m.value)}%` }}>
+              {m.label}
+            </span>
+          </div>
+        ))}
+        {band ? (
+          <div className="relative h-5" aria-hidden>
+            <span className={cn('absolute whitespace-nowrap text-[11px] text-muted', place(pos(band.median)))} style={{ left: `${pos(band.median)}%` }}>
+              Median
+            </span>
+          </div>
+        ) : null}
+        <div className="relative h-12">
+          <div className="absolute inset-x-0 top-1/2 border-t border-line" aria-hidden />
+          {band ? (
+            <>
+              <div
+                className="absolute top-1/2 h-8 -translate-y-1/2 rounded bg-navy-600/10"
+                style={{ left: `${pos(band.p25)}%`, width: `${Math.max(0.5, pos(band.p75) - pos(band.p25))}%` }}
+                aria-hidden
+              />
+              <div className="absolute top-1/2 h-10 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-navy-900" style={{ left: `${pos(band.median)}%` }} aria-hidden />
+            </>
+          ) : null}
+          {[...points]
+            .sort((a, b) => a.value - b.value)
+            .map((p, i) => (
+              <span
+                key={`p${i}`}
+                data-tip={p.tip}
+                className="group absolute flex size-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+                style={{ left: `${pos(p.value)}%`, top: `calc(50% + ${((i % 3) - 1) * 6}px)` }}
+              >
+                <span className="size-2.5 rounded-full bg-navy-300 ring-2 ring-white group-data-[active]:bg-navy-700" />
+              </span>
+            ))}
+          {sortedMarkers.map((m) => (
+            <span
+              key={m.label}
+              data-tip={m.tip}
+              className="group absolute top-1/2 flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+              style={{ left: `${pos(m.value)}%` }}
+            >
+              <span className="size-3.5 rotate-45 rounded-[2px] bg-navy-600 ring-2 ring-white group-data-[active]:bg-navy-900" />
+            </span>
+          ))}
+        </div>
+        <div className="relative h-4 text-[11px] text-muted" aria-hidden>
+          {ticks.map((t, i) => (
+            <span key={t} className={cn('num absolute whitespace-nowrap', i === 0 ? 'translate-x-0' : i === ticks.length - 1 ? '-translate-x-full' : '-translate-x-1/2')} style={{ left: `${pos(t)}%` }}>
+              {axisLabel(t, ticks[ticks.length - 1]!)}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

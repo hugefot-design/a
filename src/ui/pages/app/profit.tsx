@@ -12,6 +12,8 @@ import { TERM_LABELS, type TermCategory } from '@/domain/profit/terms-scan';
 import { RECOMMENDATION_LABEL, type Recommendation, type RiskLevel } from '@/domain/profit/recommendation';
 import type { CapacityResult } from '@/domain/profit/capacity';
 import type { CapacityData, OrgEconomics, PortfolioSummary, ProfitWorkspace } from '@/domain/profit/service';
+import type { MarketPrice } from '@/domain/profit/market';
+import { MarketPanel, type CalcHistory } from './market';
 import {
   COMPETITION_GUIDANCE_URL,
   PARTNER_CONSENT_TEXT,
@@ -145,9 +147,13 @@ export interface ProfitWorkspacePageProps {
   canRunAi: boolean;
   canSearchPartners: boolean;
   aiQuota: { used: number; limit: number };
+  /** Markedspris fra tidligere tildelinger. */
+  market?: MarketPrice | null;
+  /** Hvor målprisen i tidligere kalkyler lå mot det som vant (fra Resultater). */
+  calcHistory?: CalcHistory | null;
 }
 
-export function ProfitWorkspacePage({ ws, errors, canRunAi, canSearchPartners, aiQuota }: ProfitWorkspacePageProps) {
+export function ProfitWorkspacePage({ ws, errors, canRunAi, canSearchPartners, aiQuota, market, calcHistory }: ProfitWorkspacePageProps) {
   const t = ws.tender;
   return (
     <AppShell wide>
@@ -195,6 +201,7 @@ export function ProfitWorkspacePage({ ws, errors, canRunAi, canSearchPartners, a
         <div className="min-w-0 space-y-6">
           <CalcForm ws={ws} />
           <ResultsPanel ws={ws} />
+          {market ? <MarketPanel ws={ws} market={market} calcHistory={calcHistory ?? null} /> : null}
           <RiskPanel ws={ws} />
         </div>
         <aside className="space-y-6">

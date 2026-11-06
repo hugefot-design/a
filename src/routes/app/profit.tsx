@@ -4,6 +4,8 @@
  * Endringer i bedriftens økonomi, kapasitet og partnerprofil krever eier/administrator (også i databasen).
  */
 import { getTender } from '@/domain/tenders/queries';
+import { marketPrice } from '@/domain/profit/market';
+import { learningSummary, loadResults } from '@/domain/tenders/results';
 import { getProfile } from '@/domain/profile/profile';
 import { usageSummary } from '@/domain/ai/usage';
 import { getLatestProfitAnalysis, runProfitAnalysis } from '@/domain/profit/ai';
@@ -68,7 +70,11 @@ async function renderWorkspace(ctx: RequestContext, tenderId: string, opts: { er
     const ws = await loadProfitWorkspace(tx, org, tenderId, { inputsOverride: opts.inputsOverride, testPrice: opts.testPrice ?? null });
     if (!ws) return null;
     if (!opts.inputsOverride) await refreshSnapshotIfChanged(tx, org.id, tenderId, ws);
-    return { ws, usage: await usageSummary(tx, org) };
+    // Markedspris fra tidligere tildelinger, og hvor treffsikre kalkylene har vært (fra Resultater).
+    const market = await marketPrice(tx, ws.tender);
+    const learning = learningSummary((await loadResults(tx, org.id)).rows);
+    const calcHistory = learning.medianCalcDiffPct !== null ? { medianPct: learning.medianCalcDiffPct, n: learning.calcVsResult.length } : null;
+    return { ws, usage: await usageSummary(tx, org), market, calcHistory };
   });
   if (!data) throw new HttpError(404, 'Fant ikke kunngjøringen.');
   return render(
@@ -79,6 +85,8 @@ async function renderWorkspace(ctx: RequestContext, tenderId: string, opts: { er
       canRunAi={org.entitlements.profitAI}
       canSearchPartners={org.entitlements.partnerSearch}
       aiQuota={{ used: data.usage.analyses, limit: data.usage.analysesLimit }}
+      market={data.market}
+      calcHistory={data.calcHistory}
     />,
     { title: `Lønnsomhet – ${data.ws.tender.title}`, status: opts.status },
   );
