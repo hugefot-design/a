@@ -9,10 +9,11 @@ export type AiUsageKind =
   | 'ai_bid_structure'
   | 'ai_bid_draft'
   | 'ai_bid_review'
-  | 'ai_weekly_overview';
+  | 'ai_weekly_overview'
+  | 'ai_tender_chat';
 
 /** AI-bruk som teller mot «AI-analyser per måned». */
-export const ANALYSIS_KINDS = ['ai_tender_analysis', 'ai_fit_assessment', 'ai_profit_analysis', 'ai_weekly_overview', 'ai_bid_checklist', 'ai_bid_structure'];
+export const ANALYSIS_KINDS = ['ai_tender_analysis', 'ai_fit_assessment', 'ai_profit_analysis', 'ai_weekly_overview', 'ai_bid_checklist', 'ai_bid_structure', 'ai_tender_chat'];
 
 export function currentPeriod(now = new Date()): string {
   return now.toISOString().slice(0, 7);

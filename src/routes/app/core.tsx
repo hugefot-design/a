@@ -22,6 +22,7 @@ import { deleteTenderDocument, uploadTenderDocument } from '@/domain/documents/d
 import { tenderRequirementScan } from '@/domain/documents/requirements-service';
 import { confirmAwardWin, learningSummary, loadResults, parseResultForm, saveResultFields, tenderResultInfo } from '@/domain/tenders/results';
 import { noticeSignals, screenTender } from '@/domain/matching/screening';
+import { askTender, chatHistory, MAX_QUESTION } from '@/domain/ai/chat';
 import type { Tx } from '@/lib/db';
 
 /** Profilens «minst antall dager til frist» (standard 10 når profilen mangler). */
@@ -257,7 +258,8 @@ export function registerCoreAppRoutes(router: Router): void {
         minDaysToDeadline: await profileMinDays(tx, org.id),
         signals: noticeSignals(tender.description),
       });
-      return { tender, extras, labels, analysis, fit, usage, profit, requirements, result, screening };
+      const chat = integrationStatus().ai && org.entitlements.aiAnalysesPerMonth > 0 ? await chatHistory(tx, org.id, id) : null;
+      return { tender, extras, labels, analysis, fit, usage, profit, requirements, result, screening, chat };
     });
     if (!data) throw new HttpError(404, 'Fant ikke kunngjøringen.');
     return render(
@@ -280,6 +282,7 @@ export function registerCoreAppRoutes(router: Router): void {
         requirements={data.requirements}
         result={data.result}
         screening={data.screening}
+        chat={data.chat}
       />,
       { title: data.tender.title },
     );
@@ -302,6 +305,16 @@ export function registerCoreAppRoutes(router: Router): void {
     const result = await runTenderAnalysis(org, user.id, id, { force: formBool(form, 'force') });
     if (!result.ok) return redirectWith(ctx, `/app/anbud/${id}`, 'error', result.error);
     return redirectWith(ctx, `/app/anbud/${id}/analyse`, 'success', result.cached ? 'Viser lagret analyse (ingen ny kostnad).' : 'Analysen er klar.');
+  });
+
+  // Spør om anbudet (AI med kontrollerte kildehenvisninger). Teller som én AI-analyse; samme spørsmål igjen er gratis.
+  router.post('/app/anbud/:id/sporsmal', 'org', async (ctx) => {
+    const { org, user } = requireOrg(ctx);
+    const id = param(ctx, 'id');
+    const question = formStr(await ctx.form(), 'question', MAX_QUESTION + 50);
+    const result = await askTender(org, user.id, id, question);
+    if (!result.ok) return redirectWith(ctx, `/app/anbud/${id}#sporsmal`, 'error', result.error);
+    return redirectWith(ctx, `/app/anbud/${id}#sporsmal`, 'success', result.cached ? 'Viser lagret svar (ingen ny kostnad).' : 'Svaret er klart.');
   });
 
   router.post('/app/anbud/:id/egnethet', 'org', async (ctx) => {

@@ -33,6 +33,7 @@ import { REQUIREMENT_KINDS, REQUIREMENT_LABELS, sourceLabel, type RequirementHit
 import { OUTCOME_REASONS, type TenderResultInfo } from '@/domain/tenders/results';
 import { expectedEnd } from '@/domain/competitors/expiry';
 import type { Screening } from '@/domain/matching/screening';
+import type { ChatEntry, CheckedClaim } from '@/domain/ai/chat';
 
 export interface TenderPageProps {
   tender: TenderDetail;
@@ -65,6 +66,8 @@ export interface TenderPageProps {
   result?: TenderResultInfo | null;
   /** Forhåndsvurdering uten AI (frist, krav, befaring, vilkår og treff mot profilen). */
   screening?: Screening | null;
+  /** «Spør om anbudet»: organisasjonens siste spørsmål og svar (bare når AI er slått på). */
+  chat?: ChatEntry[] | null;
 }
 
 const SOURCE_NAMES: Record<string, string> = { ted: 'TED', doffin: 'Doffin', manual: 'Manuell import', sample: 'Eksempeldata' };
@@ -280,6 +283,10 @@ export function TenderPage(p: TenderPageProps) {
             full={ent.aiFullAnalysis}
             quota={p.aiQuota}
           />
+
+          {p.chat && aiConfigured ? (
+            <ChatPanel tenderId={t.id} entries={p.chat} isMock={aiIsMock} quota={p.aiQuota} withDocuments={ent.aiFullAnalysis} />
+          ) : null}
 
           <DocumentsPanel tenderId={t.id} documents={p.documents} canUpload={ent.documentUpload} />
 
@@ -602,6 +609,88 @@ function ExpiryNote({ tender, awards, radar }: { tender: TenderDetail; awards: T
         </>
       ) : null}
     </p>
+  );
+}
+
+function ClaimSource({ check }: { check: CheckedClaim['check'] }) {
+  if (!check) return null;
+  const where = `${check.sourceTitle ?? check.sourceId}${check.page ? `, s. ${check.page}` : ''}`;
+  return (
+    <span className="block text-[12px] text-muted">
+      {where}
+      {check.quote ? ` – «${check.quote}»` : ''}
+    </span>
+  );
+}
+
+/** Spør om anbudet: svar delt i «står i kilden» (sitatet kontrollert) og «vurdering». */
+function ChatPanel({
+  tenderId,
+  entries,
+  isMock,
+  quota,
+  withDocuments,
+}: {
+  tenderId: string;
+  entries: ChatEntry[];
+  isMock: boolean;
+  quota: { used: number; limit: number };
+  withDocuments: boolean;
+}) {
+  return (
+    <Panel>
+      <div id="sporsmal" className="scroll-mt-24" />
+      <PanelHeader
+        title="Spør om anbudet"
+        description={`AI svarer bare ut fra kunngjøringen${withDocuments ? ' og dokumentene dere har lastet opp' : ''}. Hver påstand viser om den står i kilden (med sitat vi har kontrollert) eller er en vurdering.`}
+      />
+      {isMock ? <p className="border-b border-line bg-urgent-soft px-5 py-2 text-[12.5px] text-ink">Testmodus: svarene er simulerte, ikke ekte AI.</p> : null}
+      <PostForm action={`/app/anbud/${tenderId}/sporsmal`} className="flex flex-col gap-2 px-5 py-4 sm:flex-row">
+        <label htmlFor="chat-q" className="sr-only">
+          Spørsmål
+        </label>
+        <Input id="chat-q" name="question" required minLength={3} maxLength={500} placeholder="F.eks. «Kreves det befaring?» eller «Hva er kravet til omsetning?»" />
+        <Button busyLabel="Leser kildene …" disabled={quota.used >= quota.limit} className="shrink-0">
+          Spør
+        </Button>
+      </PostForm>
+      <p className="-mt-2 px-5 pb-3 text-[12px] text-muted">
+        Hvert nye spørsmål teller som én AI-analyse ({formatInt(quota.used)} av {formatInt(quota.limit)} brukt denne måneden). Samme spørsmål igjen er gratis.
+      </p>
+      {entries.length ? (
+        <ul className="divide-y divide-line border-t border-line">
+          {entries.map((e) => (
+            <li key={e.id} className="space-y-2 px-5 py-4">
+              <p className="text-[14px] font-semibold text-navy-900">{e.question}</p>
+              <p className="text-[14px] leading-relaxed text-ink">{e.answer}</p>
+              {e.notInSources ? <Badge tone="outline">Står ikke i kildene</Badge> : null}
+              {e.claims.length ? (
+                <ul className="space-y-2">
+                  {e.claims.map((c, i) => (
+                    <li key={i} className="border-l-2 border-line-strong pl-3 text-[13.5px]">
+                      <span className="mr-1.5 inline-block align-middle">
+                        {c.basis === 'tolkning' ? (
+                          <Badge tone="ai">Vurdering</Badge>
+                        ) : c.verified ? (
+                          <Badge tone="ok">Står i kilden</Badge>
+                        ) : (
+                          <Badge tone="urgent" title="Sitatet ble ikke funnet ordrett i kilden">
+                            Sitat ikke bekreftet
+                          </Badge>
+                        )}
+                      </span>
+                      {c.text}
+                      <ClaimSource check={c.check} />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <p className="text-[11.5px] text-muted">{relativeTime(e.createdAt)}</p>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </Panel>
   );
 }
 

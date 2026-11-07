@@ -9,7 +9,16 @@ import { AIError, estimateCostUsd, getProvider, type Effort, type JsonSchema, ty
 import { PROMPT_VERSION } from './prompts';
 import { currentPeriod, quotaFor, recordUsage, usageSummary, ANALYSIS_KINDS, type AiUsageKind } from './usage';
 
-export type AiKind = 'tender_analysis' | 'match_explanation' | 'profit_analysis' | 'bid_checklist' | 'bid_structure' | 'bid_draft' | 'bid_review' | 'weekly_overview';
+export type AiKind =
+  | 'tender_analysis'
+  | 'match_explanation'
+  | 'profit_analysis'
+  | 'bid_checklist'
+  | 'bid_structure'
+  | 'bid_draft'
+  | 'bid_review'
+  | 'weekly_overview'
+  | 'tender_chat';
 
 export interface RunAiInput<T> {
   kind: AiKind;

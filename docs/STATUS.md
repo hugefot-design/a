@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 7. november 2026 (veikartpunkt 1–6 og 8–11 – se [VEIKART.md](VEIKART.md)).
+Sist oppdatert 7. november 2026 (veikartpunkt 1–11 – se [VEIKART.md](VEIKART.md)).
 
 ## Testresultater
 
@@ -9,8 +9,8 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 179 av 179 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 161 av 161 bestått – 7.11.2026 |
+| Enhetstester | 181 av 181 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 164 av 164 bestått – 7.11.2026 |
 | Ende-til-ende i nettleser | 5 av 5 bestått (inkl. appen på telefon) – 7.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -307,3 +307,20 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   aldri spriker på samme side.
 - **Test som vakt:** `tests/e2e/mobile-app.test.ts` sjekker ti sider på telefon (vannrett rulling, feil, trykkflater
   under 24 px) og at frist og vurdering står før beskrivelsen på anbudssiden.
+
+## «Spør om anbudet» – AI med kontrollerte kildehenvisninger (7. november 2026)
+
+- **Hva:** på anbudssiden kan brukeren stille spørsmål om hele anbudet (kunngjøringen, og opplastede dokumenter for
+  planer med full analyse). Svaret deles i påstander merket «Står i kilden» (med dokument, side og ordrett sitat) eller
+  «Vurdering». Står svaret ikke i kildene, sier den det («Står ikke i kildene») i stedet for å gjette.
+- **Mot hallusinasjoner:** samme regler og isolerte kildeblokk som AI-analysen (teksten i dokumentene er data, ikke
+  instruksjoner). «Står i kilden» vises bare når sitatet finnes ordrett i kilden **og** sidetallet finnes – ellers
+  «Sitat ikke bekreftet».
+- **Kostnad og kontroll:** hvert nye spørsmål teller som én AI-analyse i planens kvote (vises ved feltet). Samme
+  spørsmål igjen – også med annen skrivemåte – hentes fra hurtigbufferen uten kostnad. Spørsmål og svar lagres bare for
+  organisasjonen. Migrering `0021` utvider listen over AI-typer (ingen data endres).
+- **I produksjon:** vises bare når AI er slått på – i dag er AI av (eiers valg), så ingenting endres for kundene før det
+  skjer.
+- **Tester:** `tests/unit/chat.test.ts` (testmodus-svar, sitatkontroll med feil sitat og feil side, «står ikke i
+  kildene») og `tests/integration/chat.test.ts` (svar med kilde, hurtigbuffer uten ny kostnad – fant og rettet at annen
+  skrivemåte kostet på nytt –, private svar, tomt spørsmål). **IKKE VERIFISERT** med ekte AI-leverandør.
