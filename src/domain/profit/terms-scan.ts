@@ -14,7 +14,11 @@ export type TermCategory =
   | 'leveringsfrist'
   | 'forsikring'
   | 'volum'
-  | 'standardkontrakt';
+  | 'standardkontrakt'
+  | 'arbeidsvilkar'
+  | 'miljokrav'
+  | 'rapportering'
+  | 'oppstart';
 
 export const TERM_LABELS: Record<TermCategory, string> = {
   dagbot: 'Dagbøter og sanksjoner',
@@ -26,6 +30,18 @@ export const TERM_LABELS: Record<TermCategory, string> = {
   forsikring: 'Forsikring',
   volum: 'Volum og opsjoner',
   standardkontrakt: 'Standardkontrakt',
+  arbeidsvilkar: 'Lønns- og arbeidsvilkår, lærlinger og seriøsitet',
+  miljokrav: 'Miljø- og klimakrav (f.eks. utslippsfrie kjøretøy)',
+  rapportering: 'Rapportering og oppfølging',
+  oppstart: 'Oppstart, innfasing og virksomhetsoverdragelse',
+};
+
+/** Hva funnet bør bety for kalkylen – vises under treffene (kostnader som ofte glemmes). */
+export const COST_HINTS: Partial<Record<TermCategory, string>> = {
+  arbeidsvilkar: 'Regn med tarifflønn (allmenngjort sats der det gjelder), lærlinger og HMS-kort i timekostnaden.',
+  miljokrav: 'Utslippsfrie kjøretøy og maskiner, drivstoff og merkede produkter koster mer – legg dem inn under utstyr eller transport.',
+  rapportering: 'Rapporter, timelister og møter tar tid – legg dem inn som en egen linje med timer.',
+  oppstart: 'Innfasing og eventuell overtakelse av ansatte (arbeidsmiljøloven kap. 16) gir kostnader før første faktura.',
 };
 
 const PATTERNS: Record<TermCategory, RegExp> = {
@@ -38,6 +54,16 @@ const PATTERNS: Record<TermCategory, RegExp> = {
   forsikring: /ansvarsforsikring|yrkesskadeforsikring|forsikringssum|\bforsikring|insurance/i,
   volum: /ingen garanti for (volum|omfang)|uten (forpliktelse|garantert volum)|estimert (volum|omfang)|ikke forpliktet til å|no guaranteed volume|non[- ]binding (estimate|volume)|opsjon(er)? på|forlengelsesopsjon|kan forlenges|option(s)? to extend/i,
   standardkontrakt: /NS ?84\d\d|NS ?8401|NS ?8402|NS ?8405|NS ?8406|NS ?8407|SSA[- ][A-Z]{1,3}\b|statens standardavtale/i,
+  // Skjulte kostnader som ofte glemmes i kalkylen (tariffløn, lærlinger, utslippsfritt utstyr, rapportering, innfasing).
+  // NB: \b kjenner bare a–z, så ord med æøå i kanten avgrenses ikke med \b.
+  arbeidsvilkar:
+    /lønns-?\s+og\s+arbeidsvilkår|allmenngjort|allmenngjøring|landsomfattende tariffavtale|tariffavtale|påseplikt|seriøsitetskrav|lærling|HMS-kort|ID-kort|ledd i (?:kontraktskjeden|leverandørkjeden)|minimum wage|collective agreement|apprentice/i,
+  miljokrav:
+    /miljøkrav|klimakrav|utslippsfri|nullutslipp|fossilfri|klimagassutslipp|\beuro ?6\b|elektriske? (?:kjøretøy|biler|varebiler|maskiner|anleggsmaskiner)|biodrivstoff|\bHVO\b|svanemerk|miljømerk|emission[- ]free|zero[- ]emission|fossil[- ]free/i,
+  rapportering:
+    /rapporteringskrav|rapporteringsplikt|statusrapport|månedsrapport|kvartalsrapport|(?:månedlig|kvartalsvis|ukentlig|årlig)e? rapport|skal rapportere|rapporteres (?:månedlig|kvartalsvis|ukentlig|årlig)|statusmøte|oppfølgingsmøte|avviksrapport|timeliste|reporting requirement|monthly report|status report|progress report/i,
+  oppstart:
+    /virksomhetsoverdragelse|overdragelse av virksomhet|arbeidsmiljøloven kap(?:ittel|\.)? ?16|\baml\.? kap(?:ittel|\.)? ?16|overta (?:de )?(?:ansatte|arbeidstakere)|innfasing|implementeringsperiode|oppstartsperiode|mobilisering|transfer of undertaking|\bTUPE\b|transition period/i,
 };
 
 export interface TermHit {

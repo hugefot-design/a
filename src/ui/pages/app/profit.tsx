@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { LuArrowLeft, LuCircleCheck, LuCircleHelp, LuCircleX, LuSparkles } from 'react-icons/lu';
 import { CERTIFICATIONS, CERT_BY_ID, INDUSTRIES, INDUSTRY_BY_ID, REGIONS, REGION_BY_CODE } from '@/domain/reference';
 import { COST_CATEGORIES, fmtKr, fmtNumber, PERIODS, type CostLine, type Provenance } from '@/domain/profit/calculator';
-import { TERM_LABELS, type TermCategory } from '@/domain/profit/terms-scan';
+import { COST_HINTS, TERM_LABELS, type TermCategory } from '@/domain/profit/terms-scan';
 import { RECOMMENDATION_LABEL, type Recommendation, type RiskLevel } from '@/domain/profit/recommendation';
 import type { CapacityResult } from '@/domain/profit/capacity';
 import type { CapacityData, OrgEconomics, PortfolioSummary, ProfitWorkspace } from '@/domain/profit/service';
@@ -839,6 +839,7 @@ function RiskPanel({ ws }: { ws: ProfitWorkspace }) {
                         </Badge>
                       ) : null}
                     </summary>
+                    {COST_HINTS[cat] && !scan.negatedOnly.includes(cat) ? <p className="mt-1 text-[12.5px] text-ink">Til kalkylen: {COST_HINTS[cat]}</p> : null}
                     <ul className="mt-1 space-y-1">
                       {scan.byCategory[cat]!.map((h, idx) => (
                         <li key={idx}>

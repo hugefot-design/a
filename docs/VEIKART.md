@@ -1,6 +1,6 @@
 # Veikart: de 15 viktigste forbedringene
 
-Sist oppdatert 6. november 2026. Rangert etter forretningsverdi, brukeropplevelse, sikkerhet og teknisk risiko.
+Sist oppdatert 7. november 2026. Rangert etter forretningsverdi, brukeropplevelse, sikkerhet og teknisk risiko.
 Status skiller mellom **implementert** (koden finnes), **testet** (automatiske tester), **verifisert** (prøvd mot ekte
 tjenester/produksjon) og **forslag** (krever eiers godkjenning: nye leverandører, kostnader eller endring i produksjon).
 
@@ -16,7 +16,7 @@ tjenester/produksjon) og **forslag** (krever eiers godkjenning: nye leverandøre
 | 5 | **Kontraktsutløp-radar** – kontrakter som trolig utløper, fra tildeling + varighet | Fremtidige anbud før de blir konkurranser – tid til å forberede seg | **Implementert og testet** – «Kontrakter som utløper» under Konkurrenter og anslått utløp på anbudssiden, se [STATUS.md](STATUS.md#kontraktsutløp-radar-6-november-2026). Varsel gjenstår. Ikke rullet ut. |
 | 6 | **Automatisk forhåndsvurdering av nye treff** – frist, krav, vilkår, sertifiseringer og kapasitet uten AI | Sparer tid hver dag; brukeren ser straks hva som er verdt å se på | **Implementert og testet** – vurdering med grunner i søk, på Oversikt og på anbudssiden, se [STATUS.md](STATUS.md#forhåndsvurdering-av-treff-6-november-2026). Ikke rullet ut. |
 | 7 | **AI-chat om hele anbudet** med kontrollerte kildehenvisninger | Forventet funksjon i 2026; svar med side og sitat, skille fakta/vurdering | Planlagt (AI er av i produksjon – eiers valg) |
-| 8 | **Flere skjulte kostnader i vilkårssøket** – lønns- og arbeidsvilkår, miljøkrav, rapportering, oppstart | Kostnader som ofte glemmes i kalkylen | Planlagt |
+| 8 | **Flere skjulte kostnader i vilkårssøket** – lønns- og arbeidsvilkår, miljøkrav, rapportering, oppstart | Kostnader som ofte glemmes i kalkylen | **Implementert og testet** – fire nye kategorier med kilde og tips til kalkylen, se [STATUS.md](STATUS.md#flere-skjulte-kostnader-i-vilkårssøket-7-november-2026). Ikke rullet ut. |
 | 9 | **Kapasitet per måned og sesong** | Sesongarbeid (vinterdrift, renhold i ferier) regnes feil per år | Planlagt |
 | 10 | **«Til handling»-oversikt** – frister denne uken, spørsmålsfrister, godkjenninger, sterke nye treff | Arbeidsflyt i stedet for lister | Planlagt |
 | 11 | **Mobil og navigasjon i appen** – gjennomgang og rettinger | Mange vurderer anbud på telefonen | Planlagt |

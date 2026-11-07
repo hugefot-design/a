@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 6. november 2026 (veikartpunkt 1–6: sikkerhet, kravsjekk, tilbudsresultat, markedspris, kontraktsutløp og forhåndsvurdering – se [VEIKART.md](VEIKART.md)).
+Sist oppdatert 7. november 2026 (veikartpunkt 1–6 og 8: sikkerhet, kravsjekk, tilbudsresultat, markedspris, kontraktsutløp, forhåndsvurdering og skjulte kostnader – se [VEIKART.md](VEIKART.md)).
 
 ## Testresultater
 
@@ -9,8 +9,8 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 169 av 169 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 6.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 157 av 157 bestått – 6.11.2026 |
+| Enhetstester | 173 av 173 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 158 av 158 bestått – 7.11.2026 |
 | Ende-til-ende i nettleser | 4 av 4 bestått – 6.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -65,7 +65,7 @@ Fremgangsmåte for hver: [INTEGRASJONER.md](INTEGRASJONER.md).
 - **Naturlig språk-søket** er regelbasert. Tolkningen vises alltid.
 - **Konkurrentinnsikt** er bare så god som tildelingskunngjøringene.
 - **Relevansscoren** er samsvar med profilen, ikke sannsynlighet for å vinne.
-- **Profit Intelligence:** ordsøket finner ord, ikke betydning («ingen dagbot» gir treff); kapasitet regnes per år, ikke per uke/sesong; sertifiseringer gjenkjennes fra en kjent liste; partnernettverket er tomt ved lansering.
+- **Profit Intelligence:** ordsøket finner ord, ikke betydning (nektelser som «ingen dagbot» merkes, men ikke alle formuleringer fanges); kapasitet regnes per år, ikke per uke/sesong; sertifiseringer gjenkjennes fra en kjent liste; partnernettverket er tomt ved lansering.
 - **Sitatkontrollen** bekrefter at sitatet står i kilden – ikke at tolkningen er riktig.
 - **Krav- og avvisningssjekken** er ordsøk: den finner setninger med kjente kravord (avvisning, minstekrav, kvalifikasjonskrav,
   befaring, «skal»/«må»), ikke betydning. Krav skrevet med andre ord fanges ikke opp, og noen treff kan være generelle.
@@ -255,4 +255,15 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   `tests/integration/screening.test.ts` (anbudssiden, søk og Oversikt med matching, Start-plan uten merkelapper).
   Visuell kontroll 1280 og 390 px.
 - **Begrensning:** bygger bare på kunngjøringen – konkurransegrunnlaget kan ha flere krav (det står under vurderingen).
+  Ikke rullet ut.
+
+## Flere skjulte kostnader i vilkårssøket (7. november 2026)
+
+- **Nye kategorier** i ordsøket under Lønnsomhet → Kontraktsrisiko: lønns- og arbeidsvilkår (tariff/allmenngjøring,
+  lærlinger, HMS-kort, ledd i kontraktskjeden), miljø- og klimakrav (utslippsfrie kjøretøy, HVO, Euro 6, svanemerket),
+  rapportering og oppfølging (månedsrapporter, statusmøter, timelister) og oppstart/innfasing/virksomhetsoverdragelse
+  (arbeidsmiljøloven kap. 16). Hver med dokument, side og utdrag, og et tips om hva som bør inn i kalkylen.
+- **Vern mot falske treff:** «hvordan» gir ikke HVO, «Euro 60 000» gir ikke Euro 6; ord med æøå avgrenses ikke med `\b`.
+- **Tester:** `tests/unit/terms-costs.test.ts` (treff per kategori, falske treff, «ikke funnet») og
+  `tests/integration/terms-costs.test.ts` (Lønnsomhet-siden med tips, nektelse av dagbot fortsatt merket).
   Ikke rullet ut.
