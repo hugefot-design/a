@@ -40,6 +40,8 @@ before(async () => {
     ...[1_000_000, 2_000_000, 3_000_000].map((v, i) =>
       makeNotice({ ...construction, title: `Fasadearbeid ${i + 1} (visningstest)`, lifecycle: 'awarded', noticeType: 'award', awards: award(v, day(-(i + 2))) }),
     ),
+    // Én svært stor kontrakt (som sykehusbygget i produksjonen): med i medianen, men ikke tegnet inn.
+    makeNotice({ ...construction, title: 'Nytt sykehusbygg (visningstest)', lifecycle: 'awarded', noticeType: 'award', awards: award(11_000_000_000, day(-6)) }),
     makeNotice({
       ...construction,
       title: EXPIRING,
@@ -101,6 +103,9 @@ test('kundereisen bygger på ekte, lagrede kunngjøringer og tildelinger', async
   // Markedsprisen er regnet ut fra de lagrede tildelingene.
   assert.ok(s.market && s.market.n >= 3, JSON.stringify(s.market));
   for (const v of [1_000_000, 2_000_000, 3_000_000]) assert.ok(s.market!.values.includes(v), `${v} er med`);
+  assert.ok(!s.market!.values.includes(11_000_000_000), 'den svært store kontrakten tegnes ikke inn');
+  assert.equal(s.market!.hidden?.n, 1, JSON.stringify(s.market!.hidden));
+  assert.equal(s.market!.n, s.market!.values.length + 1, 'men den er med i grunnlaget');
   assert.ok(s.market!.p25 <= s.market!.median && s.market!.median <= s.market!.p75);
   assert.ok(s.award && s.award.value > 0);
   assert.ok(s.expiring.some((e) => e.title === EXPIRING && e.basis === 'oppgitt'), JSON.stringify(s.expiring));
@@ -118,6 +123,7 @@ test('forsiden viser de ekte eksemplene – uten leverandørnavn og uten AI-løf
   assert.match(body, /Ekte kunngjøring/);
   assert.match(body, /<mark[^>]*>[^<]+<\/mark>/, 'treffordet er uthevet');
   assert.match(body, /Eksempelprofil/);
+  assert.match(body, /1 svært stor kontrakt \(over [^)]+\) er ikke tegnet inn, men er med i medianen/);
   assert.ok(!body.includes(SUPPLIER), 'leverandørnavn vises ikke på nettsiden');
   // Simulert AI (testmiljøet) skal ikke markedsføres.
   const features = await (await fetch(`${server.base}/funksjoner`)).text();

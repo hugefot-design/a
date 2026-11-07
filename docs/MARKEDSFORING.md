@@ -46,6 +46,14 @@ og SSA-R som «kostbart vilkår». Reglene nå:
 - Et norsk anbud med minst to gode krav går alltid foran et engelsk. Blant de beste velges helst ett der også
   markedspris og kontrakter som utløper finnes, så alle seks stegene kan vises.
 - Titler som mest er koder vises sist.
+- Markedspris: svært store kontrakter tegnes ikke inn i figuren, men er med i medianen, og det står under figuren
+  («1 svært stor kontrakt (over 100 mill. kr) er ikke tegnet inn …»). Grensen er øvre kvartil + 3 × midtre halvdel.
+  I produksjonen presset én kontrakt på 11 mrd. kr de 19 andre sammen ved 0.
+- Sjekklisten beholder «…» når et utdrag starter midt i en setning.
+
+Etter endringen viste produksjonen en norsk Doffin-kunngjøring (VVS-anlegg i Aukra kommunehus) med konkrete krav
+(3 års erfaring, befaring i uke 48), markedspris fra 20 tildelinger, en ny tildeling og tre kontrakter som utløper –
+alle seks stegene med ekte data. Hvilket anbud som vises, skifter med dataene.
 
 Tester: `tests/unit/showcase.test.ts`, `tests/integration/showcase.test.ts`.
 

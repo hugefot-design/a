@@ -123,6 +123,7 @@ export const da: Messages = {
       market: { one: '{n} tidligere tildeling', other: '{n} tidligere tildelinger' },
       median: 'Median {value}',
       middle: 'Midterste halvdel {from} – {to}',
+      hidden: { one: '{n} meget stor kontrakt (over {value}) er ikke tegnet ind, men indgår i medianen.', other: '{n} meget store kontrakter (over {value}) er ikke tegnet ind, men indgår i medianen.' },
       calc: ['Kostpris', 'Minimumspris', 'Målpris'],
       calcNote: 'Beregnes ud fra jeres egne omkostninger',
       checklist: 'Tjekliste',

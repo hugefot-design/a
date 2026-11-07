@@ -153,6 +153,7 @@ export function ProfitVisual({ s }: { s: Showcase }) {
             <span className="font-semibold">{fill(t.median, { value: kr(mk.median) })}</span>
             <span className="text-muted">{fill(t.middle, { from: kr(mk.p25), to: kr(mk.p75) })}</span>
           </p>
+          {mk.hidden ? <p className="mt-1 text-[12px] text-muted">{fill(plural(locale, t.hidden, mk.hidden.n), { value: kr(mk.hidden.above) })}</p> : null}
         </div>
       ) : null}
     </AppFrame>
@@ -163,9 +164,10 @@ export function ProfitVisual({ s }: { s: Showcase }) {
 export function ChecklistVisual({ s }: { s: Showcase }) {
   const { m } = useUi();
   const t = m.home.journey;
-  // Hele kravsetninger først; utdrag fra vilkårene bare hvis det er for få krav.
-  const reqs = s.requirements.map((r) => r.text.replace(/^… /, ''));
-  const items = (reqs.length >= 3 ? reqs : [...reqs, ...s.terms.map((r) => r.text.replace(/^… /, ''))]).slice(0, 4);
+  // Kravene først; utdrag fra vilkårene bare hvis det er for få krav. «…» foran beholdes når utdraget starter midt i
+  // en setning (ellers ser punktet ut som en setning med liten forbokstav).
+  const reqs = s.requirements.map((r) => r.text);
+  const items = (reqs.length >= 3 ? reqs : [...reqs, ...s.terms.map((r) => r.text)]).slice(0, 4);
   return (
     <AppFrame label={`${t.checklist} · ${s.notice.title}`}>
       <ul className="space-y-2">

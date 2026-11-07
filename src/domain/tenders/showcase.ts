@@ -57,8 +57,21 @@ export interface Showcase {
   };
   requirements: (ShowcaseQuote & { kind: RequirementKind })[];
   terms: (ShowcaseQuote & { kind: TermCategory })[];
-  /** Tidligere tildelinger for samme type kontrakt (bare når minst MIN_COMPARABLES finnes). */
-  market: { label: string; n: number; values: number[]; median: number; p25: number; p75: number; currency: string } | null;
+  /**
+   * Tidligere tildelinger for samme type kontrakt (bare når minst MIN_COMPARABLES finnes). `values` er verdiene som
+   * tegnes inn; `hidden` er svært store kontrakter som ikke tegnes inn (se splitOutliers). Median og midtre halvdel
+   * er regnet av alle `n`.
+   */
+  market: {
+    label: string;
+    n: number;
+    values: number[];
+    hidden: { n: number; above: number } | null;
+    median: number;
+    p25: number;
+    p75: number;
+    currency: string;
+  } | null;
   award: { title: string; buyerName: string | null; value: number; currency: string; awardDate: Date } | null;
   expiring: { title: string; buyerName: string | null; expectedEnd: Date; basis: ExpiryBasis }[];
 }
@@ -236,20 +249,40 @@ export function exampleProfile(industry: string, region: string | null): MatchPr
   };
 }
 
+/**
+ * Svært store kontrakter tegnes ikke inn i figuren på forsiden: én kontrakt på 11 mrd. kr presset ellers de 19 andre
+ * sammen ved 0 (sett i produksjon). Grensen er øvre kvartil + 3 × midtre halvdel (minst 2,5 × øvre kvartil), rundet
+ * opp til to sifre så den kan stå i teksten. Median og midtre halvdel regnes fortsatt av alle verdiene.
+ */
+export function splitOutliers(values: number[], p25: number, p75: number): { shown: number[]; hidden: { n: number; above: number } | null } {
+  const raw = p75 + 3 * Math.max(p75 - p25, p75 * 0.5);
+  if (!(raw > 0)) return { shown: values, hidden: null };
+  const step = 10 ** (Math.floor(Math.log10(raw)) - 1);
+  const above = Math.ceil(raw / step) * step;
+  const shown = values.filter((v) => v <= above);
+  const n = values.length - shown.length;
+  return { shown, hidden: n ? { n, above } : null };
+}
+
 /** 3. Markedspris fra tidligere tildelinger (samme som i kalkylen) – bare når det finnes nok sammenlignbare. */
 async function marketFor(tx: Tx, c: Candidate): Promise<Showcase['market']> {
   const mp = await marketPrice(tx, { id: c.id, mainCpv: c.mainCpv, cpvCodes: c.cpvCodes, currency: c.currency });
-  return mp.total && mp.awards.length >= MIN_COMPARABLES && mp.match
-    ? {
-        label: mp.match.label,
-        n: mp.total.n,
-        values: mp.awards.map((a) => a.value),
-        median: mp.total.median,
-        p25: mp.total.p25,
-        p75: mp.total.p75,
-        currency: mp.currency,
-      }
-    : null;
+  if (!mp.total || mp.awards.length < MIN_COMPARABLES || !mp.match) return null;
+  const { shown, hidden } = splitOutliers(
+    mp.awards.map((a) => a.value),
+    mp.total.p25,
+    mp.total.p75,
+  );
+  return {
+    label: mp.match.label,
+    n: mp.total.n,
+    values: shown,
+    hidden,
+    median: mp.total.median,
+    p25: mp.total.p25,
+    p75: mp.total.p75,
+    currency: mp.currency,
+  };
 }
 
 /** 6. Kontrakter som snart utløper i bransjen (samme anslag som radaren i appen). */

@@ -132,6 +132,7 @@ export const en: Messages = {
       market: { one: '{n} past award', other: '{n} past awards' },
       median: 'Median {value}',
       middle: 'Middle half {from} – {to}',
+      hidden: { one: '{n} very large contract (over {value}) is not drawn but is included in the median.', other: '{n} very large contracts (over {value}) are not drawn but are included in the median.' },
       calc: ['Cost price', 'Minimum price', 'Target price'],
       calcNote: 'Calculated from your own costs',
       checklist: 'Checklist',

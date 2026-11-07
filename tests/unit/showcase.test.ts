@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clipAround, exampleProfile, exampleQuality, goodQuote, readableTitle, scanCandidate } from '../../src/domain/tenders/showcase';
+import { clipAround, exampleProfile, exampleQuality, goodQuote, readableTitle, scanCandidate, splitOutliers } from '../../src/domain/tenders/showcase';
 import { displayBuyer } from '../../src/domain/tenders/market';
 import { scanRequirements } from '../../src/domain/documents/requirements';
 import { scanContractTerms } from '../../src/domain/profit/terms-scan';
@@ -100,4 +100,17 @@ test('displayBuyer: navn med bare store bokstaver får små småord', () => {
   assert.equal(displayBuyer('HELSE SØR-ØST RHF'), 'Helse Sør-Øst RHF');
   assert.equal(displayBuyer('STATSBYGG'), 'Statsbygg');
   assert.equal(displayBuyer('Moss kommune'), 'Moss kommune', 'vanlig skrivemåte endres ikke');
+});
+
+test('splitOutliers: én svært stor kontrakt tegnes ikke inn, men oppgis (som i produksjonen 7.11.2026)', () => {
+  const mill = 1_000_000;
+  const values = [1.2, 2.1, 2.8, 3.5, 4.4, 5.0, 5.7, 6.3, 8.0, 9.9, 12, 15, 19, 24, 27.1, 31, 38, 45, 60].map((v) => v * mill);
+  const { shown, hidden } = splitOutliers([...values, 11_000 * mill], 2.8 * mill, 27.1 * mill);
+  assert.deepEqual(hidden, { n: 1, above: 100 * mill }, 'grensen rundes til to sifre: 27,1 + 3 × 24,3 = 100 mill.');
+  assert.deepEqual(shown, values, 'alle de andre tegnes inn');
+  // Midtre halvdel lik null: grensen er minst 2,5 × øvre kvartil.
+  const flat = splitOutliers([5, 5, 5, 5, 50].map((v) => v * mill), 5 * mill, 5 * mill);
+  assert.deepEqual(flat.hidden, { n: 1, above: 13 * mill });
+  // Ingen ekstreme verdier: alt tegnes inn.
+  assert.deepEqual(splitOutliers([1, 2, 3].map((v) => v * mill), 1.5 * mill, 2.5 * mill), { shown: [1, 2, 3].map((v) => v * mill), hidden: null });
 });

@@ -391,6 +391,11 @@ planer, betaling, database, API-er eller integrasjoner.
   «kostbart vilkår», intetsigende setninger i sjekklisten, ingen markedspris, tomt steg 6 og en kodetittel blant
   treffene. Utvalget er strammet inn (reglene står i [MARKEDSFORING.md](MARKEDSFORING.md)); appens ordsøk er uendret.
   Oppdragsgivernavn med bare store bokstaver får nå små småord («Barne-, Ungdoms- og Familiedirektoratet»).
+  **Rullet ut** (versjon `80f7de6`): produksjonen viser nå en norsk Doffin-kunngjøring med konkrete krav og alle seks
+  stegene med ekte data; loggen etter oppstart hadde 0 advarsler og 0 feil.
+- **Funnet i andre kontroll:** én kontrakt på 11 mrd. kr presset de 19 andre sammen ved 0 i markedsprisfiguren, og
+  sjekklisten startet midt i en setning. Rettet: svært store kontrakter tegnes ikke inn (er med i medianen, og det
+  står under figuren), og «…» beholdes foran utdrag.
 
 - **Forsiden:** ny toppseksjon; «Hvorfor AnbudRadar» med sju fordeler og planen hver finnes i (regnes ut fra planene);
   kundereisen i seks steg vist med **ekte, offentlige data** (krav ordrett fra en åpen kunngjøring, markedspris fra

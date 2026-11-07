@@ -123,6 +123,7 @@ export const sv: Messages = {
       market: { one: '{n} tidigare tilldelning', other: '{n} tidigare tilldelningar' },
       median: 'Median {value}',
       middle: 'Mittersta hälften {from} – {to}',
+      hidden: { one: '{n} mycket stort kontrakt (över {value}) är inte inritat men ingår i medianen.', other: '{n} mycket stora kontrakt (över {value}) är inte inritade men ingår i medianen.' },
       calc: ['Självkostnad', 'Lägsta pris', 'Målpris'],
       calcNote: 'Räknas ut från era egna kostnader',
       checklist: 'Checklista',

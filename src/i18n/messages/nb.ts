@@ -150,6 +150,7 @@ export const nb = {
       market: p({ one: '{n} tidligere tildeling', other: '{n} tidligere tildelinger' }),
       median: 'Median {value}',
       middle: 'Midterste halvdel {from} – {to}',
+      hidden: p({ one: '{n} svært stor kontrakt (over {value}) er ikke tegnet inn, men er med i medianen.', other: '{n} svært store kontrakter (over {value}) er ikke tegnet inn, men er med i medianen.' }),
       calc: ['Selvkost', 'Minstepris', 'Målpris'],
       calcNote: 'Regnes ut fra deres egne kostnader',
       checklist: 'Sjekkliste',
