@@ -23,8 +23,8 @@ eksisterende sikkerhetstestene). Ikke en ekstern penetrasjonstest.
 
 ## Gjenstående risiko (ikke rettet – krever valg eller penger)
 
-- **Ingen sikkerhetskopi i produksjon.** Supabase gratisplan har ikke automatiske sikkerhetskopier. Se forslag i
-  [VEIKART.md](VEIKART.md) (#15).
+- **Ingen sikkerhetskopi i produksjon.** Supabase gratisplan har ikke automatiske sikkerhetskopier. Forslag med pris
+  (Supabase Pro, 25 USD/mnd) i [FORSLAG.md](FORSLAG.md#15-sikkerhetskopi-overvåking-og-staging).
 - **Ingen ekstern overvåking/varsling av feil** utover helsesjekk og admin-oversikten.
 - **PDF-tolking kan bruke mye CPU** på en ondsinnet fil (begrenset av filstørrelse og sideantall, men ikke tid).
 - **AI og ondsinnede dokumenter:** tekst fra opplastede dokumenter sendes til AI-en. Kildeblokken er isolert og svar

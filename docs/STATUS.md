@@ -105,9 +105,10 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 
 1. **Koble til ekte tjenester i testmodus** – Doffin-nøkkel, Stripe testmodus, Resend med testmottakere, Anthropic med utgiftsgrense – og kjør verifiseringen i [INTEGRASJONER.md](INTEGRASJONER.md).
 2. **Juridisk gjennomgang** av personvernerklæring, vilkår, samtykketekst for partnerprofiler og konkurranserettslig veiledning; databehandleravtaler.
-3. **Staging på Render + Supabase**, gjenopprettingstest av sikkerhetskopi, overvåking.
-4. **Pilot med 3–5 bedrifter i én bransje** (f.eks. vinterdrift/maskin eller renhold) – mål om de finner anbud de ellers ville gått glipp av, og om lønnsomhetskalkylen stemmer med egne tall.
-5. **Etter pilot:** automatisk henting av konkurransedokumenter der kildene tillater det, tofaktorinnlogging, feilovervåking, kapasitet per uke/sesong.
+3. **Sikkerhetskopi, døgnåpen drift og overvåking** – forslag med pris i [FORSLAG.md](FORSLAG.md) (krever eiers godkjenning).
+4. **Pilot med 3–5 bedrifter i én bransje** (f.eks. vinterdrift/maskin eller renhold) – mål om de finner anbud de ellers ville gått glipp av, om kravsjekken og forhåndsvurderingen treffer, og om lønnsomhetskalkylen og markedsprisen stemmer med egne tall.
+5. **Etter pilot:** flere land via TED, OCR og dokumentinnhenting (se [FORSLAG.md](FORSLAG.md)), varsel om kontrakter som nærmer seg utløp.
+6. **Utrulling av veikartpunkt 1–11:** Render → tjenesten → *Manual Deploy* → *Deploy latest commit*. Migreringene 0018–0021 kjøres automatisk og endrer ingen eksisterende data.
 
 ## Abonnement og gratisplan (3.11.2026)
 
