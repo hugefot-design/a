@@ -1,4 +1,4 @@
-import { LuArrowLeft, LuExternalLink, LuFileText, LuTrash2, LuUpload } from 'react-icons/lu';
+import { LuArrowLeft, LuExternalLink, LuFileText, LuGauge, LuTrash2, LuUpload } from 'react-icons/lu';
 import type { ReactNode } from 'react';
 import { CONTRACT_NATURES, cpvLabel, INDUSTRY_BY_ID, procedureLabel, REGION_BY_CODE } from '@/domain/reference';
 import type { TenderDetail, TenderSourceRow } from '@/domain/tenders/queries';
@@ -178,6 +178,9 @@ export function TenderPage(p: TenderPageProps) {
         <h1 className="max-w-4xl font-serif text-[26px] font-semibold leading-tight text-navy-900 sm:text-[32px]">{t.title}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <BookmarkButton tenderId={t.id} bookmarked={Boolean(p.bookmark)} />
+          <a href={`/app/anbud/${t.id}/intelligence`} className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'h-9' })}>
+            <LuGauge className="size-4" aria-hidden /> Samlet vurdering
+          </a>
           {t.sourceUrl ? (
             <a href={t.sourceUrl} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'h-9' })}>
               <LuExternalLink className="size-4" aria-hidden /> Åpne hos kilden
@@ -347,6 +350,9 @@ export function TenderPage(p: TenderPageProps) {
                 </div>
                 <ScreeningPoints screening={p.screening} />
                 <p className="text-[11.5px] text-muted">Uten AI: frist, treffet mot profilen og ordsøk i kunngjøringen. Konkurransegrunnlaget kan ha flere krav.</p>
+                <a href={`/app/anbud/${t.id}/intelligence`} className="inline-flex min-h-6 items-center gap-1.5 text-[13px] font-semibold">
+                  <LuGauge className="size-4" aria-hidden /> Samlet vurdering: Go/No-Go, risiko, lønnsomhet og plan
+                </a>
               </div>
             ) : null}
             <div className="p-5">

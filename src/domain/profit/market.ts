@@ -192,10 +192,15 @@ export async function marketPrice(
   }
   if (!best) return { match: null, currency, awards: [], total: null, perYear: null, excluded: { frameworks: 0, otherCurrency: 0 } };
   const code = best.prefix.padEnd(8, '0');
+  return { match: { prefix: best.prefix, code, label: await cpvPrefixLabel(tx, best.prefix) }, ...best.summary };
+}
+
+/** Navnet på et CPV-prefiks: koden i CPV-listen, ellers hovedgruppen («innen bygge- og anleggsarbeid»). */
+export async function cpvPrefixLabel(tx: Tx, prefix: string): Promise<string> {
+  const code = prefix.padEnd(8, '0');
   const labels = await cpvLabels(tx, [code]);
   const division = CPV_DIVISIONS[code.slice(0, 2)];
-  const label = labels.get(code) ?? (division ? `innen ${division.charAt(0).toLowerCase()}${division.slice(1)}` : '');
-  return { match: { prefix: best.prefix, code, label }, ...best.summary };
+  return labels.get(code) ?? (division ? `innen ${division.charAt(0).toLowerCase()}${division.slice(1)}` : '');
 }
 
 export interface PricePosition {

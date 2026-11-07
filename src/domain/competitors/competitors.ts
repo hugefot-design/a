@@ -4,6 +4,7 @@
  */
 import { first, type Tx } from '@/lib/db';
 import { isProd } from '@/lib/env';
+import { cpvLevels, cpvPrefixLabel, pickCpv } from '@/domain/profit/market';
 
 const sample = (tx: Tx) => (isProd ? tx`and t.is_sample = false` : tx``);
 
@@ -147,4 +148,91 @@ export async function topAuthorities(tx: Tx, industries: string[], limit = 10) {
     where true ${industries.length ? tx`and t.industry_ids && ${industries}::text[]` : tx``} ${sample(tx)}
     group by au.id, au.name order by tenders desc limit ${limit}
   `) as unknown as { id: string; name: string; tenders: number; lastYear: number }[];
+}
+
+// ---------------------------------------------------------------------------
+// Konkurransen rundt ett anbud (Intelligence). Samme datagrunnlag som konkurrentsidene og markedsprisen:
+// bare publiserte tildelinger, ikke eksempeldata, de siste fem årene. Sammenlignbare kontrakter finnes på samme
+// måte som i markedsprisen (CPV-prefiks, så spesifikt som datagrunnlaget tillater).
+// ---------------------------------------------------------------------------
+export interface CompetitorRow {
+  supplierId: string;
+  name: string;
+  /** Antall kontrakter (anbud) leverandøren har vunnet i utvalget. */
+  wins: number;
+  lastWin: Date | null;
+}
+
+export interface TenderCompetition {
+  /** Vinnere hos samme oppdragsgiver i samme bransje. Null når oppdragsgiveren er ukjent. */
+  buyer: { winners: CompetitorRow[]; contracts: number } | null;
+  /** Vinnere av lignende kontrakter (CPV-prefiks) hos alle oppdragsgivere. */
+  similar: { prefix: string; label: string; winners: CompetitorRow[]; contracts: number } | null;
+  /** Antall tilbud i lignende konkurranser (fra tildelingskunngjøringene). Bare når minst tre har tallet. */
+  bids: { prefix: string; label: string; n: number; median: number; min: number; max: number } | null;
+}
+
+/** Færre lignende kontrakter enn dette: prøv et bredere CPV-nivå. */
+const SIMILAR_MIN = 5;
+const MIN_BID_COUNTS = 3;
+
+export async function tenderCompetition(
+  tx: Tx,
+  tender: { id: string; authorityId: string | null; buyerName: string | null; industryIds: string[]; mainCpv: string | null; cpvCodes: string[] },
+): Promise<TenderCompetition> {
+  const recent = tx`coalesce(a.award_date, a.created_at::date) >= current_date - make_interval(years => 5)`;
+  const industries = tender.industryIds;
+
+  let buyer: TenderCompetition['buyer'] = null;
+  const buyerCond = tender.authorityId ? tx`t.authority_id = ${tender.authorityId}` : tender.buyerName ? tx`lower(t.buyer_name) = lower(${tender.buyerName})` : null;
+  if (buyerCond) {
+    const where = tx`${buyerCond} and t.id <> ${tender.id} and not t.is_sample and ${recent} ${industries.length ? tx`and t.industry_ids && ${industries}::text[]` : tx``}`;
+    const winners = (await tx`
+      select s.id as supplier_id, s.name, count(distinct a.tender_id)::int as wins, max(coalesce(a.award_date, t.published_at::date)) as last_win
+      from contract_awards a join suppliers s on s.id = a.supplier_id join tenders t on t.id = a.tender_id
+      where ${where}
+      group by s.id, s.name order by wins desc, last_win desc nulls last limit 8
+    `) as unknown as CompetitorRow[];
+    const [count] = (await tx`
+      select count(distinct a.tender_id)::int as n from contract_awards a join tenders t on t.id = a.tender_id where ${where}
+    `) as unknown as { n: number }[];
+    buyer = { winners, contracts: count?.n ?? 0 };
+  }
+
+  // Lignende kontrakter: det mest spesifikke CPV-nivået med nok tildelte kontrakter (som i markedsprisen).
+  let similar: TenderCompetition['similar'] = null;
+  let best: { prefix: string; n: number } | null = null;
+  for (const prefix of cpvLevels(pickCpv(tender.mainCpv, tender.cpvCodes))) {
+    const [row] = (await tx`
+      select count(distinct a.tender_id)::int as n from contract_awards a join tenders t on t.id = a.tender_id
+      where t.cpv_prefixes && ${[prefix]}::text[] and t.id <> ${tender.id} and not t.is_sample and ${recent}
+    `) as unknown as { n: number }[];
+    const n = row?.n ?? 0;
+    if (!best || n > best.n) best = { prefix, n };
+    if (n >= SIMILAR_MIN) break;
+  }
+  if (best && best.n > 0) {
+    const winners = (await tx`
+      select s.id as supplier_id, s.name, count(distinct a.tender_id)::int as wins, max(coalesce(a.award_date, t.published_at::date)) as last_win
+      from contract_awards a join suppliers s on s.id = a.supplier_id join tenders t on t.id = a.tender_id
+      where t.cpv_prefixes && ${[best.prefix]}::text[] and t.id <> ${tender.id} and not t.is_sample and ${recent}
+      group by s.id, s.name order by wins desc, last_win desc nulls last limit 8
+    `) as unknown as CompetitorRow[];
+    similar = { prefix: best.prefix, label: await cpvPrefixLabel(tx, best.prefix), winners, contracts: best.n };
+  }
+
+  let bids: TenderCompetition['bids'] = null;
+  if (best) {
+    const [row] = (await tx`
+      select count(*)::int as n, percentile_cont(0.5) within group (order by t.received_tenders)::float8 as median,
+             min(t.received_tenders)::int as min, max(t.received_tenders)::int as max
+      from tenders t
+      where t.cpv_prefixes && ${[best.prefix]}::text[] and t.id <> ${tender.id} and not t.is_sample and t.received_tenders > 0
+        and coalesce(t.published_at, t.first_seen_at) >= now() - interval '5 years'
+    `) as unknown as { n: number; median: number | null; min: number | null; max: number | null }[];
+    if (row && row.n >= MIN_BID_COUNTS && row.median !== null) {
+      bids = { prefix: best.prefix, label: similar?.label ?? (await cpvPrefixLabel(tx, best.prefix)), n: row.n, median: row.median, min: row.min ?? 0, max: row.max ?? 0 };
+    }
+  }
+  return { buyer, similar, bids };
 }

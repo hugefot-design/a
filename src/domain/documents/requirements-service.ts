@@ -4,6 +4,7 @@
  */
 import { first, type Tx } from '@/lib/db';
 import { loadDocumentSources, noticeSource } from '@/domain/ai/analysis';
+import type { AnalysisSource } from '@/domain/ai/sources';
 import { isEnvironmentNonCriterion } from '@/domain/tenders/eforms-facts';
 import { getTender, type TenderDetail } from '@/domain/tenders/queries';
 import type { OrgContext } from '@/server/http';
@@ -17,9 +18,10 @@ export const MAX_CHECKLIST_IMPORT = 100;
  * kvalifikasjons- og tildelingskriteriene hentes fra egne felt, og øvrige felt (frister, verdi) vises andre
  * steder på siden. Dokumentene leses bare når planen har dokumentopplasting.
  */
-export async function tenderRequirementScan(tx: Tx, tender: TenderDetail, withDocuments: boolean): Promise<RequirementScan> {
+export async function tenderRequirementScan(tx: Tx, tender: TenderDetail, withDocuments: boolean, preloaded?: AnalysisSource[]): Promise<RequirementScan> {
   const notice = { ...noticeSource(tender), pages: [{ page: null, text: tender.description ?? '' }] };
-  const docs = withDocuments ? await loadDocumentSources(tx, tender.id) : [];
+  // `preloaded`: dokumentene er allerede lest (Intelligence leser dem én gang for alle delene).
+  const docs = withDocuments ? (preloaded ?? (await loadDocumentSources(tx, tender.id))) : [];
   return scanRequirements([notice, ...docs], {
     selectionCriteria: tender.selectionCriteria,
     // Klimakrav i spesifikasjonen og unntak (norske eForms-koder) er ikke tildelingskriterier.

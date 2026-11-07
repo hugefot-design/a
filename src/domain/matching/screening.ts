@@ -17,7 +17,24 @@ import type { MatchBreakdown } from './engine';
 export type ScreeningVerdict = 'se_paa' | 'sjekk' | 'passer_ikke';
 export type PointTone = 'stop' | 'warn' | 'info' | 'ok';
 
+/** Hva punktet gjelder – så andre deler av appen (Intelligence) kan bruke vurderingen uten å tolke teksten. */
+export type ScreeningKey =
+  | 'deadline_passed'
+  | 'deadline_soon'
+  | 'deadline_short'
+  | 'deadline_ok'
+  | 'deadline_unknown'
+  | 'excluded'
+  | 'unfulfilled'
+  | 'missing_info'
+  | 'uncertainty'
+  | 'fit'
+  | 'mandatory_visit'
+  | 'costly_terms'
+  | 'requirements';
+
 export interface ScreeningPoint {
+  key: ScreeningKey;
   tone: PointTone;
   text: string;
 }
@@ -82,35 +99,35 @@ export function screenTender(input: ScreeningInput): Screening {
     // Samme avrunding som fristfeltet i appen (4,99 døgn = «5 dager»), så tallene aldri spriker på samme side.
     const days = Math.ceil(hours / 24);
     // Timer, ikke kalenderdager: «i dag» kan være feil når fristen er i morgen tidlig.
-    if (hours < 0) points.push({ tone: 'stop', text: 'Fristen har gått ut.' });
-    else if (hours < 48) points.push({ tone: 'stop', text: hours < 24 ? 'Under ett døgn til fristen.' : 'Under to døgn til fristen.' });
-    else if (days < input.minDaysToDeadline) points.push({ tone: 'warn', text: `Bare ${days} dager til fristen (profilen sier minst ${input.minDaysToDeadline}).` });
-    else points.push({ tone: 'info', text: `${days} dager til fristen.` });
+    if (hours < 0) points.push({ key: 'deadline_passed', tone: 'stop', text: 'Fristen har gått ut.' });
+    else if (hours < 48) points.push({ key: 'deadline_soon', tone: 'stop', text: hours < 24 ? 'Under ett døgn til fristen.' : 'Under to døgn til fristen.' });
+    else if (days < input.minDaysToDeadline) points.push({ key: 'deadline_short', tone: 'warn', text: `Bare ${days} dager til fristen (profilen sier minst ${input.minDaysToDeadline}).` });
+    else points.push({ key: 'deadline_ok', tone: 'info', text: `${days} dager til fristen.` });
   } else {
-    points.push({ tone: 'info', text: 'Fristen er ikke oppgitt i kunngjøringen.' });
+    points.push({ key: 'deadline_unknown', tone: 'info', text: 'Fristen er ikke oppgitt i kunngjøringen.' });
   }
 
   // Treff mot profilen
   if (m) {
     // Eldre lagrede forklaringer (versjon 1) mangler noen felt – tåles.
     const b = m.breakdown;
-    if (m.excluded) points.push({ tone: 'stop', text: b.disqualifiers?.[0] ?? 'Utelukket av profilen (ekskluderte koder eller ord).' });
-    for (const u of (b.unfulfilled ?? []).slice(0, 2)) points.push({ tone: 'stop', text: u });
-    if (b.missingInfo?.length) points.push({ tone: 'warn', text: b.missingInfo[0]! });
-    if (b.uncertainty === 'høy') points.push({ tone: 'warn', text: 'Høy usikkerhet: kunngjøringen sier lite om innholdet.' });
-    if (!m.excluded && b.reasons?.length) points.push({ tone: 'ok', text: b.reasons[0]! });
+    if (m.excluded) points.push({ key: 'excluded', tone: 'stop', text: b.disqualifiers?.[0] ?? 'Utelukket av profilen (ekskluderte koder eller ord).' });
+    for (const u of (b.unfulfilled ?? []).slice(0, 2)) points.push({ key: 'unfulfilled', tone: 'stop', text: u });
+    if (b.missingInfo?.length) points.push({ key: 'missing_info', tone: 'warn', text: b.missingInfo[0]! });
+    if (b.uncertainty === 'høy') points.push({ key: 'uncertainty', tone: 'warn', text: 'Høy usikkerhet: kunngjøringen sier lite om innholdet.' });
+    if (!m.excluded && b.reasons?.length) points.push({ key: 'fit', tone: 'ok', text: b.reasons[0]! });
   }
 
   // Kunngjøringen
   const s = input.signals;
-  if (s.mandatoryVisit) points.push({ tone: 'warn', text: `Obligatorisk befaring: «${s.mandatoryVisit}»` });
-  if (s.costlyTerms.length) points.push({ tone: 'warn', text: `Nevnt i kunngjøringen: ${s.costlyTerms.map((c) => TERM_LABELS[c].toLowerCase()).join(', ')}.` });
+  if (s.mandatoryVisit) points.push({ key: 'mandatory_visit', tone: 'warn', text: `Obligatorisk befaring: «${s.mandatoryVisit}»` });
+  if (s.costlyTerms.length) points.push({ key: 'costly_terms', tone: 'warn', text: `Nevnt i kunngjøringen: ${s.costlyTerms.map((c) => TERM_LABELS[c].toLowerCase()).join(', ')}.` });
   if (s.rejectionClauses || s.minimumRequirements) {
     const parts = [
       s.rejectionClauses ? `${s.rejectionClauses} om avvisning` : null,
       s.minimumRequirements ? `${s.minimumRequirements} om minstekrav` : null,
     ].filter(Boolean);
-    points.push({ tone: 'info', text: `Kravsetninger i kunngjøringen: ${parts.join(', ')}. Se «Krav og avvisningsrisiko».` });
+    points.push({ key: 'requirements', tone: 'info', text: `Kravsetninger i kunngjøringen: ${parts.join(', ')}. Se «Krav og avvisningsrisiko».` });
   }
 
   points.sort((a, b) => ORDER[a.tone] - ORDER[b.tone]);

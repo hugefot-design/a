@@ -675,7 +675,7 @@ export async function loadProfitWorkspace(
   tx: Tx,
   org: OrgContext,
   tenderId: string,
-  opts: { inputsOverride?: StoredInputs; testPrice?: number | null; now?: Date } = {},
+  opts: { inputsOverride?: StoredInputs; testPrice?: number | null; now?: Date; documents?: AnalysisSource[] } = {},
 ): Promise<ProfitWorkspace | null> {
   const tender = await getTender(tx, tenderId);
   if (!tender) return null;
@@ -685,7 +685,7 @@ export async function loadProfitWorkspace(
     getCalculation(tx, org.id, tenderId),
     getProfile(tx, org.id),
     org.entitlements.profitAI ? getLatestProfitAnalysis(tx, tenderId, org.id) : Promise.resolve(null),
-    org.entitlements.documentUpload ? loadDocumentSources(tx, tenderId) : Promise.resolve([] as AnalysisSource[]),
+    org.entitlements.documentUpload ? (opts.documents ? Promise.resolve(opts.documents) : loadDocumentSources(tx, tenderId)) : Promise.resolve([] as AnalysisSource[]),
     getLatestFitAssessment(tx, tenderId, org.id),
     tx`select title, text_status from tender_documents where tender_id = ${tenderId} and (org_id is null or org_id = ${org.id})` as unknown as Promise<{ title: string; textStatus: string }[]>,
   ]);

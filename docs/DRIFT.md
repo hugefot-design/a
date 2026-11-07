@@ -262,6 +262,8 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
   helsesjekken, loggen og de offentlige sidene. Endringer bare i dokumentasjonen rulles ikke ut (nettsiden er lik).
   Gjelder ikke det som fortsatt krever eiers ja: priser og abonnementer, nye betalte tjenester eller leverandører,
   endringer i oppsettet hos Render/Supabase, produksjonsdata og hemmeligheter, og migreringer som endrer eksisterende data.
+- **Endret samme dag (oppdraget om AnbudRadar Intelligence):** eier skrev «Ikke … deploy produksjon uten min godkjenning».
+  Den nyeste beskjeden gjelder: utrulling venter igjen på eiers ja, til eier sier noe annet.
 
 ## 8. Kontinuerlig integrasjon (CI)
 
