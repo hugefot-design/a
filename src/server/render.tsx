@@ -2,10 +2,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
-import { env, integrationStatus, isDev, isProd } from '@/lib/env';
+import { env, isDev, isProd } from '@/lib/env';
 import { UiContext, type UiContextValue } from '@/ui/context';
 import type { RequestContext } from './http';
 import { liveSources } from '@/domain/tenders/source-status';
+import { aiModeFor } from '@/domain/ai/provider';
 import { LOCALE_INFO, LOCALES, localePath, MARKETING_PATHS, messages, preferredLocale } from '@/i18n';
 
 const ASSET_DIR = join(process.cwd(), 'public', 'assets');
@@ -35,7 +36,7 @@ export interface RenderOptions {
 }
 
 function uiValue(ctx: RequestContext): UiContextValue {
-  const integrations = integrationStatus();
+  const ai = aiModeFor(ctx.org);
   return {
     path: ctx.path,
     csrfToken: ctx.csrfToken,
@@ -44,8 +45,8 @@ function uiValue(ctx: RequestContext): UiContextValue {
     flash: ctx.flash,
     unreadCount: ctx.unreadCount,
     isDev: isDev,
-    aiConfigured: integrations.ai,
-    aiIsMock: integrations.aiIsMock,
+    aiConfigured: ai.configured,
+    aiIsMock: ai.isMock,
     legalReviewed: env.LEGAL_PAGES_REVIEWED,
     liveSources: liveSources(),
     trialDays: env.TRIAL_DAYS,

@@ -960,7 +960,7 @@ function AnalysisTeaser({
         ) : null}
       </div>
       <div className="space-y-3 px-5 py-4">
-        {analysis?.isMock ? <Alert tone="warning">Dette er et simulert svar fra testmodus (AI_PROVIDER=mock), ikke en ekte AI-analyse.</Alert> : null}
+        {analysis?.isMock ? <Alert tone="warning">Dette er et simulert svar fra testmodus, ikke en ekte AI-analyse.</Alert> : null}
         {analysis ? (
           <>
             <p className="text-[15px] leading-relaxed text-ink">{summary}</p>
@@ -1000,6 +1000,7 @@ function AnalysisTeaser({
 function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; documents: TenderPageProps['documents']; canUpload: boolean }) {
   return (
     <Panel>
+      <div id="dokumenter-for-analyse" className="scroll-mt-24" />
       <PanelHeader
         title="Dokumenter for analyse"
         description="Last opp konkurransegrunnlaget for en grundigere analyse med sidehenvisninger. Dokumentene er private for organisasjonen."
@@ -1163,7 +1164,7 @@ export function AnalysisPage({ tender, analysis }: { tender: TenderDetail; analy
         <h1 className="mt-1 max-w-3xl font-serif text-[26px] font-semibold leading-tight text-navy-900">{tender.title}</h1>
       </header>
       <div className="space-y-4">
-        {analysis.isMock ? <Alert tone="warning">Simulert svar fra testmodus (AI_PROVIDER=mock). Ikke en ekte AI-analyse.</Alert> : null}
+        {analysis.isMock ? <Alert tone="warning">Simulert svar fra testmodus – ikke en ekte AI-analyse.</Alert> : null}
         <Alert tone="info" title="Slik leser du analysen">
           Analysen er laget av AI og kan inneholde feil. «Står i kilden» betyr at det ordrette sitatet faktisk finnes i dokumentet. «AI-tolkning» er
           AI-ens vurdering. Frister og krav du skal handle på, må alltid sjekkes i originaldokumentene.

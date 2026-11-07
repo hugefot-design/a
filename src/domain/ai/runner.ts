@@ -5,7 +5,7 @@ import { log } from '@/lib/logger';
 import { rateLimit } from '@/lib/rate-limit';
 import type { OrgContext } from '@/server/http';
 import { env } from '@/lib/env';
-import { AIError, estimateCostUsd, getProvider, type Effort, type JsonSchema, type ModelTier } from './provider';
+import { AIError, aiFor, estimateCostUsd, type Effort, type JsonSchema, type ModelTier } from './provider';
 import { PROMPT_VERSION } from './prompts';
 import { currentPeriod, quotaFor, recordUsage, usageSummary, ANALYSIS_KINDS, type AiUsageKind } from './usage';
 
@@ -52,7 +52,8 @@ export type RunAiResult =
   | { ok: false; code: 'not_configured' | 'quota' | 'rate_limited' | 'provider_error' | 'invalid_output'; error: string };
 
 export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
-  const provider = getProvider(input.tier ?? 'quality');
+  // Testmodus for admin-tilgang (når ekte AI er av): simulerte svar som bare lagres for organisasjonen.
+  const { provider, demo } = aiFor(input.org, input.tier ?? 'quality');
   if (!provider) {
     return { ok: false, code: 'not_configured', error: 'AI er ikke konfigurert. Administrator må legge inn en API-nøkkel (se README).' };
   }
@@ -146,10 +147,11 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
     ...(input.enrich ? input.enrich(parsed.data) : {}),
   };
 
-  // 4. Lagre. Globale analyser (kun offentlig tekst) skrives av systemet og deles av alle.
+  // 4. Lagre. Globale analyser (kun offentlig tekst) skrives av systemet og deles av alle –
+  // men simulerte svar fra testmodus deles aldri med andre organisasjoner.
   const duration = Date.now() - started;
   let analysisId: string;
-  if (input.isPrivate) {
+  if (input.isPrivate || demo) {
     analysisId = await withTenant(ctx, async (tx) => {
       const [row] = (await tx`
         insert into ai_analyses (kind, tender_id, org_id, workspace_id, input_hash, prompt_version, provider, model, status, result,

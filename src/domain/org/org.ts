@@ -6,7 +6,7 @@ import { audit } from '@/lib/audit';
 import { randomToken, sha256Hex } from '@/lib/crypto';
 import { sendEmailSoon } from '@/lib/email';
 import { absoluteUrl, invitationTemplate } from '@/domain/email/templates';
-import { entitlementsFor, resolveBilling, TRIAL_PLAN, type SubscriptionRow } from '@/domain/billing/plans';
+import { entitlementsFor, resolveBilling, TRIAL_PLAN, withAdminAccess, type SubscriptionRow } from '@/domain/billing/plans';
 import type { AuthUser, Membership, OrgContext, OrgRole } from '@/server/http';
 
 export const orgNumberSchema = z
@@ -47,7 +47,8 @@ export async function loadOrgContext(user: AuthUser): Promise<OrgContext | null>
     );
     return { sub, profile };
   });
-  const billing = resolveBilling(data.sub);
+  const adminAccess = await orgHasAdminAccess(current.orgId);
+  const billing = withAdminAccess(resolveBilling(data.sub), adminAccess);
   return {
     id: current.orgId,
     name: current.name,
@@ -57,7 +58,19 @@ export async function loadOrgContext(user: AuthUser): Promise<OrgContext | null>
     billing,
     onboardingCompleted: Boolean(data.profile?.onboardingCompletedAt),
     memberships,
+    adminAccess,
   };
+}
+
+/** Eies organisasjonen av en plattform-administrator? Sjekkes på serveren (systemrollen), aldri ut fra nettleseren. */
+export async function orgHasAdminAccess(orgId: string): Promise<boolean> {
+  const [row] = (await systemSql()`
+    select exists (
+      select 1 from organization_members m join users u on u.id = m.user_id
+      where m.org_id = ${orgId} and m.role = 'owner' and u.is_platform_admin
+    ) as yes
+  `) as unknown as { yes: boolean }[];
+  return Boolean(row?.yes);
 }
 
 /** Maks antall organisasjoner én bruker kan opprette (hindrer misbruk av gratisgrensene). */

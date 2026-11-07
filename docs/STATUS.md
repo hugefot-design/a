@@ -355,3 +355,21 @@ kostnader, ingen endring i Render eller Supabase.
   OK; alle offentlige sider, språkversjoner og et utvalg bransje- og fylkessider svarer 200; admin er fortsatt skjult
   (404) for besøkende; driftssjekken på GitHub grønn mot ny versjon. Innloggede sider er **IKKE VERIFISERT i produksjon**
   (krever innlogging med totrinn) – de er dekket av testene over.
+
+## Admin-tilgang, produktoversikt og kundereise (7. november 2026)
+
+- **Admin kan bruke alle produktene:** organisasjoner som eies av en plattform-administrator får alle funksjoner
+  (Enterprise) uten betaling, merket «admin-tilgang» i appen. Abonnementet og Stripe endres ikke, og det gjelder ikke
+  kunders organisasjoner der administratoren bare er medlem. E-postvarslene følger samme regel.
+- **AI i testmodus for admin:** når ekte AI er av (som nå), kjører AI-funksjonene for admin-organisasjoner med
+  simulerte svar, tydelig merket. Svarene lagres bare for admin-organisasjonen og blandes aldri med ekte AI-svar
+  (egen hurtigbuffer per leverandør). Kunder har fortsatt ikke AI.
+- **Admin → Produkter:** alle produktene med lenke rett inn i appen, hvilken plan kundene trenger, og om funksjonen
+  virker fullt ut (AI, betaling og fillagring krever oppsett).
+- **Admin → Kundereise:** registrert → bekreftet e-post → profil → gode treff → lagret anbud → tilbudsarbeid → betaler,
+  for 30 dager, 90 dager eller alle. Bare antall; administratorer og administratorens egen organisasjon er ikke med.
+  Største frafall fremheves.
+- **Automatiske tester på GitHub** ved hver endring på arbeidsgrenen. Første kjøring 7.11.2026: grønn.
+- Tester: `tests/integration/admin-access.test.ts` (fant at vernet virker: uten privat lagring av simulerte svar feiler
+  testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
+  Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.

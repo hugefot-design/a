@@ -91,6 +91,24 @@ export function modelFor(tier: ModelTier): string | null {
   }
 }
 
+/**
+ * AI for en organisasjon. Ekte AI når leverandøren er satt opp. Ellers kjører organisasjoner med
+ * admin-tilgang i testmodus (simulerte svar, tydelig merket), så administratoren kan se hvordan
+ * AI-funksjonene virker uten nøkkel og uten kostnad. For alle andre er AI av.
+ */
+export function aiFor(org: { adminAccess?: boolean } | null | undefined, tier: ModelTier = 'quality'): { provider: AIProvider | null; demo: boolean } {
+  const real = getProvider(tier);
+  if (real) return { provider: real, demo: false };
+  if (org?.adminAccess) return { provider: mockProvider, demo: true };
+  return { provider: null, demo: false };
+}
+
+/** Til sidene: er AI tilgjengelig for organisasjonen, og er svarene simulerte? */
+export function aiModeFor(org: { adminAccess?: boolean } | null | undefined): { configured: boolean; isMock: boolean } {
+  const { provider, demo } = aiFor(org);
+  return { configured: provider !== null, isMock: demo || provider?.name === 'mock' };
+}
+
 export function getProvider(tier: ModelTier = 'quality'): AIProvider | null {
   if (override) return override;
   const model = modelFor(tier);

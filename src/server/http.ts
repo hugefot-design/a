@@ -30,6 +30,8 @@ export interface OrgContext {
   billing: BillingState;
   onboardingCompleted: boolean;
   memberships: Membership[];
+  /** Eies av en plattform-administrator: alle funksjoner uten betaling, AI i testmodus når AI er av. */
+  adminAccess?: boolean;
 }
 
 export interface Flash {

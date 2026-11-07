@@ -5,8 +5,11 @@ name: CI
 
 on:
   pull_request:
+  # Hver endring på arbeidsgrenen (som er standardgrenen og den Render ruller ut fra) testes automatisk.
+  # GitHub sender e-post til den som pushet når testene feiler. Endringer bare i dokumentasjonen hoppes over.
   push:
-    branches: [main]
+    branches: [main, claude/anbudradar-saas-launch-eje0gv]
+    paths-ignore: ['docs/**', '**/*.md']
   workflow_dispatch:
 
 concurrency:

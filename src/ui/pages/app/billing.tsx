@@ -47,6 +47,12 @@ export function BillingPage(p: BillingProps) {
   return (
     <AppShell>
       <PageHeader title="Abonnement" description="Priser er per måned, eks. mva. Abonnementet kan sies opp når som helst og gjelder ut perioden." />
+      {org?.adminAccess ? (
+        <Alert tone="info" className="mb-5" title="Admin-tilgang">
+          Organisasjonen eies av en administrator og har alle funksjoner uten betaling. Kjøp her ville gitt et ekte abonnement –
+          prøv betalingen med en vanlig testkonto i stedet.
+        </Alert>
+      ) : null}
       {p.checkout === 'fullfort' ? (
         <Alert tone="info" className="mb-5" title="Takk! Vi venter på bekreftelse fra Stripe.">
           Planen aktiveres så snart betalingen er bekreftet, vanligvis innen et minutt. Last inn siden på nytt om litt.

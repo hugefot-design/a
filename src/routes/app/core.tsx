@@ -1,7 +1,8 @@
 import { parseBoardFilter } from '@/domain/tenders/market';
 import { z } from 'zod';
 import { first } from '@/lib/db';
-import { env, integrationStatus } from '@/lib/env';
+import { env } from '@/lib/env';
+import { aiModeFor } from '@/domain/ai/provider';
 import { rateLimit } from '@/lib/rate-limit';
 import { consumeSearch, searchKey, searchQuota } from '@/domain/billing/quota';
 import { createOrganization, OrgLimitError, orgNumberSchema, switchOrganization } from '@/domain/org/org';
@@ -62,7 +63,7 @@ export function registerCoreAppRoutes(router: Router): void {
   router.get('/app', 'org', async (ctx) => {
     const { org } = requireOrg(ctx);
     const data = await ctx.tenant((tx) => loadDashboard(tx, org));
-    const aiAvailable = integrationStatus().ai && org.entitlements.aiFullAnalysis;
+    const aiAvailable = aiModeFor(org).configured && org.entitlements.aiFullAnalysis;
     let freeUsage = null;
     if (org.entitlements.plan === 'free') {
       const [sq, usage] = await Promise.all([searchQuota(org.id, ctx.user!.id, org.entitlements), ctx.tenant((tx) => usageSummary(tx, org))]);
@@ -258,7 +259,7 @@ export function registerCoreAppRoutes(router: Router): void {
         minDaysToDeadline: await profileMinDays(tx, org.id),
         signals: noticeSignals(tender.description),
       });
-      const chat = integrationStatus().ai && org.entitlements.aiAnalysesPerMonth > 0 ? await chatHistory(tx, org.id, id) : null;
+      const chat = aiModeFor(org).configured && org.entitlements.aiAnalysesPerMonth > 0 ? await chatHistory(tx, org.id, id) : null;
       return { tender, extras, labels, analysis, fit, usage, profit, requirements, result, screening, chat };
     });
     if (!data) throw new HttpError(404, 'Fant ikke kunngjøringen.');

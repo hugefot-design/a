@@ -6,6 +6,8 @@ import { listOrganizations, listUsers, organizationDetail, systemHealth } from '
 import { adminOverview } from '@/domain/admin/overview';
 import { visitStats } from '@/domain/admin/visits';
 import { listAppErrors, resolveAllAppErrors, resolveAppError } from '@/domain/ops/errors';
+import { adminProductContext } from '@/domain/admin/products';
+import { customerJourney } from '@/domain/admin/journey';
 import { linkedinPost, weeklyTopics } from '@/domain/admin/linkedin';
 import { INDUSTRY_BY_ID, REGION_BY_CODE } from '@/domain/reference';
 import { setManualPlan, verifyStripePrices, type PriceCheck } from '@/domain/billing/stripe';
@@ -22,6 +24,8 @@ import { AdminOverviewPage } from '@/ui/pages/admin-overview';
 import { AdminVisitsPage } from '@/ui/pages/admin-visits';
 import { AdminLinkedinPage } from '@/ui/pages/admin-linkedin';
 import { AdminErrorsPage } from '@/ui/pages/admin-errors';
+import { AdminProductsPage } from '@/ui/pages/admin-products';
+import { AdminJourneyPage } from '@/ui/pages/admin-journey';
 import {
   AdminHealthPage,
   AdminImportsPage,
@@ -309,6 +313,16 @@ export function registerAdminRoutes(router: Router): void {
       { title: 'Revisjonslogg' },
     );
   });
+
+  // Kundereisen: fra registrering til betalende kunde (bare antall).
+  router.get('/admin/kundereise', 'admin', async (ctx) => {
+    const p = ctx.query.get('periode');
+    const days = p === 'alle' ? null : p === '30' ? 30 : 90;
+    return render(ctx, <AdminJourneyPage j={await customerJourney(days)} />, { title: 'Kundereisen' });
+  });
+
+  // Alle produktene med lenke inn i appen; administratorens egen organisasjon har alle funksjoner.
+  router.get('/admin/produkter', 'admin', async (ctx) => render(ctx, <AdminProductsPage c={await adminProductContext(ctx.user!.id)} />, { title: 'Produkter' }));
 
   // Feilovervåking: feil som er logget, gruppert per type (se src/domain/ops/errors.ts).
   router.get('/admin/feil', 'admin', async (ctx) => {

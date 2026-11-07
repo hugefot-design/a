@@ -420,8 +420,20 @@ function Sidebar() {
 }
 
 function AccountBanners() {
-  const { user, org, isDev } = useUi();
+  const { user, org, isDev, path, aiIsMock } = useUi();
   const banners: ReactNode[] = [];
+  if (org?.adminAccess && path === '/app') {
+    banners.push(
+      <Alert key="admin-access" tone="info" title="Admin-tilgang">
+        Alle funksjoner er åpne for {org.name} uten betaling{aiIsMock ? ', og AI kjører i testmodus med simulerte svar' : ''}.{' '}
+        {user?.isPlatformAdmin ? (
+          <a href="/admin/produkter" className="font-semibold">
+            Se alle produktene
+          </a>
+        ) : null}
+      </Alert>,
+    );
+  }
   if (user && !user.emailVerified) {
     banners.push(
       <Alert key="verify" tone="warning" title="Bekreft e-postadressen din">
@@ -536,7 +548,9 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
 // ---------------------------------------------------------------------------
 const ADMIN_NAV = [
   { href: '/admin', label: 'Oversikt' },
+  { href: '/admin/produkter', label: 'Produkter' },
   { href: '/admin/besok', label: 'Besøk' },
+  { href: '/admin/kundereise', label: 'Kundereise' },
   { href: '/admin/linkedin', label: 'LinkedIn' },
   { href: '/admin/brukere', label: 'Brukere' },
   { href: '/admin/organisasjoner', label: 'Organisasjoner' },

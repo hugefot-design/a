@@ -330,6 +330,26 @@ export function entitlementsFor(plan: PlanId): Entitlements {
   return PLANS[plan].entitlements;
 }
 
+/**
+ * Admin-tilgang: organisasjoner som eies av en plattform-administrator får alle funksjoner (høyeste plan)
+ * uten betaling, så administratoren kan bruke og vise frem alle produktene. Påvirker ikke abonnementet
+ * eller Stripe, og gjelder ikke organisasjoner der administratoren bare er medlem.
+ */
+export const ADMIN_ACCESS_PLAN: PlanId = 'enterprise';
+
+export function withAdminAccess(billing: BillingState, adminAccess: boolean): BillingState {
+  if (!adminAccess) return billing;
+  return {
+    effectivePlan: ADMIN_ACCESS_PLAN,
+    label: `${PLANS[ADMIN_ACCESS_PLAN].name} (admin-tilgang)`,
+    status: 'active',
+    notice: null,
+    trialEndsAt: null,
+    renewsAt: null,
+    cancelAtPeriodEnd: false,
+  };
+}
+
 export type Feature =
   | 'advancedSearch'
   | 'aiFullAnalysis'

@@ -1,5 +1,5 @@
 import { first } from '@/lib/db';
-import { integrationStatus } from '@/lib/env';
+import { aiModeFor } from '@/domain/ai/provider';
 import { rateLimit } from '@/lib/rate-limit';
 import {
   changeStatus,
@@ -63,7 +63,7 @@ export function registerBidRoutes(router: Router): void {
         sections={data.sections}
         documents={data.documents}
         review={data.review}
-        aiConfigured={integrationStatus().ai}
+        aiConfigured={aiModeFor(org).configured}
         draftQuota={{ used: data.usage.drafts, limit: data.usage.draftsLimit }}
       />,
       { title: `Tilbud: ${data.ws.tenderTitle}` },

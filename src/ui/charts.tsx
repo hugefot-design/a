@@ -314,3 +314,49 @@ export function StripChart({
     </div>
   );
 }
+
+/**
+ * Kundereise (trakt): ett steg per rad i en tabell, med en tynn søyle for andelen av første steg.
+ * Fremhevet form: steget etter det største frafallet er marine 600, resten dempet marine 300 – tallene står
+ * alltid som tekst (antall, andel av første steg og av forrige steg), så fargen er aldri eneste kilde.
+ */
+export function FunnelBars({ steps, emphasize, caption }: { steps: { label: string; hint?: string; n: number }[]; emphasize: number | null; caption: string }) {
+  const first = steps[0]?.n ?? 0;
+  const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)} %` : '–');
+  return (
+    <table className="w-full text-[13.5px]">
+      <caption className="sr-only">{caption}</caption>
+      <thead>
+        <tr className="border-b border-line text-left text-[12px] text-muted">
+          <th scope="col" className="px-5 py-2 font-medium">Steg</th>
+          <th scope="col" className="px-2 py-2 text-right font-medium">Antall</th>
+          <th scope="col" className="px-2 py-2 text-right font-medium">Av første</th>
+          <th scope="col" className="py-2 pl-2 pr-5 text-right font-medium">Av forrige</th>
+        </tr>
+      </thead>
+      <tbody>
+        {steps.map((s, i) => {
+          const prev = i > 0 ? steps[i - 1]!.n : null;
+          const strong = i === emphasize;
+          return (
+            <tr key={s.label} className="border-b border-line last:border-b-0 align-top">
+              <th scope="row" className="px-5 py-3 text-left font-normal">
+                <span className={cn('block', strong ? 'font-semibold text-night' : 'text-ink')}>{s.label}</span>
+                {s.hint ? <span className="block text-[12px] text-muted">{s.hint}</span> : null}
+                <span className="mt-2 block h-2 rounded-full bg-navy-50" aria-hidden>
+                  <span
+                    className={cn('block h-2 rounded-full', strong ? 'bg-navy-600' : 'bg-navy-300')}
+                    style={{ width: `${first > 0 ? Math.max(s.n > 0 ? 2 : 0, (s.n / first) * 100) : 0}%` }}
+                  />
+                </span>
+              </th>
+              <td className="num px-2 py-3 text-right font-semibold text-ink">{formatInt(s.n)}</td>
+              <td className="num px-2 py-3 text-right text-ink">{pct(s.n, first)}</td>
+              <td className="num py-3 pl-2 pr-5 text-right text-ink">{prev === null || s.n > prev ? '–' : pct(s.n, prev)}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}

@@ -3,7 +3,8 @@
  * Bruker systemrollen (på tvers av organisasjoner) – tilgang kontrolleres i ruteren.
  */
 import { first, systemSql } from '@/lib/db';
-import { entitlementsFor, PLANS, resolveBilling, type PlanId, type SubscriptionRow } from '@/domain/billing/plans';
+import { entitlementsFor, PLANS, resolveBilling, withAdminAccess, type PlanId, type SubscriptionRow } from '@/domain/billing/plans';
+import { orgHasAdminAccess } from '@/domain/org/org';
 
 export async function platformMetrics() {
   const sql = systemSql();
@@ -142,12 +143,16 @@ export async function listOrganizations(q: string) {
     select o.id, o.name, o.org_number, o.created_at, s.plan, s.status, s.source, s.current_period_end, s.trial_ends_at, s.cancel_at_period_end,
            s.stripe_customer_id, s.stripe_subscription_id,
            (select count(*)::int from organization_members m where m.org_id = o.id) as members,
-           (select onboarding_completed_at from company_profiles p where p.org_id = o.id) as onboarded_at
+           (select onboarding_completed_at from company_profiles p where p.org_id = o.id) as onboarded_at,
+           exists (
+             select 1 from organization_members m join users u on u.id = m.user_id
+             where m.org_id = o.id and m.role = 'owner' and u.is_platform_admin
+           ) as admin_access
     from organizations o left join subscriptions s on s.org_id = o.id
     where ${q ? systemSql()`o.name ilike ${pattern}` : systemSql()`true`}
     order by o.created_at desc limit 100
-  `) as unknown as (SubscriptionRow & { id: string; name: string; orgNumber: string | null; createdAt: Date; plan: PlanId | null; members: number; onboardedAt: Date | null })[];
-  return rows.map((r) => ({ ...r, billing: resolveBilling(r.plan ? r : null) }));
+  `) as unknown as (SubscriptionRow & { id: string; name: string; orgNumber: string | null; createdAt: Date; plan: PlanId | null; members: number; onboardedAt: Date | null; adminAccess: boolean })[];
+  return rows.map((r) => ({ ...r, billing: withAdminAccess(resolveBilling(r.plan ? r : null), r.adminAccess) }));
 }
 
 export async function organizationDetail(orgId: string) {
@@ -171,7 +176,7 @@ export async function organizationDetail(orgId: string) {
     select kind, sum(quantity)::int as n, sum(cost_usd)::float8 as cost from usage_records
     where org_id = ${orgId} and period = to_char(now(), 'YYYY-MM') group by kind
   `) as unknown as { kind: string; n: number; cost: number }[];
-  const billing = resolveBilling(sub);
+  const billing = withAdminAccess(resolveBilling(sub), await orgHasAdminAccess(orgId));
   return { org, sub, billing, entitlements: entitlementsFor(billing.effectivePlan), members, usage };
 }
 

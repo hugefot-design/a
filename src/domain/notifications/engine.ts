@@ -8,7 +8,7 @@ import { log } from '@/lib/logger';
 import { sha256Hex } from '@/lib/crypto';
 import { queueEmail } from '@/lib/email';
 import { listUnsubscribeHeaders, unsubscribeUrl } from '@/domain/email/unsubscribe';
-import { entitlementsFor, resolveBilling, type Entitlements, type SubscriptionRow } from '@/domain/billing/plans';
+import { entitlementsFor, resolveBilling, withAdminAccess, type Entitlements, type SubscriptionRow } from '@/domain/billing/plans';
 import { buildConditions } from '@/domain/tenders/queries';
 import { sanitizeQuery, type TenderQuery } from '@/domain/search/filters';
 import { absoluteUrl, digestTemplate, trialEndingTemplate, type DigestItem } from '@/domain/email/templates';
@@ -66,12 +66,16 @@ export async function insertNotifications(items: NewNotification[]): Promise<num
 export async function entitlementsByOrg(): Promise<Map<string, Entitlements>> {
   const rows = (await systemSql()`
     select o.id as org_id, s.plan, s.status, s.source, s.current_period_end, s.trial_ends_at, s.cancel_at_period_end,
-           s.stripe_customer_id, s.stripe_subscription_id
+           s.stripe_customer_id, s.stripe_subscription_id,
+           exists (
+             select 1 from organization_members m join users u on u.id = m.user_id
+             where m.org_id = o.id and m.role = 'owner' and u.is_platform_admin
+           ) as admin_access
     from organizations o left join subscriptions s on s.org_id = o.id
-  `) as unknown as (SubscriptionRow & { orgId: string; plan: SubscriptionRow['plan'] | null })[];
+  `) as unknown as (SubscriptionRow & { orgId: string; plan: SubscriptionRow['plan'] | null; adminAccess: boolean })[];
   const map = new Map<string, Entitlements>();
   for (const r of rows) {
-    const billing = resolveBilling(r.plan ? r : null);
+    const billing = withAdminAccess(resolveBilling(r.plan ? r : null), r.adminAccess);
     map.set(r.orgId, entitlementsFor(billing.effectivePlan));
   }
   return map;

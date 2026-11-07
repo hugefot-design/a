@@ -258,7 +258,7 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
 
 ## 8. Kontinuerlig integrasjon (CI)
 
-`.github/workflows/ci.yml` kjører typesjekk, enhetstester, integrasjonstester mot PostgreSQL 16, produksjonsbygg og ende-til-ende i Chromium ved pull request og push til `main`. Ingen hemmeligheter trengs (AI, e-post og Stripe er simulert i `.env.test`). GitHub Actions er gratis for offentlige repoer; for private repoer bruker kjøringene av kontoens inkluderte minutter (ca. 6–10 minutter per kjøring).
+`.github/workflows/ci.yml` kjører typesjekk, sårbarhetssjekk, enhetstester, integrasjonstester mot PostgreSQL 16, produksjonsbygg og ende-til-ende i Chromium ved hver endring på arbeidsgrenen (den Render ruller ut fra), ved push til `main` og ved pull request. Endringer bare i dokumentasjonen hoppes over. Feiler testene, sender GitHub e-post til den som sendte endringen – sjekk at kjøringen er grønn før utrulling. Ingen hemmeligheter trengs (AI, e-post og Stripe er simulert i `.env.test`). GitHub Actions er gratis for offentlige repoer; for private repoer bruker kjøringene av kontoens inkluderte minutter (ca. 6–10 minutter per kjøring).
 
 To jobber til går av seg selv: **Drift** (hver time, se under) og **Sikkerhetskopi** (hver natt, se avsnitt 6). Blir
 repoet privat, bruker de av gratisminuttene (2 000 per måned): Drift ca. 1 minutt per kjøring (ca. 750 i måneden) og
