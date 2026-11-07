@@ -199,6 +199,23 @@ export function TenderPage(p: TenderPageProps) {
         </div>
       </header>
 
+      {/* Telefon og nettbrett: frist og vurdering øverst – sidepanelet havner ellers langt ned. */}
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:hidden">
+        <Panel className="p-4">
+          <DeadlineBlock tender={t} />
+        </Panel>
+        {p.screening ? (
+          <a href="#forhandsvurdering" className="block rounded-2xl border border-line bg-white px-4 py-3 text-ink no-underline shadow-[0_1px_2px_rgba(6,14,27,0.04)]">
+            <span className="flex items-center justify-between gap-2">
+              <span className="text-[13px] font-semibold text-navy-900">Forhåndsvurdering</span>
+              <ScreeningBadge screening={p.screening} />
+            </span>
+            {p.screening.points[0] ? <span className="mt-1.5 block text-[13px] leading-snug">{p.screening.points[0].text}</span> : null}
+            <span className="mt-1.5 block text-[12.5px] font-semibold text-navy-700">Se hele vurderingen</span>
+          </a>
+        ) : null}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
           <Panel>
@@ -310,7 +327,7 @@ export function TenderPage(p: TenderPageProps) {
         </div>
 
         <aside className="space-y-6">
-          <Panel className="p-5">
+          <Panel className="hidden p-5 lg:block">
             <DeadlineBlock tender={t} />
           </Panel>
           <Panel>
@@ -935,7 +952,7 @@ function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; 
               name="file"
               required
               accept=".pdf,.docx,.txt,application/pdf"
-              className="block w-full text-[13px] file:mr-3 file:rounded-md file:border file:border-line-strong file:bg-white file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900"
+              className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-white file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900"
             />
             <Button size="sm" variant="secondary" busyLabel="Leser dokumentet …">
               <LuUpload className="size-4" aria-hidden /> Last opp

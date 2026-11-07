@@ -140,7 +140,7 @@ function LegalDocument({ title, lead, sections }: { title: string; lead: ReactNo
       <Container className="grid gap-10 py-10 sm:py-14 lg:grid-cols-[250px_minmax(0,1fr)]">
         <aside className="print:hidden">
           <details className="rounded-xl border border-line bg-white p-4 lg:hidden">
-            <summary className="cursor-pointer text-[14px] font-semibold text-navy-900">Innhold</summary>
+            <summary className="cursor-pointer py-1 text-[14px] font-semibold text-navy-900">Innhold</summary>
             <Toc sections={sections} />
           </details>
           <div className="sticky top-24 hidden lg:block">

@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 7. november 2026 (veikartpunkt 1–6 og 8–10 – se [VEIKART.md](VEIKART.md)).
+Sist oppdatert 7. november 2026 (veikartpunkt 1–6 og 8–11 – se [VEIKART.md](VEIKART.md)).
 
 ## Testresultater
 
@@ -9,9 +9,9 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 178 av 178 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
+| Enhetstester | 179 av 179 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
 | Integrasjonstester (ekte database, ekte HTTP) | 161 av 161 bestått – 7.11.2026 |
-| Ende-til-ende i nettleser | 4 av 4 bestått – 6.11.2026 |
+| Ende-til-ende i nettleser | 5 av 5 bestått (inkl. appen på telefon) – 7.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av anbudssiden (regelverk/klima) og Admin → Datakilder (XML-berikelse), 1280 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -294,3 +294,16 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 - **Tester:** `tests/unit/capacity-season.test.ts` (måneder fra skjema, «nov–mar» over nyttår, sesongtopp, «stram» vs.
   «for lite», sesongkontrakt per år) og `tests/integration/capacity-season.test.ts` (registrering, lagret sesong,
   panelet med håndregnede tall). Visuell kontroll 1280 og 390 px. Ikke rullet ut.
+
+## Mobil og navigasjon i appen (7. november 2026)
+
+- **Gjennomgang:** 19 sider i appen kontrollert automatisk på iPhone 13-bredde: ingen vannrett rulling og ingen
+  JavaScript-feil. Menyen (skuffen) har store trykkflater og alle punktene, også «Resultater».
+- **Rettet:** på telefon lå frist og «Passer det for oss?» ca. 3 500 px ned på anbudssiden (etter beskrivelse og
+  dokumenter). Nå står frist og forhåndsvurdering rett under tittelen på skjermer under 1024 px, med lenke til hele
+  vurderingen. Sjekklistens avkrysning og sletteknapp (20 og 16 px) har nå 32 px trykkflate; fil-opplasting og alle
+  «vis mer»-linjer er minst 24 px høye (WCAG 2.5.8).
+- **Samme tall overalt:** forhåndsvurderingen runder dager opp som fristfeltet (4,99 døgn = «5 dager»), så to tall
+  aldri spriker på samme side.
+- **Test som vakt:** `tests/e2e/mobile-app.test.ts` sjekker ti sider på telefon (vannrett rulling, feil, trykkflater
+  under 24 px) og at frist og vurdering står før beskrivelsen på anbudssiden.

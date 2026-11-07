@@ -449,7 +449,7 @@ function CalcForm({ ws }: { ws: ProfitWorkspace }) {
                   {l?.calculation ? <p className="mt-1 text-[12px] text-muted">Utregning (AI): {l.calculation}</p> : null}
                   {l?.sourceRef ? (
                     <details className="mt-1 text-[12px]">
-                      <summary className="cursor-pointer text-muted">Kilde for mengden</summary>
+                      <summary className="cursor-pointer py-1 text-muted">Kilde for mengden</summary>
                       <SourceLine source={l.sourceRef} />
                     </details>
                   ) : null}
@@ -648,7 +648,7 @@ function ResultsPanel({ ws }: { ws: ProfitWorkspace }) {
                   ))}
                 </dl>
                 <details className="mt-2 text-[12px] text-muted">
-                  <summary className="cursor-pointer">Linjene</summary>
+                  <summary className="cursor-pointer py-1">Linjene</summary>
                   <ul className="mt-1 space-y-0.5">
                     {c.lines.map((l) => (
                       <li key={l.id}>
@@ -838,7 +838,7 @@ function RiskPanel({ ws }: { ws: ProfitWorkspace }) {
               {scanCategories.map((cat) => (
                 <li key={cat}>
                   <details>
-                    <summary className="cursor-pointer text-[13px] font-semibold text-navy-900">
+                    <summary className="cursor-pointer py-1 text-[13px] font-semibold text-navy-900">
                       {TERM_LABELS[cat]} <span className="font-normal text-muted">({scan.byCategory[cat]!.length})</span>
                       {scan.negatedOnly.includes(cat) ? (
                         <Badge tone="outline" className="ml-2">
@@ -1643,7 +1643,7 @@ export function PartnersPage(p: PartnersPageProps) {
                 ))}
               </fieldset>
               <details>
-                <summary className="cursor-pointer text-[13px] font-semibold text-navy-900">Områder, bransjer og sertifiseringer</summary>
+                <summary className="cursor-pointer py-1.5 text-[13px] font-semibold text-navy-900">Områder, bransjer og sertifiseringer</summary>
                 <fieldset className="mt-2">
                   <legend className="mb-1 text-[13px] font-semibold text-ink">Områder</legend>
                   <Checkbox name="regions" value="ALL" defaultChecked={prof.regions.includes('ALL')} label="Hele landet" disabled={!p.canManage} />
@@ -1815,7 +1815,7 @@ function RequestItem({ r, incoming, canManage }: { r: PartnerRequestRow; incomin
         incoming ? (
           <div className="flex flex-wrap items-start gap-3">
             <details className="rounded-md border border-line px-3 py-2">
-              <summary className="cursor-pointer text-[13px] font-semibold text-navy-900">Godta og del kontaktinfo</summary>
+              <summary className="cursor-pointer py-1 text-[13px] font-semibold text-navy-900">Godta og del kontaktinfo</summary>
               <PostForm action={`/app/partnere/foresporsel/${r.id}/svar`} className="mt-2 space-y-2">
                 <input type="hidden" name="decision" value="accept" />
                 <Field label="Kontaktperson" htmlFor={`ac-n-${r.id}`}>

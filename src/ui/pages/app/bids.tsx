@@ -207,13 +207,16 @@ export function BidWorkspacePage(p: WorkspaceProps) {
                 <li key={c.id} className="flex items-start gap-3 px-5 py-2.5">
                   <PostForm action={`${base}/sjekkliste/${c.id}`} className="pt-0.5">
                     <input type="hidden" name="done" value={c.isDone ? '0' : '1'} />
+                    {/* Trykkflaten er 32 px (mobil), selve boksen 20 px. */}
                     <button
                       type="submit"
                       disabled={locked}
-                      className={cn('flex size-5 items-center justify-center rounded border text-[12px] font-bold', c.isDone ? 'border-ok bg-ok text-white' : 'border-line-strong bg-white')}
+                      className="-m-1.5 flex size-8 items-center justify-center rounded-md"
                       aria-label={c.isDone ? `Marker «${c.label}» som ikke gjort` : `Marker «${c.label}» som gjort`}
                     >
-                      {c.isDone ? '✓' : ''}
+                      <span className={cn('flex size-5 items-center justify-center rounded border text-[12px] font-bold', c.isDone ? 'border-ok bg-ok text-white' : 'border-line-strong bg-white')}>
+                        {c.isDone ? '✓' : ''}
+                      </span>
                     </button>
                   </PostForm>
                   <div className="min-w-0 flex-1">
@@ -225,7 +228,7 @@ export function BidWorkspacePage(p: WorkspaceProps) {
                   </div>
                   {!locked ? (
                     <PostForm action={`${base}/sjekkliste/${c.id}/slett`}>
-                      <button type="submit" className="text-muted hover:text-danger" title="Fjern punkt">
+                      <button type="submit" className="-m-1.5 flex size-8 items-center justify-center rounded-md text-muted hover:bg-danger-soft hover:text-danger" title="Fjern punkt">
                         <LuTrash2 className="size-4" aria-hidden />
                         <span className="sr-only">Fjern {c.label}</span>
                       </button>
@@ -408,7 +411,7 @@ export function BidWorkspacePage(p: WorkspaceProps) {
             ) : null}
             {!locked ? (
               <PostForm action={`${base}/dokumenter`} multipart className="space-y-2 border-t border-line px-5 py-3">
-                <input type="file" name="file" required className="block w-full text-[13px]" />
+                <input type="file" name="file" required className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-white file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900" />
                 <Field label="Type" htmlFor="doc-cat">
                   <select id="doc-cat" name="category" className="field-input">
                     <option value="vedlegg">Vedlegg</option>

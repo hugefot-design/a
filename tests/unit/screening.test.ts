@@ -82,3 +82,8 @@ test('vurdering: eldre lagrede forklaringer (versjon 1) og manglende frist hånd
   assert.equal(excluded.verdict, 'passer_ikke');
   assert.ok(!excluded.points.some((p) => p.tone === 'ok'), 'ingen «hvorfor det passer» når anbudet er utelukket');
 });
+
+test('vurdering: dagene rundes opp som i fristfeltet (4,99 døgn = 5 dager)', () => {
+  const r = screenTender({ match: null, deadlineAt: new Date(now.getTime() + 4.99 * 86_400_000), minDaysToDeadline: 10, signals: none, now });
+  assert.equal(r.points[0]!.text, 'Bare 5 dager til fristen (profilen sier minst 10).');
+});

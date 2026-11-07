@@ -121,7 +121,7 @@ export function ColumnChart({
         </div>
       )}
       <details className="mt-3 text-[13px]">
-        <summary className="cursor-pointer font-semibold text-navy-700">Vis tallene som tabell</summary>
+        <summary className="cursor-pointer py-1 font-semibold text-navy-700">Vis tallene som tabell</summary>
         <div className="scroll-x mt-2 max-h-64 overflow-y-auto rounded-md border border-line">
           <table className="w-full text-[13px]">
             <caption className="sr-only">{title}</caption>

@@ -79,7 +79,8 @@ export function screenTender(input: ScreeningInput): Screening {
   // Frist
   if (input.deadlineAt) {
     const hours = (input.deadlineAt.getTime() - now.getTime()) / 3_600_000;
-    const days = Math.floor(hours / 24);
+    // Samme avrunding som fristfeltet i appen (4,99 døgn = «5 dager»), så tallene aldri spriker på samme side.
+    const days = Math.ceil(hours / 24);
     // Timer, ikke kalenderdager: «i dag» kan være feil når fristen er i morgen tidlig.
     if (hours < 0) points.push({ tone: 'stop', text: 'Fristen har gått ut.' });
     else if (hours < 48) points.push({ tone: 'stop', text: hours < 24 ? 'Under ett døgn til fristen.' : 'Under to døgn til fristen.' });

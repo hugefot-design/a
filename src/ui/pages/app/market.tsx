@@ -118,7 +118,7 @@ export function MarketPanel({ ws, market, calcHistory }: { ws: ProfitWorkspace; 
           ) : null}
 
           <details className="text-[13px]">
-            <summary className="cursor-pointer font-semibold text-navy-700">Vis tildelingene ({formatInt(n)})</summary>
+            <summary className="cursor-pointer py-1 font-semibold text-navy-700">Vis tildelingene ({formatInt(n)})</summary>
             <div className="scroll-x mt-2 max-h-80 overflow-y-auto rounded-md border border-line">
               <table className="w-full text-[13px]">
                 <caption className="sr-only">Sammenlignbare tildelinger</caption>

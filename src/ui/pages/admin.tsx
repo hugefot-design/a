@@ -195,7 +195,7 @@ export function AdminImportsPage({
         <Panel>
           <PanelHeader title="Manuell import" description="JSON/CSV i AnbudRadar-formatet, eller lagrede svar fra TED- eller Doffin-API-et. Se docs/IMPORTFORMAT.md." />
           <PostForm action="/admin/importer/fil" multipart className="space-y-3 p-5">
-            <input type="file" name="file" required accept=".json,.csv,application/json,text/csv" className="block w-full text-[13px]" />
+            <input type="file" name="file" required accept=".json,.csv,application/json,text/csv" className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-white file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900" />
             <Button size="sm" busyLabel="Importerer …">
               Importer fil
             </Button>
