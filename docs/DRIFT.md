@@ -255,6 +255,13 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
 - **Tilbakerulling av database** (sjelden – bare hvis en migrering har ødelagt data): stopp arbeideren, gjenopprett med PITR til tidspunktet før deploy, rull tilbake koden, start arbeideren. Skriv ned hva som skjedde.
 - **Før hver deploy med ny migrering:** ta en manuell sikkerhetskopi (Supabase → Database → Backups), kjør migreringen mot en kopi eller staging først hvis den endrer eksisterende data.
 - Hold `autoDeploy: false` til dere har CI som må være grønn før deploy.
+- **Rutine fra 7. november 2026 (eiers beslutning: «rull ut hver oppdatering uten at jeg sier noe»):** hver
+  kodeendring rulles ut uten egen godkjenning, men først når testene på GitHub er grønne for akkurat den versjonen.
+  Endringene sendes med `[skip render]`, så Render ikke ruller ut av seg selv før testene er ferdige; utrullingen
+  startes deretter med versjonsnummeret (Render API, `POST /v1/services/{id}/deploys` med `commitId`). Etterpå sjekkes
+  helsesjekken, loggen og de offentlige sidene. Endringer bare i dokumentasjonen rulles ikke ut (nettsiden er lik).
+  Gjelder ikke det som fortsatt krever eiers ja: priser og abonnementer, nye betalte tjenester eller leverandører,
+  endringer i oppsettet hos Render/Supabase, produksjonsdata og hemmeligheter, og migreringer som endrer eksisterende data.
 
 ## 8. Kontinuerlig integrasjon (CI)
 
