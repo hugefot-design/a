@@ -41,12 +41,20 @@ export interface MarketSnapshot {
 const REGION_NAME = new Map(REGIONS.map((r) => [r.code, r.name]));
 const KEEP_UPPER = new Set(['AS', 'ASA', 'HF', 'RHF', 'IKS', 'KF', 'SF', 'DA', 'BA', 'NAV', 'NTNU', 'UIO', 'UIB', 'UIT', 'OSLOMET', 'DFØ', 'NVE', 'IT', 'EU']);
 
+/** Småord midt i et navn skrives med liten bokstav («Universitetet i Oslo», «Barne-, ungdoms- og …»). */
+const SMALL_WORDS = new Set(['og', 'i', 'for', 'av', 'på', 'til', 'med', 'ved', 'and', 'of', 'the']);
 /** Navn som er skrevet med bare store bokstaver i kilden («STATSBYGG»), vises som «Statsbygg». */
 export function displayBuyer(name: string): string {
   if (!/\p{Lu}/u.test(name) || name !== name.toUpperCase()) return name;
   return name
     .split(/(\s+|-)/)
-    .map((w) => (KEEP_UPPER.has(w) || !/\p{L}/u.test(w) ? w : w.charAt(0) + w.slice(1).toLowerCase()))
+    .map((w, i) =>
+      KEEP_UPPER.has(w) || !/\p{L}/u.test(w)
+        ? w
+        : i > 0 && SMALL_WORDS.has(w.toLowerCase())
+          ? w.toLowerCase()
+          : w.charAt(0) + w.slice(1).toLowerCase(),
+    )
     .join('');
 }
 const INDUSTRY_IDS = new Set(INDUSTRIES.map((i) => i.id));

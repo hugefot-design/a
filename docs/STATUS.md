@@ -381,7 +381,16 @@ kostnader, ingen endring i Render eller Supabase.
 ## Ny forside og posisjonering (7. november 2026)
 
 **«Ikke bare finn anbudet. Finn ut om det er verdt å vinne.»** Bare frontend og tekst – ingen endring i priser,
-planer, betaling, database, API-er eller integrasjoner. **Ikke rullet ut** (venter på eiers godkjenning).
+planer, betaling, database, API-er eller integrasjoner.
+
+- **Rullet ut 7.11.2026** (versjon `c0511f3`, eiers ja – og fra nå rulles hver oppdatering ut når testene på GitHub er
+  grønne, se [DRIFT.md](DRIFT.md) punkt 7). Kontrollert på anbudradar.com: helsesjekk OK; forsiden, funksjoner, priser,
+  registrering og /en, /sv, /da svarer 200 på mobil (390 px) og PC (1440 px), uten vannrett rulling og uten
+  JavaScript-feil; eksemplet var en ekte norsk Doffin-kunngjøring.
+- **Funnet i produksjon og rettet:** eksemplet viste en standardsetning om eBevis merket «Avvisning», SSA-R som
+  «kostbart vilkår», intetsigende setninger i sjekklisten, ingen markedspris, tomt steg 6 og en kodetittel blant
+  treffene. Utvalget er strammet inn (reglene står i [MARKEDSFORING.md](MARKEDSFORING.md)); appens ordsøk er uendret.
+  Oppdragsgivernavn med bare store bokstaver får nå små småord («Barne-, Ungdoms- og Familiedirektoratet»).
 
 - **Forsiden:** ny toppseksjon; «Hvorfor AnbudRadar» med sju fordeler og planen hver finnes i (regnes ut fra planene);
   kundereisen i seks steg vist med **ekte, offentlige data** (krav ordrett fra en åpen kunngjøring, markedspris fra
@@ -400,5 +409,5 @@ planer, betaling, database, API-er eller integrasjoner. **Ikke rullet ut** (vent
   avkrysningsboksen for vilkår, som har klikkbar tekst). Forsiden har ca. 1 000 synlige ord (testgrense 1 300).
 - **Tester:** `tests/integration/showcase.test.ts` (ekte data, ingen leverandørnavn, ingen AI-løfter, engelsk side),
   `tests/unit/showcase.test.ts`, oppdatert `public-pages.test.ts` og `e2e/flow.test.ts`.
-- **IKKE VERIFISERT i produksjon:** eksemplene i kundereisen er prøvd mot ekte TED-data lokalt. I produksjon velges
-  helst en norsk Doffin-kunngjøring – se forsiden etter utrulling.
+- **Eksemplene i produksjon:** sett på anbudradar.com etter utrulling (se over). Hvilket anbud som vises, endres av
+  seg selv når nye kunngjøringer kommer (hver 30. minutt), så kvaliteten avhenger av hva som finnes i databasen.

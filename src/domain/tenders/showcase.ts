@@ -10,6 +10,11 @@
  *
  * Leverandørnavn vises ikke på nettsiden. Mangler noe (f.eks. ingen tildelinger), utelates det steget –
  * ingenting fylles inn. Mellomlagres i 30 minutter.
+ *
+ * Eksempelet velges for å vise produktet ærlig og tydelig: ordsøket er det samme som i appen, men nettsiden viser bare
+ * setninger som sier noe konkret (ikke henvisninger som «kravene følger under …» eller standardtekst om eBevis), bare
+ * vilkår som kan koste penger (en vanlig standardkontrakt er ikke en kostnad), helst norsk tekst, og helst et anbud der
+ * også markedspris og kontrakter som utløper finnes – så alle seks stegene kan vises med ekte data.
  */
 import { systemSql, type Tx } from '@/lib/db';
 import { log } from '@/lib/logger';
@@ -59,7 +64,53 @@ export interface Showcase {
 }
 
 const KEY_KINDS: RequirementKind[] = ['avvisning', 'minstekrav', 'kvalifikasjon', 'befaring'];
+/**
+ * Vilkår som vises som «kostbart vilkår» på nettsiden, i den rekkefølgen de foretrekkes: de tydelige kostnadene.
+ * De andre typene i appen (standardkontrakt, volum, leveringsfrist, miljøkrav osv.) er nyttige i appen, men er ikke
+ * alltid en kostnad og treffer oftere tekst som ikke er et vilkår (f.eks. en liste over tildelingskriterier).
+ */
+const COSTLY: TermCategory[] = ['dagbot', 'garanti', 'erstatningsansvar', 'forsikring', 'betalingsvilkar', 'prisregulering'];
+/**
+ * Grovsortering i databasen: bare kunngjøringer der teksten har ord som ordsøket kan treffe på (de fleste har ingen),
+ * så flere kandidater kan vurderes uten å hente all tekst. Selve vurderingen gjøres av ordsøket i appen.
+ */
+const REQUIREMENT_WORDS =
+  'avvis|minstekrav|minimumskrav|absolutte? krav|ufravikelig|obligatorisk|kvalifikasjonskrav|befaring|vedståelsesfrist|spørsmålsfrist|sentral godkjenning|iso ?(9001|14001|27001|45001)|skatteattest|referanse|omsetning|reject|qualification|site visit|mandatory';
+/** Hvor mange av de beste kandidatene som sjekkes for markedspris og kontraktsutløp. */
+const COMPLETENESS_CANDIDATES = 8;
 const TTL_MS = 30 * 60_000;
+
+/** Henvisninger og standardtekst: sanne treff, men sier ikke kunden noe om selve kravet. */
+const REFERENCE_ONLY =
+  /\beBevis\b|\bfølger (?:under|av|i)\b|\bfremgår (?:av|under|i)\b|\b(?:se|jf\.?) (?:vedlegg|punkt|kapittel|konkurransegrunnlag)|\b(?:beskrevet|angitt|nærmere omtalt) i\b|\bsee (?:annex|section|the procurement documents|the tender documents)\b|\bas (?:described|specified|stated) in\b/i;
+/** «Avvisning» bare når setningen faktisk sier at noe avvises – ikke når ordet «avvisningsgrunner» bare nevnes. */
+const REJECTS = /\bavvis(?:es|t|e)\b|\bbli avvist\b|\breject(?:ed)?\b/i;
+/** Konkret innhold i et krav: tall, sertifisering, godkjenning, omsetning, erfaring – eller «skal»/«må». */
+// NB: \b virker bare for a–z i JavaScript, så «må» avgrenses med bokstavtest i stedet.
+const CONCRETE = /\d|\bISO\b|sertifi|godkjenning|omsetning|erfaring|referanse|attest|\bskal\b|(?<!\p{L})må(?!\p{L})|\bshall\b|\bmust\b/iu;
+
+/** Om en setning er et godt eksempel på kravtypen (setningen er allerede funnet av appens ordsøk). */
+export function goodQuote(kind: RequirementKind, text: string): boolean {
+  if (REFERENCE_ONLY.test(text)) return false;
+  if (kind === 'avvisning') return REJECTS.test(text);
+  // «Befaring og frister»: en befaring eller frist med dato/tall, eller som er obligatorisk – ikke «befaring ved behov»
+  // i en liste over tjenester eller en generell setning om vedståelsesfristen.
+  if (kind === 'befaring') return /\d/.test(text) || /obligatorisk|påmelding|avholdes|gjennomføres|\bskal\b|(?<!\p{L})må(?!\p{L})|mandatory|will be held/iu.test(text);
+  return CONCRETE.test(text);
+}
+
+/** Titler som mest er koder («2799k ATC gruppe A16AX08») vises sist. */
+export function readableTitle(title: string): boolean {
+  const tokens = title.split(/\s+/).filter(Boolean);
+  const codes = tokens.filter((t) => /\d\p{L}|\p{L}\d/u.test(t)).length;
+  const chars = title.replace(/\s/g, '').length;
+  const letters = (title.match(/\p{L}/gu) ?? []).length;
+  return codes < 2 && letters >= 8 && letters / chars >= 0.6;
+}
+
+/** Lesbare titler først, ellers samme rekkefølge. */
+const readableFirst = <T>(rows: T[], title: (row: T) => string): T[] => [...rows.filter((r) => readableTitle(title(r))), ...rows.filter((r) => !readableTitle(title(r)))];
+
 let cache: { at: number; value: Showcase | null } | null = null;
 
 export function resetShowcaseCache(): void {
@@ -100,26 +151,42 @@ interface Candidate {
   sourceUrl: string | null;
 }
 
-/** Kravene og vilkårene i ett anbud, slik appen finner dem i kunngjøringsteksten. */
+/**
+ * Kravene og vilkårene i ett anbud, slik appen finner dem i kunngjøringsteksten – men bare setninger som er gode
+ * eksempler (se goodQuote) og bare vilkår som kan koste penger.
+ */
 export function scanCandidate(c: Pick<Candidate, 'description' | 'selectionCriteria'>): { requirements: Showcase['requirements']; terms: Showcase['terms'] } {
   const source: AnalysisSource = { id: 'S0', kind: 'notice', title: 'Kunngjøringen', pages: [{ page: null, text: c.description }], totalPages: null, isPrivate: false };
   const scan = scanRequirements([source], { selectionCriteria: [] });
   const requirements: Showcase['requirements'] = [];
   for (const kind of KEY_KINDS) {
-    const hit = scan.byKind[kind].find((h) => h.match && !h.structured);
+    const hit = scan.byKind[kind].find((h) => h.match && !h.structured && goodQuote(kind, h.text));
     if (hit) requirements.push({ kind, text: clipAround(hit.text, hit.match), match: hit.match });
   }
   const seen = new Set<TermCategory>();
   const terms: Showcase['terms'] = [];
   for (const h of scanContractTerms([source]).hits) {
-    if (h.negated || seen.has(h.category)) continue;
+    if (h.negated || seen.has(h.category) || !COSTLY.includes(h.category) || REFERENCE_ONLY.test(h.snippet)) continue;
     seen.add(h.category);
     terms.push({ kind: h.category, text: clipAround(h.snippet, h.match), match: h.match });
   }
+  terms.sort((a, b) => COSTLY.indexOf(a.kind) - COSTLY.indexOf(b.kind));
   return { requirements, terms: terms.slice(0, 2) };
 }
 
-async function pickNotice(tx: Tx): Promise<(Candidate & ReturnType<typeof scanCandidate>) | null> {
+/** Hvor godt anbudet viser kravsjekken: gode krav, tydelige kostnader og norsk tekst (de fleste besøkende er norske). */
+export function exampleQuality(c: { title: string; description: string | null } & ReturnType<typeof scanCandidate>): number {
+  const reqs = Math.min(c.requirements.length, 3);
+  const terms = c.terms.length ? 2 : 0;
+  // Norsk tekst teller når eksempelet har nok å vise (minst to gode krav). Vektes så høyt at et slikt norsk eksempel
+  // alltid går foran et engelsk, også når det engelske har alt annet (høyst 6 + 2 + 6 for markedspris og kontraktsutløp).
+  return reqs * 2 + terms + (reqs >= 2 ? norwegianFirst(c.title, c.description) * 12 : 0);
+}
+
+type Scored = Candidate & ReturnType<typeof scanCandidate> & { quality: number };
+
+/** De beste kandidatene (åpne anbud med krav i teksten), best først; ved likt resultat den nyeste. */
+async function pickNotices(tx: Tx): Promise<Scored[]> {
   const known = new Set(INDUSTRIES.map((i) => i.id));
   const rows = (await tx`
     select t.id, t.title, t.buyer_name, t.deadline_at, t.description, t.region_codes, t.industry_ids, t.cpv_codes, t.main_cpv, t.currency,
@@ -133,23 +200,21 @@ async function pickNotice(tx: Tx): Promise<(Candidate & ReturnType<typeof scanCa
     ) s on true
     where not t.is_sample and t.lifecycle = 'competition' and t.deadline_at > now() + interval '5 days'
       and char_length(coalesce(t.description, '')) > 300 and cardinality(t.industry_ids) > 0
+      and t.description ~* ${REQUIREMENT_WORDS}
     order by t.first_seen_at desc
-    limit 120
+    limit 300
   `) as unknown as Candidate[];
-  let best: (Candidate & ReturnType<typeof scanCandidate>) | null = null;
-  let bestScore = -1;
+  const scored: Scored[] = [];
   for (const r of rows) {
-    if (!r.industryIds.some((i) => known.has(i))) continue;
+    if (!r.industryIds.some((i) => known.has(i)) || !readableTitle(r.title)) continue;
     const found = scanCandidate(r);
-    // Norsk tekst teller bare når eksempelet også har nok innhold (minst to krav).
-    const score = Math.min(found.requirements.length, 3) * 2 + Math.min(found.terms.length, 2) + (found.requirements.length >= 2 ? norwegianFirst(r.title, r.description) * 4 : 0);
-    if (score > bestScore) {
-      best = { ...r, ...found };
-      bestScore = score;
-    }
-    if (score >= 12) break;
+    if (!found.requirements.length) continue;
+    const c = { ...r, ...found, quality: 0 };
+    c.quality = exampleQuality(c);
+    scored.push(c);
   }
-  return best && best.requirements.length ? best : null;
+  // Stabil sortering: ved likt resultat beholdes rekkefølgen fra spørringen (nyeste først).
+  return scored.sort((a, b) => b.quality - a.quality).slice(0, COMPLETENESS_CANDIDATES);
 }
 
 /** Eksempelprofil: bransjen og fylket til anbudet – ikke en ekte kunde. */
@@ -171,10 +236,54 @@ export function exampleProfile(industry: string, region: string | null): MatchPr
   };
 }
 
+/** 3. Markedspris fra tidligere tildelinger (samme som i kalkylen) – bare når det finnes nok sammenlignbare. */
+async function marketFor(tx: Tx, c: Candidate): Promise<Showcase['market']> {
+  const mp = await marketPrice(tx, { id: c.id, mainCpv: c.mainCpv, cpvCodes: c.cpvCodes, currency: c.currency });
+  return mp.total && mp.awards.length >= MIN_COMPARABLES && mp.match
+    ? {
+        label: mp.match.label,
+        n: mp.total.n,
+        values: mp.awards.map((a) => a.value),
+        median: mp.total.median,
+        p25: mp.total.p25,
+        p75: mp.total.p75,
+        currency: mp.currency,
+      }
+    : null;
+}
+
+/** 6. Kontrakter som snart utløper i bransjen (samme anslag som radaren i appen). */
+async function expiringFor(tx: Tx, industryId: string, now: Date): Promise<Showcase['expiring']> {
+  const expiry = await expiringContracts(tx, { industries: [industryId], regions: null, monthsAhead: 12 }, now);
+  const upcoming = expiry.rows
+    .filter((r) => r.expectedEnd >= now)
+    .sort((a, b) => norwegianFirst(b.title) - norwegianFirst(a.title) || a.expectedEnd.getTime() - b.expectedEnd.getTime());
+  return readableFirst(upcoming, (r) => r.title)
+    .slice(0, 3)
+    .sort((a, b) => a.expectedEnd.getTime() - b.expectedEnd.getTime())
+    .map((r) => ({ title: r.title, buyerName: r.buyerName ? displayBuyer(r.buyerName) : null, expectedEnd: r.expectedEnd, basis: r.basis }));
+}
+
+const knownIndustry = (c: Candidate) => c.industryIds.find((i) => INDUSTRIES.some((x) => x.id === i))!;
+
 async function buildShowcase(tx: Tx, now: Date): Promise<Showcase | null> {
-  const notice = await pickNotice(tx);
-  if (!notice) return null;
-  const industryId = notice.industryIds.find((i) => INDUSTRIES.some((x) => x.id === i))!;
+  const candidates = await pickNotices(tx);
+  if (!candidates.length) return null;
+  // Blant de beste kandidatene: helst et anbud der også markedspris og kontrakter som utløper finnes (+3 hver).
+  // Kandidatene er sortert etter kvalitet, så når én har begge, kan ingen senere slå den.
+  const expiryByIndustry = new Map<string, Showcase['expiring']>();
+  let best: { notice: Scored; market: Showcase['market']; expiring: Showcase['expiring']; total: number } | null = null;
+  for (const c of candidates) {
+    const ind = knownIndustry(c);
+    if (!expiryByIndustry.has(ind)) expiryByIndustry.set(ind, await expiringFor(tx, ind, now));
+    const expiring = expiryByIndustry.get(ind)!;
+    const market = await marketFor(tx, c);
+    const total = c.quality + (market ? 3 : 0) + (expiring.length ? 3 : 0);
+    if (!best || total > best.total) best = { notice: c, market, expiring, total };
+    if (market && expiring.length) break;
+  }
+  const { notice, market, expiring } = best!;
+  const industryId = knownIndustry(notice);
   const industry = { id: industryId, name: INDUSTRIES.find((x) => x.id === industryId)!.name };
   const regionCode = notice.regionCodes.find((c) => REGIONS.some((r) => r.code === c)) ?? null;
   const region = regionCode ? { code: regionCode, name: REGIONS.find((r) => r.code === regionCode)!.name } : null;
@@ -192,11 +301,13 @@ async function buildShowcase(tx: Tx, now: Date): Promise<Showcase | null> {
   `) as unknown as (MatchTender & { buyerName: string | null; placeText: string | null })[];
   const profile = exampleProfile(industryId, regionCode);
   const regionName = new Map(REGIONS.map((r) => [r.code, r.name]));
-  const matches = pool
+  const ranked = pool
     .map((t) => ({ t, r: scoreTender(profile, t, now) }))
     .filter((x) => !x.r.excluded)
-    .sort((a, b) => b.r.score - a.r.score || norwegianFirst(b.t.title, b.t.description) - norwegianFirst(a.t.title, a.t.description))
+    .sort((a, b) => b.r.score - a.r.score || norwegianFirst(b.t.title, b.t.description) - norwegianFirst(a.t.title, a.t.description));
+  const matches = readableFirst(ranked, (x) => x.t.title)
     .slice(0, 3)
+    .sort((a, b) => b.r.score - a.r.score)
     .map(({ t, r }) => ({
       id: t.id,
       title: t.title,
@@ -207,21 +318,6 @@ async function buildShowcase(tx: Tx, now: Date): Promise<Showcase | null> {
       reason: r.breakdown.reasons[0] ?? null,
     }));
 
-  // 3. Markedspris fra tidligere tildelinger (samme som i kalkylen).
-  const mp = await marketPrice(tx, { id: notice.id, mainCpv: notice.mainCpv, cpvCodes: notice.cpvCodes, currency: notice.currency });
-  const market =
-    mp.total && mp.awards.length >= MIN_COMPARABLES && mp.match
-      ? {
-          label: mp.match.label,
-          n: mp.total.n,
-          values: mp.awards.map((a) => a.value),
-          median: mp.total.median,
-          p25: mp.total.p25,
-          p75: mp.total.p75,
-          currency: mp.currency,
-        }
-      : null;
-
   // 5. En nylig tildeling i samme bransje (uten leverandørnavn).
   const awards = (await tx`
     select t.title, t.buyer_name, a.awarded_value::float8 as value, coalesce(a.currency, 'NOK') as currency, a.award_date
@@ -231,16 +327,10 @@ async function buildShowcase(tx: Tx, now: Date): Promise<Showcase | null> {
     order by a.award_date desc, a.awarded_value desc
     limit 20
   `) as unknown as { title: string; buyerName: string | null; value: number; currency: string; awardDate: Date }[];
-  const award = [...awards].sort((a, b) => norwegianFirst(b.title) - norwegianFirst(a.title))[0];
-
-  // 6. Kontrakter som snart utløper (samme anslag som radaren i appen).
-  const expiry = await expiringContracts(tx, { industries: [industryId], regions: null, monthsAhead: 12 }, now);
-  const expiring = expiry.rows
-    .filter((r) => r.expectedEnd >= now)
-    .sort((a, b) => norwegianFirst(b.title) - norwegianFirst(a.title) || a.expectedEnd.getTime() - b.expectedEnd.getTime())
-    .slice(0, 3)
-    .sort((a, b) => a.expectedEnd.getTime() - b.expectedEnd.getTime())
-    .map((r) => ({ title: r.title, buyerName: r.buyerName ? displayBuyer(r.buyerName) : null, expectedEnd: r.expectedEnd, basis: r.basis }));
+  const award = readableFirst(
+    [...awards].sort((a, b) => norwegianFirst(b.title) - norwegianFirst(a.title)),
+    (a) => a.title,
+  )[0];
 
   return {
     at: now,

@@ -17,6 +17,11 @@ const SUPPLIER = 'Hemmelig Entreprenør AS (test)';
 const award = (value: number, awardDate: string): NoticeAward[] => [{ lotTitle: null, supplierName: SUPPLIER, supplierOrgNumber: null, value, currency: 'NOK', awardDate }];
 const COMP = 'Rehabilitering av Byskolen, utvendig fasade (visningstest)';
 const EXPIRING = 'Drift og vedlikehold av kommunale bygg (visningstest)';
+// Nyere og like godt eksempel, men i en bransje uten tildelinger: ingen markedspris og ingen kontrakter som utløper.
+const HEALTH = 'Bedriftshelsetjeneste for kommunens ansatte (visningstest)';
+// Nyest, men bare standardtekst og henvisninger: ordsøket treffer, men det er ikke gode eksempler.
+const BOILERPLATE = 'Rammeavtale for vaktmestertjenester (visningstest)';
+const deadline = () => new Date(Date.now() + 25 * 86_400_000).toISOString();
 
 before(async () => {
   server = await startServer();
@@ -44,6 +49,34 @@ before(async () => {
       awards: award(4_000_000, day(-31)),
     }),
   ]);
+  // Hver for seg, så de blir nyere enn eksempelet over (gamle regler valgte det nyeste ved likt resultat).
+  await ingest([
+    makeNotice({
+      cpvCodes: ['85147000'],
+      mainCpv: '85147000',
+      contractNature: 'services' as const,
+      title: HEALTH,
+      description:
+        'Kommunen skal anskaffe bedriftshelsetjeneste for alle ansatte i fire år. Tilbud som leveres etter fristen, vil bli avvist. ' +
+        'Leverandøren må dokumentere ISO 45001 eller tilsvarende og legge ved skatteattest. ' +
+        'Det er obligatorisk befaring 4. desember kl. 12.00. Ved forsinket oppstart påløper dagbot på 1 promille av kontraktssummen per dag. ' +
+        'Faktura betales innen 30 dager.',
+      deadlineAt: deadline(),
+    }),
+  ]);
+  await ingest([
+    makeNotice({
+      ...construction,
+      title: BOILERPLATE,
+      description:
+        'Rammeavtalen gjelder vaktmestertjenester for kommunens bygg. ' +
+        'I denne anskaffelsen benyttes eBevis for å innhente opplysninger knyttet til kvalifikasjonskrav og avvisningsgrunner. ' +
+        'Kvalifikasjonskrav med tilhørende dokumentasjonskrav følger under kravspesifikasjonen. ' +
+        'En eventuell forlengelse av tilbudets vedståelsesfrist kan bare skje dersom leverandøren godkjenner dette. ' +
+        'Følgende kontraktsvilkår legges til grunn for rammeavtalen: SSA-R med bilag 1-7.',
+      deadlineAt: deadline(),
+    }),
+  ]);
   resetShowcaseCache();
 });
 
@@ -55,7 +88,10 @@ after(async () => {
 test('kundereisen bygger på ekte, lagrede kunngjøringer og tildelinger', async () => {
   const s = await siteShowcase();
   assert.ok(s, 'fant et eksempel');
+  // Ikke standardteksten (nyest), og ikke det like gode helseanbudet uten markedspris og kontraktsutløp (nyere).
   assert.equal(s.notice.title, COMP);
+  assert.ok(s.requirements.every((r) => !/eBevis|følger under/.test(r.text)), JSON.stringify(s.requirements));
+  assert.ok(s.terms.every((t) => t.kind !== 'standardkontrakt'), JSON.stringify(s.terms));
   assert.equal(s.industry.id, 'construction');
   const kinds = s.requirements.map((r) => r.kind);
   for (const k of ['avvisning', 'kvalifikasjon', 'befaring']) assert.ok(kinds.includes(k as never), `${k} i ${kinds.join(',')}`);

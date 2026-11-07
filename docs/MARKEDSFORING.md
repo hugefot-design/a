@@ -33,6 +33,22 @@ tildeling og kontrakter som snart utløper. **Leverandørnavn vises aldri.** Fin
 eksemplet. Norske kunngjøringer foretrekkes (TED publiserer norske kunngjøringer på engelsk).
 Test: `tests/integration/showcase.test.ts`.
 
+**Hvilket eksempel som vises (endret 7.11.2026 etter kontroll i produksjon).** Ordsøket er det samme som i appen, men
+forsiden viser bare setninger som er gode eksempler. Produksjonen viste en standardsetning om eBevis merket «Avvisning»
+og SSA-R som «kostbart vilkår». Reglene nå:
+
+- «Avvisning» bare når setningen sier at noe avvises (ikke når ordet «avvisningsgrunner» bare nevnes).
+- Ingen henvisninger eller standardtekst («følger under …», «fremgår av …», eBevis).
+- Krav må være konkrete (tall, sertifisering, godkjenning, «skal/må»); befaring og frister med dato, tall eller
+  «obligatorisk».
+- «Kostbart vilkår» bare for dagbøter, garantier, ansvar, forsikring, betaling og prisregulering. En standardkontrakt,
+  volum og leveringsfrist vises ikke som kostnad.
+- Et norsk anbud med minst to gode krav går alltid foran et engelsk. Blant de beste velges helst ett der også
+  markedspris og kontrakter som utløper finnes, så alle seks stegene kan vises.
+- Titler som mest er koder vises sist.
+
+Tester: `tests/unit/showcase.test.ts`, `tests/integration/showcase.test.ts`.
+
 ## Det vi bevisst ikke lover
 
 - **AI:** AI er ikke slått på i produksjon. Forsiden, funksjonssiden og prissiden nevner AI bare som «ikke slått på
