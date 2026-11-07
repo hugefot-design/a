@@ -146,7 +146,13 @@ test('besøkstelling: kilde fra lenke eller søkemotor; roboter og innloggede te
   const acc = await createAccount();
   await (await clientFor(server.base, acc)).get('/priser', { 'user-agent': BROWSER, referer: 'https://www.bing.com/' });
   await new Promise((r) => setTimeout(r, 150));
-  const rows = (await systemSql()`select path, source, views from page_views_daily order by path`) as unknown as { path: string; source: string; views: number }[];
+  // Bare radene denne testen selv kan lage: besøk telles etter at svaret er sendt, så besøk fra testene over
+  // (f.eks. /priser og /en/pricing uten kilde) kan komme inn etter slettingen på en treg maskin.
+  const rows = (await systemSql()`
+    select path, source, views from page_views_daily
+    where path in ('/om', '/kontakt', '/fylker/finnes-ikke') or source in ('google', 'linkedin', 'bing')
+    order by path
+  `) as unknown as { path: string; source: string; views: number }[];
   assert.deepEqual(
     rows.map((r) => `${r.path}|${r.source}|${r.views}`),
     ['/funksjoner|linkedin|1', '/priser|google|1'],
