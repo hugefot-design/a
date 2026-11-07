@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 7. november 2026 (veikartpunkt 1–6, 8 og 10 – se [VEIKART.md](VEIKART.md)).
+Sist oppdatert 7. november 2026 (veikartpunkt 1–6 og 8–10 – se [VEIKART.md](VEIKART.md)).
 
 ## Testresultater
 
@@ -9,8 +9,8 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 175 av 175 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 160 av 160 bestått – 7.11.2026 |
+| Enhetstester | 178 av 178 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 161 av 161 bestått – 7.11.2026 |
 | Ende-til-ende i nettleser | 4 av 4 bestått – 6.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -65,7 +65,7 @@ Fremgangsmåte for hver: [INTEGRASJONER.md](INTEGRASJONER.md).
 - **Naturlig språk-søket** er regelbasert. Tolkningen vises alltid.
 - **Konkurrentinnsikt** er bare så god som tildelingskunngjøringene.
 - **Relevansscoren** er samsvar med profilen, ikke sannsynlighet for å vinne.
-- **Profit Intelligence:** ordsøket finner ord, ikke betydning (nektelser som «ingen dagbot» merkes, men ikke alle formuleringer fanges); kapasitet regnes per år, ikke per uke/sesong; sertifiseringer gjenkjennes fra en kjent liste; partnernettverket er tomt ved lansering.
+- **Profit Intelligence:** ordsøket finner ord, ikke betydning (nektelser som «ingen dagbot» merkes, men ikke alle formuleringer fanges); kapasitet regnes per år og per måned (sesong), ikke per uke; sertifiseringer gjenkjennes fra en kjent liste; partnernettverket er tomt ved lansering.
 - **Sitatkontrollen** bekrefter at sitatet står i kilden – ikke at tolkningen er riktig.
 - **Krav- og avvisningssjekken** er ordsøk: den finner setninger med kjente kravord (avvisning, minstekrav, kvalifikasjonskrav,
   befaring, «skal»/«må»), ikke betydning. Krav skrevet med andre ord fanges ikke opp, og noen treff kan være generelle.
@@ -279,3 +279,18 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 - **Tester:** `tests/unit/actions.test.ts` (rekkefølge, kalenderdager rundt midnatt og sommertid) og
   `tests/integration/actions.test.ts` (alle punkttypene, rekkefølge, ingen arbeidspunkter fra andre organisasjoner,
   tom liste). Visuell kontroll 1280 og 390 px. Ikke rullet ut.
+
+## Kapasitet per måned og sesong (7. november 2026)
+
+- **Hva:** eksisterende kontrakter (Kapasitet og økonomi) og kalkylen (Lønnsomhet) kan få «måneder med arbeid», f.eks.
+  vinterdrift nov–mar. Ingen avkrysning = hele året, som før. Kapasitetspanelet viser belastning måned for måned og sier
+  fra om sesongtopper: «I nov–mar mangler dere opptil 70 timer per måned, selv om året samlet går opp».
+- **Riktigere årstall:** en sesongkontrakt binder timer bare i sine måneder (20 t/mnd i fem måneder = 100 t/år, ikke 240).
+- **Status:** mangel i enkelte måneder gir «Stram kapasitet», eller «For lite kapasitet» når toppen er over 10 % av
+  månedens behov. Tilgjengelige timer fordeles likt på månedene (ferie og fravær er ikke trukket fra per måned – det står
+  i panelet).
+- **Data:** migrering `0020` legger til valgfri `active_months` på eksisterende kontrakter (ingen data endres). Sesongen
+  for kalkylen lagres i kalkylens egne felt.
+- **Tester:** `tests/unit/capacity-season.test.ts` (måneder fra skjema, «nov–mar» over nyttår, sesongtopp, «stram» vs.
+  «for lite», sesongkontrakt per år) og `tests/integration/capacity-season.test.ts` (registrering, lagret sesong,
+  panelet med håndregnede tall). Visuell kontroll 1280 og 390 px. Ikke rullet ut.

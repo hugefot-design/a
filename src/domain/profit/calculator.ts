@@ -71,6 +71,8 @@ export interface CalcInputs {
   durationMonths: number | null;
   durationBasis: 'dokument' | 'bruker' | 'mangler';
   isFramework: boolean;
+  /** Måneder (1–12) oppdraget har arbeid – sesong. Null/udefinert = hele året. Påvirker kapasitet, ikke summene. */
+  activeMonths?: number[] | null;
   lines: CostLine[];
   overheadPct: number | null;
   riskBufferPct: number | null;

@@ -10,7 +10,7 @@ import { CERTIFICATIONS, CERT_BY_ID, INDUSTRIES, INDUSTRY_BY_ID, REGIONS, REGION
 import { COST_CATEGORIES, fmtKr, fmtNumber, PERIODS, type CostLine, type Provenance } from '@/domain/profit/calculator';
 import { COST_HINTS, TERM_LABELS, type TermCategory } from '@/domain/profit/terms-scan';
 import { RECOMMENDATION_LABEL, type Recommendation, type RiskLevel } from '@/domain/profit/recommendation';
-import type { CapacityResult } from '@/domain/profit/capacity';
+import { MONTH_SHORT, monthsLabel, type CapacityResult, type MonthLoad } from '@/domain/profit/capacity';
 import type { CapacityData, OrgEconomics, PortfolioSummary, ProfitWorkspace } from '@/domain/profit/service';
 import type { MarketPrice } from '@/domain/profit/market';
 import { MarketPanel, type CalcHistory } from './market';
@@ -350,6 +350,13 @@ function CalcForm({ ws }: { ws: ProfitWorkspace }) {
           </Field>
           <div className="space-y-2 pt-6">
             <Checkbox name="isFramework" defaultChecked={i.isFramework} label="Rammeavtale" hint="Verdien er da et anslag eller tak, ikke garantert omsetning." />
+          </div>
+          <div className="md:col-span-3">
+            <MonthPicker
+              legend="Sesong: måneder med arbeid"
+              hint="Ingen avkrysning = hele året. Timene fordeles på månedene dere krysser av (f.eks. vinterdrift nov–mar), og kapasiteten sjekkes måned for måned."
+              selected={i.activeMonths ?? null}
+            />
           </div>
           {t.lots.some((l) => l.estimatedValue !== null) ? (
             <div className="text-[13px] text-muted md:col-span-3">
@@ -965,6 +972,50 @@ function QualificationsPanel({ ws }: { ws: ProfitWorkspace }) {
   );
 }
 
+/** 12 avkrysningsbokser for måneder (name="activeMonths"). Ingen = hele året. */
+function MonthPicker({ legend, hint, selected }: { legend: string; hint: string; selected: number[] | null }) {
+  return (
+    <fieldset>
+      <legend className="text-[13px] font-semibold text-ink">{legend}</legend>
+      <p className="mt-0.5 text-[12px] text-muted">{hint}</p>
+      <div className="mt-2 grid max-w-xl grid-cols-4 gap-1.5 sm:grid-cols-6">
+        {MONTH_SHORT.map((m, idx) => (
+          <label key={m} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line px-2 py-1.5 text-[13px] has-[:checked]:border-navy-600 has-[:checked]:bg-navy-50">
+            <input type="checkbox" name="activeMonths" value={idx + 1} defaultChecked={selected?.includes(idx + 1) ?? false} className="size-3.5" />
+            {m}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+/** Belastning per måned: eksisterende kontrakter + dette oppdraget i prosent av kapasiteten, med tall som tekst. */
+function MonthLoadGrid({ months }: { months: MonthLoad[] }) {
+  return (
+    <div className="text-[13px]">
+      <p className="font-semibold text-navy-900">Måned for måned</p>
+      <p className="text-[12px] text-muted">Belastning med dette oppdraget, i prosent av tilgjengelige timer.</p>
+      <ul className="mt-2 grid grid-cols-6 gap-1">
+        {months.map((m) => {
+          const short = m.gap !== null && m.gap > 0.5;
+          return (
+            <li
+              key={m.month}
+              className={cn('rounded-md border px-1 py-1 text-center', short ? 'border-danger/40 bg-danger-soft' : m.required > 0 ? 'border-navy-200 bg-navy-50' : 'border-line')}
+              title={`${MONTH_SHORT[m.month - 1]}: ${fmtNumber(m.committed)} t i andre kontrakter + ${fmtNumber(m.required)} t i dette oppdraget av ${fmtNumber(m.capacity)} t${short ? ` – mangler ${fmtNumber(m.gap!)} t` : ''}`}
+            >
+              <span className="block text-[11px] text-muted">{MONTH_SHORT[m.month - 1]}</span>
+              <span className={cn('num block text-[12px] font-semibold', short ? 'text-danger' : 'text-ink')}>{m.loadPct !== null ? `${m.loadPct} %` : '–'}</span>
+              {short ? <span className="sr-only">mangler {fmtNumber(m.gap!)} timer</span> : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function CapacityPanel({ ws }: { ws: ProfitWorkspace }) {
   const c = ws.capacity;
   return (
@@ -996,7 +1047,10 @@ function CapacityPanel({ ws }: { ws: ProfitWorkspace }) {
             <ul className="mt-1 space-y-0.5">
               {c.overlappingContracts.map((o) => (
                 <li key={o.name}>
-                  {o.name}: <span className="num">{fmtNumber(o.hoursPerYear)} t/år</span> <span className="text-muted">({o.overlapPct} % overlapp)</span>
+                  {o.name}: <span className="num">{fmtNumber(o.hoursPerYear)} t/år</span>{' '}
+                  <span className="text-muted">
+                    ({o.overlapPct} % overlapp{o.activeMonths ? `, ${monthsLabel(o.activeMonths)}` : ''})
+                  </span>
                 </li>
               ))}
             </ul>
@@ -1018,6 +1072,9 @@ function CapacityPanel({ ws }: { ws: ProfitWorkspace }) {
               ))}
             </ul>
           </div>
+        ) : null}
+        {c.months && (c.seasonalShortage || ws.inputs.activeMonths || c.overlappingContracts.some((o) => o.activeMonths)) ? (
+          <MonthLoadGrid months={c.months} />
         ) : null}
         {[...(ws.capacityPeriodNote ? [ws.capacityPeriodNote] : []), ...c.notes].map((n) => (
           <p key={n} className="text-[12px] text-muted">
@@ -1335,7 +1392,12 @@ export function CapacityPage({ data, canManage, errors }: { data: CapacityData; 
                   <div>
                     <p className="font-semibold text-navy-900">{c.name}</p>
                     <p className="text-[12px] text-muted">
-                      {[c.client, `${c.startDate ? formatDate(c.startDate) : '?'} – ${c.endDate ? formatDate(c.endDate) : 'løpende'}`, c.hoursPerMonth !== null ? `${fmtNumber(c.hoursPerMonth)} t/mnd` : 'timer ikke oppgitt']
+                      {[
+                        c.client,
+                        `${c.startDate ? formatDate(c.startDate) : '?'} – ${c.endDate ? formatDate(c.endDate) : 'løpende'}`,
+                        c.hoursPerMonth !== null ? `${fmtNumber(c.hoursPerMonth)} t/mnd` : 'timer ikke oppgitt',
+                        c.activeMonths ? monthsLabel(c.activeMonths) : null,
+                      ]
                         .filter(Boolean)
                         .join(' · ')}
                     </p>
@@ -1363,9 +1425,12 @@ export function CapacityPage({ data, canManage, errors }: { data: CapacityData; 
                 <Field label="Slutt" htmlFor="ct-end" hint="Tom = løpende.">
                   <Input id="ct-end" name="endDate" type="date" />
                 </Field>
-                <Field label="Timer per måned" htmlFor="ct-hours">
+                <Field label="Timer per måned" htmlFor="ct-hours" hint="I månedene med arbeid.">
                   <Input id="ct-hours" name="hoursPerMonth" inputMode="decimal" />
                 </Field>
+                <div className="sm:col-span-2">
+                  <MonthPicker legend="Måneder med arbeid" hint="Ingen avkrysning = hele året (f.eks. vinterdrift: nov–mar)." selected={null} />
+                </div>
                 <Field label="Notat" htmlFor="ct-notes">
                   <Input id="ct-notes" name="notes" maxLength={1000} />
                 </Field>

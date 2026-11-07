@@ -33,7 +33,7 @@ import {
   type Period,
 } from './calculator';
 import { scanContractTerms, type TermScan } from './terms-scan';
-import { analyzeCapacity, type CapacityResult } from './capacity';
+import { analyzeCapacity, parseMonths, type CapacityResult } from './capacity';
 import { recommend, type Recommendation, type RecommendationResult, type RiskLevel } from './recommendation';
 import { getLatestProfitAnalysis, PROFIT_RISK_LABELS, type ProfitRiskCategory, type StoredProfitAnalysis } from './ai';
 import { suggestPartners, type PartnerGaps, type PartnerSuggestion } from './partners';
@@ -170,6 +170,8 @@ export interface ContractRow {
   startDate: Date | null;
   endDate: Date | null;
   hoursPerMonth: number | null;
+  /** Måneder med arbeid (1–12). Null = hele året. */
+  activeMonths: number[] | null;
   notes: string | null;
 }
 
@@ -232,7 +234,7 @@ export async function listEquipment(tx: Tx, orgId: string): Promise<EquipmentRow
 }
 export async function listContracts(tx: Tx, orgId: string): Promise<ContractRow[]> {
   return (await tx`
-    select id, name, client, start_date, end_date, hours_per_month, notes from org_contracts where org_id = ${orgId}
+    select id, name, client, start_date, end_date, hours_per_month, active_months::int[] as active_months, notes from org_contracts where org_id = ${orgId}
     order by end_date nulls last, created_at
   `) as unknown as ContractRow[];
 }
@@ -259,12 +261,17 @@ export async function addEquipment(tx: Tx, ctx: { orgId: string; userId: string 
   await audit({ action: 'profit.capacity_updated', orgId: ctx.orgId, actorUserId: ctx.userId, targetType: 'org_equipment', metadata: { op: 'add' } }, tx);
   return null;
 }
-export async function addContract(tx: Tx, ctx: { orgId: string; userId: string }, d: z.infer<typeof contractSchema>): Promise<string | null> {
+export async function addContract(
+  tx: Tx,
+  ctx: { orgId: string; userId: string },
+  d: z.infer<typeof contractSchema>,
+  activeMonths: number[] | null = null,
+): Promise<string | null> {
   const [{ n } = { n: 0 }] = (await tx`select count(*)::int as n from org_contracts where org_id = ${ctx.orgId}`) as unknown as { n: number }[];
   if (n >= CAPACITY_LIMIT) return `Dere kan registrere høyst ${CAPACITY_LIMIT} kontrakter.`;
   await tx`
-    insert into org_contracts (org_id, name, client, start_date, end_date, hours_per_month, notes, created_by)
-    values (${ctx.orgId}, ${d.name}, ${d.client}, ${d.startDate}, ${d.endDate}, ${d.hoursPerMonth}, ${d.notes}, ${ctx.userId})
+    insert into org_contracts (org_id, name, client, start_date, end_date, hours_per_month, active_months, notes, created_by)
+    values (${ctx.orgId}, ${d.name}, ${d.client}, ${d.startDate}, ${d.endDate}, ${d.hoursPerMonth}, ${activeMonths}::smallint[], ${d.notes}, ${ctx.userId})
   `;
   await audit({ action: 'profit.capacity_updated', orgId: ctx.orgId, actorUserId: ctx.userId, targetType: 'org_contracts', metadata: { op: 'add' } }, tx);
   return null;
@@ -430,6 +437,8 @@ export function parseCalcForm(form: FormData, previous: StoredInputs | null, doc
     durationBasis:
       !durationMonths || durationMonths <= 0 ? 'mangler' : documented.durationMonths !== null && durationMonths === documented.durationMonths ? 'dokument' : previous?.durationBasis === 'dokument' && previous.durationMonths === durationMonths ? 'dokument' : 'bruker',
     isFramework: str(form, 'isFramework') === 'on',
+    // Sesong: måneder med arbeid (tom = hele året). Brukes i kapasiteten måned for måned.
+    activeMonths: parseMonths(form.getAll('activeMonths')),
     lines,
     overheadPct: num('Påslag for indirekte kostnader', str(form, 'overheadPct'), 0, 300),
     riskBufferPct: num('Risikopåslag', str(form, 'riskBufferPct'), 0, 100),
@@ -701,8 +710,9 @@ export async function loadProfitWorkspace(
   const capacity = analyzeCapacity({
     availableHoursPerYear: capacityData.availableHoursPerYear,
     employeeCount: capacityData.staff.reduce((s, g) => s + g.headcount, 0) || profile?.employeeCount || null,
-    contracts: capacityData.contracts.map((c) => ({ name: c.name, startDate: c.startDate, endDate: c.endDate, hoursPerMonth: c.hoursPerMonth })),
+    contracts: capacityData.contracts.map((c) => ({ name: c.name, startDate: c.startDate, endDate: c.endDate, hoursPerMonth: c.hoursPerMonth, activeMonths: c.activeMonths })),
     requiredHoursPerYear: calc.hoursPerYear,
+    requiredActiveMonths: inputs.activeMonths ?? null,
     periodStart,
     periodEnd,
     equipmentNeeds,

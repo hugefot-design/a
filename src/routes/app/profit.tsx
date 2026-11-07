@@ -4,6 +4,7 @@
  * Endringer i bedriftens økonomi, kapasitet og partnerprofil krever eier/administrator (også i databasen).
  */
 import { getTender } from '@/domain/tenders/queries';
+import { parseMonths } from '@/domain/profit/capacity';
 import { marketPrice } from '@/domain/profit/market';
 import { learningSummary, loadResults } from '@/domain/tenders/results';
 import { getProfile } from '@/domain/profile/profile';
@@ -227,9 +228,10 @@ export function registerProfitRoutes(router: Router): void {
 
   router.post('/app/kapasitet/kontrakter', 'org', async (ctx) => {
     const { org, user } = requireManager(ctx);
-    const parsed = contractSchema.safeParse(formFields(await ctx.form(), ['name', 'client', 'startDate', 'endDate', 'hoursPerMonth', 'notes']));
+    const form = await ctx.form();
+    const parsed = contractSchema.safeParse(formFields(form, ['name', 'client', 'startDate', 'endDate', 'hoursPerMonth', 'notes']));
     if (!parsed.success) return capacityError(ctx, zodErrors(parsed.error));
-    const error = await ctx.tenant((tx) => addContract(tx, { orgId: org.id, userId: user.id }, parsed.data));
+    const error = await ctx.tenant((tx) => addContract(tx, { orgId: org.id, userId: user.id }, parsed.data, parseMonths(form.getAll('activeMonths'))));
     if (error) return redirectWith(ctx, '/app/kapasitet', 'error', error);
     return redirectWith(ctx, '/app/kapasitet', 'success', 'Kontrakten er lagt til.');
   }, calc);
