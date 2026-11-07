@@ -1,0 +1,132 @@
+# Daglig sikkerhetskopi av databasen – gratis, uten nye leverandører (GitHub Actions + Supabase sin gratisplan):
+#   1. pg_dump av produksjonsdatabasen, kryptert med AES-256 (gpg) og passordfrasen i hemmeligheten BACKUP_PASSPHRASE.
+#   2. Lastes opp til en PRIVAT bøtte i Supabase Storage («sikkerhetskopier»). Kopier eldre enn 30 dager slettes.
+#   3. Generalprøve: kopien legges inn i en tom PostgreSQL her, innholdet kontrolleres, og migreringene i koden
+#      kjøres mot den – så vi vet at kopien kan brukes, og at neste utrulling fungerer på ekte data.
+#
+# Repoet er OFFENTLIG: kopien legges aldri som GitHub-artefakt, og loggen viser bare filnavn, størrelse og antall rader.
+# Mangler hemmelighetene, hopper jobben over (advarsel i loggen) – oppsett i docs/DRIFT.md.
+# Varsel ved feil: GitHub-saken «Driftsvarsel: sikkerhetskopi feilet», som lukkes neste gang kopien går bra.
+name: Sikkerhetskopi
+
+on:
+  schedule:
+    - cron: '23 2 * * *' # hver natt kl. 02:23 UTC (03:23/04:23 norsk tid)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sikkerhetskopi
+  cancel-in-progress: false
+
+jobs:
+  kopi:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: generalprove
+          POSTGRES_DB: generalprove
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BUCKET: sikkerhetskopier
+      KEEP_DAYS: '30'
+    steps:
+      - name: Er sikkerhetskopien satt opp?
+        id: oppsett
+        run: |
+          missing=""
+          for v in BACKUP_DATABASE_URL BACKUP_PASSPHRASE SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::warning::Sikkerhetskopien er ikke satt opp ennå. Mangler GitHub-hemmeligheter:$missing (se docs/DRIFT.md)."
+            echo "klar=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "klar=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.oppsett.outputs.klar == 'true'
+
+      - name: Installer PostgreSQL-klient 17 (kan ta kopi av eldre og nyere servere)
+        if: steps.oppsett.outputs.klar == 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17 >/dev/null
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Ta kryptert kopi
+        id: kopi
+        if: steps.oppsett.outputs.klar == 'true'
+        run: |
+          NAME="anbudradar-$(date -u +%Y-%m-%dT%H%MZ).dump.gpg"
+          scripts/backup/backup.sh "$RUNNER_TEMP/$NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Last opp til privat bøtte i Supabase Storage
+        if: steps.oppsett.outputs.klar == 'true'
+        run: scripts/backup/upload.sh "$RUNNER_TEMP/${{ steps.kopi.outputs.name }}"
+
+      - uses: actions/setup-node@v4
+        if: steps.oppsett.outputs.klar == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Generalprøve – gjenopprett i tom database og kjør migreringene
+        if: steps.oppsett.outputs.klar == 'true'
+        env:
+          TARGET: postgresql://postgres:generalprove@127.0.0.1:5432/generalprove
+        run: |
+          scripts/backup/restore-check.sh "$RUNNER_TEMP/${{ steps.kopi.outputs.name }}" "$TARGET"
+          npm ci --no-audit --no-fund --loglevel=error
+          NODE_ENV=development DATABASE_ADMIN_URL="$TARGET" DATABASE_URL="$TARGET" npx tsx scripts/migrate.ts
+
+      - name: Slett den lokale kopien
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/*.dump.gpg
+
+      - name: Varsle ved feil (GitHub-sak)
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'Driftsvarsel: sikkerhetskopi feilet';
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = `Nattens sikkerhetskopi feilet (${new Date().toISOString()}). Se kjøringen: ${run}\n\nFremgangsmåte: docs/DRIFT.md, avsnittet «Sikkerhetskopi».`;
+            const { data: open } = await github.rest.issues.listForRepo({ ...context.repo, state: 'open', per_page: 100 });
+            const existing = open.find((i) => i.title === title && !i.pull_request);
+            if (existing) await github.rest.issues.createComment({ ...context.repo, issue_number: existing.number, body });
+            else await github.rest.issues.create({ ...context.repo, title, body });
+
+      - name: Lukk varselet når kopien går bra igjen
+        if: success() && steps.oppsett.outputs.klar == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'Driftsvarsel: sikkerhetskopi feilet';
+            const { data: open } = await github.rest.issues.listForRepo({ ...context.repo, state: 'open', per_page: 100 });
+            for (const i of open.filter((i) => i.title === title && !i.pull_request)) {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: i.number, body: 'Sikkerhetskopien gikk bra i natt.' });
+              await github.rest.issues.update({ ...context.repo, issue_number: i.number, state: 'closed' });
+            }

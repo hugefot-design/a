@@ -39,13 +39,24 @@ class LocalStorage implements Storage {
   }
 }
 
-/** Supabase Storage via REST. Bøtta må være PRIVAT. (Ikke testet mot live Supabase i utviklingsmiljøet.) */
-class SupabaseStorage implements Storage {
-  private base = `${env.SUPABASE_URL!.replace(/\/$/, '')}/storage/v1/object`;
-  private headers = { Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, apikey: env.SUPABASE_SERVICE_ROLE_KEY ?? '' };
+/**
+ * Supabase Storage via REST (samme API som Supabase-klienten bruker). Bøtta MÅ være privat: filene hentes bare
+ * gjennom appen med tjenestenøkkelen, aldri via en offentlig lenke. Se {@link checkSupabaseBucket}.
+ */
+export class SupabaseStorage implements Storage {
+  private base: string;
+  private headers: Record<string, string>;
+  constructor(
+    url: string,
+    serviceKey: string,
+    private bucket: string,
+  ) {
+    this.base = `${url.replace(/\/$/, '')}/storage/v1`;
+    this.headers = { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey };
+  }
   async put(key: string, data: Buffer, contentType: string) {
     assertSafeKey(key);
-    const res = await fetch(`${this.base}/${env.SUPABASE_STORAGE_BUCKET}/${key}`, {
+    const res = await fetch(`${this.base}/object/${this.bucket}/${key}`, {
       method: 'POST',
       headers: { ...this.headers, 'Content-Type': contentType, 'x-upsert': 'true' },
       body: new Uint8Array(data),
@@ -54,23 +65,52 @@ class SupabaseStorage implements Storage {
   }
   async get(key: string) {
     assertSafeKey(key);
-    const res = await fetch(`${this.base}/${env.SUPABASE_STORAGE_BUCKET}/${key}`, { headers: this.headers });
+    const res = await fetch(`${this.base}/object/${this.bucket}/${key}`, { headers: this.headers });
     if (!res.ok) throw new Error(`Henting feilet (${res.status})`);
     return Buffer.from(await res.arrayBuffer());
   }
   async remove(keys: string[]) {
     if (!keys.length) return;
     keys.forEach(assertSafeKey);
-    await fetch(`${this.base}/${env.SUPABASE_STORAGE_BUCKET}`, {
+    const res = await fetch(`${this.base}/object/${this.bucket}`, {
       method: 'DELETE',
       headers: { ...this.headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ prefixes: keys }),
     });
+    if (!res.ok) throw new Error(`Sletting feilet (${res.status})`);
+  }
+  /** Bøttas innstillinger: finnes den, og er den privat? */
+  async bucketInfo(): Promise<{ exists: boolean; isPublic: boolean | null }> {
+    const res = await fetch(`${this.base}/bucket/${this.bucket}`, { headers: this.headers });
+    if (res.status === 404 || res.status === 400) return { exists: false, isPublic: null };
+    if (!res.ok) throw new Error(`Bøtta kunne ikke leses (${res.status})`);
+    const body = (await res.json()) as { public?: boolean };
+    return { exists: true, isPublic: Boolean(body.public) };
+  }
+}
+
+/**
+ * Kontroll for admin: lagring på serverdisken forsvinner ved ny versjon (Render), og en offentlig bøtte ville gjort
+ * kundenes filer tilgjengelige for alle med lenken. Ingen nøkler eller filinnhold i svaret.
+ */
+export async function checkSupabaseBucket(): Promise<{ state: 'ok' | 'feil'; detail: string }> {
+  if (env.STORAGE_DRIVER !== 'supabase') return { state: 'feil', detail: 'På serverdisken – forsvinner ved hver ny versjon og når gratistjenesten sover.' };
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { state: 'feil', detail: 'Supabase valgt, men SUPABASE_URL eller SUPABASE_SERVICE_ROLE_KEY mangler.' };
+  try {
+    const info = await new SupabaseStorage(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, env.SUPABASE_STORAGE_BUCKET).bucketInfo();
+    if (!info.exists) return { state: 'feil', detail: `Bøtta «${env.SUPABASE_STORAGE_BUCKET}» finnes ikke – opprett den som privat.` };
+    if (info.isPublic) return { state: 'feil', detail: `Bøtta «${env.SUPABASE_STORAGE_BUCKET}» er OFFENTLIG – gjør den privat straks.` };
+    return { state: 'ok', detail: `Supabase Storage, privat bøtte «${env.SUPABASE_STORAGE_BUCKET}».` };
+  } catch (err) {
+    return { state: 'feil', detail: err instanceof Error ? err.message : 'Kunne ikke kontrollere lagringen.' };
   }
 }
 
 let instance: Storage | null = null;
 export function storage(): Storage {
-  if (!instance) instance = env.STORAGE_DRIVER === 'supabase' ? new SupabaseStorage() : new LocalStorage();
+  if (!instance) {
+    instance =
+      env.STORAGE_DRIVER === 'supabase' ? new SupabaseStorage(env.SUPABASE_URL ?? '', env.SUPABASE_SERVICE_ROLE_KEY ?? '', env.SUPABASE_STORAGE_BUCKET) : new LocalStorage();
+  }
   return instance;
 }

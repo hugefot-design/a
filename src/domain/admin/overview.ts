@@ -6,6 +6,7 @@
  * Bruker systemrollen (på tvers av organisasjoner); tilgangen kontrolleres i ruteren.
  */
 import { systemSql } from '@/lib/db';
+import { checkSupabaseBucket } from '@/lib/storage';
 import { env, integrationStatus } from '@/lib/env';
 import { BLOCKED_BY_ALLOWLIST, BLOCKED_TEST_DOMAIN } from '@/lib/email';
 import { CONNECTORS } from '@/connectors';
@@ -268,6 +269,8 @@ export async function adminOverview(now = new Date()) {
 
   // ---- Klar for lansering ---------------------------------------------------------------------
   const i = integrationStatus();
+  // Ekte kontroll av fillagringen (finnes bøtta, og er den privat?) – ikke bare om nøklene er satt.
+  const storageCheck = await checkSupabaseBucket();
   const appUrl = new URL(env.APP_URL);
   const ownDomain = appUrl.protocol === 'https:' && !/(^|\.)(onrender\.com|localhost)$|^127\.0\.0\.1$/.test(appUrl.hostname);
   const fromAddress = (/<([^>]+)>/.exec(env.EMAIL_FROM)?.[1] ?? env.EMAIL_FROM).trim();
@@ -319,8 +322,8 @@ export async function adminOverview(now = new Date()) {
     {
       id: 'filer',
       label: 'Lagring av dokumenter',
-      state: i.storageDriver === 'supabase' && i.storage ? 'klar' : 'mangler',
-      detail: i.storageDriver === 'supabase' ? (i.storage ? 'Supabase Storage' : 'Supabase valgt, men nøkler mangler') : 'På serverdisken – forsvinner ved hver ny versjon',
+      state: storageCheck.state === 'ok' ? 'klar' : 'mangler',
+      detail: storageCheck.detail,
     },
     {
       id: 'firma',

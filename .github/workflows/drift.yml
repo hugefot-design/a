@@ -1,0 +1,77 @@
+# Drift uten ekstra kostnad: vekker AnbudRadar hver time og sjekker at den svarer.
+#
+# Gratisplanen hos Render sover etter 15 minutter uten besøk, og da står bakgrunnsjobbene (henting av anbud,
+# varsler, e-post, ukesbrev, opprydding) stille. Arbeideren i appen tar igjen alt som er forfalt så snart tjenesten
+# våkner, så ett kall i timen holder. Det bruker omtrent 15 minutter av gratistimene per time (ca. 200 av 750 timer
+# i måneden). Ingen hemmeligheter trengs – helsesjekken er offentlig og viser bare om databasen svarer.
+#
+# Svarer tjenesten ikke etter seks forsøk, åpnes GitHub-saken «Driftsvarsel: AnbudRadar svarer ikke» (GitHub sender
+# e-post til de som følger repoet). Saken lukkes automatisk når tjenesten svarer igjen.
+# NB: GitHub skrur av planlagte jobber i offentlige repoer etter 60 dager uten aktivitet i repoet.
+name: Drift
+
+on:
+  schedule:
+    - cron: '7 * * * *' # hver time, sju minutter over
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: drift
+  cancel-in-progress: false
+
+jobs:
+  vekk-og-sjekk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      APP_URL: ${{ vars.APP_URL || 'https://anbudradar.com' }}
+    steps:
+      - name: Vekk tjenesten og sjekk helsen
+        id: helse
+        run: |
+          code=000
+          for i in 1 2 3 4 5 6; do
+            # Kald start på gratisplanen kan ta rundt ett minutt.
+            code=$(curl -sS -o /tmp/helse.json -w '%{http_code}' --max-time 90 -A 'AnbudRadar-drift (GitHub Actions)' "$APP_URL/api/health" || true)
+            if [ "$code" = "200" ]; then
+              echo "Svarer: $(cat /tmp/helse.json)"
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Forsøk $i: HTTP $code"
+            sleep 20
+          done
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+          echo "kode=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Varsle når tjenesten ikke svarer (GitHub-sak)
+        if: steps.helse.outputs.ok == 'false'
+        uses: actions/github-script@v7
+        env:
+          KODE: ${{ steps.helse.outputs.kode }}
+        with:
+          script: |
+            const title = 'Driftsvarsel: AnbudRadar svarer ikke';
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = `Helsesjekken svarte ikke med 200 etter seks forsøk (siste svar: HTTP ${process.env.KODE || 'ingen'}, ${new Date().toISOString()}).\nSe kjøringen: ${run}\n\nSjekk Render (tjenesten og loggen) og Supabase (databasen). Fremgangsmåte: docs/DRIFT.md.`;
+            const { data: open } = await github.rest.issues.listForRepo({ ...context.repo, state: 'open', per_page: 100 });
+            const existing = open.find((i) => i.title === title && !i.pull_request);
+            if (existing) await github.rest.issues.createComment({ ...context.repo, issue_number: existing.number, body });
+            else await github.rest.issues.create({ ...context.repo, title, body });
+            core.setFailed('Tjenesten svarer ikke.');
+
+      - name: Lukk varselet når tjenesten svarer igjen
+        if: steps.helse.outputs.ok == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'Driftsvarsel: AnbudRadar svarer ikke';
+            const { data: open } = await github.rest.issues.listForRepo({ ...context.repo, state: 'open', per_page: 100 });
+            for (const i of open.filter((i) => i.title === title && !i.pull_request)) {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: i.number, body: `Tjenesten svarer igjen (${new Date().toISOString()}).` });
+              await github.rest.issues.update({ ...context.repo, issue_number: i.number, state: 'closed' });
+            }
