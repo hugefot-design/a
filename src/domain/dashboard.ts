@@ -3,6 +3,7 @@ import { isProd } from '@/lib/env';
 import type { OrgContext } from '@/server/http';
 import { statusCondition, type TenderListItem } from '@/domain/tenders/queries';
 import { screenRow, type ScreenableRow } from '@/domain/matching/screening';
+import { loadActionItems, type ActionItem } from '@/domain/actions';
 
 export interface DashboardData {
   newMatches: number;
@@ -17,6 +18,8 @@ export interface DashboardData {
   profileIndustries: string[];
   profileRegions: string[];
   weeklyOverview: { headline: string; points: string[]; isMock: boolean; createdAt: Date } | null;
+  /** «Til handling»: frister, godkjenninger, resultater og sterke treff – sortert etter hvor mye det haster. */
+  actions: ActionItem[];
 }
 
 const LIST_COLUMNS = (tx: Tx, orgId: string) => tx`
@@ -129,5 +132,6 @@ export async function loadDashboard(tx: Tx, org: OrgContext): Promise<DashboardD
     profileIndustries: industries,
     profileRegions: regions,
     weeklyOverview: weekly ? { ...weekly.result.data, isMock: Boolean(weekly.result.isMock), createdAt: weekly.createdAt } : null,
+    actions: await loadActionItems(tx, org),
   };
 }

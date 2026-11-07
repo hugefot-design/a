@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 7. november 2026 (veikartpunkt 1–6 og 8: sikkerhet, kravsjekk, tilbudsresultat, markedspris, kontraktsutløp, forhåndsvurdering og skjulte kostnader – se [VEIKART.md](VEIKART.md)).
+Sist oppdatert 7. november 2026 (veikartpunkt 1–6, 8 og 10 – se [VEIKART.md](VEIKART.md)).
 
 ## Testresultater
 
@@ -9,8 +9,8 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 173 av 173 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 158 av 158 bestått – 7.11.2026 |
+| Enhetstester | 175 av 175 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 160 av 160 bestått – 7.11.2026 |
 | Ende-til-ende i nettleser | 4 av 4 bestått – 6.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -267,3 +267,15 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 - **Tester:** `tests/unit/terms-costs.test.ts` (treff per kategori, falske treff, «ikke funnet») og
   `tests/integration/terms-costs.test.ts` (Lønnsomhet-siden med tips, nektelse av dagbot fortsatt merket).
   Ikke rullet ut.
+
+## «Til handling» på Oversikt (7. november 2026)
+
+- **Hva:** én arbeidsliste øverst på Oversikt, det som haster først: tilbudsfrister og spørsmålsfrister innen en uke
+  (lagrede anbud som ikke er levert), obligatorisk befaring, tilbud som venter på godkjenning eller er godkjent men ikke
+  levert (Bedrift), leverte tilbud der tildelingen er publisert (eller levert for over tre måneder siden) og inntil tre
+  sterke nye treff (75+) som ikke er lagret. Hvert punkt lenker dit det løses. Høyst ti punkter.
+- **Bare egne data**, ingen anslag. «I dag/i morgen» regnes i kalenderdager i norsk tid (riktig rundt midnatt og ved
+  sommertid). Uten noe som haster står en kort forklaring.
+- **Tester:** `tests/unit/actions.test.ts` (rekkefølge, kalenderdager rundt midnatt og sommertid) og
+  `tests/integration/actions.test.ts` (alle punkttypene, rekkefølge, ingen arbeidspunkter fra andre organisasjoner,
+  tom liste). Visuell kontroll 1280 og 390 px. Ikke rullet ut.

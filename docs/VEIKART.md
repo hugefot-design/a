@@ -18,7 +18,7 @@ tjenester/produksjon) og **forslag** (krever eiers godkjenning: nye leverandøre
 | 7 | **AI-chat om hele anbudet** med kontrollerte kildehenvisninger | Forventet funksjon i 2026; svar med side og sitat, skille fakta/vurdering | Planlagt (AI er av i produksjon – eiers valg) |
 | 8 | **Flere skjulte kostnader i vilkårssøket** – lønns- og arbeidsvilkår, miljøkrav, rapportering, oppstart | Kostnader som ofte glemmes i kalkylen | **Implementert og testet** – fire nye kategorier med kilde og tips til kalkylen, se [STATUS.md](STATUS.md#flere-skjulte-kostnader-i-vilkårssøket-7-november-2026). Ikke rullet ut. |
 | 9 | **Kapasitet per måned og sesong** | Sesongarbeid (vinterdrift, renhold i ferier) regnes feil per år | Planlagt |
-| 10 | **«Til handling»-oversikt** – frister denne uken, spørsmålsfrister, godkjenninger, sterke nye treff | Arbeidsflyt i stedet for lister | Planlagt |
+| 10 | **«Til handling»-oversikt** – frister denne uken, spørsmålsfrister, godkjenninger, sterke nye treff | Arbeidsflyt i stedet for lister | **Implementert og testet** – arbeidsliste øverst på Oversikt, se [STATUS.md](STATUS.md#til-handling-på-oversikt-7-november-2026). Ikke rullet ut. |
 | 11 | **Mobil og navigasjon i appen** – gjennomgang og rettinger | Mange vurderer anbud på telefonen | Planlagt |
 | 12 | **Flerlands-struktur** – land, regioner og valuta per land; TED for Sverige, Danmark, Finland og Tyskland bak en bryter (av) | Vekst utenfor Norge uten nye leverandører; TED dekker hele EØS | Planlagt |
 | 13 | **Automatisk innhenting av konkurransedokumenter** | Full analyse uten opplasting | Forslag – krever nye eksterne kilder (godkjenning) |

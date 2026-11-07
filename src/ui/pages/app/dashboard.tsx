@@ -1,5 +1,8 @@
 import { INDUSTRY_BY_ID } from '@/domain/reference';
+import type { ReactNode } from 'react';
+import { LuClock, LuMapPin, LuMessageCircleQuestion, LuSend, LuSparkle, LuTrophy, LuUserCheck } from 'react-icons/lu';
 import type { DashboardData } from '@/domain/dashboard';
+import type { ActionItem, ActionKind, Urgency } from '@/domain/actions';
 import { useUi } from '../../context';
 import { Alert, Badge, Button, buttonVariants, DeadlineChip, EmptyState, Panel, PanelHeader, PostForm, Stat } from '../../components';
 import { AppShell } from '../../layouts';
@@ -53,6 +56,51 @@ function FreeUsagePanel({ u }: { u: FreeUsage }) {
   );
 }
 
+const ACTION_ICON: Record<ActionKind, ReactNode> = {
+  frist: <LuClock className="size-4" aria-hidden />,
+  sporsmalsfrist: <LuMessageCircleQuestion className="size-4" aria-hidden />,
+  befaring: <LuMapPin className="size-4" aria-hidden />,
+  godkjenning: <LuUserCheck className="size-4" aria-hidden />,
+  levere: <LuSend className="size-4" aria-hidden />,
+  resultat: <LuTrophy className="size-4" aria-hidden />,
+  treff: <LuSparkle className="size-4" aria-hidden />,
+};
+const URGENCY_STYLE: Record<Urgency, { chip: string; label: string }> = {
+  haster: { chip: 'bg-danger-soft text-danger', label: 'Haster' },
+  snart: { chip: 'bg-urgent-soft text-urgent', label: 'Snart' },
+  info: { chip: 'bg-navy-50 text-navy-800', label: 'Når dere har tid' },
+};
+
+/** «Til handling»: én arbeidsliste fra egne data – lenke dit hvert punkt løses. */
+function ActionPanel({ items }: { items: ActionItem[] }) {
+  return (
+    <Panel>
+      <PanelHeader title="Til handling" description="Frister, godkjenninger og resultater som venter på dere – det som haster står først." />
+      {items.length ? (
+        <ul className="divide-y divide-line">
+          {items.map((a, i) => (
+            <li key={`${a.kind}-${a.href}-${i}`}>
+              <a href={a.href} className="flex items-start gap-3 px-5 py-3 no-underline hover:bg-navy-50/40">
+                <span className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full ${URGENCY_STYLE[a.urgency].chip}`}>{ACTION_ICON[a.kind]}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-semibold text-navy-900">{a.title}</span>
+                  <span className="block truncate text-[13px] text-muted">{a.detail}</span>
+                </span>
+                <span className="shrink-0 text-right text-[12px] text-muted">
+                  <span className="sr-only">{URGENCY_STYLE[a.urgency].label}. </span>
+                  {a.due ? formatDate(a.due) : ''}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="px-5 py-4 text-[14px] text-muted">Ingenting haster akkurat nå. Lagrede anbud med frister, tilbud som venter på godkjenning og resultater som mangler, dukker opp her.</p>
+      )}
+    </Panel>
+  );
+}
+
 export function DashboardPage({
   data,
   aiAvailable,
@@ -96,6 +144,7 @@ export function DashboardPage({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-6">
+          <ActionPanel items={data.actions} />
           <Panel>
             <PanelHeader
               title={ent.matching ? 'Anbefalt for dere' : 'Nye anbud i deres bransjer'}
