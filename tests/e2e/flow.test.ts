@@ -58,7 +58,7 @@ test('ny kunde: fra registrering til tilbudsarbeid', async () => {
 
   // Offentlig forside → registrering
   await page.goto(`${BASE}/`);
-  assert.match((await page.locator('h1').textContent()) ?? '', /Alle offentlige anbud/);
+  assert.match((await page.locator('h1').textContent()) ?? '', /Ikke bare finn anbudet/);
   // «Start gratis» står i menyen, øverst og nederst på forsiden – bruk den i toppen av siden.
   await page.locator('main').getByRole('link', { name: /Start gratis/ }).first().click();
   await page.fill('#name', 'Eva Ende-til-ende');

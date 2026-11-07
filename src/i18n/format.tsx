@@ -101,3 +101,13 @@ export function timeUntil(locale: Locale, target: Date, now = new Date()): strin
   if (hours < 36) return rtf.format(hours, 'hour');
   return rtf.format(Math.round(ms / 86_400_000), 'day');
 }
+
+/** «mars 2027» – måned og år (anslag for når en kontrakt utløper). */
+export function monthYear(locale: Locale, d: Date): string {
+  return new Intl.DateTimeFormat(intl(locale), { month: 'long', year: 'numeric', timeZone: TZ }).format(d);
+}
+
+/** «1,2 mill.» / «1.2M» – korte tall til akser. */
+export function compactNumber(locale: Locale, n: number): string {
+  return new Intl.NumberFormat(intl(locale), { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+}

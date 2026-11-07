@@ -5,7 +5,7 @@
  */
 import { systemSql } from '@/lib/db';
 import { env, integrationStatus } from '@/lib/env';
-import { PLANS, type Entitlements, type PlanId } from '@/domain/billing/plans';
+import { cheapestPlanWith, PLANS, type Entitlements } from '@/domain/billing/plans';
 import { getProvider } from '@/domain/ai/provider';
 
 type BoolFeature = { [K in keyof Entitlements]: Entitlements[K] extends boolean ? K : never }[keyof Entitlements];
@@ -74,15 +74,10 @@ export const PRODUCT_GROUPS: { title: string; items: ProductItem[] }[] = [
   },
 ];
 
-const PLAN_ORDER: PlanId[] = ['free', 'starter', 'professional', 'business', 'enterprise'];
-
 /** Laveste plan som gir funksjonen (navnet), eller «Alle planer». */
 export function minPlanName(feature: ProductItem['feature']): string {
   if (!feature) return 'Alle planer';
-  const plan = PLAN_ORDER.find((p) => {
-    const v = PLANS[p].entitlements[feature];
-    return typeof v === 'number' ? v > 0 : Boolean(v);
-  });
+  const plan = cheapestPlanWith(feature);
   return plan ? (plan === 'free' ? 'Alle planer' : `${PLANS[plan].name} og høyere`) : 'Ingen plan';
 }
 

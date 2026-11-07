@@ -1,20 +1,24 @@
 /**
- * Forsiden. Mørk topp med en radar over Norge der punktene er åpne anbud per fylke akkurat nå,
- * og kort med de nyeste ekte anbudene. Deretter oppdragsgivere med åpne anbud (ekte), tre steg og
- * et vindu fra appen (merket «Eksempel»), bransjer med ekte antall og en avslutning med neste frist.
- * Ingen oppdiktede kunder, omtaler eller tall.
+ * Forsiden: «Ikke bare finn anbudet. Finn ut om det er verdt å vinne.»
+ *
+ * Mørk topp med radaren over Norge (åpne anbud per fylke akkurat nå) og de nyeste ekte anbudene; hvorfor
+ * AnbudRadar (sju fordeler, med planen hver finnes i); kundereisen i seks steg vist med ekte, offentlige data;
+ * forskjellen fra søk og varsling; hva kunden får og ikke får; bransjer med ekte antall; avslutning.
+ * Ingen oppdiktede kunder, omtaler, tall eller skjermbilder. AI nevnes bare når ekte AI er slått på.
  */
 import type { ReactNode } from 'react';
-import { LuArrowRight, LuCheck } from 'react-icons/lu';
-import { PAID_PLANS, PLANS } from '@/domain/billing/plans';
+import { LuArrowRight, LuCalculator, LuCalendarRange, LuChartColumn, LuCheck, LuClipboardCheck, LuMinus, LuShieldAlert, LuTarget, LuTrophy } from 'react-icons/lu';
+import { cheapestPlanWith, PAID_PLANS, PLANS, type Entitlements } from '@/domain/billing/plans';
 import type { MarketSnapshot } from '@/domain/tenders/market';
+import type { Showcase } from '@/domain/tenders/showcase';
 import type { Locale } from '@/i18n';
 import { sourcesText } from '@/i18n';
 import { clockTime, fill, int, osloDay, plural, pluralTemplate, rich, weekdayShort } from '@/i18n/format';
 import { useUi } from '../context';
 import { cn } from '../components';
 import { PublicLayout } from '../layouts';
-import { AnalysisMock, BuyerTicker, ExampleTag, FinalCta, H2, IndustryTiles, Kicker, MatchVisual, ProfileVisual, Radar, ReminderVisual, TenderPing, Wrap } from '../site';
+import { BuyerTicker, FinalCta, H2, IndustryTiles, Kicker, Radar, TenderPing, Wrap } from '../site';
+import { JOURNEY_VISUALS } from '../showcase';
 
 /** Fristen kort: «I dag 12.00», «I morgen», «fre. 07.11» (brukes også i eksempelkunngjøringen). */
 export function boardWhen(
@@ -40,7 +44,7 @@ function Hero({ market }: { market: MarketSnapshot }) {
   return (
     <section className="night relative overflow-hidden">
       <div className="dot-grid absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_70%_40%,#000_20%,transparent_70%)]" aria-hidden />
-      <Wrap className="relative grid grid-cols-1 items-center gap-14 pb-20 pt-14 sm:pt-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-10 lg:pb-28 lg:pt-24">
+      <Wrap className="relative grid grid-cols-1 items-center gap-14 pb-20 pt-14 sm:pt-20 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-10 lg:pb-28 lg:pt-24">
         <div className="min-w-0">
           {market.open > 0 ? (
             <p className="glass slide-in inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 text-[13.5px] font-medium text-white/90">
@@ -48,11 +52,11 @@ function Hero({ market }: { market: MarketSnapshot }) {
               {rich(pluralTemplate(locale, t.live, market.open), { n: <strong className="font-semibold text-white">{int(locale, market.open)}</strong> })}
             </p>
           ) : null}
-          <h1 className="mt-7 text-[44px] font-[800] leading-[0.98] tracking-[-0.04em] text-white sm:text-[64px] lg:text-[76px]">
+          <h1 className="mt-7 text-[40px] font-[800] leading-[1.02] tracking-[-0.04em] text-white sm:text-[56px] lg:text-[64px]">
             <span className="block">{t.title1}</span>
             <span className="text-gradient-signal block pb-1">{t.title2}</span>
           </h1>
-          <p className="mt-7 max-w-[34rem] text-[18px] leading-relaxed text-white/70 sm:text-[19px]">{fill(t.lead, { sources: sourcesText(m, liveSources) })}</p>
+          <p className="mt-7 max-w-[36rem] text-[18px] leading-relaxed text-white/70 sm:text-[19px]">{fill(t.lead, { sources: sourcesText(m, liveSources) })}</p>
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <a href={user ? '/app' : lp('/registrer')} className="btn-signal">
               {user ? m.nav.toApp : m.nav.start} <LuArrowRight className="size-4" aria-hidden />
@@ -63,7 +67,7 @@ function Hero({ market }: { market: MarketSnapshot }) {
           </div>
           {user ? null : (
             <p className="mt-5 flex items-center gap-2 text-[14px] text-white/55">
-              <LuCheck className="size-4 text-signal" aria-hidden />
+              <LuCheck className="size-4 shrink-0 text-signal" aria-hidden />
               {fill(t.note, { days: plural(locale, m.units.days, trialDays) })}
             </p>
           )}
@@ -83,68 +87,214 @@ function Hero({ market }: { market: MarketSnapshot }) {
   );
 }
 
-function Steps() {
-  const { m } = useUi();
-  const t = m.home.steps;
-  const visuals = [<ProfileVisual key="p" />, <MatchVisual key="m" />, <ReminderVisual key="r" />];
+// ---------------------------------------------------------------------------
+// Hvorfor AnbudRadar: sju fordeler, med planen hver finnes i (regnes ut fra planene, så teksten alltid stemmer).
+// ---------------------------------------------------------------------------
+type BoolFeature = { [K in keyof Entitlements]: Entitlements[K] extends boolean ? K : never }[keyof Entitlements];
+const WHY_ICONS = [LuTarget, LuShieldAlert, LuCalculator, LuChartColumn, LuTrophy, LuCalendarRange, LuClipboardCheck];
+const WHY_FEATURES: (BoolFeature | null)[] = ['matching', null, 'profitCalculator', 'competitorIntel', null, 'profitCalculator', 'bidAssistant'];
+
+function Why() {
+  const { m, lp } = useUi();
+  const t = m.home.why;
+  const included = (f: BoolFeature | null) => {
+    const plan = f ? cheapestPlanWith(f) : 'free';
+    return fill(t.included, { plans: !plan || plan === 'free' ? t.allPlans : fill(t.andUp, { plan: m.plans[plan].name }) });
+  };
   return (
-    <section id="slik" className="scroll-mt-16 bg-white py-24 sm:py-32">
+    <section className="bg-white py-24 sm:py-32">
       <Wrap>
-        <div className="reveal max-w-2xl">
+        <div className="reveal max-w-3xl">
           <Kicker>{t.eyebrow}</Kicker>
           <H2 className="mt-4">{t.title}</H2>
+          <p className="mt-5 text-[18px] leading-relaxed text-muted">{t.lead}</p>
         </div>
-        <ol className="mt-14 grid grid-cols-1 gap-5 lg:grid-cols-3">
-          {t.items.map((s, i) => (
-            <li key={s.title} className={cn('reveal flex flex-col overflow-hidden rounded-3xl border border-line bg-cream', i === 1 && 'delay-1', i === 2 && 'delay-2')}>
-              <div className="relative border-b border-line bg-[radial-gradient(circle_at_30%_20%,#fff,transparent_70%)] px-6 pb-6 pt-12">
-                <span className="absolute right-4 top-4">
-                  <ExampleTag>{t.example}</ExampleTag>
+        <ul className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {t.items.map((item, i) => {
+            const Icon = WHY_ICONS[i]!;
+            return (
+              <li key={item.title} className={cn('reveal flex flex-col rounded-3xl border border-line bg-cream p-6', i % 4 === 1 && 'delay-1', i % 4 === 2 && 'delay-2', i % 4 === 3 && 'delay-3')}>
+                <span className="flex size-11 items-center justify-center rounded-2xl bg-night text-signal">
+                  <Icon className="size-5" aria-hidden />
                 </span>
-                <div className="flex min-h-[11.5rem] flex-col justify-center">{visuals[i]}</div>
-              </div>
-              <div className="flex flex-1 flex-col p-6 sm:p-7">
-                <span className="flex size-9 items-center justify-center rounded-full bg-night font-mono text-[14px] font-medium text-signal">{i + 1}</span>
-                <h3 className="mt-4 text-[22px] font-[740] leading-tight tracking-[-0.02em] text-night">{s.title}</h3>
-                <p className="mt-2 text-[16px] leading-relaxed text-muted">{s.text}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+                <h3 className="mt-5 text-[19px] font-[740] leading-tight tracking-[-0.015em] text-night">{item.title}</h3>
+                <p className="mt-2 flex-1 text-[15px] leading-relaxed text-muted">{item.text}</p>
+                <p className="mt-5 text-[12.5px] font-semibold text-navy-700">{included(WHY_FEATURES[i] ?? null)}</p>
+              </li>
+            );
+          })}
+          <li className="reveal delay-3 flex flex-col justify-between rounded-3xl bg-night p-6 text-white">
+            <p className="text-[15px] leading-relaxed text-white/70">{t.moreText}</p>
+            <a href={lp('/funksjoner')} className="mt-6 inline-flex items-center gap-2 text-[16px] font-semibold text-signal no-underline hover:text-white">
+              {t.more} <LuArrowRight className="size-4" aria-hidden />
+            </a>
+          </li>
+        </ul>
       </Wrap>
     </section>
   );
 }
 
-function Product() {
-  const { m, lp } = useUi();
-  const t = m.home.product;
+// ---------------------------------------------------------------------------
+// Kundereisen i seks steg – med ekte data (src/ui/showcase.tsx).
+// ---------------------------------------------------------------------------
+function Journey({ showcase }: { showcase: Showcase | null }) {
+  const { m } = useUi();
+  const t = m.home.journey;
+  return (
+    <section id="slik" className="scroll-mt-16 bg-cream py-24 sm:py-32">
+      <Wrap>
+        <div className="reveal max-w-3xl">
+          <Kicker>{t.eyebrow}</Kicker>
+          <H2 className="mt-4">{t.title}</H2>
+          {showcase ? <p className="mt-5 text-[18px] leading-relaxed text-muted">{t.lead}</p> : null}
+        </div>
+        <ol className="reveal mt-10 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6" aria-label={t.eyebrow}>
+          {t.steps.map((s, i) => (
+            <li key={s.title} className="flex">
+              <a href={`#steg-${i + 1}`} className="flex min-h-11 flex-1 items-center gap-2 rounded-2xl border border-line-strong bg-white px-3 py-2 text-[13.5px] font-semibold leading-snug text-night no-underline hover:border-night">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-night font-mono text-[11.5px] text-signal">{i + 1}</span>
+                <span className="min-w-0">{s.title}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-10 grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {t.steps.map((s, i) => {
+            const Visual = JOURNEY_VISUALS[i]!;
+            return (
+              <article id={`steg-${i + 1}`} key={s.title} className="reveal flex scroll-mt-24 flex-col rounded-3xl border border-line bg-white p-5 sm:p-7">
+                <div className="flex items-start gap-4">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-night font-mono text-[14px] font-medium text-signal">{i + 1}</span>
+                  <div className="min-w-0">
+                    <h3 className="text-[21px] font-[740] leading-tight tracking-[-0.02em] text-night">{s.title}</h3>
+                    <p className="mt-1.5 text-[15.5px] leading-relaxed text-muted">{s.text}</p>
+                  </div>
+                </div>
+                {showcase ? <div className="mt-6">{<Visual s={showcase} />}</div> : null}
+              </article>
+            );
+          })}
+        </div>
+      </Wrap>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Forskjellen fra søk og varsling – bare funksjoner vi har. Sier ingenting om andre tjenester.
+// ---------------------------------------------------------------------------
+const SEARCH_HAS = 2; // De to første radene er det søk og varsling som funksjon dekker.
+
+function Compare() {
+  const { m } = useUi();
+  const t = m.home.compare;
+  const mark = (yes: boolean) =>
+    yes ? (
+      <span className="inline-flex size-7 items-center justify-center rounded-full bg-ok-soft text-ok">
+        <LuCheck className="size-4" strokeWidth={3} aria-hidden />
+        <span className="sr-only">{t.yes}</span>
+      </span>
+    ) : (
+      <span className="inline-flex size-7 items-center justify-center rounded-full bg-paper text-muted">
+        <LuMinus className="size-4" aria-hidden />
+        <span className="sr-only">{t.no}</span>
+      </span>
+    );
+  return (
+    <section className="bg-white py-24 sm:py-32">
+      <Wrap>
+        <div className="reveal max-w-3xl">
+          <Kicker>{t.eyebrow}</Kicker>
+          <H2 className="mt-4">{t.title}</H2>
+          <p className="mt-5 text-[18px] leading-relaxed text-muted">{t.lead}</p>
+        </div>
+        <div className="reveal mt-12 overflow-hidden rounded-3xl border border-line">
+          <table className="w-full border-collapse text-left [font-variant-numeric:normal]">
+            <thead>
+              <tr className="border-b border-line">
+                <th scope="col" className="px-4 py-4 text-[13px] font-semibold uppercase tracking-[0.1em] text-muted sm:px-6">
+                  <span className="sr-only">{t.eyebrow}</span>
+                </th>
+                <th scope="col" className="w-[24%] px-2 py-4 text-center text-[13px] font-semibold text-muted sm:w-[20%] sm:text-[14px]">
+                  {t.colSearch}
+                </th>
+                <th scope="col" className="night w-[24%] px-2 py-4 text-center text-[13px] font-semibold text-white sm:w-[20%] sm:text-[14px]">
+                  {t.colUs}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {t.rows.map((row, i) => (
+                <tr key={row} className="border-b border-line last:border-b-0">
+                  <th scope="row" className="px-4 py-3.5 text-[14.5px] font-medium leading-snug text-ink sm:px-6 sm:text-[15.5px]">
+                    {row}
+                  </th>
+                  <td className="px-2 py-3.5 text-center">{mark(i < SEARCH_HAS)}</td>
+                  <td className="bg-navy-50/60 px-2 py-3.5 text-center">{mark(true)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-4 max-w-3xl text-[13.5px] leading-relaxed text-muted">{t.note}</p>
+      </Wrap>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Åpenhet: hva kunden får, og hva vi ikke gjør (ennå). AI-linjen vises så lenge ekte AI ikke er slått på.
+// ---------------------------------------------------------------------------
+function Openness() {
+  const { m, locale, lp, trialDays, liveSources, aiConfigured, aiIsMock } = useUi();
+  const t = m.home.open;
+  const days = plural(locale, m.units.days, trialDays);
+  const notItems = [...t.notItems, ...(t.notApp ? [t.notApp] : []), ...(aiConfigured && !aiIsMock ? [] : [t.notAi])];
   return (
     <section className="night relative overflow-hidden py-24 sm:py-32">
-      <Wrap className="relative grid grid-cols-1 items-center gap-14 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
-        <div className="reveal min-w-0">
+      <div className="dot-grid absolute inset-0 opacity-40" aria-hidden />
+      <Wrap className="relative">
+        <div className="reveal max-w-3xl">
           <Kicker dark>{t.eyebrow}</Kicker>
           <H2 dark className="mt-4">
             {t.title}
           </H2>
-          <p className="mt-6 max-w-lg text-[18px] leading-relaxed text-white/70">{t.lead}</p>
-          <ul className="mt-8 space-y-3.5">
-            {t.points.map((x) => (
-              <li key={x} className="flex items-center gap-3 text-[16px] text-white/90">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-signal/15 text-signal">
-                  <LuCheck className="size-3.5" aria-hidden strokeWidth={3} />
-                </span>
-                {x}
-              </li>
-            ))}
-          </ul>
-          <a href={lp('/funksjoner')} className="mt-9 inline-flex items-center gap-2 text-[16px] font-semibold text-signal no-underline hover:text-white">
-            {t.more} <LuArrowRight className="size-4" aria-hidden />
-          </a>
         </div>
-        <div className="reveal delay-1 min-w-0">
-          <div className="float-slow">
-            <AnalysisMock />
+        <div className="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="reveal glass rounded-3xl p-6 sm:p-8">
+            <h3 className="text-[18px] font-[720] text-white">{t.get}</h3>
+            <ul className="mt-5 space-y-4">
+              {t.getItems.map((x) => (
+                <li key={x} className="flex items-start gap-3 text-[15.5px] leading-relaxed text-white/85">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-signal/15 text-signal">
+                    <LuCheck className="size-3.5" strokeWidth={3} aria-hidden />
+                  </span>
+                  {fill(x, { sources: sourcesText(m, liveSources), days })}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="reveal delay-1 rounded-3xl border border-white/10 p-6 sm:p-8">
+            <h3 className="text-[18px] font-[720] text-white">{t.not}</h3>
+            <ul className="mt-5 space-y-4">
+              {notItems.map((x) => (
+                <li key={x} className="flex items-start gap-3 text-[15.5px] leading-relaxed text-white/70">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/60">
+                    <LuMinus className="size-3.5" aria-hidden />
+                  </span>
+                  {x}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-[14px]">
+              <a href={lp('/underleverandorer')} className="inline-flex min-h-6 items-center gap-1 font-semibold text-signal no-underline hover:text-white">
+                {t.links} <LuArrowRight className="size-3.5" aria-hidden />
+              </a>
+              <a href={lp('/personvern')} className="inline-flex min-h-6 items-center gap-1 font-semibold text-signal no-underline hover:text-white">
+                {t.privacy} <LuArrowRight className="size-3.5" aria-hidden />
+              </a>
+            </p>
           </div>
         </div>
       </Wrap>
@@ -177,14 +327,16 @@ function Industries({ market }: { market: MarketSnapshot }) {
   );
 }
 
-export function HomePage({ market }: { market: MarketSnapshot }) {
+export function HomePage({ market, showcase }: { market: MarketSnapshot; showcase: Showcase | null }) {
   const from = Math.min(...PAID_PLANS.map((p) => PLANS[p].priceNok ?? Number.POSITIVE_INFINITY));
   return (
     <PublicLayout>
       <Hero market={market} />
       <BuyerTicker buyers={market.topBuyers} />
-      <Steps />
-      <Product />
+      <Why />
+      <Journey showcase={showcase} />
+      <Compare />
+      <Openness />
       <Industries market={market} />
       <FinalCta next={market.board[0]?.deadlineAt ?? null} now={market.at} fromPrice={from} />
     </PublicLayout>

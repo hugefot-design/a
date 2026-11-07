@@ -377,3 +377,28 @@ kostnader, ingen endring i Render eller Supabase.
 - Tester: `tests/integration/admin-access.test.ts` (fant at vernet virker: uten privat lagring av simulerte svar feiler
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
+
+## Ny forside og posisjonering (7. november 2026)
+
+**«Ikke bare finn anbudet. Finn ut om det er verdt å vinne.»** Bare frontend og tekst – ingen endring i priser,
+planer, betaling, database, API-er eller integrasjoner. **Ikke rullet ut** (venter på eiers godkjenning).
+
+- **Forsiden:** ny toppseksjon; «Hvorfor AnbudRadar» med sju fordeler og planen hver finnes i (regnes ut fra planene);
+  kundereisen i seks steg vist med **ekte, offentlige data** (krav ordrett fra en åpen kunngjøring, markedspris fra
+  tildelinger, kontrakter som utløper – ingen leverandørnavn); sammenligning med søk og varsling som funksjon (ikke
+  navngitte tjenester); «Dette får dere – og dette får dere ikke». Fjernet: et oppdiktet AI-eksempel og oppdiktede
+  illustrasjoner, og påstanden «gratis med alt» (prøveperioden gjelder Profesjonell).
+- **AI markedsføres ikke** så lenge ekte AI er av: funksjonssiden viser AI-kortet bare med ekte leverandør; prissiden
+  sier at AI-funksjonene i planene ikke er slått på; registreringssiden lover ikke lenger AI-sammendrag.
+- **Funksjonssiden:** ni funksjoner i samme rekkefølge som fordelene; ingen AI-løfter.
+- **Engelsk, svensk og dansk:** oversatt, og sier at bare norske anbud dekkes og at appen er på norsk.
+- **Delingsbildet** (lenker på LinkedIn o.l.) er laget på nytt med ny overskrift på fire språk.
+- **Navnerisiko:** [NAVNERISIKO.md](NAVNERISIKO.md) – anbudsradar.no (FOA) i samme marked. **Påstandsregister:**
+  [MARKEDSFORING.md](MARKEDSFORING.md).
+- **Kontrollert:** desktop (1440 px), nettbrett (iPad) og mobil (iPhone 13) for forside, funksjoner, priser,
+  registrering og /en, /sv, /da – ingen vannrett rulling, ingen JavaScript-feil, trykkflater minst 24 px (unntatt
+  avkrysningsboksen for vilkår, som har klikkbar tekst). Forsiden har ca. 1 000 synlige ord (testgrense 1 300).
+- **Tester:** `tests/integration/showcase.test.ts` (ekte data, ingen leverandørnavn, ingen AI-løfter, engelsk side),
+  `tests/unit/showcase.test.ts`, oppdatert `public-pages.test.ts` og `e2e/flow.test.ts`.
+- **IKKE VERIFISERT i produksjon:** eksemplene i kundereisen er prøvd mot ekte TED-data lokalt. I produksjon velges
+  helst en norsk Doffin-kunngjøring – se forsiden etter utrulling.

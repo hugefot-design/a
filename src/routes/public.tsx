@@ -4,6 +4,7 @@ import { env, isProd } from '@/lib/env';
 import { rateLimit } from '@/lib/rate-limit';
 import { queueEmail } from '@/lib/email';
 import { countyOverview, industryListing, industryRegionCounts, marketSnapshot, noticeSpecimen } from '@/domain/tenders/market';
+import { siteShowcase } from '@/domain/tenders/showcase';
 import { industryIdFromSlug, industryRegionPath, industrySlugNb, MIN_OPEN_FOR_INDEXING, regionCodeFromSlug, regionPath, REGION_SLUG } from '@/domain/slugs';
 import { CountiesPage, CountyPage } from '@/ui/pages/counties';
 import { fill } from '@/i18n/format';
@@ -66,7 +67,8 @@ function breadcrumbs(items: [name: string, path: string][]) {
 export function registerPublicRoutes(router: Router): void {
   router.get('/', 'public', async (ctx) => {
     const t = messages(ctx.locale);
-    return render(ctx, <HomePage market={await marketSnapshot()} />, { title: t.meta.homeTitle, description: t.meta.homeDescription });
+    const [market, showcase] = await Promise.all([marketSnapshot(), siteShowcase()]);
+    return render(ctx, <HomePage market={market} showcase={showcase} />, { title: t.meta.homeTitle, description: t.meta.homeDescription });
   });
   router.get('/funksjoner', 'public', async (ctx) =>
     render(ctx, <FeaturesPage specimen={await noticeSpecimen()} />, { title: messages(ctx.locale).meta.features }),

@@ -102,7 +102,7 @@ export function NoticeExample({ s }: { s: NoticeSpecimen }) {
             ))}
             {s.sourceUrl ? (
               <li className="pl-[2.5rem]">
-                <a href={s.sourceUrl} rel="noopener" className="inline-flex items-center gap-1 text-[14px] font-semibold">
+                <a href={s.sourceUrl} rel="noopener" className="inline-flex min-h-6 items-center gap-1 py-0.5 text-[14px] font-semibold">
                   {fill(t.open, { source: sourceName })} <LuArrowUpRight className="size-4" aria-hidden />
                 </a>
               </li>

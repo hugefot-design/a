@@ -33,11 +33,20 @@ test('alle offentlige sider svarer og har nøyaktig én h1', async () => {
   }
 });
 
-test('forsiden bygger på ekte data og merker illustrasjonene', async () => {
+test('forsiden: tydelig posisjonering, ekte data og ingen AI-løfter når AI er av', async () => {
   const page = await get('/');
-  assert.match(page.body, /<h1[^>]*>[\s\S]*Alle offentlige anbud\.[\s\S]*Bare de som passer deg\.[\s\S]*<\/h1>/);
-  // Illustrasjonene av appen er merket som eksempler; tallene og anbudene er ekte.
-  assert.match(page.body, /Eksempel/);
+  assert.match(page.body, /<h1[^>]*>[\s\S]*Ikke bare finn anbudet\.[\s\S]*Finn ut om det er verdt å vinne\.[\s\S]*<\/h1>/);
+  for (const section of ['Hvorfor AnbudRadar', 'Slik fungerer det', 'Forskjellen', 'Åpenhet']) assert.ok(page.body.includes(section), section);
+  // Sju fordeler, hver med planen den finnes i (regnet ut fra planene).
+  for (const t of ['Intelligent anbudsmatching', 'Risiko før tilbud', 'Lønnsomhetsanalyse', 'Markedsinnsikt', 'Resultater og læring', 'Kapasitetsoversikt', 'Tilbudsarbeid']) {
+    assert.ok(page.body.includes(t), t);
+  }
+  assert.match(page.body.replaceAll('<!-- -->', ''), /Med i Profesjonell og høyere/);
+  // Testmiljøet bruker simulert AI: den skal ikke markedsføres som ekte – og det skal stå at AI ikke er slått på.
+  assert.doesNotMatch(page.body, /AI leser kunngjøringen/);
+  assert.match(page.body, /AI-sammendrag og AI-utkast er ikke slått på ennå/);
+  // Sammenligningen sier ingenting om bestemte tjenester.
+  assert.match(page.body, /ikke en bestemt tjeneste/);
   assert.match(page.body, /role="img" aria-label="Åpne anbud per fylke/);
   assert.doesNotMatch(page.body.replaceAll('<!-- -->', ''), />null/);
   // Forsiden skal være lett å lese: korte tekster (detaljene står på undersidene).
@@ -46,7 +55,8 @@ test('forsiden bygger på ekte data og merker illustrasjonene', async () => {
     .replace(/<details[\s\S]*?<summary[^>]*>([\s\S]*?)<\/summary>[\s\S]*?<\/details>/g, ' $1 ')
     .replace(/<[^>]+>/g, ' ');
   const words = text.split(/\s+/).filter((w) => /\p{L}|\d/u.test(w)).length;
-  assert.ok(words < 700, `forsiden har ${words} synlige ord – hold den kort`);
+  // Eier ba 7.11.2026 om fordeler, kundereise, sammenligning og åpenhet på forsiden – hver tekst skal likevel være kort.
+  assert.ok(words < 1300, `forsiden har ${words} synlige ord – hold den kort`);
   // Ingen påstander om kunder eller omtaler vi ikke kan dokumentere.
   assert.doesNotMatch(page.body, /fornøyde kunder|kundene våre sier|★/i);
 });

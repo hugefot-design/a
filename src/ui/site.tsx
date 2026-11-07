@@ -1,11 +1,10 @@
 /**
- * Byggeklosser for nettsiden: radaren, kort for nye anbud, den rullende raden med oppdragsgivere,
- * illustrasjonene av appen (merket «Eksempel») og den mørke avslutningen.
- * Alt som vises som fakta, kommer fra databasen. Illustrasjoner er tydelig merket.
+ * Byggeklosser for nettsiden: radaren, kort for nye anbud, den rullende raden med oppdragsgivere og den
+ * mørke avslutningen. Alt som vises som fakta, kommer fra databasen (kundereisen: src/ui/showcase.tsx).
  */
 import { industrySlugNb } from '@/domain/slugs';
 import type { ReactNode } from 'react';
-import { LuArrowRight, LuBell, LuCheck, LuCircleAlert, LuFileText, LuSparkles } from 'react-icons/lu';
+import { LuArrowRight, LuBell, LuFileText } from 'react-icons/lu';
 import type { BoardRow, MarketSnapshot } from '@/domain/tenders/market';
 import { fill, int, plural, rich, shortDate, timeUntil } from '@/i18n/format';
 import { cn } from './components';
@@ -162,144 +161,6 @@ export function BuyerTicker({ buyers }: { buyers: string[] }) {
         </div>
       </Wrap>
     </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Illustrasjoner av appen (merket «Eksempel»)
-// ---------------------------------------------------------------------------
-export function ProfileVisual() {
-  const { m } = useUi();
-  const t = m.home.steps;
-  return (
-    <div className="rounded-2xl border border-line bg-white p-4 shadow-sm">
-      <p className="text-[13px] font-semibold text-night">{t.profileTitle}</p>
-      <dl className="mt-3 space-y-2">
-        {t.chips.map((c, i) => (
-          <div key={c} className="flex items-center justify-between gap-3">
-            <dt className="text-[12.5px] text-muted">{t.profileLabels[i]}</dt>
-            <dd className={cn('rounded-full px-2.5 py-1 text-[12.5px] font-semibold', i === 0 ? 'bg-night text-white' : 'bg-night/6 text-night')}>{c}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
-
-export function MatchVisual() {
-  const { m } = useUi();
-  const scores = [86, 74, 61];
-  return (
-    <ul className="space-y-2">
-      {m.home.steps.matches.map((row, i) => (
-        <li key={row.title} className="rounded-xl border border-line bg-white px-3.5 py-2 shadow-sm">
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="truncate text-[13px] font-semibold text-night">{row.title}</p>
-            <span className="font-mono text-[13px] font-medium text-night">{scores[i]}</span>
-          </div>
-          <div className="mt-1.5 flex items-center gap-2.5">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-night/8">
-              <div className="fill-bar h-full rounded-full bg-signal-strong" style={{ ['--fill' as string]: (scores[i]! / 100).toString() }} />
-            </div>
-            <span className="shrink-0 truncate text-[11.5px] text-muted">{row.meta}</span>
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-export function ReminderVisual() {
-  const { m } = useUi();
-  const t = m.home.steps;
-  return (
-    <div className="flex flex-col gap-2">
-      {t.reminders.map((label, i) => (
-        <div
-          key={label}
-          className={cn(
-            'flex items-center gap-3 rounded-xl border px-3.5 py-2.5 shadow-sm',
-            i === 1 ? 'border-night bg-night text-white' : 'border-line bg-white text-night',
-          )}
-        >
-          <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-full', i === 1 ? 'bg-signal text-night' : 'bg-night/6 text-muted')}>
-            <LuBell className="size-4" aria-hidden />
-          </span>
-          <span className="min-w-0">
-            <span className={cn('block text-[13px] font-semibold', i !== 1 && 'text-muted')}>{label}</span>
-            {i === 1 ? <span className="block truncate text-[12px] text-white/70">{t.remindText}</span> : null}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** Et vindu fra appen: analysen av et anbud. Eksempeldata, merket. */
-export function AnalysisMock() {
-  const { m } = useUi();
-  const t = m.home.product;
-  return (
-    <div className="relative overflow-hidden rounded-[22px] bg-white text-night shadow-[0_50px_120px_-40px_rgba(0,0,0,0.85)] ring-1 ring-white/10">
-      <div className="flex items-center justify-between gap-3 border-b border-line bg-paper px-4 py-3">
-        <span className="flex gap-1.5" aria-hidden>
-          <span className="size-2.5 rounded-full bg-[#ff5f57]" />
-          <span className="size-2.5 rounded-full bg-[#febc2e]" />
-          <span className="size-2.5 rounded-full bg-[#28c840]" />
-        </span>
-        <ExampleTag>{t.example}</ExampleTag>
-      </div>
-      <div className="p-5 sm:p-7">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">{t.mockBuyer}</p>
-            <h3 className="mt-1 text-[20px] font-[740] leading-snug tracking-[-0.015em] sm:text-[22px]">{t.mockTitle}</h3>
-          </div>
-          <div className="flex items-center gap-3 rounded-2xl bg-night px-3.5 py-2 text-white">
-            <span className="text-[12px] leading-tight text-white/70">{t.score}</span>
-            <span className="font-mono text-[22px] font-medium text-signal">86</span>
-          </div>
-        </div>
-        <dl className="mt-5 grid grid-cols-2 gap-3 text-[13px]">
-          <div className="rounded-xl bg-paper px-3 py-2.5">
-            <dt className="text-muted">{t.deadline}</dt>
-            <dd className="font-semibold">{t.deadlineText}</dd>
-          </div>
-          <div className="rounded-xl bg-paper px-3 py-2.5">
-            <dt className="text-muted">{t.value}</dt>
-            <dd className="font-semibold">{t.valueText}</dd>
-          </div>
-        </dl>
-        <div className="mt-5 flex gap-1 overflow-hidden border-b border-line text-[13px] font-semibold">
-          {t.tabs.map((tab, i) => (
-            <span key={tab} className={cn('whitespace-nowrap px-3 pb-2.5', i === 0 ? 'border-b-2 border-night text-night' : 'text-muted')}>
-              {tab}
-            </span>
-          ))}
-        </div>
-        <p className="mt-4 flex gap-2 text-[14px] leading-relaxed">
-          <LuSparkles className="mt-0.5 size-4 shrink-0 text-signal-strong" aria-hidden />
-          {t.summary}
-        </p>
-        <ul className="mt-4 space-y-2">
-          {t.reqs.map((r, i) => (
-            <li key={r} className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2.5 text-[13.5px]">
-              <span className="flex min-w-0 items-center gap-2.5">
-                {i < 2 ? <LuCheck className="size-4 shrink-0 text-ok" aria-hidden /> : <LuCircleAlert className="size-4 shrink-0 text-urgent" aria-hidden />}
-                <span className="truncate">{r}</span>
-              </span>
-              <span className="flex shrink-0 items-center gap-2 text-[12px]">
-                <span className="hidden items-center gap-1 text-muted sm:inline-flex">
-                  <LuFileText className="size-3.5" aria-hidden />
-                  {fill(t.source, { page: [4, 7, 12][i] ?? 3 })}
-                </span>
-                <span className={cn('rounded-full px-2 py-0.5 font-semibold', i < 2 ? 'bg-ok-soft text-ok' : 'bg-urgent-soft text-urgent')}>{i < 2 ? t.ok : t.check}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
   );
 }
 

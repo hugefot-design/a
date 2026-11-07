@@ -8,6 +8,7 @@ import {
   LuArrowRight,
   LuBellRing,
   LuCalculator,
+  LuCalendarRange,
   LuChartColumn,
   LuCheck,
   LuDatabase,
@@ -21,7 +22,9 @@ import {
   LuRadar,
   LuSearch,
   LuShieldCheck,
+  LuSparkles,
   LuTelescope,
+  LuTrophy,
 } from 'react-icons/lu';
 import { INDUSTRIES, REGION_BY_CODE } from '@/domain/reference';
 import { industryRegionPath, industrySlugNb, regionPath } from '@/domain/slugs';
@@ -66,11 +69,14 @@ function Points({ items, dark = false, className }: { items: string[]; dark?: bo
 // Funksjoner
 // ---------------------------------------------------------------------------
 /** Ikonene til funksjonene, i samme rekkefølge som m.features.items. */
-const FEATURE_ICONS: IconType[] = [LuSearch, LuFileSearch, LuGauge, LuBellRing, LuChartColumn, LuListChecks, LuCalculator, LuHandshake];
+// Samme rekkefølge som m.features.items. AI-kortet (LuSparkles) vises bare når ekte AI er slått på.
+const FEATURE_ICONS: IconType[] = [LuSearch, LuGauge, LuFileSearch, LuCalculator, LuCalendarRange, LuChartColumn, LuTrophy, LuListChecks, LuHandshake, LuSparkles];
 
 export function FeaturesPage({ specimen }: { specimen: NoticeSpecimen | null }) {
-  const { user, m, lp } = useUi();
+  const { user, m, lp, aiConfigured, aiIsMock } = useUi();
   const t = m.features;
+  // Simulert AI markedsføres aldri som ekte: AI-kortet vises bare når en ekte leverandør er satt opp.
+  const items = aiConfigured && !aiIsMock ? [...t.items, t.aiItem] : t.items;
   return (
     <PublicLayout>
       <NightHero eyebrow={t.eyebrow} title={t.title} lead={t.lead}>
@@ -85,8 +91,8 @@ export function FeaturesPage({ specimen }: { specimen: NoticeSpecimen | null }) 
       </NightHero>
       <section className="bg-white py-24 sm:py-28">
         <Wrap>
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {t.items.map((f, i) => {
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {items.map((f, i) => {
               const Icon = FEATURE_ICONS[i] ?? LuRadar;
               return (
                 <li key={f.title} className={cn('reveal card-lift flex flex-col rounded-3xl border border-line bg-white p-6', i % 4 === 1 && 'delay-1', i % 4 === 2 && 'delay-2', i % 4 === 3 && 'delay-3')}>
@@ -186,7 +192,8 @@ function PlanCard({ id }: { id: PlanId }) {
 }
 
 export function PricingPage() {
-  const { user, liveSources, trialDays, m, locale, lp } = useUi();
+  const { user, liveSources, trialDays, m, locale, lp, aiConfigured, aiIsMock } = useUi();
+  const aiReal = aiConfigured && !aiIsMock;
   const t = m.pricing;
   const days = plural(locale, m.units.days, trialDays);
   const ent = m.plans.enterprise;
@@ -204,6 +211,12 @@ export function PricingPage() {
               <PlanCard key={id} id={id} />
             ))}
           </div>
+          {aiReal ? null : (
+            <p className="mt-4 flex items-start gap-2 rounded-2xl border border-line bg-white px-5 py-3.5 text-[14px] leading-relaxed text-ink">
+              <LuSparkles className="mt-0.5 size-4 shrink-0 text-navy-600" aria-hidden />
+              {t.aiNote}
+            </p>
+          )}
           <article id="enterprise" className="night mt-4 grid scroll-mt-24 grid-cols-1 gap-8 rounded-3xl p-7 text-white sm:p-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] lg:items-center">
             <div>
               <Kicker dark>{ent.name}</Kicker>
@@ -270,7 +283,7 @@ export function PricingPage() {
             <H2 className="mt-4">{t.faqTitle}</H2>
             <p className="mt-4 text-[17px] text-muted">{rich(t.faqLead, { contact: <a href={lp('/kontakt')}>{t.contactUs}</a> })}</p>
           </div>
-          <FaqList items={[...faqItems(m, { days, sources: sourcesText(m, liveSources, true) }), [m.faq.ai.q, m.faq.ai.a]]} />
+          <FaqList items={[...faqItems(m, { days, sources: sourcesText(m, liveSources, true) }), ...(aiReal ? [[m.faq.ai.q, m.faq.ai.a] as [string, string]] : [])]} />
         </Wrap>
       </section>
       <SignalCta

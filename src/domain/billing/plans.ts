@@ -330,6 +330,18 @@ export function entitlementsFor(plan: PlanId): Entitlements {
   return PLANS[plan].entitlements;
 }
 
+export const PLAN_ORDER: PlanId[] = ['free', 'starter', 'professional', 'business', 'enterprise'];
+
+/** Den billigste planen som gir funksjonen (tall: mer enn 0). Brukes i markedsteksten, så den alltid stemmer med planene. */
+export function cheapestPlanWith(feature: keyof Entitlements): PlanId | null {
+  return (
+    PLAN_ORDER.find((p) => {
+      const v = PLANS[p].entitlements[feature];
+      return typeof v === 'number' ? v > 0 : Boolean(v);
+    }) ?? null
+  );
+}
+
 /**
  * Admin-tilgang: organisasjoner som eies av en plattform-administrator får alle funksjoner (høyeste plan)
  * uten betaling, så administratoren kan bruke og vise frem alle produktene. Påvirker ikke abonnementet
