@@ -395,7 +395,9 @@ planer, betaling, database, API-er eller integrasjoner.
   stegene med ekte data; loggen etter oppstart hadde 0 advarsler og 0 feil.
 - **Funnet i andre kontroll:** én kontrakt på 11 mrd. kr presset de 19 andre sammen ved 0 i markedsprisfiguren, og
   sjekklisten startet midt i en setning. Rettet: svært store kontrakter tegnes ikke inn (er med i medianen, og det
-  står under figuren), og «…» beholdes foran utdrag.
+  står under figuren), og «…» beholdes foran utdrag. **Rullet ut** (versjon `9eebe4b`) og kontrollert på
+  anbudradar.com: figuren går 0–80 mill. kr med noten «1 svært stor kontrakt (over 110 mill. kr) er ikke tegnet inn»;
+  alle sider 200 på mobil og PC, ingen vannrett rulling, ingen JavaScript-feil, 0 advarsler og 0 feil i loggen.
 
 - **Forsiden:** ny toppseksjon; «Hvorfor AnbudRadar» med sju fordeler og planen hver finnes i (regnes ut fra planene);
   kundereisen i seks steg vist med **ekte, offentlige data** (krav ordrett fra en åpen kunngjøring, markedspris fra
