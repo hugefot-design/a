@@ -370,6 +370,10 @@ kostnader, ingen endring i Render eller Supabase.
   for 30 dager, 90 dager eller alle. Bare antall; administratorer og administratorens egen organisasjon er ikke med.
   Største frafall fremheves.
 - **Automatiske tester på GitHub** ved hver endring på arbeidsgrenen. Første kjøring 7.11.2026: grønn.
+- **Rullet ut 7.11.2026 kl. 11:31 UTC** (versjon `f148325`, eiers ja): ingen databaseendringer; ingen advarsler eller
+  feil i loggen etter oppstart; helsesjekk OK; alle offentlige sider svarer 200; Admin → Produkter og Admin →
+  Kundereise er skjult (404) for besøkende. Sidene bak innlogging er **IKKE VERIFISERT i produksjon** (krever totrinn) –
+  dekket av testene og CI.
 - Tester: `tests/integration/admin-access.test.ts` (fant at vernet virker: uten privat lagring av simulerte svar feiler
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
