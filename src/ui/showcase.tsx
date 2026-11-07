@@ -31,11 +31,14 @@ export function AppFrame({ label, href, children, className }: { label: ReactNod
 function Quote({ q }: { q: ShowcaseQuote }) {
   const i = q.match ? q.text.indexOf(q.match) : -1;
   if (i < 0) return <>{q.text}</>;
+  // Uthev hele ordet, ikke bare treffet («minstekrav» i «minstekravene»).
+  let end = i + q.match.length;
+  while (end < q.text.length && /\p{L}/u.test(q.text[end]!)) end++;
   return (
     <>
       {q.text.slice(0, i)}
-      <mark className="rounded bg-marker-soft px-0.5 text-ink">{q.match}</mark>
-      {q.text.slice(i + q.match.length)}
+      <mark className="rounded bg-marker-soft px-0.5 text-ink">{q.text.slice(i, end)}</mark>
+      {q.text.slice(end)}
     </>
   );
 }
