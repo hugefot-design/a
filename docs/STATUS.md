@@ -350,3 +350,8 @@ kostnader, ingen endring i Render eller Supabase.
   Målt mot TED 7.11.2026: Sverige 2 341 kunngjøringer per måned (Norge 1 144). Test: `tests/integration/ted-country.test.ts`.
 - **OCR:** ikke bygget – Admin → Systemhelse teller nå opplastede dokumenter som ikke kan leses, som grunnlag.
 - **GitHub Actions** oppdatert til `checkout@v5`, `setup-node@v5` og `github-script@v8` (Node 24).
+- **Rullet ut til produksjon 7.11.2026 kl. 10:55 UTC** (versjon `5fe650c`, eiers ja): migreringene 0018–0022 kjørt i
+  byggesteget uten feil; server og bakgrunnsjobber startet; ingen advarsler eller feil i loggen etter oppstart; helsesjekk
+  OK; alle offentlige sider, språkversjoner og et utvalg bransje- og fylkessider svarer 200; admin er fortsatt skjult
+  (404) for besøkende; driftssjekken på GitHub grønn mot ny versjon. Innloggede sider er **IKKE VERIFISERT i produksjon**
+  (krever innlogging med totrinn) – de er dekket av testene over.

@@ -27,7 +27,7 @@ nederst) – sjekk dem før kjøp, de endres.
 3. **Gjør repoet privat** (GitHub → Settings → General → Danger Zone → Change visibility). I dag kan alle lese koden og
    loggene fra GitHub Actions. Ingen hemmeligheter ligger der, men privat er tryggere. Kostnad: jobbene bruker da av
    gratisminuttene (ca. 900 av 2 000 i måneden, se DRIFT.md §8).
-4. **Neste versjon ut:** endringene ligger klare på grenen, men er ikke rullet ut (du bestemmer når).
+4. **Rullet ut 7.11.2026** (versjon `5fe650c`) etter ditt ja: feilovervåkingen og veikartpunkt 1–11 er i produksjon.
 
 ---
 
