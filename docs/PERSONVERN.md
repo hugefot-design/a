@@ -45,6 +45,7 @@ Kunngjøringsdata er offentlige, men kan inneholde navn på kontaktpersoner og l
 | Ukesbrev: ubekreftede påmeldinger | 7 dager (bekreftede slettes straks ved avmelding) |
 | Besøkstelling (ingen persondata) | 25 måneder |
 | Utløpte innloggings- og passkey-utfordringer | 1 dag / straks |
+| Feillogg (Admin → Feil; e-post, lange tall og nøkler fjernet, ingen bruker-ID) | Løste feil 90 dager, andre 180 dager uten nye tilfeller |
 
 Regler: `applyRetention()` i `src/domain/ops/tasks.ts`.
 

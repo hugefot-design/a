@@ -52,11 +52,21 @@ Begrensninger: tjenesten sover etter en stund uten besøk (første besøk tar 30
    Migreringen stopper med en tydelig feil hvis rollen `anbudradar_app` mangler. Den fjerner også Supabase-rollene `anon`/`authenticated` sin tilgang til tabellene, så databasen ikke kan leses via Supabase sitt auto-API.
 5. Slå på daglig sikkerhetskopi (inkludert i Pro). Vurder PITR når dere har betalende kunder.
 
-## 2. Fillagring (Supabase Storage)
+## 2. Fillagring (Supabase Storage) – gjør dette før kundene laster opp dokumenter
 
-1. Lag en **privat** bøtte `anbudradar` (Storage → New bucket, ikke «public»).
-2. Sett `STORAGE_DRIVER=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` og `SUPABASE_STORAGE_BUCKET`.
-   Service role-nøkkelen gir full tilgang – den skal bare ligge i servermiljøet.
+Uten dette lagres opplastede filer (konkurransegrunnlag, tilbudsvedlegg) på serverdisken hos Render. Den tømmes ved
+hver ny versjon og når gratistjenesten sover – filene forsvinner. **Admin → Oversikt → Klar for lansering** viser hvor
+filene lagres nå («Filer»). Gratisplanen hos Supabase har 1 GB fillagring; ingen ny leverandør.
+
+1. Supabase → **Storage** → **New bucket** → navn `anbudradar` → la **Public bucket** være **av** → *Create bucket*.
+2. Supabase → **Project Settings** → **Data API** (eldre visning: **API**): kopier *Project URL*. Under **API Keys**
+   (fanen «Legacy API keys» hvis du ser to faner): kopier **service_role** (hemmelig – den gir full tilgang og skal bare
+   ligge i servermiljøet, aldri i koden eller i chat).
+3. Render → **Environment Groups** → gruppen tjenesten bruker → legg til:
+   `STORAGE_DRIVER=supabase`, `SUPABASE_URL=<Project URL>`, `SUPABASE_SERVICE_ROLE_KEY=<service_role>`,
+   `SUPABASE_STORAGE_BUCKET=anbudradar`. Lagre. Endringen tar effekt ved neste utrulling (du bestemmer når).
+4. Kontroll: Admin → Oversikt skal vise «Filer: Klar» (appen sjekker at bøtta finnes og at den er privat; en offentlig
+   bøtte gir rød advarsel).
 
 ## 3. Webapp og arbeider (Render)
 
@@ -121,20 +131,53 @@ Sjekk deretter **Admin → Kilder**: en kilde markeres «verifisert» først nå
 - [ ] Profit Intelligence: samtykketeksten for partnerprofiler og den konkurranserettslige veiledningen gjennomgått av advokat
 - [ ] CI grønn på `main` før første produksjonsdeploy
 
-## 6. Sikkerhetskopi og gjenoppretting
+## 6. Sikkerhetskopi og gjenoppretting (gratis, automatisk)
 
-- **Daglig sikkerhetskopi** er inkludert i Supabase Pro (7 dager). Slå på **PITR** (gjenoppretting til et tidspunkt) når dere har betalende kunder.
-- **Egen kopi utenfor Supabase** (anbefalt ukentlig, lagres kryptert et annet sted):
-  ```bash
-  pg_dump "$DATABASE_ADMIN_URL" --format=custom --no-owner --file=anbudradar-$(date +%F).dump
-  ```
-- **Test gjenoppretting minst én gang før lansering**, til en ny tom database:
-  ```bash
-  createdb anbudradar_restore_test
-  pg_restore --no-owner --dbname=anbudradar_restore_test anbudradar-ÅÅÅÅ-MM-DD.dump
-  ```
-  Kontroller at `schema_migrations` har alle migreringene, og at antall rader i `organizations`, `subscriptions` og `tenders` stemmer.
-- **Opplastede filer** ligger i Supabase Storage og er ikke med i databasekopien. Dokumentene kan lastes opp på nytt av kundene, men vurder periodisk kopi av bøtta.
+Gratisplanen hos Supabase har ingen sikkerhetskopi. Jobben `.github/workflows/sikkerhetskopi.yml` lager derfor en selv,
+hver natt kl. 02:23 UTC:
+
+1. `pg_dump` av databasen, kryptert med AES-256 (gpg) og en passordfrase bare du har (`scripts/backup/backup.sh`).
+2. Opplasting til den **private** bøtta `sikkerhetskopier` i Supabase Storage; kopier eldre enn 30 dager slettes
+   (`scripts/backup/upload.sh`). Jobben nekter å bruke en offentlig bøtte.
+3. **Generalprøve hver natt:** kopien legges inn i en tom PostgreSQL på GitHub sin maskin, tabellene, migreringene og
+   radnivåsikkerheten kontrolleres, og migreringene i koden kjøres mot kopien (`scripts/backup/restore-check.sh`).
+   Feiler noe, åpnes GitHub-saken «Driftsvarsel: sikkerhetskopi feilet» (GitHub sender e-post); den lukkes av seg selv
+   neste gang kopien går bra.
+
+Til hemmelighetene er lagt inn, hopper jobben over med en advarsel. Repoet er offentlig, derfor legges kopien aldri som
+GitHub-artefakt, og loggen viser bare filnavn, størrelse og antall tabeller/migreringer – ikke antall kunder eller brukere.
+
+**Før du slår den på – personvern:** kopien lages og prøves på GitHub sine maskiner (GitHub/Microsoft, kan være i USA).
+Databasen behandles der i noen minutter hver natt (kryptert før lagring, men lesbar i minnet under kopiering og
+generalprøve). GitHub blir dermed **underleverandør (databehandler)** og må stå i listen på `/underleverandorer` før du
+legger inn hemmelighetene. Si fra, så legger jeg den inn.
+
+**Oppsett (ca. 10 minutter):**
+
+1. Supabase → Storage: du trenger ikke lage bøtta – jobben lager `sikkerhetskopier` som privat første gang.
+2. Lag en passordfrase på minst 24 tegn (f.eks. fem tilfeldige ord). **Skriv den ned og oppbevar den trygt utenfor
+   GitHub og Supabase** (passordbehandler eller papir i safe). Uten den kan ingen – heller ikke du – åpne kopiene.
+3. GitHub → repoet → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**, fire ganger:
+   - `BACKUP_DATABASE_URL` = samme verdi som `DATABASE_ADMIN_URL` i Render (Session pooler, port 5432).
+   - `BACKUP_PASSPHRASE` = passordfrasen fra steg 2.
+   - `SUPABASE_URL` = *Project URL*.
+   - `SUPABASE_SERVICE_ROLE_KEY` = nøkkelen *service_role*.
+4. GitHub → **Actions** → **Sikkerhetskopi** → **Run workflow**. Etter 3–5 minutter skal kjøringen være grønn, og
+   bøtta `sikkerhetskopier` i Supabase skal ha en fil `db/anbudradar-ÅÅÅÅ-MM-DDTHHMMZ.dump.gpg`.
+
+**Gjenoppretting (når uhellet er ute):**
+
+1. Last ned siste kopi fra Supabase → Storage → `sikkerhetskopier` → `db/`.
+2. Lag et nytt, tomt Supabase-prosjekt (eller en tom database) og kjør
+   `BACKUP_PASSPHRASE=… SHOW_COUNTS=1 scripts/backup/restore-check.sh kopi.dump.gpg "<tilkobling til TOM database>"`.
+   Skriptet nekter å skrive til en database som ikke er tom, og viser antall organisasjoner, brukere og anbud.
+3. Kjør `db/supabase-app-role.sql` i det nye prosjektet (passord for `anbudradar_app`), sett nye `DATABASE_URL` og
+   `DATABASE_ADMIN_URL` i Render, og rull ut.
+
+**Begrensninger:** kopien tas én gang i døgnet (inntil ett døgns arbeid kan gå tapt), og filene i bøtta `anbudradar` er
+ikke med. Supabase Pro (25 USD/mnd) gir i tillegg Supabases egne daglige kopier, og PITR gir gjenoppretting til et
+bestemt tidspunkt. GitHub skrur av planlagte jobber i offentlige repoer etter 60 dager uten aktivitet i repoet – da
+kommer det en e-post fra GitHub, og jobben slås på igjen under **Actions**.
 
 ## 6b. Totrinnsinnlogging, passkeys og sikkerhetsvarsler
 
@@ -217,11 +260,24 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
 
 `.github/workflows/ci.yml` kjører typesjekk, enhetstester, integrasjonstester mot PostgreSQL 16, produksjonsbygg og ende-til-ende i Chromium ved pull request og push til `main`. Ingen hemmeligheter trengs (AI, e-post og Stripe er simulert i `.env.test`). GitHub Actions er gratis for offentlige repoer; for private repoer bruker kjøringene av kontoens inkluderte minutter (ca. 6–10 minutter per kjøring).
 
-## 9. Overvåking
+To jobber til går av seg selv: **Drift** (hver time, se under) og **Sikkerhetskopi** (hver natt, se avsnitt 6). Blir
+repoet privat, bruker de av gratisminuttene (2 000 per måned): Drift ca. 1 minutt per kjøring (ca. 750 i måneden) og
+Sikkerhetskopi 3–5 minutter per natt (ca. 150) – til sammen innenfor gratiskvoten, men CI-kjøringer kommer i tillegg.
 
-- Oppetidssjekk mot `/api/health` hvert minutt (f.eks. Better Stack eller UptimeRobot). Svarer `503` når databasen ikke svarer.
-- **Admin → Helse**: arbeiderens siste livstegn, jobbkø, siste henting per kilde, e-postkø og feilede jobber.
-- Varsle på loggmeldingene `worker_tick_failed`, `stripe_webhook_failed`, `email_send_failed` og `ai_cost_limit_reached`.
+## 9. Overvåking (gratis)
+
+- **Oppetid – `.github/workflows/drift.yml`:** hver time (sju minutter over) kalles `/api/health`. Svarer den ikke med
+  200 etter seks forsøk (ca. 2 minutter, siden en kald start på gratisplanen tar tid), åpnes GitHub-saken
+  «Driftsvarsel: AnbudRadar svarer ikke», og GitHub sender e-post til deg. Saken lukkes av seg selv når siden svarer
+  igjen. Kallet vekker også tjenesten, så henting av anbud, varsler og e-post tar igjen det som er forfalt minst én gang i
+  timen (ca. 200 av 750 gratistimer i måneden hos Render). Annen adresse: sett repo-variabelen `APP_URL`.
+- **Feil i appen – Admin → Feil:** alt som logges som feil (sider som krasjer, bakgrunnsjobber som gir opp, henting,
+  Stripe, e-post) samles i databasen, gruppert per type med teller. E-postadresser, lange tall og nøkler fjernes før
+  lagring, og ingen bruker-ID lagres. Du får **én e-post i timen** når nye feil oppstår (til `ADMIN_NOTIFICATION_EMAIL`),
+  og høyst én gang i døgnet for feil som fortsetter. «Merk som løst» når feilen er rettet; kommer den tilbake, varsles
+  den igjen. Løste feil slettes etter 90 dager. Ingen ny leverandør.
+- **Admin → Systemhelse**: arbeiderens siste livstegn, jobbkø, e-postkø, feilede jobber, databasestørrelse og hvor mange
+  opplastede dokumenter som ikke kunne leses (grunnlag for å vurdere OCR).
 
 ## Logger og feilsøking
 

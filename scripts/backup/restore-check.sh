@@ -35,7 +35,12 @@ read -r TABLES MIGRATIONS ORGS USERS TENDERS < <("$PSQL" "$TARGET" -At -F ' ' -c
          (select count(*) from organizations),
          (select count(*) from users),
          (select count(*) from tenders)")
-echo "Gjenopprettet: $TABLES tabeller, $MIGRATIONS migreringer, $ORGS organisasjoner, $USERS brukere, $TENDERS anbud."
+# Repoet er offentlig, og det er loggen fra GitHub Actions også: antall kunder og brukere skrives bare ut lokalt (SHOW_COUNTS=1).
+if [ "${SHOW_COUNTS:-0}" = "1" ]; then
+  echo "Gjenopprettet: $TABLES tabeller, $MIGRATIONS migreringer, $ORGS organisasjoner, $USERS brukere, $TENDERS anbud."
+else
+  echo "Gjenopprettet: $TABLES tabeller og $MIGRATIONS migreringer (antall rader vises bare med SHOW_COUNTS=1)."
+fi
 if [ "$TABLES" -lt 30 ] || [ "$MIGRATIONS" -lt 1 ]; then
   echo "Gjenopprettingen ser ufullstendig ut." >&2
   exit 1

@@ -7,6 +7,9 @@
  *   npm run ingest -- --source doffin --dry-run --limit 50
  *   npm run ingest -- --source ted --dry-run --sample 5      (vis flere eksempler)
  *
+ * Mål et annet land i TED før det eventuelt slås på (bare dry-run – appen viser bare norske anbud):
+ *   npm run ingest -- --source ted --country SWE --dry-run --since 2026-10-08 --until 2026-11-07 --sample 0
+ *
  * Enkeltkunngjøringer fra Doffin per ID (eForms-XML, maks 10 nedlastinger per minutt):
  *   npm run ingest -- --source doffin --id 2026-123456 --dry-run                     (vis, LAGRER INGENTING)
  *   npm run ingest -- --source doffin --id 2026-123456 --dry-run --save-raw ./storage/doffin-xml
@@ -39,7 +42,7 @@ function args(name: string): string[] {
 async function main() {
   const source = arg('source');
   if (source !== 'ted' && source !== 'doffin') {
-    console.error('Bruk: npm run ingest -- --source ted|doffin [--since ÅÅÅÅ-MM-DD] [--until ÅÅÅÅ-MM-DD] [--limit N] [--dry-run] [--sample N] [--id DOFFIN-ID[,…]] [--save-raw MAPPE] [--enrich [--plan]]');
+    console.error('Bruk: npm run ingest -- --source ted|doffin [--since ÅÅÅÅ-MM-DD] [--until ÅÅÅÅ-MM-DD] [--limit N] [--dry-run] [--sample N] [--country SWE] [--id DOFFIN-ID[,…]] [--save-raw MAPPE] [--enrich [--plan]]');
     process.exit(2);
   }
   const sinceArg = arg('since');
@@ -124,6 +127,7 @@ async function main() {
     limit: arg('limit') ? Number(arg('limit')) : undefined,
     dryRun,
     force: true,
+    country: arg('country'),
   });
   const sampleCount = Number(arg('sample') ?? 3);
   console.log(

@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 7. november 2026 (veikartpunkt 1–11 – se [VEIKART.md](VEIKART.md)).
+Sist oppdatert 7. november 2026 (veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -9,12 +9,13 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 181 av 181 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 164 av 164 bestått – 7.11.2026 |
+| Enhetstester | 195 av 195 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 171 av 171 bestått – 7.11.2026 |
 | Ende-til-ende i nettleser | 5 av 5 bestått (inkl. appen på telefon) – 7.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av anbudssiden (regelverk/klima) og Admin → Datakilder (XML-berikelse), 1280 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
+| Visuell kontroll av Admin → Feil, 1280 px og iPhone 13 | Ingen JavaScript-feil, ingen horisontal rulling, ingen e-postadresser synlige – 7.11.2026 |
 | Visuell kontroll av de offentlige sidene etter redesign (forside, funksjoner, priser, bransjer, om, kontakt, personvern), 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 
 **Mutasjonssjekker** (testene skal feile når beskyttelsen fjernes – det gjorde de):
@@ -325,3 +326,27 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 - **Tester:** `tests/unit/chat.test.ts` (testmodus-svar, sitatkontroll med feil sitat og feil side, «står ikke i
   kildene») og `tests/integration/chat.test.ts` (svar med kilde, hurtigbuffer uten ny kostnad – fant og rettet at annen
   skrivemåte kostet på nytt –, private svar, tomt spørsmål). **IKKE VERIFISERT** med ekte AI-leverandør.
+
+## Gratis drift: sikkerhetskopi, oppetid, feilovervåking og fillagring (7. november 2026)
+
+Svar på «gjør alt som er gratis eller finn alternativer» (se [FORSLAG.md](FORSLAG.md)). Ingen nye leverandører, ingen
+kostnader, ingen endring i Render eller Supabase.
+
+- **Sikkerhetskopi hver natt** (`.github/workflows/sikkerhetskopi.yml`, `scripts/backup/`): kryptert kopi (AES-256) til
+  en privat bøtte i Supabase Storage, 30 dager, med generalprøve (gjenoppretting i tom database + migreringene kjørt mot
+  kopien). Prøvd lokalt: 68 tabeller, 22 migreringer, radnivåsikkerhet på alle tabeller; feil passordfrase og ikke-tom
+  måldatabase avvises; loggen viser ikke antall kunder (repoet er offentlig). Kjørt på GitHub 7.11.2026: hoppet over med
+  advarsel fordi hemmelighetene mangler – som planlagt. **IKKE VERIFISERT mot produksjonsdatabasen.**
+- **Helsesjekk hver time** (`.github/workflows/drift.yml`): vekker tjenesten og åpner/lukker GitHub-saken «Driftsvarsel».
+  **Verifisert mot produksjon** 7.11.2026: `{"ok":true,"db":"ok","ms":21}`.
+- **Feilovervåking i appen** (Admin → Feil, `src/domain/ops/errors.ts`, migrering `0022`): alt som logges som feil samles
+  gruppert, uten e-post, lange tall, nøkler eller bruker-ID; én e-post i timen ved nye feil; «Merk som løst», og feilen
+  åpnes igjen hvis den kommer tilbake. Bakgrunnsjobber som gir opp, logges nå som feil. Lesbare feilsteder i loggene
+  (`--enable-source-maps` i `npm start`/`npm run worker`). Tester: `tests/unit/error-tracking.test.ts`,
+  `tests/integration/error-tracking.test.ts`.
+- **Fillagring:** Admin → Oversikt sjekker om filene lagres i en privat Supabase-bøtte eller på serverdisken (der de
+  forsvinner). I produksjon i dag: serverdisken – oppsett i [DRIFT.md](DRIFT.md) §2.
+- **Flere land via TED:** dry-run per land med volum og plassbehov (`--country SWE`); lagring av andre land er sperret.
+  Målt mot TED 7.11.2026: Sverige 2 341 kunngjøringer per måned (Norge 1 144). Test: `tests/integration/ted-country.test.ts`.
+- **OCR:** ikke bygget – Admin → Systemhelse teller nå opplastede dokumenter som ikke kan leses, som grunnlag.
+- **GitHub Actions** oppdatert til `checkout@v5`, `setup-node@v5` og `github-script@v8` (Node 24).

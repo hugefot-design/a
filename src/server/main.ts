@@ -3,9 +3,12 @@ import { env } from '@/lib/env';
 import { log } from '@/lib/logger';
 import { closeDb } from '@/lib/db';
 import { buildRouter } from '@/routes';
+import { installErrorTracking } from '@/domain/ops/errors';
 import { startWorker } from '@/worker/runner';
 import { createApp } from './app';
 
+// Feil som logges, samles i databasen og oppsummeres for administratoren (Admin → Feil).
+installErrorTracking();
 const app = createApp(buildRouter());
 const server = createServer((req, res) => {
   void app(req, res);

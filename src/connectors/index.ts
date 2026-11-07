@@ -6,7 +6,8 @@ import { enqueueJob } from '@/lib/jobs';
 import { finishImportRun, ingestNotices, recordImportError, startImportRun, type IngestStats } from '@/domain/tenders/ingest';
 import { regionCodesFor, type NormalizedNotice, type SourceId } from '@/domain/tenders/normalize';
 import { doffinConnector, fetchDoffinByIds, type DoffinByIdOutcome } from './doffin';
-import { tedConnector } from './ted';
+import { TED_KNOWN_COUNTRIES, tedConnector } from './ted';
+import { measureVolume, type VolumeEstimate } from './volume';
 import type { SourceConnector } from './types';
 
 export const CONNECTORS: Record<'ted' | 'doffin', SourceConnector> = {
@@ -26,6 +27,8 @@ export interface RunOptions {
   ids?: string[];
   /** Bare sammen med `ids`: lagre originalfilene i denne mappen (lokal kontroll, ikke database). */
   saveRawDir?: string;
+  /** Bare TED og bare med dryRun: mål et annet land (ISO 3166-1 alpha-3, f.eks. SWE). Ingenting lagres. */
+  country?: string;
 }
 
 export interface RunResult {
@@ -39,6 +42,8 @@ export interface RunResult {
   quality?: DataQuality;
   /** Resultat per Doffin-ID når kjøringen gjaldt enkeltkunngjøringer. */
   downloads?: DoffinByIdOutcome[];
+  /** Dry-run: datamengde per måned og anslått plass i databasen. */
+  volume?: VolumeEstimate;
 }
 
 export interface DataQuality {
@@ -93,6 +98,12 @@ export function dataQuality(notices: NormalizedNotice[]): DataQuality {
 /** Kjører én datakilde: henting → validering → dedup → lagring → matching og varsler i kø. */
 export async function runConnector(sourceId: 'ted' | 'doffin', opts: RunOptions): Promise<RunResult> {
   const connector = CONNECTORS[sourceId];
+  const country = opts.country?.toUpperCase();
+  if (country && country !== 'NOR') {
+    // Appen viser bare norske anbud. Andre land kan måles, men aldri lagres, før appen er klar for dem.
+    if (sourceId !== 'ted' || !opts.dryRun) return { ok: false, error: 'Andre land kan foreløpig bare måles med --dry-run mot TED (ingenting lagres).' };
+    if (!TED_KNOWN_COUNTRIES.includes(country)) return { ok: false, error: `Ukjent land: ${country}. Kjente: ${TED_KNOWN_COUNTRIES.join(', ')}.` };
+  }
   const sql = systemSql();
   const [source] = (await sql`select enabled, last_success_at from data_sources where id = ${sourceId}`) as unknown as {
     enabled: boolean;
@@ -107,6 +118,8 @@ export async function runConnector(sourceId: 'ted' | 'doffin', opts: RunOptions)
 
   const since =
     opts.since ??
+    // Måling av et annet land: siste 30 dager (siste vellykkede henting gjelder Norge).
+    (country && country !== 'NOR' ? new Date(Date.now() - 30 * 86_400_000) : null) ??
     (source.lastSuccessAt
       ? new Date(source.lastSuccessAt.getTime() - 2 * 86_400_000)
       : new Date(Date.now() - env.INGEST_LOOKBACK_DAYS * 86_400_000));
@@ -117,7 +130,7 @@ export async function runConnector(sourceId: 'ted' | 'doffin', opts: RunOptions)
   }
   try {
     const fetchErrors: string[] = [];
-    const notices = await connector.fetch({ since, until: opts.until, limit: opts.limit }, async (id, error, raw) => {
+    const notices = await connector.fetch({ since, until: opts.until, limit: opts.limit, countryIso3: country }, async (id, error, raw) => {
       fetchErrors.push(id ? `${id}: ${error}` : error);
       // Dry-run skal aldri lagre eller endre noe – feil vises bare i resultatet.
       if (!opts.dryRun) await recordImportError(run, 'mapping', error, id, raw);
@@ -129,6 +142,7 @@ export async function runConnector(sourceId: 'ted' | 'doffin', opts: RunOptions)
         sample: notices.slice(0, 3).map(({ raw: _raw, ...rest }) => rest),
         errorSample: fetchErrors.slice(0, 10),
         quality: dataQuality(notices),
+        volume: measureVolume(notices, since, opts.until),
       };
     }
     const stats = await ingestNotices(notices, run);

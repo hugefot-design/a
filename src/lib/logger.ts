@@ -32,9 +32,30 @@ function write(level: Level, msg: string, data?: Record<string, unknown>) {
   }
 }
 
+type ErrorHook = (msg: string, data: Record<string, unknown> | undefined) => void;
+const errorHooks: ErrorHook[] = [];
+
+/** Kalles for hver feil som logges med log.error (brukes av feilovervåkingen). Gir tilbake en funksjon som fjerner kroken. */
+export function onErrorLogged(hook: ErrorHook): () => void {
+  errorHooks.push(hook);
+  return () => {
+    const i = errorHooks.indexOf(hook);
+    if (i >= 0) errorHooks.splice(i, 1);
+  };
+}
+
 export const log = {
   debug: (msg: string, data?: Record<string, unknown>) => write('debug', msg, data),
   info: (msg: string, data?: Record<string, unknown>) => write('info', msg, data),
   warn: (msg: string, data?: Record<string, unknown>) => write('warn', msg, data),
-  error: (msg: string, data?: Record<string, unknown>) => write('error', msg, data),
+  error: (msg: string, data?: Record<string, unknown>) => {
+    write('error', msg, data);
+    for (const hook of errorHooks) {
+      try {
+        hook(msg, data);
+      } catch {
+        // Overvåkingen skal aldri velte det som logget feilen.
+      }
+    }
+  },
 };

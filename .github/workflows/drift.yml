@@ -50,7 +50,7 @@ jobs:
 
       - name: Varsle når tjenesten ikke svarer (GitHub-sak)
         if: steps.helse.outputs.ok == 'false'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           KODE: ${{ steps.helse.outputs.kode }}
         with:
@@ -66,7 +66,7 @@ jobs:
 
       - name: Lukk varselet når tjenesten svarer igjen
         if: steps.helse.outputs.ok == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const title = 'Driftsvarsel: AnbudRadar svarer ikke';

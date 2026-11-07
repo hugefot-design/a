@@ -546,6 +546,7 @@ const ADMIN_NAV = [
   { href: '/admin/epost', label: 'E-post' },
   { href: '/admin/rapporter', label: 'Henvendelser' },
   { href: '/admin/logg', label: 'Revisjonslogg' },
+  { href: '/admin/feil', label: 'Feil' },
   { href: '/admin/helse', label: 'Systemhelse' },
 ];
 

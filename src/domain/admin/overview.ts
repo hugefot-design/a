@@ -7,6 +7,7 @@
  */
 import { systemSql } from '@/lib/db';
 import { checkSupabaseBucket } from '@/lib/storage';
+import { openErrorCount } from '@/domain/ops/errors';
 import { env, integrationStatus } from '@/lib/env';
 import { BLOCKED_BY_ALLOWLIST, BLOCKED_TEST_DOMAIN } from '@/lib/email';
 import { CONNECTORS } from '@/connectors';
@@ -225,6 +226,15 @@ export async function adminOverview(now = new Date()) {
       title: o.workerSeenAt ? `Bakgrunnsjobbene har ikke meldt seg på ${hoursAgo(o.workerSeenAt, now)}` : 'Bakgrunnsjobbene har aldri meldt seg',
       detail: 'Uten dem hentes ikke anbud, og varsler sendes ikke.',
       href: '/admin/helse',
+    });
+  }
+  const appErrors = await openErrorCount();
+  if (appErrors > 0) {
+    attention.push({
+      tone: 'feil',
+      title: `${appErrors} feil i appen siste døgn`,
+      detail: 'Gruppert per type, uten personopplysninger. Merk som løst når de er rettet.',
+      href: '/admin/feil',
     });
   }
   if (o.failedJobs > 0) {

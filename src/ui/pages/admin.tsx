@@ -368,6 +368,14 @@ export function AdminHealthPage({
         <Panel>
           <PanelHeader title="E-post siste 7 dager" />
           <Table head={['Status', 'Antall']} rows={h.emails.map((e) => [e.status, e.n])} empty="Ingen e-post." />
+          <PanelHeader
+            title="Opplastede dokumenter siste 90 dager"
+            description="Dokumenter uten lesbar tekst er som regel skannede PDF-er. Tallet avgjør om tekstgjenkjenning (OCR) lønner seg."
+          />
+          <Table
+            head={['Lastet opp', 'Kunne ikke leses']}
+            rows={[[formatInt(h.documents.uploaded), `${formatInt(h.documents.unreadable)}${h.documents.uploaded ? ` (${Math.round((h.documents.unreadable / h.documents.uploaded) * 100)} %)` : ''}`]]}
+          />
           <PanelHeader title="Integrasjoner" />
           <Table head={['Integrasjon', 'Status']} rows={integrationRows(integrations)} />
         </Panel>

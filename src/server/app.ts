@@ -377,7 +377,7 @@ export function createApp(router: Router) {
     } catch (err) {
       const httpErr = err instanceof HttpError ? err : null;
       status = httpErr?.status ?? 500;
-      if (!httpErr || status >= 500) log.error('request_failed', { path: ctx?.path, requestId: ctx?.requestId, err });
+      if (!httpErr || status >= 500) log.error('request_failed', { method: req.method, path: ctx?.path, requestId: ctx?.requestId, err });
       const message =
         httpErr && httpErr.expose ? httpErr.message : 'Noe gikk galt hos oss. Prøv igjen, eller kontakt oss hvis feilen fortsetter.';
       try {

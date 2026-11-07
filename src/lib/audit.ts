@@ -42,6 +42,8 @@ export type AuditAction =
   | 'admin.import_triggered'
   | 'admin.source_updated'
   | 'admin.report_resolved'
+  | 'admin.error_resolved'
+  | 'admin.errors_resolved'
   | 'admin.role_changed'
   | 'profit.economics_updated'
   | 'profit.capacity_updated'

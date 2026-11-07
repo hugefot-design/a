@@ -15,7 +15,8 @@ Hver oppgave gjøres i leverandørens kontrollpanel. Nøkler og passord legges *
 | 5 | **Supabase:** prosjekt i EU-region, `db/supabase-app-role.sql`, privat bøtte | Database og filer | `node dist/migrate.js` kjører; RLS-testen fra `tests/integration/tenancy.test.ts` er gjentatt manuelt med to testkontoer |
 | 6 | **Render:** Blueprint fra `render.yaml` (staging først) | Drift | `/api/health` svarer `ok`, arbeideren vises i Admin → Helse |
 | 7 | **Jurist:** personvernerklæring, vilkår, samtykketekst for partnerprofiler, konkurranserettslig veiledning, databehandleravtaler | Lovlighet | `LEGAL_PAGES_REVIEWED=true`, `COMPANY_*` fylt ut |
-| 8 | **Sikkerhetskopi:** ta en kopi og gjenopprett den til en tom database én gang | Driftssikkerhet | Fremgangsmåten i [DRIFT.md](DRIFT.md) §6 er fulgt og antall rader stemmer |
+| 8 | **Sikkerhetskopi:** GitHub godkjent som underleverandør, fire hemmeligheter lagt inn, jobben «Sikkerhetskopi» kjørt for hånd | Driftssikkerhet | Kjøringen er grønn (generalprøven har gjenopprettet kopien og kjørt migreringene), og filen ligger i bøtta `sikkerhetskopier` – se [DRIFT.md](DRIFT.md) §6 |
+| 9 | **Fillagring:** privat bøtte og `STORAGE_DRIVER=supabase` i Render | Opplastede dokumenter forsvinner ellers | Admin → Oversikt viser «Filer: Klar» – se [DRIFT.md](DRIFT.md) §2 |
 
 ## 2. Lanseringssjekkliste
 
@@ -24,7 +25,8 @@ Hver oppgave gjøres i leverandørens kontrollpanel. Nøkler og passord legges *
 - [ ] CI grønn på `main`
 - [ ] Alle integrasjoner over er verifisert i testmodus, og [INTEGRASJONER.md](INTEGRASJONER.md) er oppdatert fra «IKKE VERIFISERT»
 - [ ] TED og Doffin har gått i én uke uten feil i Admin → Importer, og antall åpne kunngjøringer er sammenlignet med doffin.no
-- [ ] Oppetidsovervåking på `/api/health` og varsel på feil i loggen
+- [x] Oppetidsovervåking på `/api/health` (GitHub Actions hver time) og varsel på feil i loggen (Admin → Feil + e-post) – bygget 7.11.2026, se [DRIFT.md](DRIFT.md) §9
+- [ ] `ADMIN_NOTIFICATION_EMAIL` satt, og første e-post om feil mottatt etter utrulling
 - [ ] AI-utgiftsgrense hos leverandøren og `AI_MONTHLY_COST_LIMIT_USD_PER_ORG`
 - [ ] Stripe byttet fra test- til live-nøkler **først etter** at alt over er grønt (egen beslutning)
 

@@ -83,6 +83,8 @@ export const TED_FIELDS = [
 ] as const;
 
 const ISO3_TO_ISO2: Record<string, string> = { NOR: 'NO', SWE: 'SE', DNK: 'DK', FIN: 'FI', DEU: 'DE', ISL: 'IS' };
+/** Land tolkningen kjenner (kan måles med dry-run). */
+export const TED_KNOWN_COUNTRIES = Object.keys(ISO3_TO_ISO2);
 const LANG_PREFERENCE = ['nor', 'nob', 'nno', 'eng', 'swe', 'dan', 'fin', 'deu', 'mul'];
 const LANG_CODE: Record<string, string> = { nor: 'nb', nob: 'nb', nno: 'nn', eng: 'en', swe: 'sv', dan: 'da', fin: 'fi', deu: 'de' };
 
@@ -435,7 +437,7 @@ export const tedConnector: SourceConnector = {
     const endpoint = `${env.TED_API_BASE_URL.replace(/\/$/, '')}/v3/notices/search`;
     for (let page = 0; page < 200 && out.length < limit; page++) {
       const body: Record<string, unknown> = {
-        query: buildTedQuery(window),
+        query: buildTedQuery(window, window.countryIso3 ?? 'NOR'),
         fields: TED_FIELDS,
         limit: 100,
         scope: 'ALL',

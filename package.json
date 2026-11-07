@@ -10,8 +10,8 @@
   "scripts": {
     "dev": "tsx scripts/dev.ts",
     "build": "tsx scripts/build.ts",
-    "start": "node dist/server.js",
-    "worker": "node dist/worker.js",
+    "start": "node --enable-source-maps dist/server.js",
+    "worker": "node --enable-source-maps dist/worker.js",
     "worker:dev": "tsx scripts/worker.ts",
     "typecheck": "tsc --noEmit",
     "db:setup-local": "bash scripts/setup-local-db.sh",

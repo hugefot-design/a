@@ -12,8 +12,9 @@ import { recomputeMatchesForTenders } from '@/domain/matching/service';
 import { reconcileStripeSubscriptions } from '@/domain/billing/stripe';
 import { generateWeeklySummaries, runNotificationCycle } from '@/domain/notifications/engine';
 import { sendWeeklyNewsletters } from '@/domain/newsletter/newsletter';
+import { sendErrorDigest } from '@/domain/ops/errors';
 
-export const SCHEDULED_TASKS = ['ingest-ted', 'ingest-doffin', 'enrich-doffin', 'ingest-einnsyn', 'notifications', 'emails', 'weekly', 'retention', 'refresh-matches', 'reconcile-stripe'] as const;
+export const SCHEDULED_TASKS = ['ingest-ted', 'ingest-doffin', 'enrich-doffin', 'ingest-einnsyn', 'notifications', 'emails', 'weekly', 'retention', 'refresh-matches', 'reconcile-stripe', 'error-digest'] as const;
 export type ScheduledTask = (typeof SCHEDULED_TASKS)[number];
 
 /** Oppbevaringsregler (personvern og databasestørrelse). Dokumentert i docs/PERSONVERN.md. */
@@ -52,6 +53,8 @@ export async function applyRetention(): Promise<Record<string, number>> {
   // Utløpte innloggings- og passkey-utfordringer.
   await run('login_challenges', sql`delete from login_challenges where expires_at < now() - interval '1 day' returning 1`);
   await run('webauthn_challenges', sql`delete from webauthn_challenges where expires_at < now() returning 1`);
+  // Feilovervåking: løste feil etter 90 dager, feil som ikke har skjedd på 180 dager.
+  await run('app_errors', sql`delete from app_errors where (resolved_at is not null and resolved_at < now() - interval '90 days') or last_seen_at < now() - interval '180 days' returning 1`);
   log.info('retention_applied', out);
   return out;
 }
@@ -68,6 +71,7 @@ const LOCK_TTL_MINUTES: Record<ScheduledTask, number> = {
   retention: 30,
   'refresh-matches': 60,
   'reconcile-stripe': 30,
+  'error-digest': 10,
 };
 
 async function runUnlocked(task: ScheduledTask, trigger: 'schedule' | 'manual' | 'cli', triggeredBy?: string | null): Promise<unknown> {
@@ -91,6 +95,8 @@ async function runUnlocked(task: ScheduledTask, trigger: 'schedule' | 'manual' |
       return applyRetention();
     case 'reconcile-stripe':
       return reconcileStripeSubscriptions();
+    case 'error-digest':
+      return sendErrorDigest();
     case 'refresh-matches': {
       // Daglig: frister passerer, så åpne anbud må vurderes på nytt.
       const rows = (await systemSql()`

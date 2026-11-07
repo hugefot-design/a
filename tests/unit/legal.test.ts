@@ -82,6 +82,7 @@ test('lagringstidene i personvernerklæringen stemmer med slettejobben', () => {
   assert.deepEqual(
     [...rules.keys()].sort(),
     [
+      'app_errors',
       'audit_logs',
       'doffin_enrichment',
       'email_outbox',
@@ -119,6 +120,7 @@ test('lagringstidene i personvernerklæringen stemmer med slettejobben', () => {
     { table: 'import_errors', days: [90], row: /^Tekniske logger/, phrases: ['90 til'] },
     { table: 'import_runs', days: [365], row: /^Tekniske logger/, phrases: ['365 dager'] },
     { table: 'newsletter_unconfirmed', days: [7], row: /^Påmelding til ukesbrevet/, phrases: ['7 dager', 'slettes'] },
+    { table: 'app_errors', days: [90, 180], row: /^Feillogg/, phrases: ['90 dager', '180 dager'] },
   ];
   // Besøkstellingen har ingen persondata; 25 måneder står i erklæringen.
   assert.match(source('src/domain/ops/tasks.ts'), /page_views_daily where day < [^`]*interval '25 months'/);

@@ -198,5 +198,21 @@ export async function systemHealth() {
     n: number;
   }[];
   const [dbSize] = (await sql`select pg_size_pretty(pg_database_size(current_database())) as size`) as unknown as { size: string }[];
-  return { dbMs, migrations, workers, jobs, failedJobs, emails, dbSize: dbSize?.size ?? '?', node: process.version, uptimeSec: Math.round(process.uptime()) };
+  // Grunnlag for å vurdere OCR: opplastede dokumenter som ikke kunne leses (typisk skannede PDF-er).
+  const [documents] = (await sql`
+    select count(*)::int as uploaded, (count(*) filter (where text_status <> 'extracted'))::int as unreadable
+    from tender_documents where storage_key is not null and created_at > now() - interval '90 days'
+  `) as unknown as { uploaded: number; unreadable: number }[];
+  return {
+    dbMs,
+    migrations,
+    workers,
+    jobs,
+    failedJobs,
+    emails,
+    documents: documents ?? { uploaded: 0, unreadable: 0 },
+    dbSize: dbSize?.size ?? '?',
+    node: process.version,
+    uptimeSec: Math.round(process.uptime()),
+  };
 }

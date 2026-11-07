@@ -67,6 +67,8 @@ async function scheduleTick(): Promise<void> {
   if (await claimScheduledTask('refresh-matches', 24 * 60)) await runScheduledTask('refresh-matches', 'schedule');
   if (await claimScheduledTask('retention', 24 * 60)) await enqueueJob('retention', {}, { dedupeKey: 'retention' });
   if (await claimScheduledTask('reconcile-stripe', 6 * 60)) await runScheduledTask('reconcile-stripe', 'schedule');
+  // Feilovervåking: én oppsummering i timen til administratoren når det har kommet nye feil.
+  if (await claimScheduledTask('error-digest', 60)) await runScheduledTask('error-digest', 'schedule');
 }
 
 async function loop(state: { running: boolean }, mode: 'worker' | 'web'): Promise<void> {

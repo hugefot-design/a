@@ -20,6 +20,7 @@ Hemmeligheter (API-nøkler, webhook-hemmeligheter, databasepassord) legges **bar
 - Felt som hentes: se `TED_FIELDS` i `src/connectors/ted.ts`.
 - **Gjør først:** `npm run ingest -- --source ted --dry-run --limit 20`. Sjekk at titler, oppdragsgivere, frister og CPV-koder ser riktige ut. Blir felt tomme, juster `TED_FIELDS` og `mapTedNotice` (testene i `tests/unit/connectors.test.ts` viser forventet form).
 - Vilkår: TED-data kan gjenbrukes med kildehenvisning («© Den europeiske union»), som står i bunnteksten. Les TEDs gjeldende vilkår for API-bruk før lansering.
+- **Andre land (bare måling):** `npm run ingest -- --source ted --country SWE --dry-run --since 2026-10-08 --until 2026-11-07 --sample 0` viser antall per måned, åpne konkurranser, andel som passer bransjene og anslått plass i databasen. Kjente land: NOR, SWE, DNK, FIN, DEU, ISL. Uten `--dry-run` avvises andre land enn Norge – appen viser bare norske anbud. Målinger 7.11.2026 står i [FORSLAG.md](FORSLAG.md#12-flere-land-via-ted--målt-ikke-slått-på).
 - Verifisert 1.11.2026: tilbudsfrist hentes fra `deadline-receipt-tender-date-lot` (BT-131); frist for å be om å delta (BT-1311) og spørsmålsfrist (BT-13) vises separat. Frist fantes på 98,4 % av konkurransekunngjøringene, dokumentlenke på 82,9 %. Fylke utledes fra NUTS 2024-koder.
 
 ## Doffin
@@ -110,4 +111,4 @@ Dokumenttekst behandles som upålitelig: den pakkes i egne kildemarkører, mark�
 
 ## Fillagring
 
-`STORAGE_DRIVER=supabase` med en **privat** bøtte. Filene lagres under `orgs/<org-id>/…` og leses bare via appen etter tilgangskontroll. Lokal lagring (`STORAGE_DRIVER=local`) er for utvikling.
+`STORAGE_DRIVER=supabase` med en **privat** bøtte. Filene lagres under `orgs/<org-id>/…` og leses bare via appen etter tilgangskontroll. Lokal lagring (`STORAGE_DRIVER=local`) er for utvikling – på Render forsvinner slike filer ved hver ny versjon og når gratistjenesten sover. Admin → Oversikt viser hvilken lagring som er i bruk, og advarer hvis bøtta mangler eller er offentlig. Oppsett: [DRIFT.md](DRIFT.md) §2.

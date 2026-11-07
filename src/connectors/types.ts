@@ -7,6 +7,11 @@ export interface FetchWindow {
   until?: Date;
   /** Maks antall kunngjøringer (sikkerhetsgrense). */
   limit?: number;
+  /**
+   * Bare TED: kjøperens land (ISO 3166-1 alpha-3). Standard er NOR – den vanlige hentingen er uendret.
+   * Andre land brukes foreløpig bare til måling med dry-run (appen viser bare norske anbud).
+   */
+  countryIso3?: string;
 }
 
 export interface ConnectorStatus {

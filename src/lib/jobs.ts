@@ -62,7 +62,8 @@ export async function failJob(job: Job, error: string): Promise<void> {
       finished_at = ${retry ? null : new Date()}
     where id = ${job.id}
   `;
-  log.warn('job_failed', { id: job.id, kind: job.kind, attempts: job.attempts, retry, error });
+  // Siste forsøk: logges som feil (og havner i feilovervåkingen). Nye forsøk er bare en advarsel.
+  (retry ? log.warn : log.error)('job_failed', { id: job.id, kind: job.kind, attempts: job.attempts, retry, error });
 }
 
 /** Jobber som har hengt (krasjet arbeider) settes tilbake i køen. */

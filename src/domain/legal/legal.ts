@@ -146,6 +146,7 @@ export const RETENTION: RetentionRule[] = [
   { what: 'Partnerforespørsler', how: 'Ubesvarte etter 180 dager, avslåtte og trukne etter 12 måneder, godtatte etter 24 måneder.' },
   { what: 'Invitasjoner', how: '90 dager etter at de ble brukt, trukket tilbake eller utløp.' },
   { what: 'Tekniske logger for henting av kunngjøringer', how: '90 til 365 dager (inneholder ikke personopplysninger utover det kildene publiserer).' },
+  { what: 'Feillogg (tekniske feil i tjenesten – e-postadresser, lange tall og nøkler fjernes, ingen bruker-ID)', how: 'Løste feil etter 90 dager, andre etter 180 dager uten nye tilfeller.' },
   { what: 'Bevis på at vilkårene er godtatt (versjon og tidspunkt)', how: 'Så lenge kontoen finnes.' },
   { what: 'Regnskapsopplysninger (fakturaer i Stripe)', how: 'Så lenge bokføringsloven krever (normalt 5 år).' },
   { what: 'Påmelding til ukesbrevet «Ukens anbud» (e-postadresse, bransje, fylke og når du bekreftet)', how: 'Til du melder deg av – da slettes den med en gang. Ubekreftede påmeldinger slettes etter 7 dager.' },

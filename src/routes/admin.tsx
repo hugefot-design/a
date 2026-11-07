@@ -5,6 +5,7 @@ import { enqueueJob } from '@/lib/jobs';
 import { listOrganizations, listUsers, organizationDetail, systemHealth } from '@/domain/admin/admin';
 import { adminOverview } from '@/domain/admin/overview';
 import { visitStats } from '@/domain/admin/visits';
+import { listAppErrors, resolveAllAppErrors, resolveAppError } from '@/domain/ops/errors';
 import { linkedinPost, weeklyTopics } from '@/domain/admin/linkedin';
 import { INDUSTRY_BY_ID, REGION_BY_CODE } from '@/domain/reference';
 import { setManualPlan, verifyStripePrices, type PriceCheck } from '@/domain/billing/stripe';
@@ -20,6 +21,7 @@ import type { Router } from '@/server/router';
 import { AdminOverviewPage } from '@/ui/pages/admin-overview';
 import { AdminVisitsPage } from '@/ui/pages/admin-visits';
 import { AdminLinkedinPage } from '@/ui/pages/admin-linkedin';
+import { AdminErrorsPage } from '@/ui/pages/admin-errors';
 import {
   AdminHealthPage,
   AdminImportsPage,
@@ -306,6 +308,27 @@ export function registerAdminRoutes(router: Router): void {
       />,
       { title: 'Revisjonslogg' },
     );
+  });
+
+  // Feilovervåking: feil som er logget, gruppert per type (se src/domain/ops/errors.ts).
+  router.get('/admin/feil', 'admin', async (ctx) => {
+    const { open, resolved } = await listAppErrors();
+    return render(ctx, <AdminErrorsPage open={open} resolved={resolved} emailOn={Boolean(env.ADMIN_NOTIFICATION_EMAIL)} />, { title: 'Feil i appen' });
+  });
+
+  router.post('/admin/feil/lost-alle', 'admin', async (ctx) => {
+    const n = await resolveAllAppErrors();
+    await audit({ action: 'admin.errors_resolved', actorUserId: ctx.user!.id, targetType: 'app_errors', metadata: { count: n } });
+    return redirectWith(ctx, '/admin/feil', 'success', n === 1 ? 'Én feil er merket som løst.' : `${n} feil er merket som løst.`);
+  });
+
+  router.post('/admin/feil/:id/lost', 'admin', async (ctx) => {
+    // Feil-ID-en er en kort sjekksum (32 heksadesimale tegn), ikke en UUID.
+    const fingerprint = ctx.params.id ?? '';
+    if (!/^[0-9a-f]{32}$/.test(fingerprint)) throw new HttpError(404, 'Fant ikke feilen.');
+    const ok = await resolveAppError(fingerprint);
+    if (ok) await audit({ action: 'admin.error_resolved', actorUserId: ctx.user!.id, targetType: 'app_errors', metadata: { fingerprint } });
+    return redirectWith(ctx, '/admin/feil', ok ? 'success' : 'info', ok ? 'Merket som løst.' : 'Feilen var allerede løst.');
   });
 
   router.get('/admin/helse', 'admin', async (ctx) => {

@@ -8,7 +8,11 @@
  * Selve løkken ligger i src/worker/runner.ts (kan også kjøre i nettsiden, se RUN_WORKER_IN_WEB).
  */
 import { closeDb } from '../src/lib/db';
+import { installErrorTracking } from '../src/domain/ops/errors';
 import { startWorker } from '../src/worker/runner';
+
+// Feil som logges, samles i databasen og oppsummeres for administratoren (Admin → Feil).
+installErrorTracking();
 
 const worker = startWorker('worker');
 let stopping = false;
