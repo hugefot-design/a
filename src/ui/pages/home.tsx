@@ -7,7 +7,7 @@
  * Ingen oppdiktede kunder, omtaler, tall eller skjermbilder. AI nevnes bare når ekte AI er slått på.
  */
 import type { ReactNode } from 'react';
-import { LuArrowRight, LuCalculator, LuCalendarRange, LuChartColumn, LuCheck, LuClipboardCheck, LuMinus, LuShieldAlert, LuTarget, LuTrophy } from 'react-icons/lu';
+import { LuArrowRight, LuCalculator, LuCalendarRange, LuChartColumn, LuCheck, LuGauge, LuGraduationCap, LuMinus, LuScale, LuShieldAlert, LuTarget } from 'react-icons/lu';
 import { cheapestPlanWith, PAID_PLANS, PLANS, type Entitlements } from '@/domain/billing/plans';
 import type { MarketSnapshot } from '@/domain/tenders/market';
 import type { Showcase } from '@/domain/tenders/showcase';
@@ -91,8 +91,9 @@ function Hero({ market }: { market: MarketSnapshot }) {
 // Hvorfor AnbudRadar: sju fordeler, med planen hver finnes i (regnes ut fra planene, så teksten alltid stemmer).
 // ---------------------------------------------------------------------------
 type BoolFeature = { [K in keyof Entitlements]: Entitlements[K] extends boolean ? K : never }[keyof Entitlements];
-const WHY_ICONS = [LuTarget, LuShieldAlert, LuCalculator, LuChartColumn, LuTrophy, LuCalendarRange, LuClipboardCheck];
-const WHY_FEATURES: (BoolFeature | null)[] = ['matching', null, 'profitCalculator', 'competitorIntel', null, 'profitCalculator', 'bidAssistant'];
+// Samme rekkefølge som fordelene i tekstene: det som skiller AnbudRadar ut først.
+const WHY_ICONS = [LuGauge, LuCalculator, LuScale, LuShieldAlert, LuCalendarRange, LuGraduationCap, LuTarget, LuChartColumn];
+const WHY_FEATURES: (BoolFeature | null)[] = [null, 'profitCalculator', 'profitCalculator', null, 'profitCalculator', null, 'matching', 'competitorIntel'];
 
 function Why() {
   const { m, lp } = useUi();
@@ -109,7 +110,7 @@ function Why() {
           <H2 className="mt-4">{t.title}</H2>
           <p className="mt-5 text-[18px] leading-relaxed text-muted">{t.lead}</p>
         </div>
-        <ul className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {t.items.map((item, i) => {
             const Icon = WHY_ICONS[i]!;
             return (

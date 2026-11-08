@@ -23,6 +23,7 @@ import {
   LuSearch,
   LuShieldCheck,
   LuSparkles,
+  LuScale,
   LuTelescope,
   LuTrophy,
 } from 'react-icons/lu';
@@ -70,7 +71,7 @@ function Points({ items, dark = false, className }: { items: string[]; dark?: bo
 // ---------------------------------------------------------------------------
 /** Ikonene til funksjonene, i samme rekkefølge som m.features.items. */
 // Samme rekkefølge som m.features.items. AI-kortet (LuSparkles) vises bare når ekte AI er slått på.
-const FEATURE_ICONS: IconType[] = [LuSearch, LuGauge, LuFileSearch, LuCalculator, LuCalendarRange, LuChartColumn, LuTrophy, LuListChecks, LuHandshake, LuSparkles];
+const FEATURE_ICONS: IconType[] = [LuScale, LuSearch, LuGauge, LuFileSearch, LuCalculator, LuCalendarRange, LuChartColumn, LuTrophy, LuListChecks, LuHandshake, LuSparkles];
 
 export function FeaturesPage({ specimen }: { specimen: NoticeSpecimen | null }) {
   const { user, m, lp, aiConfigured, aiIsMock } = useUi();

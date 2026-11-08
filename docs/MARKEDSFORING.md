@@ -1,6 +1,6 @@
 # Markedsføring: påstander og hva de bygger på
 
-Oppdatert 7. november 2026 (ny forside). Hver påstand på nettsiden skal kunne spores til en funksjon som finnes, og
+Oppdatert 8. november 2026 (forsiden selger det som skiller AnbudRadar ut). Hver påstand på nettsiden skal kunne spores til en funksjon som finnes, og
 til en test eller kontroll. Endrer du markedsteksten, oppdater tabellen.
 
 ## Posisjonering
@@ -21,6 +21,12 @@ kapasitet og tilbudsarbeid.
 | Resultater og læring | `src/domain/tenders/results.ts` | Alle | Aktiv | `tests/integration/results.test.ts` |
 | Kapasitet måned for måned, også sesong | `src/domain/profit/capacity.ts` | Profesjonell og høyere | Aktiv | `tests/unit/capacity-season.test.ts`, `tests/integration/capacity-season.test.ts` |
 | Krav, sjekklister og tilbudsarbeid for teamet | `src/domain/bids/` | Bedrift og høyere | Aktiv (AI-utkast er av) | `tests/integration/requirements.test.ts`, `tests/unit/bid-export.test.ts` |
+| Go/No-Go med kilde på alt: én side per anbud, «Gå videre / Avklar først / Ikke gå videre», grunner, risikoscore og hvor det står | `src/domain/intelligence/*`, `/app/anbud/:id/intelligence` | Alle (deler som krever plan, sier det) | Aktiv fra 8.11.2026 | `tests/unit/intelligence.test.ts`, `tests/integration/intelligence.test.ts` |
+| PDF til ledelsen | `src/domain/intelligence/pdf.ts`, `/app/anbud/:id/intelligence/pdf` | Alle | Aktiv fra 8.11.2026 | `tests/integration/intelligence.test.ts` (teksten i PDF-en leses ut og kontrolleres) |
+| Handlingsplan med frister | `src/domain/intelligence/plan.ts` | Alle | Aktiv fra 8.11.2026 | `tests/unit/intelligence.test.ts` |
+| Deres pris mot markedet (målprisen blant tildelte kontrakter, alltid med antall) | `src/domain/profit/market.ts` (`pricePositions`) | Profesjonell og høyere | Aktiv | `tests/integration/market.test.ts`, `tests/unit/market.test.ts` |
+| Norske krav: lovpålagte godkjenninger (sentral godkjenning, renholdsregisteret, vaktvirksomhet) blir hindringer; dagbøter og garantier finnes automatisk | `matching/engine.ts` (`LEGAL_REQUIREMENTS`), `intelligence/risk.ts`, `terms-scan.ts` | Alle | Aktiv | `tests/unit/intelligence.test.ts`, `tests/integration/intelligence.test.ts` (bedrift uten sentral godkjenning får «Ikke gå videre») |
+| Læring fra egne resultater som påvirker vurderingen | `src/domain/tenders/results.ts`, `intelligence/learning.ts` (fra tre avgjorte) | Alle | Aktiv | `tests/integration/results.test.ts`, `tests/unit/intelligence.test.ts` |
 | Gratisplan uten tidsgrense, prøveperiode i Profesjonell uten kort, ingen binding | Planer og prøveperiode | – | Aktiv. Betaling (Stripe) er ikke satt opp ennå | `tests/integration/public-pages.test.ts` (prøvetid følger `TRIAL_DAYS`) |
 | Data lagres i EU (Frankfurt og Irland), deles ikke uten at kunden velger det, selges aldri | Render Frankfurt, Supabase Irland, RLS, partnerprofil er frivillig | – | Aktiv. **Slås sikkerhetskopien via GitHub på, behandles databasen også på GitHubs maskiner (kan være i USA) – oppdater da teksten og underleverandørlisten** | Underleverandørlisten, `tests/integration/tenancy.test.ts` |
 
@@ -68,7 +74,11 @@ Tester: `tests/unit/showcase.test.ts`, `tests/integration/showcase.test.ts`.
 - **Integrasjoner** med konkurransegjennomføringsverktøy: ingen.
 - **Kundetall, omtaler, besparelser, «vinn flere anbud»:** ingen slike påstander. Testen avviser stjerner og
   «fornøyde kunder».
-- **Konkurrenter:** sammenligningen gjelder søk og varsling som *funksjon*, ikke en bestemt tjeneste, og sier det.
+- **Konkurrenter:** sammenligningen gjelder søk og varsling som *funksjon*, ikke en bestemt tjeneste, og sier det. Nettsiden
+  selger det som skiller AnbudRadar ut ved å beskrive våre egne funksjoner – ingen tjenester nevnes ved navn, og vi sier
+  ikke hva andre mangler (testen avviser konkurrentnavn på forsiden).
+- **Kostnaden av dagbøter og betalingsfrist** (maks dagbot, bundet kapital) regnes bare ut fra AI-analysen i Lønnsomhet.
+  AI er av, så dette markedsføres ikke.
 
 ## Navn
 

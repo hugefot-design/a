@@ -36,11 +36,24 @@ test('alle offentlige sider svarer og har nøyaktig én h1', async () => {
 test('forsiden: tydelig posisjonering, ekte data og ingen AI-løfter når AI er av', async () => {
   const page = await get('/');
   assert.match(page.body, /<h1[^>]*>[\s\S]*Ikke bare finn anbudet\.[\s\S]*Finn ut om det er verdt å vinne\.[\s\S]*<\/h1>/);
-  for (const section of ['Hvorfor AnbudRadar', 'Slik fungerer det', 'Forskjellen', 'Åpenhet']) assert.ok(page.body.includes(section), section);
-  // Sju fordeler, hver med planen den finnes i (regnet ut fra planene).
-  for (const t of ['Intelligent anbudsmatching', 'Risiko før tilbud', 'Lønnsomhetsanalyse', 'Markedsinnsikt', 'Resultater og læring', 'Kapasitetsoversikt', 'Tilbudsarbeid']) {
+  for (const section of ['Det som skiller AnbudRadar ut', 'Slik fungerer det', 'Forskjellen', 'Åpenhet']) assert.ok(page.body.includes(section), section);
+  // Åtte fordeler – det som skiller AnbudRadar ut først – hver med planen den finnes i (regnet ut fra planene).
+  for (const t of [
+    'Go/No-Go med kilde på alt',
+    'Lønnsomhet med egne kostnader',
+    'Deres pris mot markedet',
+    'Norske krav og kostbare vilkår',
+    'Kapasitet måned for måned',
+    'Læring fra egne resultater',
+    'Intelligent anbudsmatching',
+    'Hvem vinner, og hva som utløper',
+  ]) {
     assert.ok(page.body.includes(t), t);
   }
+  assert.match(page.body, /med kilde på alt, fra/);
+  assert.match(page.body, /Go\/No-Go per anbud, med grunner og kilde/);
+  // Vi selger våre egne funksjoner – ingen konkurrenter nevnes ved navn.
+  assert.doesNotMatch(page.body, /Mercell|Tendium|Stotles|anbudsradar\.no/i);
   assert.match(page.body.replaceAll('<!-- -->', ''), /Med i Profesjonell og høyere/);
   // Testmiljøet bruker simulert AI: den skal ikke markedsføres som ekte – og det skal stå at AI ikke er slått på.
   assert.doesNotMatch(page.body, /AI leser kunngjøringen/);
@@ -121,4 +134,18 @@ test('Google Search Console: bekreftelsesfilen svarer bare for eierens filnavn',
   assert.equal(ok.body, 'google-site-verification: google89c7bd88c1234567.html');
   assert.equal((await c.get('/google0000000000000000.html')).status, 404);
   assert.equal((await c.get('/google89c7bd88.html')).status, 404);
+});
+
+test('funksjonssiden starter med den samlede vurderingen – og den finnes i appen', async () => {
+  const page = await get('/funksjoner');
+  assert.equal(page.status, 200);
+  const body = page.body.replaceAll('<!-- -->', '');
+  assert.match(body, /Samlet vurdering \(Go\/No-Go\)/);
+  assert.match(body, /Risikoscore 0–100 med kilde for hver faktor/);
+  assert.match(body, /PDF til ledelsen/);
+  assert.ok(body.indexOf('Samlet vurdering (Go/No-Go)') < body.indexOf('Finn anbud og få varsel'), 'den samlede vurderingen står først');
+  // Påstanden peker på en ekte side i appen (krever innlogging).
+  const app = await fetch(`${server.base}/app/anbud/00000000-0000-4000-8000-000000000000/intelligence`, { redirect: 'manual' });
+  assert.ok([302, 303].includes(app.status), String(app.status));
+  assert.match(app.headers.get('location') ?? '', /logg-inn/);
 });
