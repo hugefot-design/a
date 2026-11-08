@@ -151,7 +151,12 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   dager, krever et ekstra klikk). Reservekode og innlogging uten totrinn varsles alltid. Regler: [DRIFT.md](DRIFT.md#6b-totrinnsinnlogging-passkeys-og-sikkerhetsvarsler).
   Testet: første innlogging, samme nettleser og IP (ingen e-post), ny nettleser, ny IP, ødelagt nøkkel, eldre enn
   90 dager, etter «logg ut alle», reservekode og uten totrinn; fem bevisste feil i reglene ble fanget av testene.
-  Ingen databaseendring (bruker revisjonsloggen). **Ikke rullet ut** (venter på eiers ja).
+  Ingen databaseendring (bruker revisjonsloggen). **Rullet ut 8.11.2026** (versjon `be15ecf`, eiers ja; testene på
+  GitHub grønne). Kontrollert på anbudradar.com: helsesjekk OK; informasjonskapsel-siden viser `__Host-ar_enhet`,
+  sikkerhetssiden den nye regelen; offentlige sider 200 på mobil og PC uten JavaScript-feil; admin skjult (404);
+  0 advarsler og 0 feil i loggen. **IKKE VERIFISERT i produksjon:** selve e-posten ved en ekte admin-innlogging
+  (krever eierens totrinn). Ventet: én e-post ved første innlogging etter utrullingen, deretter bare ved ny enhet
+  eller ny IP-adresse.
 - Tester: `tests/integration/admin-stepup.test.ts`, `tests/integration/passkeys.test.ts` (programvare-autentikator som
   signerer som en ekte enhet: falsk side, gjenbruk og kopiert nøkkel avvises) og `tests/e2e/admin-passkey.test.ts`
   (Chromium med virtuell autentikator: legg til Face ID, logg inn og bekreft med den).
