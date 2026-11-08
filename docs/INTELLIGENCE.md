@@ -61,7 +61,7 @@ null eller et anslag. Ingen vinnersannsynlighet, ingen oppdiktede priser eller k
 5. PDF fra den samme rapporten.
 6. Tester (enhet, integrasjon med flere planer og datasett, PDF-innhold, tilgang), og prøve med ekte anbud.
 
-## 4. Status (7. november 2026) – på arbeidsgrenen, ikke rullet ut
+## 4. Status – rullet ut 8. november 2026 (versjon `c106ce0`)
 
 **Ferdig og testet**
 
@@ -96,8 +96,13 @@ null eller et anslag. Ingen vinnersannsynlighet, ingen oppdiktede priser eller k
 - AI er av i produksjon. Intelligence virker uten AI; AI-funn vises bare når en analyse finnes, merket «AI-vurdering»
   og med om sitatet er funnet i kilden. Administratorer ser simulerte AI-svar, merket «Simulert – testmodus».
 
-**Krever eiers godkjenning**
+**Utrulling (8.11.2026, eiers ja)**
 
-- Utrulling til produksjon. Ingen databaseendringer (ingen migreringer) – bare ny kode.
-- Ny avhengighet: `pdfkit` (MIT, åpen kildekode, kjører lokalt – ingen tjeneste eller kostnad). `npm audit`: 0 sårbarheter.
+- Rullet ut med `pdfkit` (MIT, åpen kildekode, kjører lokalt – ingen tjeneste eller kostnad; `npm audit`: 0 sårbarheter).
+  Ingen databaseendringer.
+- Kontrollert i produksjon: helsesjekk, innloggingskrav på side og PDF, offentlige sider, 0 feil i loggen.
+  **IKKE VERIFISERT i produksjon:** siden og PDF-en med en innlogget kunde (dekket av tester og lokal prøve med ekte data).
+
+**Krever fortsatt eiers godkjenning**
+
 - Om Intelligence skal nevnes på nettsiden og i planbeskrivelsene (ikke gjort – markedsføring endres ikke uten ja).

@@ -378,12 +378,15 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
-## AnbudRadar Intelligence (7. november 2026) – ikke rullet ut
+## AnbudRadar Intelligence (7.–8. november 2026) – rullet ut 8.11.2026
 
 Én samlet vurdering per anbud: Go/No-Go med grunner, risikoscore med kilder, lønnsomhet, konkurranse, handlingsplan og
 læring, og PDF. Bygger på modulene som fantes (ingen nye regnemotorer). Kartlegging, regler, status og hva som krever
-godkjenning: [INTELLIGENCE.md](INTELLIGENCE.md). **Venter på eiers ja før utrulling** (ingen databaseendringer; ny
-avhengighet `pdfkit`).
+godkjenning: [INTELLIGENCE.md](INTELLIGENCE.md). **Rullet ut 8.11.2026** (versjon `c106ce0`, eiers ja; ingen
+databaseendringer; ny avhengighet `pdfkit`). Kontrollert på anbudradar.com: helsesjekk OK; `/app/anbud/:id/intelligence`
+og `/intelligence/pdf` sender til innlogging uten økt (303); offentlige sider 200 på mobil og PC uten JavaScript-feil;
+0 advarsler og 0 feil i loggen. **IKKE VERIFISERT i produksjon:** selve siden og PDF-en med en innlogget kunde (dekket
+av testene og prøvd lokalt med ekte TED/Doffin-data).
 
 ## Ny forside og posisjonering (7. november 2026)
 
