@@ -397,7 +397,7 @@ og `/intelligence/pdf` sender til innlogging uten økt (303); offentlige sider 2
 0 advarsler og 0 feil i loggen. **IKKE VERIFISERT i produksjon:** selve siden og PDF-en med en innlogget kunde (dekket
 av testene og prøvd lokalt med ekte TED/Doffin-data).
 
-## Feilsjekk av hele nettsiden (8. november 2026)
+## Feilsjekk av hele nettsiden (8. november 2026) – rullet ut 8.11.2026 (`2d3e8ab`)
 
 Eiers beskjed: «rull ut automatisk … sjekk for små feil på hele nettsiden, fiks dem og rull ut små oppdateringer».
 
@@ -418,6 +418,10 @@ Eiers beskjed: «rull ut automatisk … sjekk for små feil på hele nettsiden, 
   - Språkvelgeren på engelske/svenske/danske bransjesider med fylke lenket via en omdirigering; lenker nå rett.
   - Avsnittsnumrene på de juridiske sidene hadde for svak kontrast (2,2:1) – nå lesbare.
   - Lenkene i bunnteksten og «Glemt passordet?» har minst 24 px trykkflate; ikonknappene i admin-toppen 36 px.
+- **Kontrollert på anbudradar.com etter utrulling:** helsesjekk OK; forsiden, funksjoner, priser, registrering og
+  /en, /sv, /da uten sidelengs rulling på mobil og PC og uten JavaScript-feil; feilsiden viser besøkende bare «Til
+  forsiden»; språklenken går rett til fylkessiden; 0 advarsler og 0 feil i loggen. Innloggede sider (Innstillinger,
+  admin) er **IKKE VERIFISERT i produksjon** (krever innlogging) – dekket av testene.
 - **Sjekket og ikke endret:** tekstlenker i lister (titler, navn) er under 24 px høye, men har god avstand til
   hverandre (tillatt etter WCAG 2.2). Lys modus ellers uendret: appens sider punkt for punkt like som før.
 
