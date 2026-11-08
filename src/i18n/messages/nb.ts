@@ -51,6 +51,7 @@ export const nb = {
     home: 'AnbudRadar – til forsiden',
     language: 'Språk',
     theme: 'Bytt mellom lys og mørk modus',
+    darkMode: 'Mørk modus',
     suggest: 'Denne siden finnes også på norsk.',
     suggestAction: 'Les på norsk',
   },

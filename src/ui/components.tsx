@@ -415,14 +415,32 @@ export function Tabs({ items }: { items: { href: string; label: ReactNode; activ
  * Bryter for lys og mørk modus. Vises bare med JavaScript (uten følger siden innstillingen på enheten).
  * Månen vises i lys modus, solen i mørk. Skriptet setter aria-pressed og husker valget.
  */
-export function ThemeToggle({ dark = false, className }: { dark?: boolean; className?: string }) {
+export function ThemeToggle({ dark = false, menu = false, className }: { dark?: boolean; menu?: boolean; className?: string }) {
   const { m } = useUi();
+  if (menu) {
+    // Som rad i mobilmenyen: tekst og ikon.
+    return (
+      <button
+        type="button"
+        data-theme-toggle
+        aria-pressed="false"
+        className={cn(
+          'js-only flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 text-[15px] font-semibold text-navy-900 hover:bg-navy-50',
+          className,
+        )}
+      >
+        {m.nav.darkMode}
+        <LuMoon className="size-[18px] dark:hidden" aria-hidden />
+        <LuSun className="hidden size-[18px] dark:block" aria-hidden />
+      </button>
+    );
+  }
   return (
     <button
       type="button"
       data-theme-toggle
       aria-pressed="false"
-      aria-label={m.nav.theme}
+      aria-label={m.nav.darkMode}
       title={m.nav.theme}
       className={cn(
         'js-only flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors',

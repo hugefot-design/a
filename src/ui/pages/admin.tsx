@@ -120,7 +120,7 @@ export function AdminOrgPage({ d }: { d: NonNullable<Awaited2<ReturnType<typeof 
   return (
     <AdminShell>
       <PageHeader title={d.org.name} description={`Opprettet ${formatDate(d.org.createdAt)}${d.org.orgNumber ? `, org.nr. ${d.org.orgNumber}` : ''}`} />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel>
           <PanelHeader title="Abonnement" />
           <div className="space-y-1 p-5 text-[14px]">
@@ -175,7 +175,7 @@ export function AdminImportsPage({
     <AdminShell>
       <PageHeader title="Importer" description="Henting fra TED og Doffin, og manuell import av JSON/CSV." />
       {result ? <Alert tone="info" className="mb-4">{result}</Alert> : null}
-      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel>
           <PanelHeader title="Kjør henting nå" description="Legges i køen og kjøres av arbeideren (npm run worker)." />
           <div className="space-y-3 p-5">

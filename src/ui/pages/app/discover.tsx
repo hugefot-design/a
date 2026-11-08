@@ -212,7 +212,7 @@ export function DiscoverPage(props: DiscoverProps) {
         ) : null}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside>
           <button
             type="button"

@@ -158,7 +158,7 @@ export function ResultsPage({ learning: l, rows }: { learning: Learning; rows: R
             </Panel>
           ) : null}
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {l.reasons.length ? (
               <Panel>
                 <PanelHeader title="Hva avgjorde" description="Slik dere har registrert det fra tildelingsbrevet." />

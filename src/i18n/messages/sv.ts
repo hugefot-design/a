@@ -33,6 +33,7 @@ export const sv: Messages = {
     home: 'AnbudRadar – startsida',
     language: 'Språk',
     theme: 'Växla mellan ljust och mörkt läge',
+    darkMode: 'Mörkt läge',
     suggest: 'Den här sidan finns också på svenska.',
     suggestAction: 'Läs på svenska',
   },

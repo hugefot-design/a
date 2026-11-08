@@ -6,7 +6,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { closeDb } from '../../src/lib/db';
 import { env } from '../../src/lib/env';
-import { Client, startServer } from '../helpers';
+import { Client, clientFor, createAccount, startServer } from '../helpers';
 
 let server: Awaited<ReturnType<typeof startServer>>;
 const savedTrialDays = env.TRIAL_DAYS;
@@ -148,4 +148,17 @@ test('funksjonssiden starter med den samlede vurderingen – og den finnes i app
   const app = await fetch(`${server.base}/app/anbud/00000000-0000-4000-8000-000000000000/intelligence`, { redirect: 'manual' });
   assert.ok([302, 303].includes(app.status), String(app.status));
   assert.match(app.headers.get('location') ?? '', /logg-inn/);
+});
+
+test('feilsiden: besøkende får «Til forsiden», innloggede i appen også «Til oversikten»', async () => {
+  const anon = await get('/finnes-ikke');
+  assert.equal(anon.status, 404);
+  assert.doesNotMatch(anon.body, /Til oversikten/, 'besøkende sendes ikke til innlogging');
+  assert.match(anon.body, /Til forsiden/);
+  const acc = await createAccount();
+  const c = await clientFor(server.base, acc);
+  // Et anbud som ikke finnes, inne i appen: innlogget, så «Til oversikten» vises.
+  const logged = await c.get('/app/anbud/00000000-0000-4000-8000-000000000000');
+  assert.equal(logged.status, 404);
+  assert.match(logged.body, /href="\/app"[^>]*>Til oversikten/);
 });

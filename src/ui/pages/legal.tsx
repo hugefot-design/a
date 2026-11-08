@@ -137,7 +137,7 @@ function LegalDocument({ title, lead, sections }: { title: string; lead: ReactNo
         </Container>
       </section>
 
-      <Container className="grid gap-10 py-10 sm:py-14 lg:grid-cols-[250px_minmax(0,1fr)]">
+      <Container className="grid grid-cols-1 gap-10 py-10 sm:py-14 lg:grid-cols-[250px_minmax(0,1fr)]">
         <aside className="print:hidden">
           <details className="rounded-xl border border-line bg-surface p-4 lg:hidden">
             <summary className="cursor-pointer py-1 text-[14px] font-semibold text-navy-900">Innhold</summary>
@@ -159,7 +159,7 @@ function LegalDocument({ title, lead, sections }: { title: string; lead: ReactNo
           {sections.map((s, i) => (
             <section key={s.id} id={s.id} className="scroll-mt-24 border-t border-line pt-6 mt-8 first-of-type:mt-10">
               <h2 className="font-serif text-[22px] font-semibold text-navy-900">
-                <span className="num mr-2 text-navy-300">{i + 1}.</span>
+                <span className="num mr-2 text-muted">{i + 1}.</span>
                 {s.title}
               </h2>
               <div className="mt-3">{s.body(i + 1)}</div>
@@ -177,7 +177,7 @@ function Toc({ sections }: { sections: Section[] }) {
       {sections.map((s, i) => (
         <li key={s.id}>
           <a href={`#${s.id}`} className="flex gap-2 text-muted no-underline hover:text-navy-900">
-            <span className="num w-6 shrink-0 text-right text-navy-300">{i + 1}.</span>
+            <span className="num w-6 shrink-0 text-right text-muted">{i + 1}.</span>
             <span>{s.title}</span>
           </a>
         </li>

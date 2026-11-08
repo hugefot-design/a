@@ -90,7 +90,7 @@ export function CompetitorsPage({
         }
       />
       <CoverageNote c={coverage} />
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-6">
           <Panel>
             <PanelHeader title="Søk etter leverandør" />
@@ -228,7 +228,7 @@ export function AuthorityPage({
         <Stat label="Snittverdi (oppgitt)" value={data.stats.avgValue ? formatMoney(data.stats.avgValue) : '–'} />
         <Stat label="Snitt tilbud mottatt" value={data.stats.avgReceived ? data.stats.avgReceived.toFixed(1).replace('.', ',') : '–'} />
       </Panel>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel>
           <PanelHeader title="Kjøper oftest" description="CPV-hovedgrupper i kunngjøringene." />
           <ul className="divide-y divide-line">
@@ -358,7 +358,7 @@ export function ExpiryPage({
             {rows.map((r) => {
               const until = untilLabel(r.expectedEnd, now);
               return (
-                <li key={r.tenderId} className="grid gap-3 px-5 py-4 sm:grid-cols-[150px_minmax(0,1fr)]">
+                <li key={r.tenderId} className="grid grid-cols-1 gap-3 px-5 py-4 sm:grid-cols-[150px_minmax(0,1fr)]">
                   <div>
                     <p className="num text-[15px] font-semibold text-navy-900">{formatDate(r.expectedEnd)}</p>
                     <Badge tone={until.tone} className="mt-1">

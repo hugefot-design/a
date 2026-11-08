@@ -43,6 +43,8 @@ test('mobil: de viktigste sidene i appen uten vannrett rulling, feil eller for s
 
   const ctx = await browser.newContext({ ...devices['iPhone 13'] });
   const { token } = await createSession(acc.user.id, { userAgent: 'e2e-mobil' });
+  // En annen innlogget enhet med lang nettlesertekst: den gjorde Innstillinger 420 px for bred på mobil (rettet 8.11.2026).
+  await createSession(acc.user.id, { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0' });
   await ctx.addCookies([{ name: SESSION_COOKIE, value: token, url: BASE }]);
   const page = await ctx.newPage();
   const errors: string[] = [];

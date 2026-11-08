@@ -197,7 +197,7 @@ export function ProfitWorkspacePage({ ws, errors, canRunAi, canSearchPartners, a
       <KpiRow ws={ws} />
       <ProvenanceLegend />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-6">
           <CalcForm ws={ws} />
           <ResultsPanel ws={ws} />
@@ -239,7 +239,7 @@ function RecommendationPanel({ ws }: { ws: ProfitWorkspace }) {
           {ws.testPrice ? ` Viser testpris ${fmtKr(ws.testPrice)} (lagres ikke).` : ''}
         </p>
       </div>
-      <div className="mt-3 grid gap-4 md:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
         <ul className="space-y-1 text-[14px]">
           {r.reasons.map((reason) => (
             <li key={reason} className="flex gap-2">
@@ -321,7 +321,7 @@ function CalcForm({ ws }: { ws: ProfitWorkspace }) {
         description="Legg inn deres egne kostnader. AI legger aldri inn priser eller kostnader – bare mengder fra dokumentene, merket med opphav."
       />
       <PostForm action={`/app/anbud/${t.id}/lonnsomhet`} className="space-y-6 px-5 py-5">
-        <fieldset className="grid min-w-0 gap-4 md:grid-cols-3">
+        <fieldset className="grid grid-cols-1 min-w-0 gap-4 md:grid-cols-3">
           <legend className="mb-2 text-[14px] font-semibold text-navy-900">Grunnlag</legend>
           <Field
             label={
@@ -382,7 +382,7 @@ function CalcForm({ ws }: { ws: ProfitWorkspace }) {
               return (
                 <li key={l?.id ?? `blank-${idx}`} className={cn('rounded-md border px-3 py-3', l ? 'border-line' : 'border-dashed border-line')}>
                   <input type="hidden" name="l_id" value={l?.id ?? ''} />
-                  <div className="grid gap-2 sm:grid-cols-[11rem_minmax(0,1fr)]">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-[11rem_minmax(0,1fr)]">
                     <div className="min-w-0">
                       <label htmlFor={id('cat')} className="text-[11px] font-semibold text-muted">
                         Kategori
@@ -460,7 +460,7 @@ function CalcForm({ ws }: { ws: ProfitWorkspace }) {
           <p className="mt-2 text-[12px] text-muted">Trenger dere flere linjer? Lagre, så kommer det nye tomme linjer. Tomme linjer lagres ikke.</p>
         </fieldset>
 
-        <fieldset className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <fieldset className="grid grid-cols-1 min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <legend className="mb-2 text-[14px] font-semibold text-navy-900">Påslag og margin</legend>
           <Field label="Indirekte kostnader (% av direkte)" htmlFor="pi-oh" hint="Administrasjon, lokaler, forsikring …">
             <Input id="pi-oh" name="overheadPct" inputMode="decimal" defaultValue={numIn(i.overheadPct)} />
@@ -482,7 +482,7 @@ function CalcForm({ ws }: { ws: ProfitWorkspace }) {
           </Field>
         </fieldset>
 
-        <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
+        <fieldset className="grid grid-cols-1 min-w-0 gap-4 md:grid-cols-2">
           <legend className="mb-2 text-[14px] font-semibold text-navy-900">Deres vurdering</legend>
           <Field label="Kontraktsrisiko etter deres vurdering" htmlFor="pi-risk" hint="Overstyrer AI-vurderingen når den er satt.">
             <Select id="pi-risk" name="userRiskLevel" defaultValue={i.userRiskLevel ?? ''}>
@@ -607,7 +607,7 @@ function ResultsPanel({ ws }: { ws: ProfitWorkspace }) {
               <p className="mt-1 text-[12px] text-muted">Økningen gjelder direkte kostnader; påslaget for indirekte kostnader følger med.</p>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div>
                 <h3 className="mb-2 text-[14px] font-semibold text-navy-900">Kostnader per kategori</h3>
                 <ul className="space-y-1.5 text-[13px]">
@@ -766,7 +766,7 @@ function RiskPanel({ ws }: { ws: ProfitWorkspace }) {
               </div>
             ) : null}
             {a.data.price_format.text || a.data.price_evaluation.text ? (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {a.data.price_format.text ? (
                   <div>
                     <h4 className="text-[13px] font-semibold text-navy-900">Slik skal prisen oppgis</h4>
@@ -801,7 +801,7 @@ function RiskPanel({ ws }: { ws: ProfitWorkspace }) {
               </div>
             ) : null}
             {a.data.missing_for_calculation.length || a.data.documents_not_read.length ? (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {a.data.missing_for_calculation.length ? (
                   <div>
                     <h4 className="text-[13px] font-semibold text-navy-900">Mangler for å kunne regne</h4>
@@ -1249,10 +1249,10 @@ export function CapacityPage({ data, canManage, errors }: { data: CapacityData; 
           </ul>
         </Alert>
       ) : null}
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Panel>
           <PanelHeader title="Økonomiske forutsetninger" description="Standardverdier for nye kalkyler. Kan endres per anbud." />
-          <PostForm action="/app/kapasitet/okonomi" className="grid gap-4 px-5 py-4 sm:grid-cols-2">
+          <PostForm action="/app/kapasitet/okonomi" className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-2">
             <Field label="Kostnad per arbeidstime (kr)" htmlFor="ec-hc" hint="Lønn + feriepenger + arbeidsgiveravgift + pensjon.">
               <Input id="ec-hc" name="hourlyCost" inputMode="decimal" defaultValue={numIn(e.hourlyCost)} disabled={!canManage} />
             </Field>
@@ -1315,7 +1315,7 @@ export function CapacityPage({ data, canManage, errors }: { data: CapacityData; 
           {canManage ? (
             <details className="border-t border-line">
               <summary className="cursor-pointer px-5 py-3 text-[14px] font-semibold text-navy-900">Legg til rolle</summary>
-              <PostForm action="/app/kapasitet/bemanning" className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
+              <PostForm action="/app/kapasitet/bemanning" className="grid grid-cols-1 gap-3 px-5 pb-5 sm:grid-cols-2">
                 <Field label="Rolle eller fag" htmlFor="st-role">
                   <Input id="st-role" name="role" required maxLength={160} placeholder="F.eks. Renholder" />
                 </Field>
@@ -1360,7 +1360,7 @@ export function CapacityPage({ data, canManage, errors }: { data: CapacityData; 
           {canManage ? (
             <details className="border-t border-line">
               <summary className="cursor-pointer px-5 py-3 text-[14px] font-semibold text-navy-900">Legg til utstyr</summary>
-              <PostForm action="/app/kapasitet/utstyr" className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
+              <PostForm action="/app/kapasitet/utstyr" className="grid grid-cols-1 gap-3 px-5 pb-5 sm:grid-cols-3">
                 <Field label="Navn" htmlFor="eq-name" className="sm:col-span-2">
                   <Input id="eq-name" name="name" required maxLength={200} placeholder="F.eks. Gulvvaskemaskin" />
                 </Field>
@@ -1412,7 +1412,7 @@ export function CapacityPage({ data, canManage, errors }: { data: CapacityData; 
           {canManage ? (
             <details className="border-t border-line">
               <summary className="cursor-pointer px-5 py-3 text-[14px] font-semibold text-navy-900">Legg til kontrakt</summary>
-              <PostForm action="/app/kapasitet/kontrakter" className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
+              <PostForm action="/app/kapasitet/kontrakter" className="grid grid-cols-1 gap-3 px-5 pb-5 sm:grid-cols-2">
                 <Field label="Navn" htmlFor="ct-name">
                   <Input id="ct-name" name="name" required maxLength={200} />
                 </Field>
@@ -1508,13 +1508,13 @@ export function PartnersPage(p: PartnersPageProps) {
           </ul>
         </Alert>
       ) : null}
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="min-w-0 space-y-6">
           {p.target && p.canSearch ? <RequestForm target={p.target} tender={p.tender} canManage={p.canManage} /> : null}
           {p.canSearch ? (
             <Panel>
               <PanelHeader title="Søk etter partnere" description="Bare bedrifter som selv har publisert en partnerprofil, vises." />
-              <form method="get" action="/app/partnere" className="grid gap-3 px-5 py-4 sm:grid-cols-2 lg:grid-cols-3">
+              <form method="get" action="/app/partnere" className="grid grid-cols-1 gap-3 px-5 py-4 sm:grid-cols-2 lg:grid-cols-3">
                 {p.tender ? <input type="hidden" name="anbud" value={p.tender.id} /> : null}
                 <Field label="Fritekst" htmlFor="ps-q">
                   <Input id="ps-q" name="q" defaultValue={p.search?.text ?? ''} maxLength={100} placeholder="F.eks. lift, asfalt, vakthold" />
@@ -1760,7 +1760,7 @@ function RequestForm({ target, tender, canManage }: { target: PartnerCard; tende
             <Field label="Melding" htmlFor="rq-msg" hint="Beskriv behovet (kapasitet, fag, utstyr, område). Ikke skriv priser.">
               <Textarea id="rq-msg" name="message" rows={4} required minLength={10} maxLength={2000} />
             </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Kontaktperson" htmlFor="rq-name">
                 <Input id="rq-name" name="contactName" required maxLength={120} defaultValue={user?.name ?? ''} />
               </Field>

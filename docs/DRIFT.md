@@ -271,6 +271,11 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
   endringer i oppsettet hos Render/Supabase, produksjonsdata og hemmeligheter, og migreringer som endrer eksisterende data.
 - **Endret samme dag (oppdraget om AnbudRadar Intelligence):** eier skrev «Ikke … deploy produksjon uten min godkjenning».
   Den nyeste beskjeden gjelder: utrulling venter igjen på eiers ja, til eier sier noe annet.
+- **Endret igjen 8. november 2026:** eier skrev «rull ut automatisk … sjekk for små feil på hele nettsiden, fiks dem og
+  rull ut små oppdateringer». Fra nå rulles feilrettinger og små oppdateringer ut uten egen godkjenning når testene på
+  GitHub er grønne for akkurat den versjonen (samme rutine som over). Unntakene gjelder fortsatt og krever eiers ja:
+  priser og abonnementer, nye betalte tjenester eller leverandører, oppsett hos Render/Supabase, produksjonsdata og
+  hemmeligheter, migreringer som endrer eksisterende data, og større nye funksjoner.
 
 ## 8. Kontinuerlig integrasjon (CI)
 

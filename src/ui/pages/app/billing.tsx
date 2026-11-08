@@ -75,10 +75,10 @@ export function BillingPage(p: BillingProps) {
         </Alert>
       ) : null}
 
-      <div className="mb-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Panel>
           <PanelHeader title="Nåværende plan" />
-          <div className="grid gap-4 p-5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-3">
             <div>
               <p className="text-[13px] text-muted">Plan</p>
               <p className="mt-1 text-[18px] font-semibold text-navy-900">{b.label}</p>

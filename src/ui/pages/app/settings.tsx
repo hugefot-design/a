@@ -4,6 +4,7 @@ import { Alert, Badge, Button, buttonVariants, Field, Input, PageHeader, Panel, 
 import { AppShell } from '../../layouts';
 import { formatDate, relativeTime } from '../../format';
 import { LuMonitor, LuMoon, LuSun } from 'react-icons/lu';
+import { describeDevice } from '@/lib/device';
 
 const ROLE_LABELS: Record<string, string> = { owner: 'Eier', admin: 'Administrator', member: 'Medlem' };
 
@@ -33,7 +34,7 @@ export function SettingsPage(p: SettingsProps) {
       />
 
       {p.tab === 'konto' ? (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Panel>
             <PanelHeader title="Profil" />
             <PostForm action="/app/innstillinger/konto" className="space-y-4 p-5">
@@ -110,7 +111,9 @@ export function SettingsPage(p: SettingsProps) {
             <ul className="divide-y divide-line">
               {p.sessions.map((s) => (
                 <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-[14px]">
-                  <span className="min-w-0 truncate">{s.userAgent || 'Ukjent nettleser'}</span>
+                  <span className="min-w-0 truncate" title={s.userAgent ?? undefined}>
+                    {s.userAgent ? describeDevice(s.userAgent).label : 'Ukjent nettleser'}
+                  </span>
                   <span className="text-[13px] text-muted">
                     {s.current ? <Badge tone="ok">Denne enheten</Badge> : `Sist aktiv ${relativeTime(s.lastSeenAt)}`}
                   </span>
@@ -247,7 +250,7 @@ export function SettingsPage(p: SettingsProps) {
       ) : null}
 
       {p.tab === 'personvern' ? (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Panel>
             <PanelHeader title="Last ned dataene dine" description="Alt vi har lagret om deg (og organisasjonen hvis du er eier/administrator), som JSON." />
             <div className="p-5">

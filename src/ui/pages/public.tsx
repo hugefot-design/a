@@ -278,7 +278,7 @@ export function PricingPage() {
         </Wrap>
       </section>
       <section className="border-t border-line bg-cream py-20 sm:py-24">
-        <Wrap className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <Wrap className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
           <div className="reveal">
             <Kicker>{t.faqEyebrow}</Kicker>
             <H2 className="mt-4">{t.faqTitle}</H2>
@@ -513,7 +513,7 @@ export function AboutPage({ company }: { company: { name: string; orgNumber: str
     <PublicLayout>
       <NightHero eyebrow={t.eyebrow} title={t.title} lead={t.lead} />
       <section className="bg-surface py-20 sm:py-24">
-        <Wrap className="grid gap-12 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
+        <Wrap className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
           <div className="reveal space-y-6 text-[20px] leading-relaxed text-ink sm:text-[22px]">
             <p>{t.p1}</p>
             <p>{fill(t.p2, { sources: sourcesText(m, liveSources) })}</p>

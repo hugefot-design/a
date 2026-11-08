@@ -73,7 +73,7 @@ function arr(v: Values, k: string): string[] {
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <fieldset className="grid gap-5 border-t border-line pt-6 first:border-t-0 first:pt-0 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
+    <fieldset className="grid grid-cols-1 gap-5 border-t border-line pt-6 first:border-t-0 first:pt-0 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
       <legend className="sr-only">{title}</legend>
       <div>
         <p className="font-semibold text-navy-900">{title}</p>
@@ -92,7 +92,7 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
   return (
     <fieldset disabled={readOnly} className="space-y-6">
       <Section title="Bedriften" description="Brukes i oversikten og som utgangspunkt for tilbudsutkast.">
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Firmanavn" htmlFor="companyName" error={errors.companyName}>
             <Input id="companyName" name="companyName" required defaultValue={str(values, 'companyName')} invalid={Boolean(errors.companyName)} />
           </Field>
@@ -100,7 +100,7 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
             <Input id="orgNumber" name="orgNumber" inputMode="numeric" defaultValue={str(values, 'orgNumber')} invalid={Boolean(errors.orgNumber)} />
           </Field>
         </div>
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           <Field label="Antall ansatte" htmlFor="employeeCount" hint="Valgfritt, eksakt tall." error={errors.employeeCount}>
             <Input id="employeeCount" name="employeeCount" inputMode="numeric" defaultValue={str(values, 'employeeCount')} invalid={Boolean(errors.employeeCount)} />
           </Field>
@@ -126,7 +126,7 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
       <Section title="Hva dere leverer" description="Avgjør hvilke anbud som rangeres høyest for dere.">
         <div>
           <p className="mb-2 text-[13px] font-semibold">Bransjer</p>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {INDUSTRIES.map((i) => (
               <Checkbox key={i.id} name="industries" value={i.id} defaultChecked={industries.includes(i.id)} label={i.name} />
             ))}
@@ -160,7 +160,7 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
 
       <Section title="Område" description="Fylker dere kan levere i. Anbud utenfor området rangeres lavere.">
         <Checkbox name="regions" value="ALL" defaultChecked={regions.includes('ALL')} label="Hele landet" />
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {REGIONS.map((r) => (
             <Checkbox key={r.code} name="regions" value={r.code} defaultChecked={regions.includes(r.code)} label={r.name} />
           ))}
@@ -169,7 +169,7 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
       </Section>
 
       <Section title="Kontraktsstørrelse og frister">
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           <Field label="Minste verdi (kr)" htmlFor="minContractValue" error={errors.minContractValue}>
             <Input id="minContractValue" name="minContractValue" inputMode="numeric" defaultValue={str(values, 'minContractValue')} />
           </Field>
@@ -186,7 +186,7 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
         title="Kvalifikasjoner"
         description="Kryss bare av det dere faktisk kan dokumentere. Tilbudsassistenten bruker dette og finner aldri på noe selv."
       >
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {CERTIFICATIONS.map((c) => (
             <Checkbox key={c.id} name="certifications" value={c.id} defaultChecked={certs.includes(c.id)} label={c.label} />
           ))}
@@ -203,7 +203,7 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
         {Array.from({ length: MAX_REFERENCES }, (_, i) => (
           <div key={i} className="rounded-md border border-line p-4">
             <p className="mb-3 text-[13px] font-semibold text-navy-900">Referanse {i + 1}</p>
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_6rem_minmax(0,1fr)]">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_6rem_minmax(0,1fr)]">
               <Field label="Oppdrag" htmlFor={`ref_title_${i}`}>
                 <Input id={`ref_title_${i}`} name={`ref_title_${i}`} maxLength={200} defaultValue={str(values, `ref_title_${i}`)} />
               </Field>

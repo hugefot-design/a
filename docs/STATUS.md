@@ -10,7 +10,7 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
 | Enhetstester | 218 av 218 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 8.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 186 av 186 bestått – 8.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 187 av 187 bestått – 8.11.2026 |
 | Ende-til-ende i nettleser | 10 av 10 bestått (inkl. appen på telefon og lys/mørk modus) – 8.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -397,7 +397,31 @@ og `/intelligence/pdf` sender til innlogging uten økt (303); offentlige sider 2
 0 advarsler og 0 feil i loggen. **IKKE VERIFISERT i produksjon:** selve siden og PDF-en med en innlogget kunde (dekket
 av testene og prøvd lokalt med ekte TED/Doffin-data).
 
-## Lys og mørk modus og ny innloggingsside (8. november 2026) – ikke rullet ut
+## Feilsjekk av hele nettsiden (8. november 2026)
+
+Eiers beskjed: «rull ut automatisk … sjekk for små feil på hele nettsiden, fiks dem og rull ut små oppdateringer».
+
+- **Slik ble det sjekket:** et skript fulgte alle lenker lokalt som besøkende, kunde og administrator – 82 offentlige
+  og 108 innloggede sider, hver på mobil (390 px) og PC (1440 px) i lys og mørk modus: statuskode, JavaScript-feil,
+  sidelengs rulling, kontrast, bilder, trykkflater og knapper uten navn. Sider med samme mal (bransje i fylke o.l.)
+  ble tatt som utvalg. I tillegg ble 807 adresser på anbudradar.com sjekket for døde lenker: ingen.
+- **Funnet og rettet:**
+  - Toppmenyen på mobil var 7 px for bred etter forrige utrulling (bryteren for lys/mørk). Bryteren ligger nå i
+    menyen på små skjermer. Mobiltesten målte mot en bredde som vokser med siden og fanget det ikke – den måler nå
+    mot skjermbredden (testet: feiler med feilen, består uten).
+  - **Innstillinger på mobil var 420 px for bred** (gjaldt ekte kunder, fantes fra før): hele nettleserteksten for
+    hver innlogget enhet. Viser nå «Chrome på Windows» o.l., og rutenett har én fast kolonne på mobil (16 sider).
+    Mobiltesten har fått en enhet med lang nettlesertekst (feiler uten rettingen).
+  - Admin → organisasjon var 5 px for bred på mobil (samme rutenettfeil).
+  - Feilsiden viste «Til oversikten» til besøkende (sendte dem til innlogging). Nå bare for innloggede i appen.
+  - Logoen i e-postforhåndsvisningen i admin ble blokkert av sikkerhetsreglene; bilder fra eget domene er tillatt.
+  - Språkvelgeren på engelske/svenske/danske bransjesider med fylke lenket via en omdirigering; lenker nå rett.
+  - Avsnittsnumrene på de juridiske sidene hadde for svak kontrast (2,2:1) – nå lesbare.
+  - Lenkene i bunnteksten og «Glemt passordet?» har minst 24 px trykkflate; ikonknappene i admin-toppen 36 px.
+- **Sjekket og ikke endret:** tekstlenker i lister (titler, navn) er under 24 px høye, men har god avstand til
+  hverandre (tillatt etter WCAG 2.2). Lys modus ellers uendret: appens sider punkt for punkt like som før.
+
+## Lys og mørk modus og ny innloggingsside (8. november 2026) – rullet ut 8.11.2026 (`d8686c0`)
 
 Bare frontend – ingen endring i priser, planer, betaling, database, API-er eller integrasjoner.
 

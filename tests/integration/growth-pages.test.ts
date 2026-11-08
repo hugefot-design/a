@@ -68,6 +68,10 @@ test('norske adresser: gamle engelske og ?fylke= sendes videre med 301', async (
   assert.equal(en.status, 200);
   assert.match(en.body, /hreflang="nb" href="[^"]*\/bransjer\/renhold"/);
   assert.match(en.body, /rel="canonical" href="[^"]*\/en\/industries\/cleaning"/);
+  // Språkvelgeren på en engelsk side med fylke lenker rett til den norske fylkessiden (ingen omdirigering).
+  const enRegion = await get('/en/industries/cleaning?fylke=50');
+  assert.match(enRegion.body, /<a href="\/bransjer\/renhold\/trondelag" hrefLang="nb"/i);
+  assert.doesNotMatch(enRegion.body, /href="\/bransjer\/renhold\?fylke=50"/);
   assert.equal((await get('/bransjer/finnes-ikke')).status, 404);
 });
 

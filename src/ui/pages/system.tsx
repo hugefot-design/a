@@ -103,7 +103,7 @@ export function LimitReachedPage({ kind, used, limit }: { kind: 'search' | 'book
 }
 
 export function ErrorPage({ status, message, requestId }: { status: number; message: string; requestId: string }) {
-  const { locale, m, lp } = useUi();
+  const { locale, m, lp, user } = useUi();
   // Bare 404 er oversatt (f.eks. /en/finnes-ikke); resten av feilsidene hører til appen og er på norsk.
   const translated = locale !== 'nb' && status === 404;
   const title = translated
@@ -129,12 +129,12 @@ export function ErrorPage({ status, message, requestId }: { status: number; mess
         <h1 className="mt-1 font-serif text-[30px] font-semibold text-navy-900">{title}</h1>
         <p className="mt-3 text-[15px] text-ink">{message}</p>
         <div className="mt-6 flex flex-wrap gap-2">
-          {translated ? null : (
-            <a href="/app" className={buttonVariants({ variant: 'primary' })}>
+          {translated || !user ? null : (
+            <a href={user.isPlatformAdmin ? '/admin' : '/app'} className={buttonVariants({ variant: 'primary' })}>
               Til oversikten
             </a>
           )}
-          <a href={lp('/')} className={buttonVariants({ variant: translated ? 'primary' : 'secondary' })}>
+          <a href={lp('/')} className={buttonVariants({ variant: translated || !user ? 'primary' : 'secondary' })}>
             {translated ? m.errors.home : 'Til forsiden'}
           </a>
         </div>

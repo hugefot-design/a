@@ -142,7 +142,7 @@ export function DashboardPage({
         <Stat label="Åpne i deres bransjer" value={formatInt(data.openInIndustries)} />
       </Panel>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-6">
           <ActionPanel items={data.actions} />
           <Panel>

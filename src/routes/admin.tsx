@@ -246,7 +246,12 @@ export function registerAdminRoutes(router: Router): void {
     const [row] = (await systemSql()`select html from email_outbox where id = ${param(ctx, 'id')}`) as unknown as { html: string }[];
     if (!row) throw new HttpError(404, 'Fant ikke e-posten.');
     return new Response(row.html, {
-      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src data:", 'Cache-Control': 'no-store' },
+      // Logoen i e-posten ligger på vårt eget domene (APP_URL); andre bilder blokkeres fortsatt.
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Security-Policy': `default-src 'none'; style-src 'unsafe-inline'; img-src data: ${new URL(env.APP_URL).origin}`,
+        'Cache-Control': 'no-store',
+      },
     });
   });
 

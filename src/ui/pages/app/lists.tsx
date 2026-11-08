@@ -49,7 +49,7 @@ export function SavedTendersPage({ rows, status, counts, limit }: { rows: Bookma
         {rows.length ? (
           <ul className="divide-y divide-line">
             {rows.map((r) => (
-              <li key={r.id} className="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_420px]">
+              <li key={r.id} className="grid grid-cols-1 gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_420px]">
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <a href={`/app/anbud/${r.tenderId}`} className="text-[15px] font-semibold text-navy-900 no-underline hover:underline">
@@ -74,7 +74,7 @@ export function SavedTendersPage({ rows, status, counts, limit }: { rows: Bookma
                     </a>
                   ) : null}
                 </div>
-                <PostForm action={`/app/lagret/${r.id}`} className="grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)_auto] sm:items-end">
+                <PostForm action={`/app/lagret/${r.id}`} className="grid grid-cols-1 gap-2 sm:grid-cols-[160px_minmax(0,1fr)_auto] sm:items-end">
                   <input type="hidden" name="back" value={`/app/lagret${status ? `?status=${status}` : ''}`} />
                   <Field label="Status" htmlFor={`st-${r.id}`}>
                     <Select id={`st-${r.id}`} name="status" defaultValue={r.status}>
@@ -244,7 +244,7 @@ export function NotificationsPage({ rows, prefs, alertsLevel }: { rows: Notifica
           ) : null
         }
       />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Panel>
           {rows.length ? (
             <ul className="divide-y divide-line">

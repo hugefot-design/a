@@ -206,7 +206,7 @@ export function TenderPage(p: TenderPageProps) {
       </header>
 
       {/* Telefon og nettbrett: frist og vurdering øverst – sidepanelet havner ellers langt ned. */}
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:hidden">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
         <Panel className="p-4">
           <DeadlineBlock tender={t} />
         </Panel>
@@ -222,7 +222,7 @@ export function TenderPage(p: TenderPageProps) {
         ) : null}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
           <Panel>
             <PanelHeader title="Fra kunngjøringen" description="Hentet direkte fra kilden. Ingen AI er brukt i denne delen." />
@@ -1208,7 +1208,7 @@ export function AnalysisPage({ tender, analysis }: { tender: TenderDetail; analy
         </Panel>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 space-y-8">
           <section>
             <h2 className="font-serif text-[20px] font-semibold text-navy-900">Sammendrag</h2>

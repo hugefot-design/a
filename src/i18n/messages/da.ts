@@ -33,6 +33,7 @@ export const da: Messages = {
     home: 'AnbudRadar – forside',
     language: 'Sprog',
     theme: 'Skift mellem lyst og mørkt tema',
+    darkMode: 'Mørk tilstand',
     suggest: 'Denne side findes også på dansk.',
     suggestAction: 'Læs på dansk',
   },

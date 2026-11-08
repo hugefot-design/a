@@ -27,7 +27,8 @@ import { useUi } from './context';
 import { Alert, Button, buttonVariants, cn, CsrfField, FlashMessage, Logo, PostForm, ThemeToggle } from './components';
 import { formatDate, sourcesPhrase } from './format';
 import { companyConfigured, companyInfo, LEGAL_DOCS } from '@/domain/legal/legal';
-import { isTranslatedPath, LOCALE_INFO, LOCALES, localePath, messages, sourcesText } from '@/i18n';
+import { isTranslatedPath, LOCALE_INFO, LOCALES, localePath, messages, sourcesText, type Locale } from '@/i18n';
+import { industryIdFromSlug, industryRegionPath, REGION_SLUG } from '@/domain/slugs';
 import { fill } from '@/i18n/format';
 import { RadarDecor } from './site';
 
@@ -39,6 +40,20 @@ const PUBLIC_NAV = ['/funksjoner', '/bransjer', '/priser', '/om'] as const;
 function useNavLabels() {
   const { m } = useUi();
   return { '/funksjoner': m.nav.features, '/bransjer': m.nav.industries, '/priser': m.nav.pricing, '/om': m.nav.about, '/kontakt': m.nav.contact } as Record<string, string>;
+}
+
+/**
+ * Adressen til samme side på et annet språk. Bransje med fylkesfilter (?fylke=) har egen norsk adresse
+ * (/bransjer/renhold/trondelag) – lenk dit direkte i stedet for via en omdirigering.
+ */
+function switchHref(l: Locale, target: string, path: string, search: string): string {
+  const base = localePath(l, target);
+  if (target !== path) return base;
+  const fylke = new URLSearchParams(search).get('fylke');
+  const slug = /^\/bransjer\/([^/]+)$/.exec(base)?.[1];
+  const industry = l === 'nb' && fylke && slug ? industryIdFromSlug(slug) : null;
+  if (industry && Object.hasOwn(REGION_SLUG, fylke!)) return industryRegionPath(industry, fylke!);
+  return base + search;
 }
 
 /** Språkvelger: samme side på et annet språk. Fungerer uten JavaScript. */
@@ -61,7 +76,7 @@ function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
         {LOCALES.map((l) => (
           <li key={l}>
             <a
-              href={localePath(l, target) + (target === path ? search : '')}
+              href={switchHref(l, target, path, search)}
               hrefLang={l}
               lang={l}
               aria-current={l === locale ? 'true' : undefined}
@@ -125,7 +140,7 @@ export function PublicLayout({ children }: { children: ReactNode; heroDark?: boo
             ))}
           </nav>
           <div className="flex items-center gap-1 sm:gap-2">
-            <ThemeToggle dark />
+            <ThemeToggle dark className="hidden sm:flex" />
             <LanguageSwitcher dark />
             {user ? (
               <a href={user.isPlatformAdmin ? '/admin' : '/app'} className="btn-signal !px-4 !py-2 !text-[14px]">
@@ -151,6 +166,9 @@ export function PublicLayout({ children }: { children: ReactNode; heroDark?: boo
                     {href === '/logg-inn' ? m.nav.login : labels[href]}
                   </a>
                 ))}
+                <div className="js-only mt-1 border-t border-line pt-1 sm:hidden">
+                  <ThemeToggle menu />
+                </div>
               </div>
             </details>
           </div>
@@ -166,10 +184,11 @@ export function PublicLayout({ children }: { children: ReactNode; heroDark?: boo
 
 function FooterNav({ title, links }: { title: string; links: { href: string; label: string }[] }) {
   return (
-    <nav aria-label={title} className="space-y-2.5 text-[14px]">
-      <p className="font-semibold text-white">{title}</p>
+    <nav aria-label={title} className="space-y-1.5 text-[14px]">
+      <p className="pb-1 font-semibold text-white">{title}</p>
       {links.map((l) => (
-        <a key={l.href} className="block text-white/60 no-underline transition-colors hover:text-white" href={l.href}>
+        // py-0.5 gir 26 px høye trykkflater; mellomrommet er krympet tilsvarende, så avstanden er som før.
+        <a key={l.href} className="block py-0.5 text-white/60 no-underline transition-colors hover:text-white" href={l.href}>
           {l.label}
         </a>
       ))}
@@ -587,7 +606,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <span className="rounded-full bg-signal px-2 py-0.5 text-[12px] font-bold text-night">Admin</span>
           <div className="ml-auto flex items-center gap-4 text-[13px] font-semibold">
             <ThemeToggle dark className="-mx-2" />
-            <a href="/konto/totrinn" className="inline-flex items-center gap-1.5 text-white/70 no-underline hover:text-white" aria-label="Min innlogging: kode-app og Face ID">
+            <a href="/konto/totrinn" className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 text-white/70 no-underline hover:text-white" aria-label="Min innlogging: kode-app og Face ID">
               <LuShieldCheck className="size-4" aria-hidden />
               <span className="hidden sm:inline">Min innlogging</span>
             </a>
@@ -595,7 +614,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               Til appen
             </a>
             <PostForm action="/logg-ut">
-              <button type="submit" className="inline-flex items-center gap-1.5 text-white/70 hover:text-white" aria-label="Logg ut">
+              <button type="submit" className="inline-flex min-h-9 min-w-9 cursor-pointer items-center justify-center gap-1.5 text-white/70 hover:text-white" aria-label="Logg ut">
                 <LuLogOut className="size-4" aria-hidden />
                 <span className="hidden sm:inline">Logg ut</span>
               </button>

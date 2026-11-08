@@ -35,6 +35,7 @@ export const en: Messages = {
     home: 'AnbudRadar – home',
     language: 'Language',
     theme: 'Switch between light and dark mode',
+    darkMode: 'Dark mode',
     suggest: 'This page is also available in English.',
     suggestAction: 'Read in English',
   },

@@ -25,7 +25,7 @@ export function LoginPage({ email = '', error, next }: { email?: string; error?:
             <label htmlFor="password" className="block text-[13px] font-semibold text-ink">
               {t.password}
             </label>
-            <a href={lp('/glemt-passord')} className="text-[13px] font-medium">
+            <a href={lp('/glemt-passord')} className="inline-flex min-h-6 items-center text-[13px] font-medium">
               {t.forgot}
             </a>
           </div>

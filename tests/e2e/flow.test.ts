@@ -32,7 +32,8 @@ function watch(page: Page): string[] {
 }
 
 async function noHorizontalScroll(page: Page): Promise<boolean> {
-  return page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+  // Mot skjermbredden: i mobilvisning utvider nettleseren siden når innholdet er for bredt, så innerWidth vokser med.
+  return page.evaluate(() => document.documentElement.scrollWidth <= Math.min(window.innerWidth, screen.width) + 1);
 }
 
 before(async () => {
