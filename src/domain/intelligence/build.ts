@@ -21,7 +21,7 @@ import type { DistinctAward } from '@/domain/tenders/results';
 import { decide } from './decision';
 import type { LearningResult } from './learning';
 import { buildPlan } from './plan';
-import { COSTLY_TERMS, hitSource, scoreRisk, termSource } from './risk';
+import { COSTLY_TERMS, hitSource, scoreRisk, termSource, wholeWords } from './risk';
 import type { FitLevel, FitSection, IntelligenceReport, Point, ProfitSection, RiskSection } from './types';
 
 /** Samme grenser som resten av appen: 60+ er et godt treff (neste steg «Start tilbudsarbeid»), under 40 svakt. */
@@ -182,7 +182,7 @@ export function buildReport(i: BuildInputs): IntelligenceReport {
     terms: COSTLY_TERMS.concat(['betalingsvilkar', 'prisregulering', 'volum'])
       .map((c) => ({ c, hits: (i.terms.byCategory[c] ?? []).filter((h) => !h.negated) }))
       .filter((x) => x.hits.length)
-      .map(({ c, hits }) => ({ category: c, label: TERM_LABELS[c], points: hits.slice(0, 2).map((h) => ({ text: h.snippet, basis: 'fact' as const, source: termSource(h) })) })),
+      .map(({ c, hits }) => ({ category: c, label: TERM_LABELS[c], points: hits.slice(0, 2).map((h) => ({ text: wholeWords(h.snippet), basis: 'fact' as const, source: termSource(h) })) })),
     contractFindings: (i.profit?.risk.findings ?? []).map((f) => ({
       text: `${f.title}: ${f.finding}`,
       basis: 'ai' as const,

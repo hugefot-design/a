@@ -159,7 +159,7 @@ function Section({ id, num, icon, title, description, children }: { id: string; 
 
 function Sub({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="text-[13.5px] font-semibold uppercase tracking-[0.06em] text-muted">{title}</h3>
         {aside}
@@ -205,7 +205,7 @@ function DecisionHero({ r }: { r: IntelligenceReport }) {
           </ul>
         </div>
       </div>
-      <div className="grid gap-5 px-5 py-5 sm:px-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 px-5 py-5 sm:px-6 lg:grid-cols-3">
         {d.blockers.length ? (
           <div>
             <h3 className="mb-2 flex items-center gap-1.5 text-[13.5px] font-semibold text-danger">
@@ -297,11 +297,11 @@ function FitSection({ r }: { r: IntelligenceReport }) {
       ) : null}
       {f.availability === 'ok' && f.score === null ? <p className="text-[14px] text-muted">Treffet er ikke regnet ut for dette anbudet ennå.</p> : null}
       {f.score !== null ? (
-        <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <Sub title={`Treff ${f.score} av 100`} aside={<BasisTag basis="calculation" />}>
             <ul className="space-y-2">
               {f.components.map((c) => (
-                <li key={c.key} className="grid grid-cols-[minmax(0,9rem)_1fr_3rem] items-center gap-3 text-[13.5px]">
+                <li key={c.key} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-center gap-3 text-[13.5px]">
                   <span className="truncate text-ink">{c.label}</span>
                   <Meter value={c.value} max={c.max} />
                   <span className="num text-right text-muted">
@@ -327,7 +327,7 @@ function FitSection({ r }: { r: IntelligenceReport }) {
           </div>
         </div>
       ) : null}
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <Sub title="Kvalifikasjoner som nevnes" aside={<BasisTag basis="fact" />}>
           {f.qualifications.length ? (
             <ul className="divide-y divide-line rounded-xl border border-line">
@@ -409,7 +409,7 @@ function RiskSection({ r }: { r: IntelligenceReport }) {
   ];
   return (
     <Section id="risiko" num="2" icon={<LuShieldAlert className="size-4 text-navy-600" aria-hidden />} title="Risiko" description="Krav, frister, dokumentasjon, avvisningsgrunner og kontraktsvilkår – med kilde og side.">
-      <div className="grid gap-5 md:grid-cols-[minmax(0,16rem)_1fr]">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted">Risikoscore</p>
           <p className={cn('num mt-0.5 text-[34px] font-semibold leading-none', LEVEL_TEXT[k.level])}>
@@ -447,7 +447,7 @@ function RiskSection({ r }: { r: IntelligenceReport }) {
         </div>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <Sub title="Frister" aside={<BasisTag basis="fact" />}>
           {k.deadlines.length ? (
             <ul className="space-y-1.5">
@@ -541,7 +541,8 @@ function ProfitSection({ r }: { r: IntelligenceReport }) {
   const c = p.calc;
   const cur = p.currency;
   const link = `/app/anbud/${r.tender.id}/lonnsomhet`;
-  const sens = c ? c.sensitivity.filter((s) => s.profitAtContractValue !== null) : [];
+  // 0 % er det samme som «Som kalkulert» – vises én gang.
+  const sens = c ? c.sensitivity.filter((s) => s.increasePct > 0 && s.profitAtContractValue !== null) : [];
   const maxAbs = c?.atContractValue ? Math.max(Math.abs(c.atContractValue.profit), ...sens.map((s) => Math.abs(s.profitAtContractValue!)), 1) : 1;
   return (
     <Section id="lonnsomhet" num="3" icon={<LuCalculator className="size-4 text-navy-600" aria-hidden />} title="Lønnsomhet" description="Fra kalkylen deres og publiserte tildelinger. Ingen anslag fylles inn.">
@@ -577,7 +578,7 @@ function ProfitSection({ r }: { r: IntelligenceReport }) {
             <Sub title="Følsomhet: fortjeneste ved kontraktsverdien" aside={<BasisTag basis="calculation" />}>
               <ul className="space-y-2">
                 {[{ label: 'Som kalkulert', v: c.atContractValue.profit }, ...sens.map((s) => ({ label: `+${s.increasePct} % kostnader`, v: s.profitAtContractValue! }))].map((row) => (
-                  <li key={row.label} className="grid grid-cols-[minmax(0,9rem)_1fr_7.5rem] items-center gap-3 text-[13.5px]">
+                  <li key={row.label} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_7.5rem] items-center gap-3 text-[13.5px]">
                     <span className="truncate">{row.label}</span>
                     <Meter value={Math.abs(row.v)} max={maxAbs} className={row.v >= 0 ? 'bg-ok' : 'bg-danger'} />
                     <span className={cn('num text-right font-semibold', row.v < 0 ? 'text-danger' : 'text-night')}>{money(row.v, cur)}</span>
@@ -639,12 +640,12 @@ function WinnerTable({ rows, linkable }: { rows: { supplierId: string; name: str
   return (
     <ul className="divide-y divide-line rounded-xl border border-line">
       {rows.map((w) => (
-        <li key={w.supplierId} className="flex items-center justify-between gap-3 px-3.5 py-2 text-[13.5px]">
-          <span className="min-w-0 truncate">
+        <li key={w.supplierId} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3.5 py-2 text-[13.5px]">
+          <span className="min-w-0">
             {linkable ? <a href={`/app/konkurrenter/leverandor/${w.supplierId}`}>{displayBuyer(w.name)}</a> : displayBuyer(w.name)}{' '}
             {w.beatUs ? <Badge tone="urgent">Har slått dere {w.beatUs}×</Badge> : null}
           </span>
-          <span className="num shrink-0 text-right text-muted">
+          <span className="num text-muted">
             <span className="font-semibold text-night">{w.wins}</span> {w.wins === 1 ? 'kontrakt' : 'kontrakter'}
             {w.lastWin ? ` · ${formatDate(w.lastWin)}` : ''}
           </span>
@@ -674,7 +675,7 @@ function CompetitionSection({ r }: { r: IntelligenceReport }) {
               </ul>
             </Sub>
           ) : null}
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Sub title={`Hos oppdragsgiveren, samme bransje${c.buyer ? ` · ${c.buyer.contracts} kontrakter` : ''}`} aside={<BasisTag basis="fact" />}>
               {c.buyer?.winners.length ? <WinnerTable rows={c.buyer.winners} linkable /> : <p className="text-[13.5px] text-muted">Ingen publiserte tildelinger hos oppdragsgiveren i samme bransje.</p>}
             </Sub>
@@ -714,7 +715,7 @@ function LearningSection({ r }: { r: IntelligenceReport }) {
   );
   return (
     <Section id="laering" num="6" icon={<LuGraduationCap className="size-4 text-navy-600" aria-hidden />} title="Læring fra resultatene deres" description={`Brukes når minst ${l.minDecided} tilbud er avgjort – færre gir tilfeldige tall.`}>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {card('Hos denne oppdragsgiveren', l.sameBuyer)}
         {card('I lignende anbud', l.similar)}
       </div>
@@ -890,7 +891,7 @@ export function IntelligencePage({ report: r }: { report: IntelligenceReport }) 
       <div className="space-y-5">
         <DecisionHero r={r} />
         <Tiles r={r} />
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-5 lg:order-2">
             <div className="lg:sticky lg:top-24">
               <PlanPanel r={r} />

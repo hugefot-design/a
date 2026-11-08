@@ -46,8 +46,11 @@ export function hitSource(hit: Pick<RequirementHit, 'sourceTitle' | 'page' | 'te
   return { kind: hit.documentId ? 'document' : 'notice', label: hit.sourceTitle, page: hit.page, quote: hit.text };
 }
 
+/** Utdrag som starter eller slutter midt i et ord («…se. Det er …») kortes til hele ord. */
+export const wholeWords = (s: string) => s.replace(/^…\S*\s+/, '… ').replace(/\s+\S*…$/, ' …');
+
 export function termSource(hit: Pick<TermHit, 'sourceId' | 'sourceTitle' | 'page' | 'snippet'>): SourceRef {
-  return { kind: hit.sourceId === 'S0' ? 'notice' : 'document', label: hit.sourceTitle, page: hit.page, quote: hit.snippet };
+  return { kind: hit.sourceId === 'S0' ? 'notice' : 'document', label: hit.sourceTitle, page: hit.page, quote: wholeWords(hit.snippet) };
 }
 
 /** Setningen om obligatorisk befaring (kunngjøring eller dokument), hvis den finnes. */

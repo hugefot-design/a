@@ -299,7 +299,7 @@ export async function intelligencePdf(r: IntelligenceReport, meta: { orgName: st
     ] as const) {
       w.point({ text: `${label}: ${value}`, basis: 'calculation' });
     }
-    const sens = c.sensitivity.filter((s) => s.profitAtContractValue !== null);
+    const sens = c.sensitivity.filter((s) => s.increasePct > 0 && s.profitAtContractValue !== null);
     if (sens.length && c.atContractValue) {
       w.sub('Følsomhet: fortjeneste ved kontraktsverdien hvis kostnadene øker');
       const maxAbs = Math.max(...sens.map((s) => Math.abs(s.profitAtContractValue!)), Math.abs(c.atContractValue.profit), 1);
