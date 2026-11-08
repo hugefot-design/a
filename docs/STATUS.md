@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 7. november 2026 (veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 8. november 2026 (Intelligence og ny salgstekst på nettsiden er rullet ut; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -9,9 +9,9 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 195 av 195 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 7.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 171 av 171 bestått – 7.11.2026 |
-| Ende-til-ende i nettleser | 5 av 5 bestått (inkl. appen på telefon) – 7.11.2026 |
+| Enhetstester | 215 av 215 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 8.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 184 av 184 bestått – 8.11.2026 |
+| Ende-til-ende i nettleser | 5 av 5 bestått (inkl. appen på telefon) – 8.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av anbudssiden (regelverk/klima) og Admin → Datakilder (XML-berikelse), 1280 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -387,6 +387,25 @@ databaseendringer; ny avhengighet `pdfkit`). Kontrollert på anbudradar.com: hel
 og `/intelligence/pdf` sender til innlogging uten økt (303); offentlige sider 200 på mobil og PC uten JavaScript-feil;
 0 advarsler og 0 feil i loggen. **IKKE VERIFISERT i produksjon:** selve siden og PDF-en med en innlogget kunde (dekket
 av testene og prøvd lokalt med ekte TED/Doffin-data).
+
+## Nettsiden selger det som skiller AnbudRadar ut (8. november 2026) – rullet ut 8.11.2026
+
+Bare tekst og frontend – ingen endring i priser, planer, betaling, database, API-er eller integrasjoner.
+
+- **Forsiden:** ny ingress («Få en tydelig anbefaling for hvert anbud … med kilde på alt») og delen «Det som skiller
+  AnbudRadar ut» med åtte fordeler, hver med planen den finnes i: Go/No-Go med kilde på alt, lønnsomhet med egne
+  kostnader, deres pris mot markedet, norske krav og kostbare vilkår, kapasitet, læring fra egne resultater, matching,
+  og hvem som vinner og hva som utløper.
+- **Sammenligningen** viser forskjellene som våre egne funksjoner (søk og varsling som funksjon – ingen tjenester nevnes
+  ved navn, og vi sier ikke hva andre mangler).
+- **Funksjonssiden** starter med «Samlet vurdering (Go/No-Go)». Engelsk, svensk og dansk er oppdatert.
+- Påstandene og hva de bygger på: [MARKEDSFORING.md](MARKEDSFORING.md). Ikke markedsført: AI (av) og kostnaden av
+  dagbøter og betalingsfrist (krever AI-analysen).
+- **Rullet ut 8.11.2026** (versjon `3801c2e`, eiers ja; testene på GitHub grønne for samme versjon). Kontrollert på
+  anbudradar.com: helsesjekk OK; forsiden viser «Det som skiller AnbudRadar ut», funksjonssiden «Samlet vurdering
+  (Go/No-Go)»; forside, funksjoner, priser, registrering og /en, /sv, /da svarer 200 på mobil (390 px) og PC (1440 px)
+  uten vannrett rulling og uten JavaScript-feil; kundereisen viser en ekte Doffin-kunngjøring i alle seks stegene;
+  admin-sidene er skjult (404); 0 advarsler og 0 feil i loggen etter oppstart.
 
 ## Ny forside og posisjonering (7. november 2026)
 

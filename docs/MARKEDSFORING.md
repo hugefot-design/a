@@ -1,6 +1,6 @@
 # Markedsføring: påstander og hva de bygger på
 
-Oppdatert 8. november 2026 (forsiden selger det som skiller AnbudRadar ut). Hver påstand på nettsiden skal kunne spores til en funksjon som finnes, og
+Oppdatert 8. november 2026 (forsiden selger det som skiller AnbudRadar ut – rullet ut samme dag, versjon `3801c2e`). Hver påstand på nettsiden skal kunne spores til en funksjon som finnes, og
 til en test eller kontroll. Endrer du markedsteksten, oppdater tabellen.
 
 ## Posisjonering
@@ -11,7 +11,7 @@ kapasitet og tilbudsarbeid.
 
 ## Påstandene på forsiden
 
-| Påstand | Hvor i appen | Plan (regnes ut fra planene) | I produksjon 7.11.2026 | Kontrollert av |
+| Påstand | Hvor i appen | Plan (regnes ut fra planene) | I produksjon 8.11.2026 | Kontrollert av |
 | --- | --- | --- | --- | --- |
 | Ekte kunngjøringer fra Doffin og TED, flere ganger i døgnet, med lenke til originalen | Henting (`src/connectors`), anbudssiden | Alle | Aktiv (Doffin-nøkkel finnes; henting hver 2. time når tjenesten er våken, vekkes hver time) | `tests/unit/connectors.test.ts`, `tests/integration/ingest-notifications.test.ts`, drift-sjekken |
 | Intelligent matching: score 0–100 med begrunnelse | `src/domain/matching/engine.ts` | Profesjonell og høyere | Aktiv | `tests/unit/matching.test.ts`, `tests/integration/screening.test.ts` |
