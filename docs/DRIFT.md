@@ -197,10 +197,17 @@ kommer det en e-post fra GitHub, og jobben slås på igjen under **Actions**.
   virke** (koden fra appen virker fortsatt) – be administratorene legge dem til på nytt.
 - **Feil koder:** 10 feil på 15 minutter (eller 30 på et døgn) gir pause for koden på kontoen, og eieren får e-post.
   Passkey virker fortsatt i pausen.
-- **Sikkerhetsvarsler på e-post:** hver innlogging på en administratorkonto, mange feil koder, totrinn slått på/av,
-  passkey lagt til/fjernet. Hver e-post har en lenke (gyldig i 7 dager, signert med `SESSION_SECRET`) som logger ut
+- **Sikkerhetsvarsler på e-post:** innlogging på en administratorkonto fra en ny enhet eller en ny IP-adresse (se
+  under), mange feil koder, totrinn slått på/av, passkey lagt til/fjernet. Hver e-post har en lenke (gyldig i 7 dager, signert med `SESSION_SECRET`) som logger ut
   alle enheter etter et ekstra klikk. Så lenge `EMAIL_ALLOWED_RECIPIENTS` er satt, må administratorens e-post stå på
   listen for at varslene skal komme fram (stoppede e-poster vises under **Admin → E-post**).
+- **Når kommer e-posten om admin-innlogging?** (fra 8.11.2026, eiers ønske) Bare når enheten eller IP-adressen er ny.
+  Enheten kjennes igjen med en tilfeldig nøkkel i informasjonskapselen `__Host-ar_enhet` (bare administratorer, 365
+  dager, blir liggende ved utlogging). IP-adressen sammenlignes som den er for IPv4; for IPv6 regnes adresser i samme
+  /64-nett som samme adresse (enheter bytter resten av adressen ofte). «Kjent» betyr brukt ved en fullført innlogging
+  de siste 90 dagene og etter siste «logg ut alle enheter» eller passordbytte. Innlogging med reservekode eller uten
+  totrinn varsles alltid. Revisjonsloggen (`auth.admin_login`) lagrer bare hash av nøkkelen og nettet. Nettleser i
+  privat modus, slettede informasjonskapsler og mobilnett (ny IP-adresse ofte) gir derfor e-post oftere.
 - **Reservekoder:** 10 engangskoder vises én gang ved oppsett. Lagre dem i passordbehandleren.
 - **Mistet telefonen og reservekodene?** Logg inn i Supabase (SQL-editoren) og slå av totrinn for kontoen, så kan
   den settes opp på nytt ved neste innlogging:

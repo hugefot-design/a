@@ -126,6 +126,12 @@ export function cookies(): CookieInfo[] {
     },
     { name: 'ar_csrf', purpose: 'Beskytter skjemaer (innlogging, registrering, kontakt) mot falske innsendinger før du er logget inn.', duration: '24 timer' },
     { name: 'ar_flash', purpose: 'Viser en kort beskjed etter en handling, f.eks. «Lagret».', duration: '60 sekunder' },
+    {
+      name: env.NODE_ENV === 'production' ? '__Host-ar_enhet' : 'ar_enhet',
+      purpose:
+        'Bare for administratorer: kjenner igjen enheten, så e-post om innlogging bare sendes når noen logger inn fra en ny enhet eller IP-adresse. Verdien er en tilfeldig nøkkel.',
+      duration: '365 dager, fornyes ved innlogging. Blir liggende når du logger ut, så enheten kjennes igjen neste gang.',
+    },
   ];
 }
 

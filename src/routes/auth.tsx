@@ -24,7 +24,8 @@ import { render } from '@/server/render';
 import { messages, translateAuthErrors } from '@/i18n';
 import { fill } from '@/i18n/format';
 import { createLoginChallenge, loginPasskeyOptions, verifyLoginChallenge } from '@/domain/auth/mfa';
-import { notifySecurityEvent } from '@/domain/auth/security';
+import { DEVICE_COOKIE, DEVICE_COOKIE_DAYS, noticeAdminLogin, validDeviceId, type LoginMethod } from '@/domain/auth/security';
+import { randomToken } from '@/lib/crypto';
 import { secondFactorFrom } from './helpers';
 import { systemSql } from '@/lib/db';
 import type { Router } from '@/server/router';
@@ -48,6 +49,16 @@ async function startSession(ctx: RequestContext, userId: string, opts: { mfaVeri
   ctx.responseCookies.push(
     serializeCookie(SESSION_COOKIE, token, { maxAge: SESSION_TTL_DAYS * 86400, secure: isProd, httpOnly: true, sameSite: 'Lax' }),
   );
+}
+
+/**
+ * Administratorer: e-post om innloggingen bare fra ny enhet eller ny IP-adresse. Enheten kjennes igjen med en
+ * tilfeldig nøkkel i en egen informasjonskapsel, som fornyes ved hver innlogging.
+ */
+async function adminLoginNotice(ctx: RequestContext, userId: string, method: LoginMethod): Promise<void> {
+  const deviceId = validDeviceId(ctx.cookies[DEVICE_COOKIE]) ?? randomToken(32);
+  ctx.responseCookies.push(serializeCookie(DEVICE_COOKIE, deviceId, { maxAge: DEVICE_COOKIE_DAYS * 86400, secure: isProd, httpOnly: true, sameSite: 'Lax' }));
+  await noticeAdminLogin(userId, { method, deviceId, ip: ctx.ip, ipHash: ctx.ipHash, userAgent: ctx.userAgent });
 }
 
 /** Kodesiden, med passkey-knapp hvis brukeren har lagt til en. */
@@ -80,8 +91,8 @@ export function registerAuthRoutes(router: Router): void {
     // Totrinnsinnlogging: riktig passord gir bare en kortvarig utfordring – økten lages når koden er riktig.
     if (result.user.totpEnabled) return codePage(ctx, await createLoginChallenge(result.user.id, next ?? null));
     await startSession(ctx, result.user.id);
-    // Administrator uten totrinn (må sette det opp før admin-panelet åpnes): varsle likevel.
-    if (result.user.isPlatformAdmin) await notifySecurityEvent(result.user.id, 'admin_login', { userAgent: ctx.userAgent, method: 'password_only' });
+    // Administrator uten totrinn (må sette det opp før admin-panelet åpnes): varsles alltid.
+    if (result.user.isPlatformAdmin) await adminLoginNotice(ctx, result.user.id, 'password_only');
     return redirect(next ?? homePath(result.user));
   });
 
@@ -104,7 +115,7 @@ export function registerAuthRoutes(router: Router): void {
     }
     const [user] = (await systemSql()`select is_platform_admin from users where id = ${res.userId}`) as unknown as { isPlatformAdmin: boolean }[];
     await startSession(ctx, res.userId, { mfaVerified: true });
-    if (user?.isPlatformAdmin) await notifySecurityEvent(res.userId, 'admin_login', { userAgent: ctx.userAgent, method: res.method });
+    if (user?.isPlatformAdmin) await adminLoginNotice(ctx, res.userId, res.method);
     const next = res.nextPath ? safeRedirectPath(res.nextPath, '') || undefined : undefined;
     return redirect(next ?? homePath(user ?? null));
   });

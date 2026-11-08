@@ -19,6 +19,7 @@ import {
 } from '../../src/domain/legal/legal';
 import { SESSION_COOKIE, SESSION_TTL_DAYS } from '../../src/domain/auth/auth';
 import { FLASH_COOKIE } from '../../src/server/flash';
+import { DEVICE_COOKIE, DEVICE_COOKIE_DAYS } from '../../src/domain/auth/security';
 import { env } from '../../src/lib/env';
 
 const source = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
@@ -44,14 +45,14 @@ test('alle informasjonskapsler appen setter, er dokumentert med riktig varighet'
       if (!file.endsWith('http.ts')) used.add(m[1]!);
     }
   }
-  assert.deepEqual([...used].sort(), ['FLASH_COOKIE', 'GUEST_CSRF_COOKIE', 'SESSION_COOKIE'], 'ny informasjonskapsel? Dokumenter den i cookies()');
+  assert.deepEqual([...used].sort(), ['DEVICE_COOKIE', 'FLASH_COOKIE', 'GUEST_CSRF_COOKIE', 'SESSION_COOKIE'], 'ny informasjonskapsel? Dokumenter den i cookies()');
 
   const csrfName = /GUEST_CSRF_COOKIE = '([^']+)'/.exec(source('src/server/app.ts'))?.[1];
   assert.ok(csrfName);
   const documented = cookies();
   assert.deepEqual(
     documented.map((c) => c.name),
-    [SESSION_COOKIE, csrfName, FLASH_COOKIE],
+    [SESSION_COOKIE, csrfName, FLASH_COOKIE, DEVICE_COOKIE],
   );
 
   // Varighetene i teksten stemmer med koden.
@@ -60,6 +61,8 @@ test('alle informasjonskapsler appen setter, er dokumentert med riktig varighet'
   assert.equal(documented[1]!.duration, '24 timer');
   assert.match(source('src/server/flash.ts'), /serializeCookie\(FLASH_COOKIE, [^)]*\), \{ maxAge: 60, /);
   assert.equal(documented[2]!.duration, '60 sekunder');
+  assert.match(source('src/routes/auth.tsx'), /serializeCookie\(DEVICE_COOKIE, deviceId, \{ maxAge: DEVICE_COOKIE_DAYS \* 86400, /);
+  assert.match(documented[3]!.duration, new RegExp(`^${DEVICE_COOKIE_DAYS} dager`));
 });
 
 /** Leser slettereglene i applyRetention(): tabell → intervaller i dager. */

@@ -1,12 +1,14 @@
 /**
  * Strengere admin: ny bekreftelse etter 12 timer, viktige endringer krever bekreftelse de siste
- * 15 minuttene, pause etter mange feil koder (med varsel), e-post ved hver admin-innlogging og
+ * 15 minuttene, pause etter mange feil koder (med varsel), e-post ved admin-innlogging fra ny enhet eller
+ * ny IP-adresse (alltid ved reservekode og uten totrinn) og
  * «logg ut alle enheter»-lenken.
  */
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { closeDb, systemSql } from '../../src/lib/db';
-import { revokeAllToken, verifyRevokeAllToken } from '../../src/domain/auth/security';
+import { DEVICE_COOKIE, revokeAllSessions, revokeAllToken, verifyRevokeAllToken } from '../../src/domain/auth/security';
+import { hmacHex } from '../../src/lib/crypto';
 import { describeDevice } from '../../src/lib/device';
 import { adminClientFor, ageMfaVerification, challengeFrom, Client, clientFor, createAccount, csrfFrom, enableTestMfa, makeAdmin, ORIGIN, startServer, testTotpCode } from '../helpers';
 
@@ -128,42 +130,135 @@ test('mange feil koder gir pause for kontoen (også med riktig kode) og et varse
   assert.match(mails[0]!.textBody, /\/konto\/logg-ut-overalt\?token=/);
 });
 
-test('hver innlogging på en administratorkonto gir e-post med tid, enhet og lenke; vanlige brukere får ikke', async () => {
-  const admin = await newAdmin();
+/** Passord og kode med en nettleser (testene kjører fra samme IP-adresse). Nullstiller innloggingsgrensen per IP. */
+async function adminLogin(c: Client, acc: { email: string; password: string; user: { id: string } }, code?: string) {
+  await systemSql()`delete from rate_limits where key like 'login:%' or key like 'mfa:%'`;
+  const pw = await c.post('/logg-inn', { email: acc.email, password: acc.password }, { from: '/logg-inn', headers: { 'user-agent': UA_IPHONE } });
+  assert.equal(pw.status, 200, 'kodesiden');
+  const res = await c.post('/logg-inn/kode', { challenge: challengeFrom(pw.body), code: code ?? (await testTotpCode(acc.user.id)) }, { from: '/logg-inn', headers: { 'user-agent': UA_IPHONE } });
+  assert.equal(res.status, 303, 'innlogget');
+}
+
+/** Samme nettleser etter utlogging: bare enhetsnøkkelen er igjen. */
+function sameBrowser(deviceId: string): Client {
   const c = new Client(server.base);
+  c.cookies.set(DEVICE_COOKIE, deviceId);
+  return c;
+}
+
+test('admin-innlogging gir e-post med tid, enhet, grunn og lenke – men bare fra ny enhet eller ny IP-adresse', async () => {
+  const admin = await newAdmin();
+  const mails = () => outbox(admin.user.id, 'security_admin_login');
+
+  // 1) Første innlogging: ny enhet og ny IP-adresse. Ingen e-post før koden er riktig.
+  const c = new Client(server.base);
+  await systemSql()`delete from rate_limits where key like 'login:%' or key like 'mfa:%'`;
   const pw = await c.post('/logg-inn', { email: admin.email, password: admin.password }, { from: '/logg-inn', headers: { 'user-agent': UA_IPHONE } });
   assert.equal(pw.status, 200);
-  assert.equal((await outbox(admin.user.id, 'security_admin_login')).length, 0, 'ingen e-post før koden er riktig');
+  assert.equal((await mails()).length, 0, 'ingen e-post før koden er riktig');
   const res = await c.post('/logg-inn/kode', { challenge: challengeFrom(pw.body), code: await testTotpCode(admin.user.id) }, { from: '/logg-inn', headers: { 'user-agent': UA_IPHONE } });
   assert.equal(res.status, 303);
-  const [mail] = await outbox(admin.user.id, 'security_admin_login');
+  const [mail] = await mails();
   assert.ok(mail, 'varsel sendt');
   assert.equal(mail.toEmail, admin.email);
   assert.equal(mail.subject, 'Ny innlogging i admin-panelet');
   assert.match(mail.textBody, /Enhet: Safari på iPhone/);
   assert.match(mail.textBody, /Innlogging: Passord og kode fra appen/);
+  assert.match(mail.textBody, /Varslet fordi: Ny enhet og ny IP-adresse/);
   assert.match(mail.textBody, /Tid: \d{1,2}\. \w+ \d{4}/);
   const token = /logg-ut-overalt\?token=([^\s]+)/.exec(mail.textBody)?.[1];
   assert.ok(token && verifyRevokeAllToken(decodeURIComponent(token)) === admin.user.id);
   // Sesjonen er bekreftet med kode, så admin åpner seg uten ny bekreftelse.
   assert.equal((await c.get('/admin')).status, 200);
+  const deviceId = c.cookies.get(DEVICE_COOKIE);
+  assert.ok(deviceId && deviceId.length >= 32, 'enheten får en tilfeldig nøkkel');
+  // Revisjonsloggen har bare hash av enheten og nettet – ikke nøkkelen eller IP-adressen.
+  const [row] = (await systemSql()`select metadata from audit_logs where action = 'auth.admin_login' and actor_user_id = ${admin.user.id}`) as unknown as { metadata: Record<string, unknown> }[];
+  assert.equal(row?.metadata.device, hmacHex(`device:${deviceId}`).slice(0, 24));
+  assert.equal(row?.metadata.notice, 'new_device_and_network');
+  assert.ok(!JSON.stringify(row?.metadata).includes(deviceId!), 'nøkkelen lagres ikke');
 
+  // 2) Samme nettleser og IP-adresse igjen: ingen ny e-post, og nøkkelen beholdes.
+  const again = sameBrowser(deviceId!);
+  await adminLogin(again, admin);
+  assert.equal((await mails()).length, 1, 'kjent enhet og IP-adresse: ingen e-post');
+  assert.equal(again.cookies.get(DEVICE_COOKIE), deviceId, 'samme nøkkel');
+  assert.equal((await again.get('/admin')).status, 200);
+
+  // 3) En annen nettleser (uten nøkkel) fra samme IP-adresse: e-post.
+  await adminLogin(new Client(server.base), admin);
+  assert.equal((await mails()).length, 2);
+  assert.match((await mails())[1]!.textBody, /Varslet fordi: Ny enhet eller nettleser/);
+
+  // 4) Kjent enhet fra en annen IP-adresse: e-post. Testene kjører fra én adresse, så de tidligere
+  //    innloggingene flyttes til et annet nett i loggen.
+  await systemSql()`update audit_logs set metadata = jsonb_set(metadata, '{net}', '"annet-nett"') where action = 'auth.admin_login' and actor_user_id = ${admin.user.id}`;
+  await adminLogin(sameBrowser(deviceId!), admin);
+  assert.equal((await mails()).length, 3);
+  assert.match((await mails())[2]!.textBody, /Varslet fordi: Ny IP-adresse/);
+
+  // 5) En falsk eller ødelagt nøkkel regnes som ny enhet.
+  await adminLogin(sameBrowser('kort'), admin);
+  assert.equal((await mails()).length, 4);
+  assert.match((await mails())[3]!.textBody, /Varslet fordi: Ny enhet eller nettleser/);
+
+  // 6) Innlogginger eldre enn 90 dager teller ikke.
+  await systemSql()`update audit_logs set created_at = now() - interval '91 days' where action = 'auth.admin_login' and actor_user_id = ${admin.user.id}`;
+  await adminLogin(sameBrowser(deviceId!), admin);
+  assert.equal((await mails()).length, 5);
+  assert.match((await mails())[4]!.textBody, /Varslet fordi: Ny enhet og ny IP-adresse/);
+  await adminLogin(sameBrowser(deviceId!), admin);
+  assert.equal((await mails()).length, 5, 'kjent igjen');
+
+  // 7) Etter «logg ut alle enheter» varsles også kjente enheter på nytt.
+  await revokeAllSessions(admin.user.id);
+  await adminLogin(sameBrowser(deviceId!), admin);
+  assert.equal((await mails()).length, 6);
+  assert.match((await mails())[5]!.textBody, /Varslet fordi: Ny enhet og ny IP-adresse/);
+
+  // Vanlige brukere får ingen slike e-poster og ingen enhetsnøkkel.
   const user = await createAccount();
   await enableTestMfa(user.user.id);
   const u = new Client(server.base);
+  await systemSql()`delete from rate_limits where key like 'login:%' or key like 'mfa:%'`;
   const upw = await u.post('/logg-inn', { email: user.email, password: user.password }, { from: '/logg-inn' });
   await u.post('/logg-inn/kode', { challenge: challengeFrom(upw.body), code: await testTotpCode(user.user.id) }, { from: '/logg-inn' });
   assert.equal((await outbox(user.user.id, 'security_admin_login')).length, 0);
+  assert.equal(u.cookies.has(DEVICE_COOKIE), false);
 });
 
-test('administrator uten totrinn får også varsel ved innlogging', async () => {
+test('innlogging med reservekode varsles alltid, også fra kjent enhet og IP-adresse', async () => {
+  const admin = await newAdmin();
+  const mails = () => outbox(admin.user.id, 'security_admin_login');
+  const c = new Client(server.base);
+  await adminLogin(c, admin);
+  const deviceId = c.cookies.get(DEVICE_COOKIE)!;
+  await adminLogin(sameBrowser(deviceId), admin);
+  assert.equal((await mails()).length, 1, 'kjent enhet: ingen ny e-post');
+  await systemSql()`insert into user_recovery_codes (user_id, code_hash) values (${admin.user.id}, ${hmacHex('recovery:ABCDE23456')})`;
+  await adminLogin(sameBrowser(deviceId), admin, 'abcde-23456');
+  assert.equal((await mails()).length, 2);
+  assert.match((await mails())[1]!.textBody, /Innlogging: Passord og en reservekode/);
+  assert.match((await mails())[1]!.textBody, /Varslet fordi: Innlogging med reservekode/);
+});
+
+test('administrator uten totrinn får varsel ved hver innlogging', async () => {
   const acc = await createAccount();
   await makeAdmin(acc.user.id, { mfa: false });
+  const passwordLogin = async (c: Client) => {
+    await systemSql()`delete from rate_limits where key like 'login:%'`;
+    const res = await c.post('/logg-inn', { email: acc.email, password: acc.password }, { from: '/logg-inn' });
+    assert.equal(res.status, 303);
+  };
   const c = new Client(server.base);
-  const res = await c.post('/logg-inn', { email: acc.email, password: acc.password }, { from: '/logg-inn' });
-  assert.equal(res.status, 303);
-  const [mail] = await outbox(acc.user.id, 'security_admin_login');
-  assert.match(mail?.textBody ?? '', /Bare passord – totrinn er ikke satt opp ennå/);
+  await passwordLogin(c);
+  await passwordLogin(sameBrowser(c.cookies.get(DEVICE_COOKIE)!));
+  const mails = await outbox(acc.user.id, 'security_admin_login');
+  assert.equal(mails.length, 2, 'også fra kjent enhet');
+  for (const m of mails) {
+    assert.match(m.textBody, /Bare passord – totrinn er ikke satt opp ennå/);
+    assert.match(m.textBody, /Varslet fordi: Totrinn er ikke satt opp/);
+  }
 });
 
 test('«logg ut alle enheter»: lenken gjør ingenting før knappen trykkes, så logges alle ut', async () => {

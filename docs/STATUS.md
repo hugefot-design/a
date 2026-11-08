@@ -9,8 +9,8 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 215 av 215 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 8.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 184 av 184 bestått – 8.11.2026 |
+| Enhetstester | 218 av 218 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 8.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 186 av 186 bestått – 8.11.2026 |
 | Ende-til-ende i nettleser | 5 av 5 bestått (inkl. appen på telefon) – 8.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -146,8 +146,12 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   filimport, passkeys) krever bekreftelse de siste 15 minuttene. Pause etter 10 feil koder på 15 min / 30 per døgn.
 - **Passkeys** (Face ID, fingeravtrykk, Windows Hello, sikkerhetsnøkkel) som andre steg i stedet for koden, via
   `@simplewebauthn/server` og `/browser` (MIT, gratis, ingen ekstern tjeneste). Bare offentlig nøkkel lagres.
-- **Sikkerhetsvarsler på e-post** ved hver admin-innlogging, mange feil koder og endringer i innloggingsmåter, med
-  signert «logg ut alle enheter»-lenke (7 dager, krever et ekstra klikk).
+- **Sikkerhetsvarsler på e-post** ved admin-innlogging fra ny enhet eller ny IP-adresse (endret 8.11.2026 – før: ved
+  hver innlogging), mange feil koder og endringer i innloggingsmåter, med signert «logg ut alle enheter»-lenke (7
+  dager, krever et ekstra klikk). Reservekode og innlogging uten totrinn varsles alltid. Regler: [DRIFT.md](DRIFT.md#6b-totrinnsinnlogging-passkeys-og-sikkerhetsvarsler).
+  Testet: første innlogging, samme nettleser og IP (ingen e-post), ny nettleser, ny IP, ødelagt nøkkel, eldre enn
+  90 dager, etter «logg ut alle», reservekode og uten totrinn; fem bevisste feil i reglene ble fanget av testene.
+  Ingen databaseendring (bruker revisjonsloggen). **Ikke rullet ut** (venter på eiers ja).
 - Tester: `tests/integration/admin-stepup.test.ts`, `tests/integration/passkeys.test.ts` (programvare-autentikator som
   signerer som en ekte enhet: falsk side, gjenbruk og kopiert nøkkel avvises) og `tests/e2e/admin-passkey.test.ts`
   (Chromium med virtuell autentikator: legg til Face ID, logg inn og bekreft med den).

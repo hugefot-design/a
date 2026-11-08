@@ -1135,7 +1135,7 @@ export function SecurityPage() {
             'Totrinnsinnlogging med kode-app kan slås på under Innstillinger, og er påkrevd for AnbudRadars egne administratorer. Hemmeligheten lagres kryptert, og reservekodene bare som hash.',
             'I stedet for koden kan du bruke en passkey: Face ID, fingeravtrykk, Windows Hello eller en sikkerhetsnøkkel. Den virker bare på vår adresse, så en falsk innloggingsside kan ikke bruke den. Vi lagrer bare den offentlige nøkkelen.',
             'Etter mange feil koder settes innlogging med kode på pause for kontoen, og du får beskjed på e-post. Du får også e-post når totrinn eller en passkey legges til eller fjernes, med en lenke som logger ut alle enheter.',
-            'Administratorer må bekrefte på nytt hver 12. time og før viktige endringer, og får e-post ved hver innlogging.',
+            'Administratorer må bekrefte på nytt hver 12. time og før viktige endringer. De får e-post når noen logger inn fra en ny enhet eller IP-adresse, med en reservekode eller uten totrinn.',
             'Økter utløper etter 30 dager uten bruk, og du kan logge ut alle andre økter under Innstillinger.',
             'Eiere og administratorer styrer hvem i organisasjonen som har tilgang, og med hvilken rolle.',
           ]}
