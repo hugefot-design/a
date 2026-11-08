@@ -103,7 +103,7 @@ export function RecoveryCodeForm({
 }) {
   return (
     <details className="mt-6 rounded-2xl border border-line bg-cream/60 px-4 py-3" data-keep-open>
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-[14px] font-semibold text-night [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-[14px] font-semibold text-strong [&::-webkit-details-marker]:hidden">
         <LuKeyRound className="size-4 text-muted" aria-hidden /> {toggle}
       </summary>
       <form method="post" action={action} className="mt-4 space-y-3 pb-1">

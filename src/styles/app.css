@@ -92,6 +92,10 @@
   --color-navy-100: #e6ecf5;
   --color-navy-50: #f2f5fa;
 
+  /* Flater og sterkeste tekst. Lys modus: hvitt og natt (som før). Mørk modus bytter dem (se under). */
+  --color-surface: #ffffff;
+  --color-strong: #060e1b;
+
   --color-ink: #172033;
   --color-muted: #5a677d;
   --color-faint: #8592a6;
@@ -128,13 +132,74 @@
   --text-2xs: 0.6875rem;
 }
 
+/* ------------------------------------------------------------------------
+   Mørk modus. Følger systemet (prefers-color-scheme) til brukeren velger selv; valget
+   settes som data-theme="light|dark" på <html> av skriptet i <head> (ingen blink).
+   Bare fargetokenene byttes – natt, signal, radar og fristtavla er like i begge modi.
+   «dark:» kan brukes i klassene der et element trenger noe eget.
+   ------------------------------------------------------------------------ */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
+:root {
+  color-scheme: light;
+  @variant dark {
+    color-scheme: dark;
+    --color-surface: #101c30;
+    --color-paper: #0a1424;
+    --color-cream: #0c1729;
+    --color-strong: #f3f6fb;
+    --color-ink: #dce4f0;
+    --color-muted: #9daac0;
+    --color-faint: #7a89a1;
+    --color-line: #22324b;
+    --color-line-strong: #33496b;
+
+    /* Navy brukes mest som tekst (overskrifter, lenker) og lyse flater – derfor snus skalaen. */
+    --color-navy-950: #f5f8fd;
+    --color-navy-900: #e8eef8;
+    --color-navy-800: #d0dcef;
+    --color-navy-700: #a8c1ec;
+    --color-navy-600: #86a8e0;
+    --color-navy-300: #4d6890;
+    --color-navy-200: #2d4468;
+    --color-navy-100: #1b2d4a;
+    --color-navy-50: #15253d;
+
+    --color-marker-soft: #3b3313;
+    --color-urgent: #f29a6b;
+    --color-urgent-soft: #33200f;
+    --color-ok: #5fd19b;
+    --color-ok-soft: #10301f;
+    --color-info: #8ab4f5;
+    --color-info-soft: #13284a;
+    --color-danger: #f4857a;
+    --color-danger-soft: #3b1715;
+    --color-ai: #86c7cc;
+    --color-ai-soft: #112c2f;
+  }
+}
+
+/* Bare når skriptet kjører (f.eks. bryteren for lys og mørk modus). */
+html:not(.js) .js-only {
+  display: none !important;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-white font-sans text-ink antialiased;
+    @apply bg-surface font-sans text-ink antialiased;
     font-size: 15px;
     line-height: 1.55;
   }
@@ -148,7 +213,7 @@
   }
   ::selection {
     background: var(--color-marker);
-    color: var(--color-ink);
+    color: #172033;
   }
   :focus-visible {
     outline: 2px solid var(--color-navy-600);
@@ -171,7 +236,8 @@
     margin: 0 -0.12em;
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
-    color: var(--color-ink);
+    /* Mørk tekst på gul tusj, også i mørk modus. */
+    color: #172033;
   }
   .hl-draw {
     animation: hl-draw 900ms cubic-bezier(0.65, 0, 0.35, 1) 300ms both;
@@ -211,8 +277,8 @@
   }
 
   .field-input {
-    @apply block w-full rounded-xl border border-line-strong bg-white px-3.5 py-2.5 text-[15px] text-ink placeholder:text-faint;
-    @apply focus:border-night focus:outline-none focus:ring-4 focus:ring-signal/25;
+    @apply block w-full rounded-xl border border-line-strong bg-surface px-3.5 py-2.5 text-[15px] text-ink placeholder:text-faint;
+    @apply focus:border-strong focus:outline-none focus:ring-4 focus:ring-signal/25;
   }
   .field-input[aria-invalid="true"] {
     @apply border-danger focus:ring-danger-soft;
@@ -223,8 +289,8 @@
 
   /* Stor kodeboks for totrinn: seks siffer med god luft og tydelig fokus i radar-gult. */
   .code-input {
-    @apply block h-16 w-full rounded-2xl border border-line-strong bg-white text-center font-mono text-[30px] font-semibold text-night placeholder:text-line-strong;
-    @apply focus:border-night focus:outline-none focus:ring-4 focus:ring-signal/30;
+    @apply block h-16 w-full rounded-2xl border border-line-strong bg-surface text-center font-mono text-[30px] font-semibold text-strong placeholder:text-line-strong;
+    @apply focus:border-strong focus:outline-none focus:ring-4 focus:ring-signal/30;
     letter-spacing: 0.42em;
     /* Luften etter siste siffer veies opp, så tallene står midt i boksen. */
     padding-left: 0.42em;
@@ -257,7 +323,7 @@
     padding: 6px 10px;
     border: 1px solid var(--color-line);
     border-radius: 8px;
-    background: #fff;
+    background: var(--color-surface);
     box-shadow: 0 6px 18px rgb(15 35 64 / 0.12);
     pointer-events: none;
     font-size: 12px;
@@ -362,8 +428,8 @@
     justify-content: center;
     gap: 0.5rem;
     border-radius: 999px;
-    background: var(--color-night);
-    color: #fff;
+    background: var(--color-strong);
+    color: var(--color-surface);
     font-weight: 650;
     padding: 0.85rem 1.4rem;
     font-size: 16px;
@@ -374,6 +440,10 @@
     background: var(--color-night-700);
     color: #fff;
     transform: translateY(-1px);
+    @variant dark {
+      background: var(--color-ink);
+      color: var(--color-surface);
+    }
   }
   .btn-outline-dark {
     display: inline-flex;
@@ -382,17 +452,17 @@
     gap: 0.5rem;
     border-radius: 999px;
     border: 1px solid var(--color-line-strong);
-    color: var(--color-night);
+    color: var(--color-strong);
     font-weight: 650;
     padding: 0.85rem 1.4rem;
     font-size: 16px;
     text-decoration: none;
-    background: #fff;
+    background: var(--color-surface);
     transition: border-color 0.15s ease, transform 0.15s ease;
   }
   .btn-outline-dark:hover {
-    border-color: var(--color-night);
-    color: var(--color-night);
+    border-color: var(--color-strong);
+    color: var(--color-strong);
     transform: translateY(-1px);
   }
 

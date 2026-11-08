@@ -49,7 +49,7 @@ export function CountiesPage({ regions, open }: { regions: MarketSnapshot['regio
         <Wrap>
           <CountyGrid regions={regions} />
           <p className="mt-6 text-[13px] text-muted">Et anbud som gjelder flere fylker, telles i hvert av dem.</p>
-          <NewsletterSignup sourcePath="/fylker" className="mt-12 max-w-xl bg-white" />
+          <NewsletterSignup sourcePath="/fylker" className="mt-12 max-w-xl bg-surface" />
         </Wrap>
       </section>
       <SignalCta
@@ -93,10 +93,10 @@ export function CountyPage({ region, overview }: { region: string; overview: Cou
         </div>
       </NightHero>
 
-      <section className="bg-white py-14 sm:py-20">
+      <section className="bg-surface py-14 sm:py-20">
         <Wrap className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0">
-            <h2 className="text-[22px] font-[740] tracking-[-0.02em] text-night">Nærmeste frister i {name}</h2>
+            <h2 className="text-[22px] font-[740] tracking-[-0.02em] text-strong">Nærmeste frister i {name}</h2>
             {overview.rows.length ? (
               <TenderRows rows={overview.rows} />
             ) : (
@@ -105,7 +105,7 @@ export function CountyPage({ region, overview }: { region: string; overview: Cou
 
             {overview.industries.length ? (
               <>
-                <h2 className="mt-12 text-[22px] font-[740] tracking-[-0.02em] text-night">Bransjer i {name}</h2>
+                <h2 className="mt-12 text-[22px] font-[740] tracking-[-0.02em] text-strong">Bransjer i {name}</h2>
                 <ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {overview.industries.map((i) => {
                     const Icon = INDUSTRY_ICONS[i.id] ?? LuBuilding2;
@@ -113,7 +113,7 @@ export function CountyPage({ region, overview }: { region: string; overview: Cou
                       <li key={i.id}>
                         <a
                           href={industryRegionPath(i.id, region)}
-                          className="card-lift group flex items-center gap-3.5 rounded-2xl border border-line bg-white p-4 text-night no-underline"
+                          className="card-lift group flex items-center gap-3.5 rounded-2xl border border-line bg-surface p-4 text-strong no-underline"
                           rel={i.n < MIN_OPEN_FOR_INDEXING ? 'nofollow' : undefined}
                         >
                           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-night text-signal">
@@ -123,7 +123,7 @@ export function CountyPage({ region, overview }: { region: string; overview: Cou
                             <span className="block truncate text-[15px] font-semibold">{i.name}</span>
                             <span className="block text-[13.5px] text-muted">{count(i.n)}</span>
                           </span>
-                          <LuArrowRight className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-night" aria-hidden />
+                          <LuArrowRight className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-strong" aria-hidden />
                         </a>
                       </li>
                     );
@@ -140,8 +140,8 @@ export function CountyPage({ region, overview }: { region: string; overview: Cou
                 <ul className="mt-4 space-y-2.5">
                   {overview.buyers.map((b) => (
                     <li key={b.name} className="flex items-baseline justify-between gap-3 text-[14px]">
-                      <span className="min-w-0 truncate text-night">{b.name}</span>
-                      <span className="num shrink-0 font-semibold text-night">{b.n}</span>
+                      <span className="min-w-0 truncate text-strong">{b.name}</span>
+                      <span className="num shrink-0 font-semibold text-strong">{b.n}</span>
                     </li>
                   ))}
                 </ul>

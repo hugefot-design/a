@@ -11,7 +11,7 @@ import { boardWhen, Mono } from './home';
 
 function Ref({ n }: { n: number }) {
   return (
-    <span className="ml-1 inline-flex size-5 -translate-y-px items-center justify-center rounded-full bg-navy-950 align-middle font-mono text-[11px] font-medium text-white" aria-hidden>
+    <span className="ml-1 inline-flex size-5 -translate-y-px items-center justify-center rounded-full bg-navy-950 align-middle font-mono text-[11px] font-medium text-surface" aria-hidden>
       {n}
     </span>
   );
@@ -40,7 +40,7 @@ export function NoticeExample({ s }: { s: NoticeSpecimen }) {
           <p className="mt-5 text-[18px] leading-relaxed text-muted">{t.lead}</p>
         </div>
         <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-12">
-          <article className="reveal min-w-0 rounded-3xl border border-line bg-white p-6 shadow-[0_40px_90px_-50px_rgba(6,14,27,0.55)] sm:p-8">
+          <article className="reveal min-w-0 rounded-3xl border border-line bg-surface p-6 shadow-[0_40px_90px_-50px_rgba(6,14,27,0.55)] sm:p-8">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-4">
               <Mono className="text-muted">{t.kind}</Mono>
               <Mono className="text-muted">
@@ -89,7 +89,7 @@ export function NoticeExample({ s }: { s: NoticeSpecimen }) {
           <ol className="min-w-0 space-y-5 self-center">
             {notes.map((x) => (
               <li key={x.n} className="grid grid-cols-[1.75rem_minmax(0,1fr)] gap-3">
-                <span className="mt-0.5 inline-flex size-6 items-center justify-center rounded-full bg-navy-950 font-mono text-[12px] font-medium text-white" aria-hidden>
+                <span className="mt-0.5 inline-flex size-6 items-center justify-center rounded-full bg-navy-950 font-mono text-[12px] font-medium text-surface" aria-hidden>
                   {x.n}
                 </span>
                 <div className="min-w-0">

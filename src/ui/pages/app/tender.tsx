@@ -211,7 +211,7 @@ export function TenderPage(p: TenderPageProps) {
           <DeadlineBlock tender={t} />
         </Panel>
         {p.screening ? (
-          <a href="#forhandsvurdering" className="block rounded-2xl border border-line bg-white px-4 py-3 text-ink no-underline shadow-[0_1px_2px_rgba(6,14,27,0.04)]">
+          <a href="#forhandsvurdering" className="block rounded-2xl border border-line bg-surface px-4 py-3 text-ink no-underline shadow-[0_1px_2px_rgba(6,14,27,0.04)]">
             <span className="flex items-center justify-between gap-2">
               <span className="text-[13px] font-semibold text-navy-900">Forhåndsvurdering</span>
               <ScreeningBadge screening={p.screening} />
@@ -377,7 +377,7 @@ export function TenderPage(p: TenderPageProps) {
               <BuyerHistory history={p.result.buyerHistory} />
             </Panel>
           ) : null}
-          <details className="rounded-lg border border-line bg-white">
+          <details className="rounded-lg border border-line bg-surface">
             <summary className="cursor-pointer px-5 py-3 text-[14px] font-semibold text-navy-900">Rapporter feil i kunngjøringen</summary>
             <PostForm action={`/app/anbud/${t.id}/rapporter`} className="space-y-3 px-5 pb-5">
               <Field label="Hva er feil?" htmlFor="report-msg">
@@ -1048,7 +1048,7 @@ function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; 
               name="file"
               required
               accept=".pdf,.docx,.txt,application/pdf"
-              className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-white file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900"
+              className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-surface file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900"
             />
             <Button size="sm" variant="secondary" busyLabel="Leser dokumentet …">
               <LuUpload className="size-4" aria-hidden /> Last opp
@@ -1129,7 +1129,7 @@ function BasisBadge({ basis, check }: { basis: Claim['basis']; check: RefCheck |
 
 function ClaimItem({ item, check }: { item: Claim; check: RefCheck | undefined }) {
   return (
-    <li className="rounded-md border border-line bg-white px-4 py-3">
+    <li className="rounded-md border border-line bg-surface px-4 py-3">
       <p className="text-[14px] text-ink">{item.text}</p>
       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
         <BasisBadge basis={item.basis} check={check} />
@@ -1258,7 +1258,7 @@ export function AnalysisPage({ tender, analysis }: { tender: TenderDetail; analy
                 {Array.isArray(d.evaluation_criteria) && (d.evaluation_criteria as unknown[]).length ? (
                   <ul className="space-y-3">
                     {(d.evaluation_criteria as { criterion: string; weight: string | null }[]).map((c, i) => (
-                      <li key={i} className="rounded-md border border-line bg-white px-4 py-3">
+                      <li key={i} className="rounded-md border border-line bg-surface px-4 py-3">
                         <p className="text-[14px]">
                           {c.criterion}
                           {c.weight ? <strong className="num"> – {c.weight}</strong> : null}

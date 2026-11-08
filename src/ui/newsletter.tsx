@@ -29,7 +29,7 @@ export function NewsletterSignup({
       <p className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">
         <LuMail className="size-4" aria-hidden /> Gratis, uten konto
       </p>
-      <p className="mt-2 text-[18px] font-[720] leading-snug text-night">Få ukens nye anbud på e-post</p>
+      <p className="mt-2 text-[18px] font-[720] leading-snug text-strong">Få ukens nye anbud på e-post</p>
       <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
         Hver mandag: nye offentlige anbud{topic ? ` – ${topic}` : ''}. Meld deg av med ett klikk.
       </p>

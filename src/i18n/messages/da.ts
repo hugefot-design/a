@@ -32,6 +32,7 @@ export const da: Messages = {
     mainMenu: 'Hovedmenu',
     home: 'AnbudRadar – forside',
     language: 'Sprog',
+    theme: 'Skift mellem lyst og mørkt tema',
     suggest: 'Denne side findes også på dansk.',
     suggestAction: 'Læs på dansk',
   },
@@ -484,6 +485,7 @@ export const da: Messages = {
     },
   },
   auth: {
+    trust: 'Sikkert login med totrinsbekræftelse og passkey · Data opbevares i EU',
     side: {
       title: 'Find ikke bare udbuddet. Find ud af, om det er værd at vinde.',
       points: ['Udbud der passer til virksomheden, rangeret med begrundelse', 'Krav og risici, før I byder', 'Rentabilitet sammenlignet med tidligere tildelinger'],
@@ -527,6 +529,10 @@ export const da: Messages = {
       submit: 'Log ind',
       busy: 'Logger ind …',
       forgot: 'Glemt adgangskoden?',
+      welcome: 'Velkommen tilbage! Log ind for at se nye match og frister.',
+      newHere: 'Ny hos AnbudRadar?',
+      showPassword: 'Vis adgangskode',
+      hidePassword: 'Skjul adgangskode',
       errors: {
         invalid: 'Forkert e-mail eller adgangskode.',
         locked: 'Kontoen er midlertidigt låst efter for mange mislykkede forsøg. Prøv igen om 15 minutter, eller nulstil adgangskoden.',

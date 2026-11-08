@@ -26,11 +26,11 @@ export function Kicker({ children, dark = false }: { children: ReactNode; dark?:
 }
 
 export function H2({ children, dark = false, className }: { children: ReactNode; dark?: boolean; className?: string }) {
-  return <h2 className={cn('text-[34px] font-[760] leading-[1.04] tracking-[-0.03em] sm:text-[52px]', dark ? 'text-white' : 'text-night', className)}>{children}</h2>;
+  return <h2 className={cn('text-[34px] font-[760] leading-[1.04] tracking-[-0.03em] sm:text-[52px]', dark ? 'text-white' : 'text-strong', className)}>{children}</h2>;
 }
 
 export function ExampleTag({ children }: { children: ReactNode }) {
-  return <span className="rounded-full bg-night/5 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{children}</span>;
+  return <span className="rounded-full bg-strong/5 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{children}</span>;
 }
 
 // ---------------------------------------------------------------------------
@@ -178,7 +178,7 @@ export function IndustryTiles({ industries, limit }: { industries: MarketSnapsho
           <li key={i.id} className={cn('reveal', idx % 3 === 1 && 'delay-1', idx % 3 === 2 && 'delay-2')}>
             <a
               href={lp(`/bransjer/${industrySlugNb(i.id)}`)}
-              className="card-lift group flex h-full items-center gap-4 rounded-2xl border border-line bg-white p-4 text-night no-underline sm:p-5"
+              className="card-lift group flex h-full items-center gap-4 rounded-2xl border border-line bg-surface p-4 text-strong no-underline sm:p-5"
             >
               <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-night text-signal">
                 <Icon className="size-6" aria-hidden strokeWidth={1.7} />
@@ -187,7 +187,7 @@ export function IndustryTiles({ industries, limit }: { industries: MarketSnapsho
                 <span className="block truncate text-[16px] font-semibold">{m.industries.names[i.id]?.name ?? i.name}</span>
                 <span className="block text-[14px] text-muted">{plural(locale, m.home.industries.open, i.n)}</span>
               </span>
-              <LuArrowRight className="size-5 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-night" aria-hidden />
+              <LuArrowRight className="size-5 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-strong" aria-hidden />
             </a>
           </li>
         );

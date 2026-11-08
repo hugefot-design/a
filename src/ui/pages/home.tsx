@@ -103,7 +103,7 @@ function Why() {
     return fill(t.included, { plans: !plan || plan === 'free' ? t.allPlans : fill(t.andUp, { plan: m.plans[plan].name }) });
   };
   return (
-    <section className="bg-white py-24 sm:py-32">
+    <section className="bg-surface py-24 sm:py-32">
       <Wrap>
         <div className="reveal max-w-3xl">
           <Kicker>{t.eyebrow}</Kicker>
@@ -118,7 +118,7 @@ function Why() {
                 <span className="flex size-11 items-center justify-center rounded-2xl bg-night text-signal">
                   <Icon className="size-5" aria-hidden />
                 </span>
-                <h3 className="mt-5 text-[19px] font-[740] leading-tight tracking-[-0.015em] text-night">{item.title}</h3>
+                <h3 className="mt-5 text-[19px] font-[740] leading-tight tracking-[-0.015em] text-strong">{item.title}</h3>
                 <p className="mt-2 flex-1 text-[15px] leading-relaxed text-muted">{item.text}</p>
                 <p className="mt-5 text-[12.5px] font-semibold text-navy-700">{included(WHY_FEATURES[i] ?? null)}</p>
               </li>
@@ -153,7 +153,7 @@ function Journey({ showcase }: { showcase: Showcase | null }) {
         <ol className="reveal mt-10 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6" aria-label={t.eyebrow}>
           {t.steps.map((s, i) => (
             <li key={s.title} className="flex">
-              <a href={`#steg-${i + 1}`} className="flex min-h-11 flex-1 items-center gap-2 rounded-2xl border border-line-strong bg-white px-3 py-2 text-[13.5px] font-semibold leading-snug text-night no-underline hover:border-night">
+              <a href={`#steg-${i + 1}`} className="flex min-h-11 flex-1 items-center gap-2 rounded-2xl border border-line-strong bg-surface px-3 py-2 text-[13.5px] font-semibold leading-snug text-strong no-underline hover:border-strong">
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-night font-mono text-[11.5px] text-signal">{i + 1}</span>
                 <span className="min-w-0">{s.title}</span>
               </a>
@@ -164,11 +164,11 @@ function Journey({ showcase }: { showcase: Showcase | null }) {
           {t.steps.map((s, i) => {
             const Visual = JOURNEY_VISUALS[i]!;
             return (
-              <article id={`steg-${i + 1}`} key={s.title} className="reveal flex scroll-mt-24 flex-col rounded-3xl border border-line bg-white p-5 sm:p-7">
+              <article id={`steg-${i + 1}`} key={s.title} className="reveal flex scroll-mt-24 flex-col rounded-3xl border border-line bg-surface p-5 sm:p-7">
                 <div className="flex items-start gap-4">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-night font-mono text-[14px] font-medium text-signal">{i + 1}</span>
                   <div className="min-w-0">
-                    <h3 className="text-[21px] font-[740] leading-tight tracking-[-0.02em] text-night">{s.title}</h3>
+                    <h3 className="text-[21px] font-[740] leading-tight tracking-[-0.02em] text-strong">{s.title}</h3>
                     <p className="mt-1.5 text-[15.5px] leading-relaxed text-muted">{s.text}</p>
                   </div>
                 </div>
@@ -203,7 +203,7 @@ function Compare() {
       </span>
     );
   return (
-    <section className="bg-white py-24 sm:py-32">
+    <section className="bg-surface py-24 sm:py-32">
       <Wrap>
         <div className="reveal max-w-3xl">
           <Kicker>{t.eyebrow}</Kicker>

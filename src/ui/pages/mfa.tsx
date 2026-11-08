@@ -46,7 +46,7 @@ function Step({ n, title, last, children }: { n: number; title: string; last?: b
       <span className="absolute left-0 top-0 flex size-8 items-center justify-center rounded-full bg-night text-[14px] font-bold text-signal" aria-hidden>
         {n}
       </span>
-      <p className="pt-1 text-[16px] font-semibold text-night">
+      <p className="pt-1 text-[16px] font-semibold text-strong">
         <span className="sr-only">Steg {n}: </span>
         {title}
       </p>
@@ -79,13 +79,13 @@ export function MfaSetupPage({ qrDataUrl, secret, error, required, next }: { qrD
           For eksempel Google Authenticator, Microsoft Authenticator eller 1Password. Gratis i App Store og Google Play.
         </Step>
         <Step n={2} title="Skann QR-koden med appen">
-          <div className="mt-3 rounded-2xl border border-line bg-white p-4 shadow-[0_18px_40px_-30px_rgba(6,14,27,0.55)]">
+          <div className="mt-3 rounded-2xl border border-line bg-surface p-4 shadow-[0_18px_40px_-30px_rgba(6,14,27,0.55)]">
             <div className="flex justify-center rounded-xl bg-cream/70 p-3">
               <img src={qrDataUrl} alt="QR-kode for å legge AnbudRadar til i kode-appen" width={176} height={176} className="rounded-lg bg-white p-1.5" />
             </div>
             <p className="mt-4 text-[13px]">Kan du ikke skanne? Skriv inn denne nøkkelen i appen:</p>
             <div className="mt-2 flex items-stretch gap-2">
-              <p className="flex-1 select-all break-words rounded-lg bg-cream px-3 py-2 font-mono text-[14px] leading-relaxed text-night">{grouped}</p>
+              <p className="flex-1 select-all break-words rounded-lg bg-cream px-3 py-2 font-mono text-[14px] leading-relaxed text-strong">{grouped}</p>
               <button type="button" data-copy={secret} className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'h-auto self-stretch px-3')} aria-label="Kopier nøkkelen">
                 <LuCopy className="size-4" aria-hidden />
                 <span data-label>Kopier</span>
@@ -124,7 +124,7 @@ export function MfaRecoveryCodesPage({ codes, next, fresh }: { codes: string[]; 
         {fresh ? 'Fra nå trenger du en kode fra appen når du logger inn. Andre innlogginger er logget ut.' : 'De gamle reservekodene virker ikke lenger.'}
       </Alert>
       <div className="rounded-2xl border border-line bg-cream p-5">
-        <ol className="grid grid-cols-2 gap-x-6 gap-y-2.5 font-mono text-[15px] text-night">
+        <ol className="grid grid-cols-2 gap-x-6 gap-y-2.5 font-mono text-[15px] text-strong">
           {codes.map((c, i) => (
             <li key={c} className="flex items-baseline gap-2">
               <span className="w-5 text-right font-sans text-[12px] text-faint" aria-hidden>
@@ -155,14 +155,14 @@ export function MfaRecoveryCodesPage({ codes, next, fresh }: { codes: string[]; 
 // ---------------------------------------------------------------------------
 function Card({ id, icon: Icon, title, status, children }: { id?: string; icon: IconType; title: string; status?: ReactNode; children: ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-6 rounded-2xl border border-line bg-white p-5">
+    <section id={id} className="scroll-mt-6 rounded-2xl border border-line bg-surface p-5">
       <div className="flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-night text-signal" aria-hidden>
           <Icon className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-            <h2 className="text-[16px] font-semibold text-night">{title}</h2>
+            <h2 className="text-[16px] font-semibold text-strong">{title}</h2>
             {status}
           </div>
           <div className="mt-1.5 text-[14px] leading-relaxed text-muted">{children}</div>
@@ -222,7 +222,7 @@ export function MfaStatusPage({
               {passkeys.map((p) => (
                 <li key={p.id} className="flex items-center gap-3 px-3.5 py-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-semibold text-night">{p.name}</p>
+                    <p className="truncate text-[14px] font-semibold text-strong">{p.name}</p>
                     <p className="text-[12px] text-muted">
                       Lagt til {formatDate(p.createdAt)} · {p.lastUsedAt ? `brukt ${formatDateTime(p.lastUsedAt)}` : 'ikke brukt ennå'}
                     </p>
@@ -276,7 +276,7 @@ export function MfaStatusPage({
         </Card>
 
         <section className="rounded-2xl border border-dashed border-line-strong p-5">
-          <h2 className="text-[16px] font-semibold text-night">Slå av totrinnsinnlogging</h2>
+          <h2 className="text-[16px] font-semibold text-strong">Slå av totrinnsinnlogging</h2>
           {isAdmin ? (
             <p className="mt-1 text-[14px] text-muted">Administratorer må ha totrinnsinnlogging. Har du mistet telefonen, bruk en reservekode og sett opp på nytt.</p>
           ) : (
@@ -376,13 +376,13 @@ export function RevokeAllDonePage({ count }: { count: number }) {
     >
       <ol className="space-y-3 text-[14px] leading-relaxed text-muted">
         <li>
-          <strong className="text-night">1. Bytt passord nå.</strong> Den som logget inn, kan kjenne det.
+          <strong className="text-strong">1. Bytt passord nå.</strong> Den som logget inn, kan kjenne det.
         </li>
         <li>
-          <strong className="text-night">2. Logg inn igjen</strong> med det nye passordet og koden fra appen.
+          <strong className="text-strong">2. Logg inn igjen</strong> med det nye passordet og koden fra appen.
         </li>
         <li>
-          <strong className="text-night">3. Kan noen ha telefonen din?</strong> Sett opp totrinn på nytt under Innstillinger.
+          <strong className="text-strong">3. Kan noen ha telefonen din?</strong> Sett opp totrinn på nytt under Innstillinger.
         </li>
       </ol>
       <a href="/glemt-passord" className={cn(buttonVariants({ variant: 'primary', size: 'lg' }), 'mt-7 w-full')}>

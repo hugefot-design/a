@@ -57,6 +57,7 @@ oppdateres.
 | 3.12 | Personer i kunngjøringer | Kontaktpersoner hos oppdragsgiver vises fordi de er publisert; grunnlag berettiget interesse | Informasjonsplikten etter art. 14 – holder unntaket i art. 14 nr. 5 b? |
 | 3.13 | Konkurranserett | Pkt. 12.2 og veiledning i appen om konkurranseloven § 10 for samarbeid om anbud | Er veiledningen riktig og tilstrekkelig? |
 | 3.14 | Bistand | Bistand ut over funksjonene i tjenesten kan faktureres etter medgått tid | OK? |
+| 3.15 | Lagring i nettleseren (8.11.2026) | Valgt lys/mørk modus lagres i localStorage («ar-tema») bare når brukeren selv velger; administratorer får i tillegg informasjonskapselen `__Host-ar_enhet` (kjenner igjen enheten for innloggingsvarsel, 365 dager). Begge er beskrevet på `/informasjonskapsler` og behandlet som unntatt fra samtykke | Holder unntaket i ekomloven § 3-15 for et lagret utseendevalg og en sikkerhetskapsel med denne varigheten? |
 
 ## 4. Fakta som må bekreftes (ikke verifisert av oss)
 

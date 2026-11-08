@@ -50,6 +50,7 @@ export const nb = {
     mainMenu: 'Hovedmeny',
     home: 'AnbudRadar – til forsiden',
     language: 'Språk',
+    theme: 'Bytt mellom lys og mørk modus',
     suggest: 'Denne siden finnes også på norsk.',
     suggestAction: 'Les på norsk',
   },
@@ -441,6 +442,7 @@ export const nb = {
     },
   },
   auth: {
+    trust: 'Sikker innlogging med totrinn og passkey · Dataene lagres i EU',
     side: {
       title: 'Ikke bare finn anbudet. Finn ut om det er verdt å vinne.',
       points: ['Anbud som passer bedriften, rangert med begrunnelse', 'Krav og risiko før dere byr', 'Lønnsomhet sammenlignet med tidligere tildelinger'],
@@ -484,6 +486,10 @@ export const nb = {
       submit: 'Logg inn',
       busy: 'Logger inn …',
       forgot: 'Glemt passordet?',
+      welcome: 'Velkommen tilbake! Logg inn for å se nye treff og frister.',
+      newHere: 'Ny hos AnbudRadar?',
+      showPassword: 'Vis passord',
+      hidePassword: 'Skjul passord',
       errors: {
         invalid: 'Feil e-post eller passord.',
         locked: 'Kontoen er midlertidig låst etter for mange mislykkede forsøk. Prøv igjen om 15 minutter, eller tilbakestill passordet.',

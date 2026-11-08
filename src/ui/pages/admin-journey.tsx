@@ -31,7 +31,7 @@ export function AdminJourneyPage({ j }: { j: Journey }) {
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'inline-flex min-h-9 items-center rounded-full border px-3.5 text-[13px] font-semibold no-underline',
-                active ? 'border-night bg-night text-white' : 'border-line-strong bg-white text-night hover:border-night',
+                active ? 'border-strong bg-strong text-surface' : 'border-line-strong bg-surface text-strong hover:border-strong',
               )}
             >
               {p.label}

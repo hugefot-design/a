@@ -224,7 +224,7 @@ export function ProfitWorkspacePage({ ws, errors, canRunAi, canSearchPartners, a
 
 function RecommendationPanel({ ws }: { ws: ProfitWorkspace }) {
   const r = ws.recommendation;
-  const tone = { bid: 'border-ok/30 bg-ok-soft', investigate: 'border-info/25 bg-info-soft', high_risk: 'border-danger/30 bg-danger-soft', insufficient_data: 'border-line bg-white' }[r.recommendation];
+  const tone = { bid: 'border-ok/30 bg-ok-soft', investigate: 'border-info/25 bg-info-soft', high_risk: 'border-danger/30 bg-danger-soft', insufficient_data: 'border-line bg-surface' }[r.recommendation];
   return (
     <section className={cn('mb-6 rounded-lg border px-5 py-4', tone)} aria-labelledby="anbefaling">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1850,7 +1850,7 @@ function RequestItem({ r, incoming, canManage }: { r: PartnerRequestRow; incomin
 
 export function TenderProfitTeaser({ tenderId, badge, enabled }: { tenderId: string; badge: { recommendation: Recommendation; marginPct: number | null; updatedAt: Date } | null; enabled: boolean }): ReactNode {
   return (
-    <section className="rounded-lg border border-line bg-white">
+    <section className="rounded-lg border border-line bg-surface">
       <div className="border-b border-line px-5 py-4">
         <h2 className="text-[15px] font-semibold text-navy-900">Lønner det seg?</h2>
         <p className="mt-0.5 text-[13px] text-muted">Selvkost, minstepris, kontraktsrisiko og kapasitet – med deres egne tall.</p>

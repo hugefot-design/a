@@ -34,6 +34,7 @@ export const en: Messages = {
     mainMenu: 'Main menu',
     home: 'AnbudRadar – home',
     language: 'Language',
+    theme: 'Switch between light and dark mode',
     suggest: 'This page is also available in English.',
     suggestAction: 'Read in English',
   },
@@ -493,6 +494,7 @@ export const en: Messages = {
     },
   },
   auth: {
+    trust: 'Secure sign-in with two-step verification and passkeys · Data stored in the EU',
     side: {
       title: 'Don’t just find the tender. Find out if it’s worth winning.',
       points: ['Tenders that fit your business, ranked with reasons', 'Requirements and risks before you bid', 'Profitability compared with past awards'],
@@ -536,6 +538,10 @@ export const en: Messages = {
       submit: 'Log in',
       busy: 'Logging in …',
       forgot: 'Forgot your password?',
+      welcome: 'Welcome back! Log in to see new matches and deadlines.',
+      newHere: 'New to AnbudRadar?',
+      showPassword: 'Show password',
+      hidePassword: 'Hide password',
       errors: {
         invalid: 'Wrong email or password.',
         locked: 'The account is temporarily locked after too many failed attempts. Try again in 15 minutes, or reset your password.',

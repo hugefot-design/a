@@ -83,7 +83,7 @@ export function AdminLinkedinPage({
             <ul className="divide-y divide-line">
               {topics.map((t) => (
                 <li key={t.id}>
-                  <a href={`/admin/linkedin?bransje=${t.id}`} className="flex items-center justify-between gap-3 px-5 py-3 text-[14px] text-night no-underline hover:bg-cream">
+                  <a href={`/admin/linkedin?bransje=${t.id}`} className="flex items-center justify-between gap-3 px-5 py-3 text-[14px] text-strong no-underline hover:bg-cream">
                     <span className="truncate">{t.name}</span>
                     <span className="num font-semibold">{t.n}</span>
                   </a>

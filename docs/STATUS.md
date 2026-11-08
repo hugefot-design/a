@@ -11,7 +11,7 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Typesjekk (TypeScript strict) | Ingen feil |
 | Enhetstester | 218 av 218 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 8.11.2026 |
 | Integrasjonstester (ekte database, ekte HTTP) | 186 av 186 bestått – 8.11.2026 |
-| Ende-til-ende i nettleser | 5 av 5 bestått (inkl. appen på telefon) – 8.11.2026 |
+| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. appen på telefon og lys/mørk modus) – 8.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av anbudssiden (regelverk/klima) og Admin → Datakilder (XML-berikelse), 1280 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -396,6 +396,30 @@ databaseendringer; ny avhengighet `pdfkit`). Kontrollert på anbudradar.com: hel
 og `/intelligence/pdf` sender til innlogging uten økt (303); offentlige sider 200 på mobil og PC uten JavaScript-feil;
 0 advarsler og 0 feil i loggen. **IKKE VERIFISERT i produksjon:** selve siden og PDF-en med en innlogget kunde (dekket
 av testene og prøvd lokalt med ekte TED/Doffin-data).
+
+## Lys og mørk modus og ny innloggingsside (8. november 2026) – ikke rullet ut
+
+Bare frontend – ingen endring i priser, planer, betaling, database, API-er eller integrasjoner.
+
+- **Mørk modus** på nettsiden, i appen og i admin. Uten valg følger siden innstillingen på enheten. Bryteren (sol/måne)
+  står i toppmenyen, og under **Innstillinger → Utseende** kan man velge Automatisk, Lys eller Mørk. Valget lagres bare
+  i nettleseren (localStorage «ar-tema») og settes før siden tegnes, så den blinker ikke. Uten JavaScript følger siden
+  enheten, og bryteren vises ikke.
+- **Slik er det bygget:** fargene byttes i fargesettet (`src/styles/app.css`); natt, radar-gult og fristtavla er like i
+  begge modi. Hvitt og natt som var skrevet direkte i komponentene, er byttet til «flate» og «sterkeste tekst».
+- **Lys modus er uendret:** 14 sider på PC og mobil ble sammenlignet punkt for punkt med forrige versjon – identiske
+  (bortsett fra den nye bryteren og sidene med ny innloggingsramme).
+- **Kontrast:** automatisk kontroll av all synlig tekst på 25 sider (nettside, app og admin) i begge modi: ingen nye
+  steder under WCAG-kravet. (Avsnittsnumrene på de juridiske sidene var under kravet fra før, også i lys modus.)
+- **Ny innloggingsside:** mørk radarbakgrunn med skjemaet på et kort, ikoner i feltene, vis/skjul passord, «Glemt
+  passordet?» ved passordfeltet, gul «Logg inn»-knapp og tydelig «Opprett en gratis konto». Linje om sikker innlogging
+  (totrinn og passkey) og at dataene lagres i EU. Samme ramme brukes av registrering, glemt passord og totrinn.
+  Fire språk.
+- **Siden om informasjonskapsler** beskriver lagringen av fargevalget; spørsmål om samtykkeunntaket er lagt til
+  advokatnotatet ([JURIDISK.md](JURIDISK.md) 3.15).
+- **Tester:** `tests/e2e/theme.test.ts` (følger enheten, bryteren og valget etter ny innlasting, Innstillinger →
+  Automatisk, uten JavaScript, vis/skjul passord). Tre bevisste feil (skriptet i `<head>`, mørk modus etter enheten,
+  bryteren uten JavaScript) ble fanget.
 
 ## Nettsiden selger det som skiller AnbudRadar ut (8. november 2026) – rullet ut 8.11.2026
 

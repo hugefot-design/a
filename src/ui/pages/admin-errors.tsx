@@ -9,7 +9,7 @@ function ErrorItem({ e, open }: { e: AppErrorRow; open: boolean }) {
   return (
     <li className="flex flex-col gap-3 border-b border-line px-5 py-4 last:border-b-0 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap items-center gap-2 font-semibold text-night">
+        <p className="flex flex-wrap items-center gap-2 font-semibold text-strong">
           {errorTitle(e.source)}
           {open && !e.notifiedAt ? <Badge tone="danger">Ny</Badge> : null}
         </p>

@@ -143,7 +143,7 @@ function Section({ id, num, icon, title, description, children }: { id: string; 
       <PanelHeader
         title={
           <span className="flex items-center gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-navy-900 text-[12.5px] font-bold text-white">{num}</span>
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-navy-900 text-[12.5px] font-bold text-surface">{num}</span>
             <span className="flex items-center gap-1.5">
               {icon}
               {title}
@@ -175,7 +175,7 @@ function DecisionHero({ r }: { r: IntelligenceReport }) {
   const v = VERDICT[d.verdict];
   const Icon = v.icon;
   return (
-    <section className={cn('overflow-hidden rounded-2xl border bg-white shadow-[0_18px_50px_-36px_rgba(6,14,27,0.55)]', v.border)} aria-labelledby="anbefaling">
+    <section className={cn('overflow-hidden rounded-2xl border bg-surface shadow-[0_18px_50px_-36px_rgba(6,14,27,0.55)]', v.border)} aria-labelledby="anbefaling">
       <div className={cn('flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6', v.soft)}>
         <div className="min-w-0">
           <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-muted">Anbefaling · Go/No-Go</p>
@@ -184,9 +184,9 @@ function DecisionHero({ r }: { r: IntelligenceReport }) {
           </h2>
           <p className="mt-1.5 max-w-3xl text-[15.5px] leading-snug text-ink">{d.headline}</p>
         </div>
-        <div className="shrink-0 rounded-xl border border-line bg-white/80 px-4 py-3 sm:w-72">
+        <div className="shrink-0 rounded-xl border border-line bg-surface/80 px-4 py-3 sm:w-72">
           <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-muted">Datagrunnlag</p>
-          <p className="mt-0.5 text-[15px] font-semibold text-night">
+          <p className="mt-0.5 text-[15px] font-semibold text-strong">
             {cap(d.confidence.level)} <span className="text-[13px] font-normal text-muted">({d.confidence.score} av {d.confidence.max})</span>
           </p>
           <div className="mt-2">
@@ -272,11 +272,11 @@ function Tiles({ r }: { r: IntelligenceReport }) {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {tiles.map((t) => (
-        <a key={t.label} href={t.href} className="block rounded-2xl border border-line bg-white px-4 py-3.5 text-ink no-underline shadow-[0_1px_2px_rgba(6,14,27,0.04)] hover:border-line-strong">
+        <a key={t.label} href={t.href} className="block rounded-2xl border border-line bg-surface px-4 py-3.5 text-ink no-underline shadow-[0_1px_2px_rgba(6,14,27,0.04)] hover:border-line-strong">
           <span className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted">
             {t.icon} {t.label}
           </span>
-          <span className={cn('num mt-1 block text-[24px] font-semibold leading-tight text-night', t.tone)}>{t.value}</span>
+          <span className={cn('num mt-1 block text-[24px] font-semibold leading-tight text-strong', t.tone)}>{t.value}</span>
           <span className="block text-[12.5px] text-muted">{t.hint}</span>
         </a>
       ))}
@@ -430,7 +430,7 @@ function RiskSection({ r }: { r: IntelligenceReport }) {
                 <li key={f.key} className="px-3.5 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={cn('num rounded-md px-1.5 text-[12.5px] font-bold', f.severity === 'høy' ? 'bg-danger-soft text-danger' : f.severity === 'middels' ? 'bg-urgent-soft text-urgent' : 'bg-paper text-muted')}>+{f.points}</span>
-                    <span className="text-[14px] font-semibold text-night">{f.label}</span>
+                    <span className="text-[14px] font-semibold text-strong">{f.label}</span>
                     {f.blocker ? <Badge tone="danger">Hindring</Badge> : null}
                     <BasisTag basis={f.basis} />
                   </div>
@@ -489,7 +489,7 @@ function RiskSection({ r }: { r: IntelligenceReport }) {
       <div className="space-y-2">
         {groups.map((g) => (
           <details key={g.title} className="group rounded-xl border border-line" open={g === groups[0] && g.points.length > 0}>
-            <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-3 px-4 py-2.5 text-[14px] font-semibold text-night">
+            <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-3 px-4 py-2.5 text-[14px] font-semibold text-strong">
               <span>{g.title}</span>
               <Badge tone={g.count ? 'neutral' : 'outline'}>{g.count}</Badge>
             </summary>
@@ -510,7 +510,7 @@ function RiskSection({ r }: { r: IntelligenceReport }) {
           <ul className="space-y-3">
             {k.terms.map((t) => (
               <li key={t.category}>
-                <p className="text-[14px] font-semibold text-night">{t.label}</p>
+                <p className="text-[14px] font-semibold text-strong">{t.label}</p>
                 {t.points.slice(0, 1).map((p, i) => (
                   <div key={i} className="text-[13.5px] text-ink">
                     <p className="line-clamp-3">{p.text}</p>
@@ -566,7 +566,7 @@ function ProfitSection({ r }: { r: IntelligenceReport }) {
             ].map(([label, value]) => (
               <div key={label} className="rounded-xl bg-paper px-3.5 py-3">
                 <dt className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">{label}</dt>
-                <dd className="num mt-1 text-[17px] font-semibold text-night">{value}</dd>
+                <dd className="num mt-1 text-[17px] font-semibold text-strong">{value}</dd>
               </div>
             ))}
           </dl>
@@ -581,7 +581,7 @@ function ProfitSection({ r }: { r: IntelligenceReport }) {
                   <li key={row.label} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_7.5rem] items-center gap-3 text-[13.5px]">
                     <span className="truncate">{row.label}</span>
                     <Meter value={Math.abs(row.v)} max={maxAbs} className={row.v >= 0 ? 'bg-ok' : 'bg-danger'} />
-                    <span className={cn('num text-right font-semibold', row.v < 0 ? 'text-danger' : 'text-night')}>{money(row.v, cur)}</span>
+                    <span className={cn('num text-right font-semibold', row.v < 0 ? 'text-danger' : 'text-strong')}>{money(row.v, cur)}</span>
                   </li>
                 ))}
               </ul>
@@ -646,7 +646,7 @@ function WinnerTable({ rows, linkable }: { rows: { supplierId: string; name: str
             {w.beatUs ? <Badge tone="urgent">Har slått dere {w.beatUs}×</Badge> : null}
           </span>
           <span className="num text-muted">
-            <span className="font-semibold text-night">{w.wins}</span> {w.wins === 1 ? 'kontrakt' : 'kontrakter'}
+            <span className="font-semibold text-strong">{w.wins}</span> {w.wins === 1 ? 'kontrakt' : 'kontrakter'}
             {w.lastWin ? ` · ${formatDate(w.lastWin)}` : ''}
           </span>
         </li>
@@ -707,7 +707,7 @@ function LearningSection({ r }: { r: IntelligenceReport }) {
   const card = (title: string, g: typeof l.sameBuyer) => (
     <div className="rounded-xl bg-paper px-4 py-3">
       <p className="text-[12.5px] font-semibold uppercase tracking-[0.06em] text-muted">{title}</p>
-      <p className="num mt-1 text-[15px] text-night">
+      <p className="num mt-1 text-[15px] text-strong">
         <span className="font-semibold">{g.won}</span> vunnet · <span className="font-semibold">{g.lost}</span> ikke vunnet{g.pending ? ` · ${g.pending} venter` : ''}
       </p>
       <p className="text-[12.5px] text-muted">{g.winRatePct !== null && g.won + g.lost >= l.minDecided ? `${fmtNumber(g.winRatePct)} % vunnet av avgjorte` : `${g.delivered} levert`}</p>
@@ -744,7 +744,7 @@ function PlanPanel({ r }: { r: IntelligenceReport }) {
       <PanelHeader
         title={
           <span className="flex items-center gap-2">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-navy-900 text-[12.5px] font-bold text-white">5</span>
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-navy-900 text-[12.5px] font-bold text-surface">5</span>
             <LuListChecks className="size-4 text-navy-600" aria-hidden /> Handlingsplan
           </span>
         }
@@ -771,13 +771,13 @@ function PlanItem({ s, n, last }: { s: PlanStep; n: number; last: boolean }) {
       <span
         className={cn(
           'relative z-[1] flex size-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold',
-          s.done ? 'bg-ok text-white' : s.priority === 'høy' ? 'bg-navy-900 text-white' : 'border border-line-strong bg-white text-navy-800',
+          s.done ? 'bg-ok text-surface' : s.priority === 'høy' ? 'bg-navy-900 text-surface' : 'border border-line-strong bg-surface text-navy-800',
         )}
       >
         {s.done ? <LuCircleCheck className="size-4" aria-label="Gjort" /> : n}
       </span>
       <div className="min-w-0 pt-0.5">
-        <p className={cn('text-[14px] font-semibold leading-snug', s.done ? 'text-muted line-through' : 'text-night')}>{s.title}</p>
+        <p className={cn('text-[14px] font-semibold leading-snug', s.done ? 'text-muted line-through' : 'text-strong')}>{s.title}</p>
         {s.due ? (
           <p className="mt-0.5 text-[12.5px]">
             <span className={cn('num font-semibold', s.dueBasis === 'fact' ? 'text-navy-800' : 'text-muted')}>{formatDateTime(s.due, s.dueBasis === 'fact')}</span>
@@ -799,7 +799,7 @@ function Method({ r }: { r: IntelligenceReport }) {
   return (
     <Panel>
       <details>
-        <summary className="flex min-h-12 cursor-pointer select-none items-center gap-2 px-5 py-3 text-[14.5px] font-semibold text-night">
+        <summary className="flex min-h-12 cursor-pointer select-none items-center gap-2 px-5 py-3 text-[14.5px] font-semibold text-strong">
           <LuGauge className="size-4 text-navy-600" aria-hidden /> Slik er vurderingen laget
         </summary>
         <div className="space-y-2 border-t border-line px-5 py-4 text-[14px] leading-relaxed">

@@ -146,7 +146,7 @@ export function BillingPage(p: BillingProps) {
                 {current ? <Badge tone="ok">Din plan</Badge> : null}
               </div>
               <p className="mt-2">
-                <span className="num text-[30px] font-[780] tracking-[-0.03em] text-night">{formatInt(plan.priceNok)}</span>
+                <span className="num text-[30px] font-[780] tracking-[-0.03em] text-strong">{formatInt(plan.priceNok)}</span>
                 <span className="text-[14px] text-muted"> kr/mnd</span>
               </p>
               <p className="mt-1 text-[13px] text-muted">{plan.tagline}</p>

@@ -43,7 +43,7 @@ export function AdminProductsPage({ c }: { c: AdminProductContext }) {
                 return (
                   <li key={item.name} className="border-b border-line px-5 py-4 last:border-b-0">
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <p className="font-semibold text-night">
+                      <p className="font-semibold text-strong">
                         {href ? <a href={href}>{item.name}</a> : item.name}
                       </p>
                       <Badge tone={TONE[state.tone]} className="whitespace-normal">{state.text}</Badge>

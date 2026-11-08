@@ -12,6 +12,7 @@ import {
   LuClipboardList,
   LuCreditCard,
   LuLayoutDashboard,
+  LuLock,
   LuLogOut,
   LuMenu,
   LuSave,
@@ -23,7 +24,7 @@ import {
   LuUsers,
 } from 'react-icons/lu';
 import { useUi } from './context';
-import { Alert, Button, buttonVariants, cn, CsrfField, FlashMessage, Logo, PostForm } from './components';
+import { Alert, Button, buttonVariants, cn, CsrfField, FlashMessage, Logo, PostForm, ThemeToggle } from './components';
 import { formatDate, sourcesPhrase } from './format';
 import { companyConfigured, companyInfo, LEGAL_DOCS } from '@/domain/legal/legal';
 import { isTranslatedPath, LOCALE_INFO, LOCALES, localePath, messages, sourcesText } from '@/i18n';
@@ -56,7 +57,7 @@ function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
         <LuGlobe className="size-4" aria-hidden />
         <span className={cn('font-mono text-[12px] tracking-[0.08em]', dark && 'hidden sm:inline')}>{locale === 'nb' ? 'no' : locale}</span>
       </summary>
-      <ul className="absolute right-0 top-11 z-50 max-h-[70vh] w-52 overflow-y-auto rounded-2xl border border-line bg-white p-1.5 shadow-xl">
+      <ul className="absolute right-0 top-11 z-50 max-h-[70vh] w-52 overflow-y-auto rounded-2xl border border-line bg-surface p-1.5 shadow-xl">
         {LOCALES.map((l) => (
           <li key={l}>
             <a
@@ -98,8 +99,8 @@ export function PublicLayout({ children }: { children: ReactNode; heroDark?: boo
   const { user, path, m, lp } = useUi();
   const labels = useNavLabels();
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <a href="#innhold" className="sr-only-focusable absolute left-3 top-3 z-50 rounded bg-white px-3 py-2 text-navy-900">
+    <div className="flex min-h-screen flex-col bg-surface">
+      <a href="#innhold" className="sr-only-focusable absolute left-3 top-3 z-50 rounded bg-surface px-3 py-2 text-navy-900">
         {m.nav.skip}
       </a>
       <LanguageSuggestion />
@@ -124,6 +125,7 @@ export function PublicLayout({ children }: { children: ReactNode; heroDark?: boo
             ))}
           </nav>
           <div className="flex items-center gap-1 sm:gap-2">
+            <ThemeToggle dark />
             <LanguageSwitcher dark />
             {user ? (
               <a href={user.isPlatformAdmin ? '/admin' : '/app'} className="btn-signal !px-4 !py-2 !text-[14px]">
@@ -143,7 +145,7 @@ export function PublicLayout({ children }: { children: ReactNode; heroDark?: boo
               <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-full text-white hover:bg-white/10" aria-label={m.nav.menu}>
                 <LuMenu className="size-5" />
               </summary>
-              <div className="absolute right-0 top-11 w-60 rounded-2xl border border-line bg-white p-2 shadow-xl">
+              <div className="absolute right-0 top-11 w-60 rounded-2xl border border-line bg-surface p-2 shadow-xl">
                 {[...PUBLIC_NAV, '/kontakt', ...(user ? [] : ['/logg-inn'])].map((href) => (
                   <a key={href} href={lp(href)} className="block rounded-xl px-3 py-2.5 text-[15px] font-semibold text-navy-900 no-underline hover:bg-navy-50">
                     {href === '/logg-inn' ? m.nav.login : labels[href]}
@@ -240,40 +242,48 @@ export function AuthLayout({ children, title, intro, side, eyebrow }: { children
   const { m, lp, path } = useUi();
   const panel = side ?? m.auth.side;
   return (
-    <div className="flex min-h-screen bg-white">
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between px-5 py-5 sm:px-10">
-          <a href={lp('/')} className="no-underline" aria-label={m.nav.home}>
-            <Logo />
-          </a>
+    <div className="night relative isolate flex min-h-screen flex-col overflow-hidden">
+      <div className="dot-grid pointer-events-none absolute inset-0 -z-10 opacity-40" aria-hidden />
+      <RadarDecor className="pointer-events-none absolute -right-56 -top-28 -z-10 w-[520px] opacity-45 sm:-right-40 sm:w-[640px] lg:-right-24 lg:top-1/2 lg:w-[820px] lg:-translate-y-1/2 lg:opacity-90" />
+      <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 py-5 sm:px-8">
+        <a href={lp('/')} className="no-underline" aria-label={m.nav.home}>
+          <Logo inverse />
+        </a>
+        <div className="flex items-center gap-1">
+          <ThemeToggle dark />
           {/* Bare innlogging og registrering er oversatt – ikke onboarding i appen. */}
-          {isTranslatedPath(path) ? <LanguageSwitcher /> : null}
-        </header>
-        <main id="innhold" className="flex flex-1 items-start justify-center px-5 pb-16 pt-4 sm:px-10 sm:pt-10 lg:items-center lg:pt-0">
-          <div className="w-full max-w-[27rem]">
+          {isTranslatedPath(path) ? <LanguageSwitcher dark /> : null}
+        </div>
+      </header>
+      <main
+        id="innhold"
+        className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-12 px-5 pb-14 pt-2 sm:px-8 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] lg:gap-20 lg:pb-24"
+      >
+        <div className="mx-auto w-full max-w-[28rem] lg:mx-0">
+          <div className="slide-in rounded-[28px] bg-surface p-6 text-ink shadow-[0_50px_120px_-40px_rgba(0,0,0,0.9)] ring-1 ring-white/10 sm:p-9">
             {eyebrow ? <div className="mb-4">{eyebrow}</div> : null}
-            <h1 className="text-[32px] font-[780] leading-[1.08] tracking-[-0.03em] text-night sm:text-[36px]">{title}</h1>
-            {intro ? <div className="mt-3 text-[15px] leading-relaxed text-muted">{intro}</div> : null}
-            <div className="mt-8">
+            <h1 className="text-[30px] font-[780] leading-[1.08] tracking-[-0.03em] text-strong sm:text-[34px]">{title}</h1>
+            {intro ? <div className="mt-2.5 text-[15px] leading-relaxed text-muted">{intro}</div> : null}
+            <div className="mt-7">
               <FlashMessage />
               {children}
             </div>
           </div>
-        </main>
-      </div>
-      <aside className="night relative hidden w-[44%] max-w-[680px] flex-col justify-center overflow-hidden lg:flex">
-        <div className="dot-grid absolute inset-0 opacity-50" aria-hidden />
-        <RadarDecor className="absolute -right-40 top-1/2 w-[560px] -translate-y-1/2 opacity-80" />
-        <div className="relative max-w-md px-12 xl:px-16">
+          <p className="mt-5 flex items-start justify-center gap-2 px-2 text-center text-[13px] leading-snug text-white/60">
+            <LuLock className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            {m.auth.trust}
+          </p>
+        </div>
+        <aside className="mx-auto w-full max-w-[28rem] lg:mx-0 lg:max-w-lg">
           {side?.secure ? (
-            <span className="mb-8 flex size-14 items-center justify-center rounded-2xl bg-signal/15 text-signal ring-1 ring-signal/30" aria-hidden>
+            <span className="mb-7 flex size-14 items-center justify-center rounded-2xl bg-signal/15 text-signal ring-1 ring-signal/30" aria-hidden>
               <LuShieldCheck className="size-7" />
             </span>
           ) : null}
-          <p className="text-[34px] font-[780] leading-[1.05] tracking-[-0.035em] text-white xl:text-[40px]">{panel.title}</p>
-          <ul className="mt-8 space-y-3.5">
+          <p className="text-[26px] font-[780] leading-[1.06] tracking-[-0.035em] text-white sm:text-[32px] xl:text-[42px]">{panel.title}</p>
+          <ul className="mt-7 space-y-3.5">
             {panel.points.map((x) => (
-              <li key={x} className="flex items-start gap-3 text-[16px] leading-snug text-white/85">
+              <li key={x} className="flex items-start gap-3 text-[15.5px] leading-snug text-white/85 sm:text-[16px]">
                 <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-signal/15 text-signal">
                   <LuCheck className="size-3.5" aria-hidden strokeWidth={3} />
                 </span>
@@ -281,8 +291,8 @@ export function AuthLayout({ children, title, intro, side, eyebrow }: { children
               </li>
             ))}
           </ul>
-        </div>
-      </aside>
+        </aside>
+      </main>
     </div>
   );
 }
@@ -483,7 +493,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
   const { user } = useUi();
   return (
     <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[256px_minmax(0,1fr)]">
-      <a href="#innhold" className="sr-only-focusable absolute left-3 top-3 z-50 rounded bg-white px-3 py-2 text-navy-900">
+      <a href="#innhold" className="sr-only-focusable absolute left-3 top-3 z-50 rounded bg-surface px-3 py-2 text-navy-900">
         Hopp til innhold
       </a>
       <div className="hidden bg-night lg:block">
@@ -493,13 +503,13 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
       </div>
       <div className="min-w-0">
         {/* Ingen backdrop-filter her: det ville gjort at mobilmenyen (position: fixed) bare ble like høy som toppen. */}
-        <header className="sticky top-0 z-20 border-b border-line bg-white">
+        <header className="sticky top-0 z-20 border-b border-line bg-surface">
           <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
             <details className="relative lg:hidden">
-              <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-full text-night hover:bg-night/5" aria-label="Meny">
+              <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-full text-strong hover:bg-strong/5" aria-label="Meny">
                 <LuMenu className="size-5" />
               </summary>
-              <div className="fixed inset-0 z-30 bg-night/50" data-close-details aria-hidden />
+              <div className="fixed inset-0 z-30 bg-strong/50" data-close-details aria-hidden />
               <div className="fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] overflow-y-auto shadow-2xl">
                 <Sidebar />
               </div>
@@ -514,16 +524,17 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
                 name="nl"
                 type="search"
                 placeholder="Søk, f.eks. «renhold i Trøndelag over 1 million»"
-                className="h-10 w-full rounded-full border border-line bg-cream pl-9 pr-4 text-[14px] placeholder:text-faint focus:border-night focus:bg-white focus:outline-none focus:ring-4 focus:ring-signal/25"
+                className="h-10 w-full rounded-full border border-line bg-cream pl-9 pr-4 text-[14px] placeholder:text-faint focus:border-strong focus:bg-surface focus:outline-none focus:ring-4 focus:ring-signal/25"
               />
             </form>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-1 sm:gap-2">
               <span className="hidden max-w-40 truncate text-[13px] text-muted md:inline">{user?.name}</span>
+              <ThemeToggle />
               <form method="post" action="/logg-ut">
                 <CsrfField />
                 <button
                   type="submit"
-                  className="flex size-9 items-center justify-center rounded-full text-muted hover:bg-night/5 hover:text-night"
+                  className="flex size-9 items-center justify-center rounded-full text-muted hover:bg-strong/5 hover:text-strong"
                   title="Logg ut"
                 >
                   <LuLogOut className="size-[18px]" aria-hidden />
@@ -575,6 +586,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </a>
           <span className="rounded-full bg-signal px-2 py-0.5 text-[12px] font-bold text-night">Admin</span>
           <div className="ml-auto flex items-center gap-4 text-[13px] font-semibold">
+            <ThemeToggle dark className="-mx-2" />
             <a href="/konto/totrinn" className="inline-flex items-center gap-1.5 text-white/70 no-underline hover:text-white" aria-label="Min innlogging: kode-app og Face ID">
               <LuShieldCheck className="size-4" aria-hidden />
               <span className="hidden sm:inline">Min innlogging</span>

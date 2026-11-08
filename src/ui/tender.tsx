@@ -25,7 +25,7 @@ export function BookmarkButton({ tenderId, bookmarked, compact = false }: { tend
         className={cn(
           'group inline-flex items-center gap-1.5 rounded-md border px-2.5 text-[13px] font-semibold',
           compact ? 'h-8' : 'h-9',
-          'border-line-strong bg-white text-navy-900 hover:border-navy-300 aria-pressed:border-navy-900 aria-pressed:bg-navy-900 aria-pressed:text-white',
+          'border-line-strong bg-surface text-navy-900 hover:border-navy-300 aria-pressed:border-navy-900 aria-pressed:bg-navy-900 aria-pressed:text-surface',
         )}
       >
         <LuBookmark className="size-4 group-aria-pressed:hidden" aria-hidden />

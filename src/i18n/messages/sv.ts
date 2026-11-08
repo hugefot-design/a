@@ -32,6 +32,7 @@ export const sv: Messages = {
     mainMenu: 'Huvudmeny',
     home: 'AnbudRadar – startsida',
     language: 'Språk',
+    theme: 'Växla mellan ljust och mörkt läge',
     suggest: 'Den här sidan finns också på svenska.',
     suggestAction: 'Läs på svenska',
   },
@@ -484,6 +485,7 @@ export const sv: Messages = {
     },
   },
   auth: {
+    trust: 'Säker inloggning med tvåstegsverifiering och passkey · Data lagras i EU',
     side: {
       title: 'Hitta inte bara upphandlingen. Ta reda på om den är värd att vinna.',
       points: ['Upphandlingar som passar företaget, rangordnade med motivering', 'Krav och risker innan ni lämnar anbud', 'Lönsamhet jämfört med tidigare tilldelningar'],
@@ -527,6 +529,10 @@ export const sv: Messages = {
       submit: 'Logga in',
       busy: 'Loggar in …',
       forgot: 'Glömt lösenordet?',
+      welcome: 'Välkommen tillbaka! Logga in för att se nya träffar och tidsfrister.',
+      newHere: 'Ny på AnbudRadar?',
+      showPassword: 'Visa lösenord',
+      hidePassword: 'Dölj lösenord',
       errors: {
         invalid: 'Fel e-post eller lösenord.',
         locked: 'Kontot är tillfälligt låst efter för många misslyckade försök. Försök igen om 15 minuter eller återställ lösenordet.',

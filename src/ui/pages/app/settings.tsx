@@ -3,6 +3,7 @@ import { useUi } from '../../context';
 import { Alert, Badge, Button, buttonVariants, Field, Input, PageHeader, Panel, PanelHeader, PostForm, Select, Tabs } from '../../components';
 import { AppShell } from '../../layouts';
 import { formatDate, relativeTime } from '../../format';
+import { LuMonitor, LuMoon, LuSun } from 'react-icons/lu';
 
 const ROLE_LABELS: Record<string, string> = { owner: 'Eier', admin: 'Administrator', member: 'Medlem' };
 
@@ -70,6 +71,28 @@ export function SettingsPage(p: SettingsProps) {
                 {user?.totpEnabled ? 'Administrer' : 'Slå på'}
               </a>
             </div>
+          </Panel>
+          <Panel className="js-only">
+            <PanelHeader title="Utseende" description="Automatisk følger innstillingen på enheten. Valget lagres bare i denne nettleseren." />
+            <fieldset className="grid grid-cols-3 gap-2 p-5">
+              <legend className="sr-only">Fargetema</legend>
+              {(
+                [
+                  ['system', 'Automatisk', LuMonitor],
+                  ['light', 'Lys', LuSun],
+                  ['dark', 'Mørk', LuMoon],
+                ] as const
+              ).map(([value, label, Icon]) => (
+                <label
+                  key={value}
+                  className="flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border border-line-strong px-2 py-3 text-[13px] font-semibold text-ink transition-colors hover:border-strong has-checked:border-strong has-checked:bg-strong/5 has-focus-visible:ring-4 has-focus-visible:ring-signal/30"
+                >
+                  <input type="radio" name="tema" value={value} data-theme-choice className="sr-only" />
+                  <Icon className="size-5" aria-hidden />
+                  {label}
+                </label>
+              ))}
+            </fieldset>
           </Panel>
           <Panel className="lg:col-span-2">
             <PanelHeader

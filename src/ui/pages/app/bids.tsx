@@ -78,7 +78,7 @@ function StatusSteps({ status }: { status: string }) {
           <span
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold',
-              i < idx ? 'bg-ok-soft text-ok' : i === idx ? 'bg-navy-900 text-white' : 'bg-navy-50 text-muted',
+              i < idx ? 'bg-ok-soft text-ok' : i === idx ? 'bg-navy-900 text-surface' : 'bg-navy-50 text-muted',
             )}
             aria-current={i === idx ? 'step' : undefined}
           >
@@ -214,7 +214,7 @@ export function BidWorkspacePage(p: WorkspaceProps) {
                       className="-m-1.5 flex size-8 items-center justify-center rounded-md"
                       aria-label={c.isDone ? `Marker «${c.label}» som ikke gjort` : `Marker «${c.label}» som gjort`}
                     >
-                      <span className={cn('flex size-5 items-center justify-center rounded border text-[12px] font-bold', c.isDone ? 'border-ok bg-ok text-white' : 'border-line-strong bg-white')}>
+                      <span className={cn('flex size-5 items-center justify-center rounded border text-[12px] font-bold', c.isDone ? 'border-ok bg-ok text-surface' : 'border-line-strong bg-surface')}>
                         {c.isDone ? '✓' : ''}
                       </span>
                     </button>
@@ -411,7 +411,7 @@ export function BidWorkspacePage(p: WorkspaceProps) {
             ) : null}
             {!locked ? (
               <PostForm action={`${base}/dokumenter`} multipart className="space-y-2 border-t border-line px-5 py-3">
-                <input type="file" name="file" required className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-white file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900" />
+                <input type="file" name="file" required className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-surface file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900" />
                 <Field label="Type" htmlFor="doc-cat">
                   <select id="doc-cat" name="category" className="field-input">
                     <option value="vedlegg">Vedlegg</option>

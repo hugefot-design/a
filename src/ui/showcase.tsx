@@ -14,11 +14,11 @@ import { StripChart } from './charts';
 /** Et vindu fra appen: liten etikett øverst (hvor dataene kommer fra) og innholdet i appens stil. */
 export function AppFrame({ label, href, children, className }: { label: ReactNode; href?: string | null; children: ReactNode; className?: string }) {
   return (
-    <div className={cn('overflow-hidden rounded-2xl border border-line bg-white text-left shadow-[0_24px_60px_-40px_rgba(6,14,27,0.55)]', className)}>
+    <div className={cn('overflow-hidden rounded-2xl border border-line bg-surface text-left shadow-[0_24px_60px_-40px_rgba(6,14,27,0.55)]', className)}>
       <div className="flex items-center justify-between gap-3 border-b border-line bg-paper/60 px-4 py-2.5">
         <p className="min-w-0 truncate font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">{label}</p>
         {href ? (
-          <a href={href} target="_blank" rel="noopener" className="inline-flex min-h-6 shrink-0 items-center gap-1 py-1 text-[12px] font-semibold text-navy-700 no-underline hover:text-night">
+          <a href={href} target="_blank" rel="noopener" className="inline-flex min-h-6 shrink-0 items-center gap-1 py-1 text-[12px] font-semibold text-navy-700 no-underline hover:text-strong">
             {href.includes('doffin') ? 'Doffin' : 'TED'} <LuArrowUpRight className="size-3.5" aria-hidden />
           </a>
         ) : null}
@@ -78,7 +78,7 @@ export function MatchesVisual({ s }: { s: Showcase }) {
               <span className="text-[15px] font-[750] leading-none">{x.score}</span>
             </span>
             <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-night">{x.title}</p>
+              <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-strong">{x.title}</p>
               <p className="mt-0.5 truncate text-[12.5px] text-muted">{[x.buyerName, x.place].filter(Boolean).join(' · ')}</p>
               {x.deadlineAt ? <Chip className="mt-1.5 bg-paper text-ink">{fill(t.deadline, { date: shortDate(locale, x.deadlineAt) })}</Chip> : null}
             </div>
@@ -97,7 +97,7 @@ export function RiskVisual({ s }: { s: Showcase }) {
   const sourceName = n.source === 'doffin' ? 'Doffin' : n.source === 'ted' ? 'TED' : n.source;
   return (
     <AppFrame label={fill(t.realNotice, { source: sourceName, id: n.noticeId })} href={n.sourceUrl}>
-      <p className="line-clamp-2 text-[14.5px] font-semibold leading-snug text-night">{n.title}</p>
+      <p className="line-clamp-2 text-[14.5px] font-semibold leading-snug text-strong">{n.title}</p>
       {n.buyerName ? <p className="mt-0.5 truncate text-[12.5px] text-muted">{n.buyerName}</p> : null}
       <ul className="mt-3 space-y-2.5">
         {s.requirements.slice(0, 3).map((r) => (
@@ -192,11 +192,11 @@ export function ResultVisual({ s }: { s: Showcase }) {
   return (
     <AppFrame label={t.publicAward}>
       <Chip className="bg-ok-soft text-ok">{fill(t.awarded, { date: shortDate(locale, a.awardDate) })}</Chip>
-      <p className="mt-2 line-clamp-2 text-[14.5px] font-semibold leading-snug text-night">{a.title}</p>
+      <p className="mt-2 line-clamp-2 text-[14.5px] font-semibold leading-snug text-strong">{a.title}</p>
       {a.buyerName ? <p className="mt-0.5 truncate text-[12.5px] text-muted">{a.buyerName}</p> : null}
       <div className="mt-3 flex flex-wrap gap-1.5" aria-hidden>
         {t.result.map((r) => (
-          <span key={r} className="rounded-full border border-line-strong px-3 py-1 text-[12.5px] font-semibold text-night">
+          <span key={r} className="rounded-full border border-line-strong px-3 py-1 text-[12.5px] font-semibold text-strong">
             {r}
           </span>
         ))}
@@ -208,7 +208,7 @@ export function ResultVisual({ s }: { s: Showcase }) {
         </div>
         <div className="rounded-xl bg-paper px-3 py-2.5">
           <dt className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-muted">{t.winnerPrice}</dt>
-          <dd className="num mt-1 text-[15px] font-semibold text-night">{money(locale, a.value, a.currency)}</dd>
+          <dd className="num mt-1 text-[15px] font-semibold text-strong">{money(locale, a.value, a.currency)}</dd>
         </div>
       </dl>
     </AppFrame>
@@ -227,7 +227,7 @@ export function ExpiryVisual({ s }: { s: Showcase }) {
           <li key={i} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
             <LuCalendarClock className="mt-0.5 size-4 shrink-0 text-navy-600" aria-hidden />
             <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-night">{x.title}</p>
+              <p className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-strong">{x.title}</p>
               {x.buyerName ? <p className="truncate text-[12.5px] text-muted">{x.buyerName}</p> : null}
               <p className="mt-1 text-[12.5px] text-ink">
                 <span className="font-semibold">{fill(t.expires, { date: monthYear(locale, x.expectedEnd) })}</span>

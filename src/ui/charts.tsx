@@ -167,7 +167,7 @@ export function Sparkline({ values, label }: { values: number[]; label: string }
         />
       </svg>
       <span
-        className="absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-navy-600 ring-2 ring-white"
+        className="absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-navy-600 ring-2 ring-surface"
         style={{ left: `${x(last)}%`, top: `${y(values[last]!)}%` }}
         aria-hidden
       />
@@ -289,7 +289,7 @@ export function StripChart({
                 className="group absolute flex size-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
                 style={{ left: `${pos(p.value)}%`, top: `calc(50% + ${((i % 3) - 1) * 6}px)` }}
               >
-                <span className="size-2.5 rounded-full bg-navy-300 ring-2 ring-white group-data-[active]:bg-navy-700" />
+                <span className="size-2.5 rounded-full bg-navy-300 ring-2 ring-surface group-data-[active]:bg-navy-700" />
               </span>
             ))}
           {sortedMarkers.map((m) => (
@@ -299,7 +299,7 @@ export function StripChart({
               className="group absolute top-1/2 flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
               style={{ left: `${pos(m.value)}%` }}
             >
-              <span className="size-3.5 rotate-45 rounded-[2px] bg-navy-600 ring-2 ring-white group-data-[active]:bg-navy-900" />
+              <span className="size-3.5 rotate-45 rounded-[2px] bg-navy-600 ring-2 ring-surface group-data-[active]:bg-navy-900" />
             </span>
           ))}
         </div>
@@ -341,7 +341,7 @@ export function FunnelBars({ steps, emphasize, caption }: { steps: { label: stri
           return (
             <tr key={s.label} className="border-b border-line last:border-b-0 align-top">
               <th scope="row" className="px-5 py-3 text-left font-normal">
-                <span className={cn('block', strong ? 'font-semibold text-night' : 'text-ink')}>{s.label}</span>
+                <span className={cn('block', strong ? 'font-semibold text-strong' : 'text-ink')}>{s.label}</span>
                 {s.hint ? <span className="block text-[12px] text-muted">{s.hint}</span> : null}
                 <span className="mt-2 block h-2 rounded-full bg-navy-50" aria-hidden>
                   <span

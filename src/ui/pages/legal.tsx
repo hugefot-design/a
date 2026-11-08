@@ -127,7 +127,7 @@ function LegalDocument({ title, lead, sections }: { title: string; lead: ReactNo
                 aria-current={path === d.href ? 'page' : undefined}
                 className={cn(
                   'rounded-full border px-3 py-1 text-[13px] font-semibold no-underline',
-                  path === d.href ? 'border-navy-900 bg-navy-900 text-white' : 'border-line bg-white text-navy-800 hover:border-navy-300',
+                  path === d.href ? 'border-navy-900 bg-navy-900 text-surface' : 'border-line bg-surface text-navy-800 hover:border-navy-300',
                 )}
               >
                 {d.label}
@@ -139,7 +139,7 @@ function LegalDocument({ title, lead, sections }: { title: string; lead: ReactNo
 
       <Container className="grid gap-10 py-10 sm:py-14 lg:grid-cols-[250px_minmax(0,1fr)]">
         <aside className="print:hidden">
-          <details className="rounded-xl border border-line bg-white p-4 lg:hidden">
+          <details className="rounded-xl border border-line bg-surface p-4 lg:hidden">
             <summary className="cursor-pointer py-1 text-[14px] font-semibold text-navy-900">Innhold</summary>
             <Toc sections={sections} />
           </details>
@@ -1068,6 +1068,17 @@ export function CookiesPage() {
       body: () => <Table head={['Navn', 'Formål', 'Varighet']} rows={cookies().map((k) => [<code key={k.name}>{k.name}</code>, k.purpose, k.duration])} />,
     },
     {
+      id: 'lagring',
+      title: 'Lagring i nettleseren',
+      body: () => (
+        <p>
+          Velger du selv lys eller mørk modus, husker nettleseren valget i lokal lagring (localStorage, nøkkelen <code>ar-tema</code>). Valget sendes ikke
+          til oss. Det slettes når du velger «Automatisk» under Innstillinger eller tømmer nettleserdataene. Uten et valg følger siden innstillingen på
+          enheten, og ingenting lagres.
+        </p>
+      ),
+    },
+    {
       id: 'ingen-sporing',
       title: 'Ingen sporing eller reklame',
       body: () => (
@@ -1085,7 +1096,7 @@ export function CookiesPage() {
       body: () => (
         <p>
           Alle kapslene er strengt nødvendige for å levere tjenesten du ber om (innlogging og sikkerhet). Slike kapsler krever ikke samtykke etter
-          ekomloven § 3-15. Tar vi i bruk andre kapsler, spør vi om samtykke først.
+          ekomloven § 3-15. Fargetemaet lagres bare når du selv velger det. Tar vi i bruk andre kapsler, spør vi om samtykke først.
         </p>
       ),
     },

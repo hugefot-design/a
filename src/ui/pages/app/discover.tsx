@@ -190,7 +190,7 @@ export function DiscoverPage(props: DiscoverProps) {
               name="nl"
               defaultValue={props.nl}
               placeholder="Beskriv hva du leter etter, f.eks. «byggeoppdrag i Trøndelag over 5 millioner med frist om minst 30 dager»"
-              className="h-12 w-full rounded-lg border border-line-strong bg-white pl-11 pr-4 text-[15px] shadow-[0_1px_0_rgba(15,35,64,0.04)] placeholder:text-faint focus:border-navy-600 focus:outline-none focus:ring-2 focus:ring-navy-100"
+              className="h-12 w-full rounded-lg border border-line-strong bg-surface pl-11 pr-4 text-[15px] shadow-[0_1px_0_rgba(15,35,64,0.04)] placeholder:text-faint focus:border-navy-600 focus:outline-none focus:ring-2 focus:ring-navy-100"
             />
           </div>
           <Button type="submit" size="lg">

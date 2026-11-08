@@ -373,3 +373,65 @@ window.addEventListener('pageshow', (event) => {
   );
   items.forEach((el) => io.observe(el));
 })();
+
+// ---------------------------------------------------------------------------
+// Lys og mørk modus. Uten valg følger siden enheten (CSS). Et valg lagres bare i denne nettleseren
+// (localStorage «ar-tema») og settes som data-theme på <html> – også av skriptet i <head>, før siden tegnes.
+// ---------------------------------------------------------------------------
+(() => {
+  const KEY = 'ar-tema';
+  const root = document.documentElement;
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  const stored = (): 'light' | 'dark' | null => {
+    try {
+      const v = localStorage.getItem(KEY);
+      return v === 'light' || v === 'dark' ? v : null;
+    } catch {
+      return null;
+    }
+  };
+  const isDark = () => (stored() ?? (media.matches ? 'dark' : 'light')) === 'dark';
+  const sync = () => {
+    const dark = isDark();
+    document.querySelectorAll('[data-theme-toggle]').forEach((b) => b.setAttribute('aria-pressed', String(dark)));
+    const choice = stored() ?? 'system';
+    document.querySelectorAll<HTMLInputElement>('input[data-theme-choice]').forEach((i) => (i.checked = i.value === choice));
+  };
+  const choose = (choice: 'light' | 'dark' | 'system') => {
+    try {
+      if (choice === 'system') localStorage.removeItem(KEY);
+      else localStorage.setItem(KEY, choice);
+    } catch {
+      /* Privat modus o.l.: valget gjelder bare denne siden. */
+    }
+    if (choice === 'system') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', choice);
+    sync();
+  };
+  document.addEventListener('click', (event) => {
+    if ((event.target as Element).closest?.('[data-theme-toggle]')) choose(isDark() ? 'light' : 'dark');
+  });
+  document.addEventListener('change', (event) => {
+    const input = event.target as HTMLInputElement;
+    if (input.matches?.('input[data-theme-choice]')) choose(input.value as 'light' | 'dark' | 'system');
+  });
+  media.addEventListener?.('change', sync);
+  sync();
+})();
+
+// Vis eller skjul passordet (knappen ligger i feltet og vises bare med JavaScript).
+document.addEventListener('click', (event) => {
+  const button = (event.target as Element).closest?.<HTMLButtonElement>('[data-toggle-password]');
+  if (!button) return;
+  const input = document.getElementById(button.dataset.togglePassword ?? '') as HTMLInputElement | null;
+  if (!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  button.setAttribute('aria-pressed', String(show));
+  const label = show ? button.dataset.labelHide : button.dataset.labelShow;
+  if (label) {
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  }
+  input.focus();
+});

@@ -2,7 +2,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { clsx, type ClassValue } from 'clsx';
 import type { ReactNode } from 'react';
 import { twMerge } from 'tailwind-merge';
-import { LuCircleAlert, LuCircleCheck, LuInfo, LuTriangleAlert } from 'react-icons/lu';
+import { LuCircleAlert, LuCircleCheck, LuInfo, LuMoon, LuSun, LuTriangleAlert } from 'react-icons/lu';
 import { useUi } from './context';
 import { daysUntil, deadlineLabel, formatDateTime } from './format';
 
@@ -18,14 +18,15 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-night text-white hover:bg-night-700',
+        /** Natt med hvit tekst; i mørk modus lys knapp med mørk tekst. */
+        primary: 'bg-strong text-surface hover:bg-night-700 dark:hover:bg-ink',
         /** Den gule knappen fra nettsiden – til de viktigste handlingene (oppgradere, starte). */
         signal: 'bg-signal text-night shadow-[0_8px_24px_-12px_rgba(245,178,16,0.9)] hover:bg-[#ffd36b]',
-        secondary: 'border border-line-strong bg-white text-night hover:border-night',
-        ghost: 'text-night hover:bg-night/5',
-        danger: 'border border-danger/30 bg-white text-danger hover:bg-danger-soft',
-        inverse: 'bg-white text-night hover:bg-cream',
-        link: 'px-0 py-0 text-navy-700 underline hover:text-night',
+        secondary: 'border border-line-strong bg-surface text-strong hover:border-strong',
+        ghost: 'text-strong hover:bg-strong/5',
+        danger: 'border border-danger/30 bg-surface text-danger hover:bg-danger-soft',
+        inverse: 'bg-white text-night hover:bg-[#fbf8f1]',
+        link: 'px-0 py-0 text-navy-700 underline hover:text-strong',
       },
       size: {
         sm: 'h-8 px-3.5 text-[13px]',
@@ -179,14 +180,14 @@ export function Checkbox({ label, hint, className, ...rest }: React.InputHTMLAtt
 // Struktur
 // ---------------------------------------------------------------------------
 export function Panel({ children, className, as: As = 'section' }: { children: ReactNode; className?: string; as?: 'section' | 'div' | 'article' }) {
-  return <As className={cn('rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(6,14,27,0.04)]', className)}>{children}</As>;
+  return <As className={cn('rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(6,14,27,0.04)]', className)}>{children}</As>;
 }
 
 export function PanelHeader({ title, action, description }: { title: ReactNode; action?: ReactNode; description?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
       <div>
-        <h2 className="text-[15.5px] font-[680] tracking-[-0.01em] text-night">{title}</h2>
+        <h2 className="text-[15.5px] font-[680] tracking-[-0.01em] text-strong">{title}</h2>
         {description ? <p className="mt-0.5 text-[13px] text-muted">{description}</p> : null}
       </div>
       {action}
@@ -208,7 +209,7 @@ export function PageHeader({
   return (
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0 max-w-3xl">
-        <h1 className="text-[28px] font-[780] leading-[1.08] tracking-[-0.03em] text-night sm:text-[34px]">{title}</h1>
+        <h1 className="text-[28px] font-[780] leading-[1.08] tracking-[-0.03em] text-strong sm:text-[34px]">{title}</h1>
         {description ? <p className="mt-2 text-[15px] text-muted">{description}</p> : null}
         {children}
       </div>
@@ -397,11 +398,11 @@ export function Tabs({ items }: { items: { href: string; label: ReactNode; activ
               aria-current={item.active ? 'page' : undefined}
               className={cn(
                 'inline-flex items-center gap-2 border-b-2 px-3 pb-2.5 pt-1 text-[14px] font-semibold no-underline',
-                item.active ? 'border-night text-night' : 'border-transparent text-muted hover:text-night',
+                item.active ? 'border-strong text-strong' : 'border-transparent text-muted hover:text-strong',
               )}
             >
               {item.label}
-              {item.count !== undefined ? <span className={cn('num rounded-full px-1.5 text-[12px]', item.active ? 'bg-signal text-night' : 'bg-night/5 text-navy-800')}>{item.count}</span> : null}
+              {item.count !== undefined ? <span className={cn('num rounded-full px-1.5 text-[12px]', item.active ? 'bg-signal text-night' : 'bg-strong/5 text-navy-800')}>{item.count}</span> : null}
             </a>
           </li>
         ))}
@@ -410,18 +411,43 @@ export function Tabs({ items }: { items: { href: string; label: ReactNode; activ
   );
 }
 
+/**
+ * Bryter for lys og mørk modus. Vises bare med JavaScript (uten følger siden innstillingen på enheten).
+ * Månen vises i lys modus, solen i mørk. Skriptet setter aria-pressed og husker valget.
+ */
+export function ThemeToggle({ dark = false, className }: { dark?: boolean; className?: string }) {
+  const { m } = useUi();
+  return (
+    <button
+      type="button"
+      data-theme-toggle
+      aria-pressed="false"
+      aria-label={m.nav.theme}
+      title={m.nav.theme}
+      className={cn(
+        'js-only flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors',
+        dark ? 'text-white/80 hover:bg-white/10 hover:text-white' : 'text-muted hover:bg-strong/5 hover:text-strong',
+        className,
+      )}
+    >
+      <LuMoon className="size-[18px] dark:hidden" aria-hidden />
+      <LuSun className="hidden size-[18px] dark:block" aria-hidden />
+    </button>
+  );
+}
+
 /** Logo: radarbue som treffer en markert prikk. Egendesignet, ikke basert på andre merker. */
 export function Logo({ inverse = false, className }: { inverse?: boolean; className?: string }) {
-  const stroke = inverse ? '#ffffff' : '#060e1b';
+  const stroke = 'currentColor';
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
-      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true" className={inverse ? 'text-white' : 'text-strong'}>
         <path d="M5 27 A22 22 0 0 1 27 5" fill="none" stroke={stroke} strokeWidth="2.6" strokeLinecap="round" />
         <path d="M11 27 A16 16 0 0 1 27 11" fill="none" stroke={stroke} strokeWidth="2.6" strokeLinecap="round" opacity="0.55" />
         <path d="M17 27 A10 10 0 0 1 27 17" fill="none" stroke={stroke} strokeWidth="2.6" strokeLinecap="round" opacity="0.3" />
         <circle cx="25.5" cy="25.5" r="3.6" fill="#ffc845" stroke={stroke} strokeWidth="1.4" />
       </svg>
-      <span className={cn('text-[17px] font-bold tracking-[-0.01em]', inverse ? 'text-white' : 'text-night')}>AnbudRadar</span>
+      <span className={cn('text-[17px] font-bold tracking-[-0.01em]', inverse ? 'text-white' : 'text-strong')}>AnbudRadar</span>
     </span>
   );
 }

@@ -3,6 +3,7 @@ import { useUi } from '../context';
 import { AuthLayout } from '../layouts';
 import { CodeInput, PasskeyForm, RecoveryCodeForm } from '../two-factor';
 import { plural, rich } from '@/i18n/format';
+import { LuArrowRight, LuEye, LuEyeOff, LuLock, LuMail } from 'react-icons/lu';
 
 type Errors = Record<string, string>;
 
@@ -10,22 +11,53 @@ export function LoginPage({ email = '', error, next }: { email?: string; error?:
   const { m, lp } = useUi();
   const t = m.auth.login;
   return (
-    <AuthLayout title={t.title} intro={rich(t.noAccount, { link: <a href={lp('/registrer')}>{t.createLink}</a> })}>
+    <AuthLayout title={t.title} intro={t.welcome}>
       <PostForm action={`${lp('/logg-inn')}${next ? `?neste=${encodeURIComponent(next)}` : ''}`} className="space-y-4">
         {error ? <Alert tone="danger">{error}</Alert> : null}
         <Field label={t.email} htmlFor="email">
-          <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={email} invalid={Boolean(error)} />
+          <div className="relative">
+            <LuMail className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-faint" aria-hidden />
+            <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={email} invalid={Boolean(error)} className="pl-11" />
+          </div>
         </Field>
-        <Field label={t.password} htmlFor="password">
-          <Input id="password" name="password" type="password" autoComplete="current-password" required invalid={Boolean(error)} />
-        </Field>
-        <Button type="submit" className="w-full" busyLabel={t.busy}>
+        <div className="space-y-1.5">
+          <div className="flex items-baseline justify-between gap-3">
+            <label htmlFor="password" className="block text-[13px] font-semibold text-ink">
+              {t.password}
+            </label>
+            <a href={lp('/glemt-passord')} className="text-[13px] font-medium">
+              {t.forgot}
+            </a>
+          </div>
+          <div className="relative">
+            <LuLock className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-faint" aria-hidden />
+            <Input id="password" name="password" type="password" autoComplete="current-password" required invalid={Boolean(error)} className="pl-11 pr-12" />
+            <button
+              type="button"
+              data-toggle-password="password"
+              data-label-show={t.showPassword}
+              data-label-hide={t.hidePassword}
+              aria-label={t.showPassword}
+              title={t.showPassword}
+              aria-pressed="false"
+              className="js-only group absolute right-1.5 top-1/2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-muted hover:bg-strong/5 hover:text-strong"
+            >
+              <LuEye className="size-[18px] group-aria-pressed:hidden" aria-hidden />
+              <LuEyeOff className="hidden size-[18px] group-aria-pressed:block" aria-hidden />
+            </button>
+          </div>
+        </div>
+        <Button type="submit" variant="signal" size="lg" className="w-full" busyLabel={t.busy}>
           {t.submit}
+          <LuArrowRight className="size-[18px]" aria-hidden />
         </Button>
-        <p className="text-center text-[14px]">
-          <a href={lp('/glemt-passord')}>{t.forgot}</a>
-        </p>
       </PostForm>
+      <div className="mt-7 border-t border-line pt-6 text-center">
+        <p className="text-[14px] text-muted">{t.newHere}</p>
+        <a href={lp('/registrer')} className={buttonVariants({ variant: 'secondary', size: 'lg', className: 'mt-3 w-full' })}>
+          {t.createLink}
+        </a>
+      </div>
     </AuthLayout>
   );
 }
@@ -69,7 +101,7 @@ export function RegisterPage({ values = {}, errors = {}, next }: { values?: Reco
           />
           {errors.acceptTerms ? <p className="mt-1 text-[13px] font-medium text-danger">{errors.acceptTerms}</p> : null}
         </div>
-        <Button type="submit" className="w-full" busyLabel={t.busy}>
+        <Button type="submit" variant="signal" size="lg" className="w-full" busyLabel={t.busy}>
           {t.submit}
         </Button>
       </PostForm>
