@@ -304,6 +304,7 @@ export const en: Messages = {
     trial: '{days} with everything in Professional · No card',
     /** Vises når ekte AI ikke er slått på. */
     aiNote: 'The AI features in the plans (summaries, analysis and drafts) are not switched on yet. Everything else in the plans works today.',
+    aiPending: 'not switched on yet',
     recommended: 'Recommended',
     perMonth: 'NOK/month',
     exVat: 'excl. VAT',
@@ -353,13 +354,19 @@ export const en: Messages = {
       { q: 'Where do the tenders come from?', a: 'From {sources}. Every notice links to the original, so you can always check the source.' },
       {
         q: 'What happens after the trial?',
-        a: 'The trial lasts {days} with everything in Professional. After that, the account moves to the free plan: real tenders, 5 searches per day, 3 saved tenders and 1 AI summary per month. You decide whether to pay – nothing is charged automatically.',
+        a: 'The trial lasts {days} with everything in Professional. After that, the account moves to the free plan: real tenders, 5 searches per day and 3 saved tenders. You decide whether to pay – nothing is charged automatically.',
       },
       { q: 'Can we cancel at any time?', a: 'Yes. The subscription runs until the end of the period you have paid for, and is not renewed after that.' },
-      { q: 'Is the AI analysis always right?', a: 'No. It is an aid. Every detail has a source, and the tender documents always apply if anything differs.' },
       { q: 'Do you submit the bid for us?', a: 'No. AnbudRadar helps you find, understand and prepare. You submit the bid yourself in the buyer’s system.' },
-      { q: 'How do we pay?', a: 'By card via Stripe. Receipts and invoices are under Subscription in the app.' },
     ],
+    accuracy: {
+      ai: { q: 'Is the AI analysis always right?', a: 'No. It is an aid. Every detail has a source, and the tender documents always apply if anything differs.' },
+      plain: { q: 'Are the assessments always right?', a: 'No. They are an aid. Every detail shows where it comes from – the notice, a calculation or an estimate – and the tender documents always apply if anything differs.' },
+    },
+    payment: {
+      open: { q: 'How do we pay?', a: 'By card via Stripe. Receipts and invoices are under Subscription in the app.' },
+      notOpen: { q: 'How do we pay?', a: 'Card payment is not open yet. The trial and the free plan work as usual. If you want a paid plan, press “Meld interesse” (register interest) under Subscription in the app – and we will get in touch.' },
+    },
     ai: { q: 'What counts as an AI analysis?', a: 'Each new analysis of a notice. Analyses that already exist for the same content do not count.' },
     app: {
       q: 'Is the app available in English?',

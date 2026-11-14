@@ -1,16 +1,16 @@
 # Integrasjoner – status og hva du må skaffe
 
-Sist oppdatert 2. november 2026. **VERIFISERT** betyr kjørt mot den ekte tjenesten fra utviklingsmiljøet. **IKKE VERIFISERT** betyr bygget etter leverandørens dokumentasjon og testet med simulerte svar – det må prøves med ekte nøkler før lansering.
+Sist oppdatert 14. november 2026 (statusen under samsvarer med [STATUS.md](STATUS.md#verifisering-mot-ekte-tjenester)). **VERIFISERT** betyr kjørt mot den ekte tjenesten fra utviklingsmiljøet. **IKKE VERIFISERT** betyr bygget etter leverandørens dokumentasjon og testet med simulerte svar – det må prøves med ekte nøkler før lansering.
 
 | Integrasjon | Status | Trenger fra deg | Kostnad |
 | --- | --- | --- | --- |
 | TED (EU) | **VERIFISERT** mot live API 1.11.2026: 1 194 norske kunngjøringer hentet, ekte import 1 110 nye + 82 slått sammen, ny kjøring ga 0 duplikater og 0 falske endringer | Ingenting (åpent API) | Gratis |
 | Doffin | **VERIFISERT live 2.11.2026** – søk og nedlasting med ekte nøkkel (9 av 9 nedlastede kunngjøringer lest riktig; nasjonale skjema ikke sett live ennå) | Abonnementsnøkkel fra Doffins API-portal ([dof-notices-prod-api.developer.azure-api.net](https://dof-notices-prod-api.developer.azure-api.net/), produktet «Public Api») | Gratis |
-| Stripe | **IKKE VERIFISERT** – Checkout, kundeportal, webhooks, refusjon/tvist og avstemming testet med simulert Stripe-API og signerte testhendelser | Konto i testmodus, 3 priser, webhook-hemmelighet | 2,4 % + 2 kr per kortbetaling + 0,7 % Billing |
-| E-post (Resend) | **IKKE VERIFISERT** – kø, nye forsøk, idempotensnøkkel og avmelding testet lokalt | Konto, API-nøkkel, verifisert avsenderdomene | Gratis til 3 000/mnd (100/dag), deretter 20 USD |
-| AI (Anthropic) | **IKKE VERIFISERT** – offisiell SDK, strukturerte svar og kildekontroll testet med simulert leverandør | API-nøkkel, valgt modell, utgiftsgrense | Etter forbruk (se under) |
-| Supabase (database + lagring) | **IKKE VERIFISERT** – migreringer og RLS testet mot PostgreSQL 16 lokalt | Prosjekt i EU-region, app-rolle, privat bøtte | Pro 25 USD/mnd |
-| Render (drift) | **IKKE VERIFISERT** – `render.yaml` følger Blueprint-spesifikasjonen, ikke prøvd | Konto, Blueprint, hemmeligheter i dashbordet | Se STATUS.md |
+| Stripe | **IKKE VERIFISERT, ikke satt opp i produksjon** – Checkout, kundeportal, webhooks, refusjon/tvist og avstemming testet med simulert Stripe-API og signerte testhendelser. Til det er satt opp, kan kundene «Meld interesse» for en plan (Admin → Henvendelser) | Konto i testmodus, 3 priser, webhook-hemmelighet | 2,4 % + 2 kr per kortbetaling + 0,7 % Billing |
+| E-post (Resend) | **VERIFISERT live 3.11.2026** – domenet `anbudradar.com` bekreftet (DKIM, SPF, EU-region); kontaktskjema → kø → Resend → levert. Kø, nye forsøk, idempotensnøkkel og avmelding testet automatisk | Konto, API-nøkkel, verifisert avsenderdomene | Gratis til 3 000/mnd (100/dag), deretter 20 USD |
+| AI (Anthropic) | **IKKE VERIFISERT, av i produksjon** – offisiell SDK, strukturerte svar og kildekontroll testet med simulert leverandør. Kundene ser ingen AI-paneler, og planene merker AI-linjene «ikke slått på ennå» | API-nøkkel, valgt modell, utgiftsgrense | Etter forbruk (se under) |
+| Supabase (database + lagring) | **Database VERIFISERT live 2.–3.11.2026** (gratisplan, EU) – migreringer ved hver utrulling og egen app-rolle med RLS. **Fillagring (Storage) IKKE satt opp** – opplastede filer ligger på serverens disk og forsvinner ved ny utrulling | Prosjekt i EU-region, app-rolle, privat bøtte | Pro 25 USD/mnd |
+| Render (drift) | **VERIFISERT live 2.–3.11.2026** (gratisplan, Frankfurt) – tjenesten er satt opp manuelt med eget domene; `render.yaml` (Blueprint) er ikke prøvd | Konto, Blueprint, hemmeligheter i dashbordet | Se STATUS.md |
 
 Hemmeligheter (API-nøkler, webhook-hemmeligheter, databasepassord) legges **bare** inn som miljøvariabler hos verten (Render → Environment) eller i leverandørens kontrollpanel – aldri i koden, i Git eller i chat.
 

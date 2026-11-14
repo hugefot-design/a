@@ -295,6 +295,7 @@ export const sv: Messages = {
     trial: '{days} med allt i Professionell · Inget kort',
     /** Vises når ekte AI ikke er slått på. */
     aiNote: 'AI-funktionerna i planerna (sammanfattningar, analys och utkast) är inte påslagna ännu. Allt annat i planerna fungerar i dag.',
+    aiPending: 'inte påslaget ännu',
     recommended: 'Rekommenderas',
     perMonth: 'NOK/mån',
     exVat: 'exkl. moms',
@@ -344,13 +345,19 @@ export const sv: Messages = {
       { q: 'Var kommer upphandlingarna ifrån?', a: 'Från {sources}. Varje annons länkar till originalet, så att ni alltid kan kontrollera källan.' },
       {
         q: 'Vad händer efter provperioden?',
-        a: 'Provperioden varar i {days} med allt i Professionell. Därefter går kontot över till gratisplanen: verkliga upphandlingar, 5 sökningar per dag, 3 sparade upphandlingar och 1 AI-sammanfattning per månad. Ni väljer själva om ni vill betala – inget dras automatiskt.',
+        a: 'Provperioden varar i {days} med allt i Professionell. Därefter går kontot över till gratisplanen: verkliga upphandlingar, 5 sökningar per dag och 3 sparade upphandlingar. Ni väljer själva om ni vill betala – inget dras automatiskt.',
       },
       { q: 'Kan vi säga upp när som helst?', a: 'Ja. Abonnemanget löper ut den period ni har betalat för och förnyas inte efter det.' },
-      { q: 'Har AI-analysen alltid rätt?', a: 'Nej. Den är ett hjälpmedel. Varje uppgift har en källa, och upphandlingsdokumenten gäller alltid vid avvikelser.' },
       { q: 'Lämnar ni in anbudet åt oss?', a: 'Nej. AnbudRadar hjälper er att hitta, förstå och förbereda. Anbudet lämnar ni själva i upphandlarens system.' },
-      { q: 'Hur betalar vi?', a: 'Med kort via Stripe. Kvitton och fakturor finns under Abonnemang i appen.' },
     ],
+    accuracy: {
+      ai: { q: 'Har AI-analysen alltid rätt?', a: 'Nej. Den är ett hjälpmedel. Varje uppgift har en källa, och upphandlingsdokumenten gäller alltid vid avvikelser.' },
+      plain: { q: 'Är bedömningarna alltid rätt?', a: 'Nej. De är ett hjälpmedel. Varje uppgift visar var den kommer ifrån – annonsen, en beräkning eller en uppskattning – och upphandlingsdokumenten gäller alltid vid avvikelser.' },
+    },
+    payment: {
+      open: { q: 'Hur betalar vi?', a: 'Med kort via Stripe. Kvitton och fakturor finns under Abonnemang i appen.' },
+      notOpen: { q: 'Hur betalar vi?', a: 'Kortbetalning är inte öppen ännu. Provperioden och gratisplanen fungerar som vanligt. Vill ni ha en betald plan, tryck på ”Meld interesse” (anmäl intresse) under Abonnemang i appen – så hör vi av oss.' },
+    },
     ai: { q: 'Vad räknas som en AI-analys?', a: 'Varje ny analys av en annons. Analyser som redan finns för samma innehåll räknas inte.' },
     app: {
       q: 'Finns appen på svenska?',

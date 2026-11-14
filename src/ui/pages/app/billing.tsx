@@ -1,4 +1,4 @@
-import { PAID_PLANS, PLANS, type PaidPlanId } from '@/domain/billing/plans';
+import { mentionsAi, PAID_PLANS, PLANS, type PaidPlanId } from '@/domain/billing/plans';
 import type { UsageSummary } from '@/domain/ai/usage';
 import { useUi } from '../../context';
 import { Alert, Badge, Button, cn, PageHeader, Panel, PanelHeader, PostForm } from '../../components';
@@ -40,8 +40,31 @@ function UsageRow({ label, used, limit }: { label: string; used: number; limit: 
   );
 }
 
+/** Linjene i en plan. Når ekte AI ikke er slått på, merkes AI-linjene – planen lover ikke AI som ikke virker. */
+function PlanLines({ features, aiReal }: { features: string[]; aiReal: boolean }) {
+  return (
+    <ul className="mt-4 flex-1 space-y-1.5 text-[14px]">
+      {features.map((f) => {
+        const pending = !aiReal && mentionsAi(f);
+        return (
+          <li key={f} className={cn('flex gap-2', pending && 'text-muted')}>
+            <span className="text-ok" aria-hidden>
+              ✓
+            </span>
+            <span>
+              {f}
+              {pending ? <span className="ml-1.5 inline-block rounded-full border border-line-strong px-2 py-px text-[11.5px] font-semibold text-muted">ikke slått på ennå</span> : null}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function BillingPage(p: BillingProps) {
-  const { org, user } = useUi();
+  const { org, user, aiConfigured, aiIsMock } = useUi();
+  const aiReal = aiConfigured && !aiIsMock;
   const b = org!.billing;
   const canManage = org!.role === 'owner' || org!.role === 'admin';
   return (
@@ -65,8 +88,8 @@ export function BillingPage(p: BillingProps) {
             Stripe-nøkler mangler i konfigurasjonen. Planer kan ikke kjøpes før de er lagt inn (se docs/INTEGRASJONER.md).
           </Alert>
         ) : (
-          <Alert tone="info" className="mb-5" title="Betaling åpner snart">
-            Prøveperioden og gratisplanen virker som vanlig. Vil du bestille en plan nå, <a href="/kontakt">kontakt oss</a>.
+          <Alert tone="info" className="mb-5" title="Kortbetaling er ikke åpnet ennå">
+            Prøveperioden og gratisplanen virker som vanlig. Vil dere ha en betalt plan, trykk «Meld interesse» på planen – så tar vi kontakt på e-post.
           </Alert>
         )
       ) : p.stripeTestMode ? (
@@ -118,11 +141,11 @@ export function BillingPage(p: BillingProps) {
           ) : null}
         </Panel>
         <Panel>
-          <PanelHeader title="Forbruk" description="Søk telles per dag, AI per måned." />
+          <PanelHeader title="Forbruk" description={aiConfigured ? 'Søk telles per dag, AI per måned.' : 'Søk telles per dag.'} />
           <dl className="space-y-3.5 p-5 text-[14px]">
             {!p.searchQuota.unlimited ? <UsageRow label="Søk i dag" used={p.searchQuota.used} limit={p.searchQuota.limit} /> : null}
-            <UsageRow label="AI-analyser" used={p.usage.analyses} limit={p.usage.analysesLimit} />
-            {p.usage.draftsLimit > 0 ? <UsageRow label="AI-utkast" used={p.usage.drafts} limit={p.usage.draftsLimit} /> : null}
+            {aiConfigured ? <UsageRow label="AI-analyser" used={p.usage.analyses} limit={p.usage.analysesLimit} /> : null}
+            {aiConfigured && p.usage.draftsLimit > 0 ? <UsageRow label="AI-utkast" used={p.usage.drafts} limit={p.usage.draftsLimit} /> : null}
             <UsageRow label="Lagrede anbud" used={p.bookmarkCount} limit={org!.entitlements.maxBookmarks} />
             <UsageRow label="Brukere" used={p.memberCount} limit={org!.entitlements.maxMembers} />
           </dl>
@@ -135,6 +158,9 @@ export function BillingPage(p: BillingProps) {
       </div>
 
       <h2 className="mb-3 font-serif text-[20px] font-semibold text-navy-900">Planer</h2>
+      {aiReal ? null : (
+        <p className="mb-4 text-[14px] text-muted">AI-funksjonene i planene (sammendrag, analyse og utkast) er ikke slått på ennå. Alt annet i planene virker i dag.</p>
+      )}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {PAID_PLANS.map((id: PaidPlanId) => {
           const plan = PLANS[id];
@@ -150,22 +176,20 @@ export function BillingPage(p: BillingProps) {
                 <span className="text-[14px] text-muted"> kr/mnd</span>
               </p>
               <p className="mt-1 text-[13px] text-muted">{plan.tagline}</p>
-              <ul className="mt-4 flex-1 space-y-1.5 text-[14px]">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex gap-2">
-                    <span className="text-ok" aria-hidden>
-                      ✓
-                    </span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
+              <PlanLines features={plan.features} aiReal={aiReal} />
               {canManage ? (
-                current ? null : (
+                current ? null : p.stripeConfigured ? (
                   <PostForm action="/app/abonnement/velg" className="mt-5">
                     <input type="hidden" name="plan" value={id} />
-                    <Button className="w-full" variant={id === 'professional' ? 'primary' : 'secondary'} disabled={!p.stripeConfigured}>
+                    <Button className="w-full" variant={id === 'professional' ? 'primary' : 'secondary'}>
                       {p.hasStripeSubscription ? `Bytt til ${plan.name}` : `Velg ${plan.name}`}
+                    </Button>
+                  </PostForm>
+                ) : (
+                  <PostForm action="/app/abonnement/interesse" className="mt-5">
+                    <input type="hidden" name="plan" value={id} />
+                    <Button className="w-full" variant={id === 'professional' ? 'primary' : 'secondary'} busyLabel="Sender …" aria-label={`Meld interesse for ${plan.name}`}>
+                      Meld interesse
                     </Button>
                   </PostForm>
                 )
@@ -184,16 +208,7 @@ export function BillingPage(p: BillingProps) {
             <span className="num">{formatInt(PLANS.enterprise.priceNok)}</span> <span className="text-[14px] font-normal text-muted">kr/mnd</span>
           </p>
           <p className="mt-1 text-[13px] text-muted">{PLANS.enterprise.tagline}</p>
-          <ul className="mt-4 flex-1 space-y-1.5 text-[14px]">
-            {PLANS.enterprise.features.map((f) => (
-              <li key={f} className="flex gap-2">
-                <span className="text-ok" aria-hidden>
-                  ✓
-                </span>
-                {f}
-              </li>
-            ))}
-          </ul>
+          <PlanLines features={PLANS.enterprise.features} aiReal={aiReal} />
           {org!.plan === 'enterprise' ? null : (
             <a href="/kontakt" className="mt-5 inline-flex h-10 w-full items-center justify-center rounded-md border border-line-strong text-[14px] font-semibold text-navy-900 no-underline hover:bg-paper">
               Kontakt oss

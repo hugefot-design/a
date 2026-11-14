@@ -668,7 +668,7 @@ export function PrivacyPage() {
               'Kunden',
             ],
             ['Partnerfunksjonen', 'Partnerprofil og navn og e-post til kontaktpersonen i forespørsler', 'Kunden'],
-            ['Kommunikasjon', 'Henvendelser via kontaktskjemaet, logg over e-post vi har sendt', 'Deg og oss'],
+            ['Kommunikasjon', 'Henvendelser via kontaktskjemaet og «Meld interesse» i appen, logg over e-post vi har sendt', 'Deg og oss'],
             ['Teknisk informasjon', 'Innloggingsøkter, nettlesertype, pseudonymisert IP-adresse (enveis-kryptert), revisjonslogg', 'Bruken av tjenesten'],
             ['Betaling', 'Kunde- og abonnementsreferanser. Kortopplysninger håndteres bare av Stripe.', 'Stripe'],
             ['Offentlige kunngjøringer', 'Navn og kontaktopplysninger som oppdragsgivere har publisert, navn på leverandører som har vunnet kontrakter', 'Doffin og TED'],

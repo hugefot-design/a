@@ -112,7 +112,9 @@ function DeadlineBlock({ tender }: { tender: TenderDetail }) {
 }
 
 export function TenderPage(p: TenderPageProps) {
-  const { org, aiConfigured, aiIsMock } = useUi();
+  const { org, user, aiConfigured, aiIsMock } = useUi();
+  // Når AI ikke er slått på, ser kundene ikke tomme AI-paneler (administratorer ser dem, med beskjed om hva som mangler).
+  const showAi = aiConfigured || Boolean(user?.isPlatformAdmin);
   const t = p.tender;
   const ent = org!.entitlements;
   const regionNames = t.regionCodes.map((r) => REGION_BY_CODE.get(r)?.name ?? r);
@@ -277,15 +279,17 @@ export function TenderPage(p: TenderPageProps) {
 
           <LotsPanel tender={t} />
 
-          <AnalysisTeaser
-            tenderId={t.id}
-            analysis={p.analysis}
-            aiConfigured={aiConfigured}
-            aiIsMock={aiIsMock}
-            canAnalyze={ent.aiAnalysesPerMonth > 0}
-            full={ent.aiFullAnalysis}
-            quota={p.aiQuota}
-          />
+          {showAi || p.analysis ? (
+            <AnalysisTeaser
+              tenderId={t.id}
+              analysis={p.analysis}
+              aiConfigured={aiConfigured}
+              aiIsMock={aiIsMock}
+              canAnalyze={ent.aiAnalysesPerMonth > 0}
+              full={ent.aiFullAnalysis}
+              quota={p.aiQuota}
+            />
+          ) : null}
 
           {p.chat && aiConfigured ? (
             <ChatPanel tenderId={t.id} entries={p.chat} isMock={aiIsMock} quota={p.aiQuota} withDocuments={ent.aiFullAnalysis} />
@@ -369,7 +373,7 @@ export function TenderPage(p: TenderPageProps) {
               )}
             </div>
           </Panel>
-          <FitPanel tenderId={t.id} fit={p.fit} canAssess={p.canAssessFit} aiConfigured={aiConfigured} quota={p.aiQuota} />
+          {showAi || p.fit ? <FitPanel tenderId={t.id} fit={p.fit} canAssess={p.canAssessFit} aiConfigured={aiConfigured} quota={p.aiQuota} /> : null}
           <TenderProfitTeaser tenderId={t.id} badge={p.profit ?? null} enabled={ent.profitCalculator} />
           {p.bookmark ? <StatusPanel tenderId={t.id} bookmark={p.bookmark} result={p.result ?? null} awards={p.awards} /> : null}
           {!p.bookmark && p.result?.buyerHistory ? (

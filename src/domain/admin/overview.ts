@@ -179,7 +179,7 @@ export async function adminOverview(now = new Date()) {
          and last_error = ${BLOCKED_BY_ALLOWLIST}) as blocked_emails,
       (select count(*)::int from email_outbox where created_at > now() - interval '7 days' and status = 'sent') as sent_emails,
       (select count(*)::int from import_errors where created_at > now() - interval '7 days') as import_errors,
-      (select count(*)::int from reports where status = 'open' and kind = 'contact') as open_contact,
+      (select count(*)::int from reports where status = 'open' and kind in ('contact', 'plan_interest')) as open_contact,
       (select count(*)::int from reports where status = 'open' and kind = 'data_error') as open_data_errors,
       (select count(*)::int from users where locked_until > now()) as locked_users,
       (select count(*)::int from subscriptions where source = 'trial' and trial_ends_at > now() and trial_ends_at < now() + interval '3 days') as trials_ending
@@ -255,7 +255,7 @@ export async function adminOverview(now = new Date()) {
     });
   }
   if (o.openContact > 0) {
-    attention.push({ tone: 'info', title: `${o.openContact} ubesvart${o.openContact === 1 ? '' : 'e'} henvendelse${o.openContact === 1 ? '' : 'r'} fra kontaktskjemaet`, href: '/admin/rapporter' });
+    attention.push({ tone: 'info', title: `${o.openContact} ubesvart${o.openContact === 1 ? '' : 'e'} henvendelse${o.openContact === 1 ? '' : 'r'} (kontaktskjema og planønsker)`, href: '/admin/rapporter' });
   }
   if (o.openDataErrors > 0) {
     attention.push({ tone: 'info', title: `${o.openDataErrors} feilmelding${o.openDataErrors === 1 ? '' : 'er'} om anbud fra brukere`, href: '/admin/rapporter' });

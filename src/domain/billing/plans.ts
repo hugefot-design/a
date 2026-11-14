@@ -223,6 +223,9 @@ export const PLANS: Record<PlanId, PlanInfo> = {
   },
 };
 
+/** Linjer i planene som gjelder AI («AI-sammendrag», «AI summary» …) – samme ord på alle språkene. */
+export const mentionsAi = (s: string): boolean => /(^|[\s(])AI(\b|-)/.test(s);
+
 export const PAID_PLANS: PaidPlanId[] = ['starter', 'professional', 'business'];
 export const TRIAL_PLAN: PlanId = 'professional';
 

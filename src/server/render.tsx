@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
-import { env, isDev, isProd } from '@/lib/env';
+import { env, isDev, isProd, paymentsOpen } from '@/lib/env';
 import { UiContext, type UiContextValue } from '@/ui/context';
 import type { RequestContext } from './http';
 import { liveSources } from '@/domain/tenders/source-status';
@@ -47,6 +47,7 @@ function uiValue(ctx: RequestContext): UiContextValue {
     isDev: isDev,
     aiConfigured: ai.configured,
     aiIsMock: ai.isMock,
+    paymentsOpen: paymentsOpen(),
     legalReviewed: env.LEGAL_PAGES_REVIEWED,
     liveSources: liveSources(),
     trialDays: env.TRIAL_DAYS,

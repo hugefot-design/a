@@ -61,7 +61,16 @@ export function FaqList({ items }: { items: [string, ReactNode][] }) {
 }
 
 /** Vanlige spørsmål – samme svar overalt, så de aldri spriker. Spørsmålet om appens språk vises bare på andre språk enn norsk. */
-export function faqItems(m: Messages, o: { days: string; sources: string }): [string, ReactNode][] {
-  const items = m.faq.items.map((x): [string, ReactNode] => [x.q, fill(x.a, o)]);
-  return m.faq.app.q ? [...items, [m.faq.app.q, m.faq.app.a]] : items;
+/**
+ * Vanlige spørsmål. Svarene om AI og betaling følger det som faktisk er slått på – siden lover aldri
+ * AI-analyse eller kortbetaling som ikke virker.
+ */
+export function faqItems(m: Messages, o: { days: string; sources: string; aiReal: boolean; paymentsOpen: boolean }): [string, ReactNode][] {
+  const vars = { days: o.days, sources: o.sources };
+  const items = m.faq.items.map((x): [string, ReactNode] => [x.q, fill(x.a, vars)]);
+  const accuracy = o.aiReal ? m.faq.accuracy.ai : m.faq.accuracy.plain;
+  const payment = o.paymentsOpen ? m.faq.payment.open : m.faq.payment.notOpen;
+  const all: [string, ReactNode][] = [...items, [accuracy.q, accuracy.a], [payment.q, payment.a]];
+  if (o.aiReal) all.push([m.faq.ai.q, m.faq.ai.a]);
+  return m.faq.app.q ? [...all, [m.faq.app.q, m.faq.app.a]] : all;
 }

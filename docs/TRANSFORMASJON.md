@@ -4,6 +4,7 @@ Startet 13. november 2026 etter eiers oppdrag «Full product transformation». M
 registrerte, flere som kommer i gang, og flere som blir – ikke en ny fasade.
 
 > **Ingenting her er rullet ut.** Produksjonen (anbudradar.com) står på versjon `2d3e8ab` fra 8. november.
+> «Push ut» er gjort som `git push` til arbeidsgrenen – ikke utrulling til produksjon.
 > Arbeidet ligger på grenen `claude/anbudradar-saas-launch-eje0gv` (samme gren som Render ruller ut fra), og alle
 > endringer har `[skip render]`, så ingenting går ut av seg selv. Utrulling skjer først når eier sier fra.
 
@@ -41,9 +42,10 @@ Kontrollert 13.11.2026 mot koden, testene og oppsettet hos Render (bare navn på
 
 | Hva | Hvor det sto | Hva som er gjort |
 | --- | --- | --- |
-| AI-sammendrag, AI-analyse og AI-utkast i planene | Plankortene (pris- og abonnementssiden), sammenligningstabellen, spørsmål og svar | Planene beskriver nå det som virker i dag. AI-linjene vises bare når ekte AI er slått på. Priser og grenser er ikke endret. |
-| «Betal med kort via Stripe» | Spørsmål og svar på prissiden | Svaret følger oppsettet: så lenge betaling ikke er satt opp, står det at betaling åpner senere. |
-| Tomme AI-paneler («AI er ikke slått på ennå») og AI-kvoter | Anbudssiden, Oversikt, Abonnement | Skjules for kunder når AI er av. |
+| AI-sammendrag, AI-analyse og AI-utkast i planene | Plankortene (pris- og abonnementssiden), sammenligningstabellen, spørsmål og svar | Når ekte AI ikke er slått på, merkes hver AI-linje «ikke slått på ennå» rett ved påstanden (plankort, sammenligningstabell, abonnementssiden), og spørsmål og svar nevner ikke AI-analyse. Priser og grenser er ikke endret. |
+| «Betal med kort via Stripe» | Spørsmål og svar på prissiden | Svaret følger oppsettet: så lenge kortbetaling ikke er satt opp, står det det – og at kunden kan melde interesse i appen. |
+| Tomme AI-paneler («AI er ikke slått på ennå») og AI-kvoter | Anbudssiden, Oversikt, Abonnement | Skjules for kunder når AI er av (administratorens organisasjon ser dem i testmodus). |
+| «AI-analyser … stopper» og «Velg plan» i e-posten før prøveperioden slutter | E-post | Nevner bare det som faktisk stopper, viser ekte tall fra kontoen (åpne anbud som passer, lagrede anbud), og ber om «Meld interesse» når kortbetaling ikke er åpnet. |
 | «Velg plan» som ikke kan trykkes | Abonnement | Kunden kan melde interesse for en plan (havner i Admin → Henvendelser). |
 
 ## 4. De 15 viktigste forbedringene
@@ -91,3 +93,21 @@ Status oppdateres nederst i dokumentet etter hvert som arbeidet blir ferdig.
 | AI | Nøkkel og utgiftsgrense – eller la AI stå av (planene sier nå det som er sant) | Eier |
 | Navn | Anbudsradar (anbudsradar.no) finnes i samme marked – se NAVNERISIKO.md | Eier |
 | Drift | Gratis-serveren sover. For betalende kunder bør den alltid være på (koster penger) | Eier |
+
+## 7. Status for arbeidet (oppdateres fortløpende)
+
+| Del | Status | Commit |
+| --- | --- | --- |
+| Fase 1 – gjennomgang og 15 forbedringer | Ferdig (dette dokumentet) | `70d0e17` |
+| Fase 3 – enklere start (punkt 1 og 5) | Ferdig og testet: ett kort oppstartsskjema (firma, bransjer, område, godkjenninger, hva dere leverer) som tar med seg anbudet kunden kom fra; «Kom i gang» med fem steg på Oversikt; «Passer fordi …» og lenke til vurderingen i listene | `49f75c7` |
+| Fase 6 – ærlighet om AI og betaling (punkt 4, 9, 12, 14, del av 15) | Ferdig og testet: «Meld interesse» for planer (Admin → Henvendelser + e-post til eier), AI-linjer merket, tomme AI-paneler skjult for kunder, spørsmål og svar og påminnelses-e-posten følger oppsettet, dokumentasjonen rettet (README, VEIKART, STATUS, INTEGRASJONER, LANSERING, DRIFT) | se git-loggen |
+| Fase 2 – forside, demo, priser | Ikke startet | |
+| Fase 4 – tydeligere grunnlag i vurderingen | Ikke startet | |
+| Fase 5 – offentlige anbudssider, ukesbrev, søk | Ikke startet | |
+| Fase 7 – måling av hele reisen | Delvis: første bruk og aktive dager lagres (fase 3); kilde ved registrering og visning i Admin gjenstår | |
+
+**Krever eiers godkjenning (ikke gjort):**
+- Henvendelser (kontaktskjema, «Meld interesse», feilrapporter) har ingen slettefrist i dag. Forslag: løste henvendelser
+  slettes etter 24 måneder. Det er sletting av produksjonsdata, så det venter på ja.
+- Brønnøysundregistrene for å fylle ut firmaopplysninger (ny ekstern tjeneste, gratis).
+

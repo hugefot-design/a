@@ -2,7 +2,13 @@
 
 Finner offentlige anbud som passer bedriften, forklarer kravene med kildehenvisning og hjelper teamet å forberede tilbud. Norge først (Doffin + TED), bygget for å utvides til Sverige, Danmark, Finland og Tyskland.
 
-> **Status (2. november 2026):** Fungerende applikasjon med 85 enhetstester, 57 integrasjonstester mot ekte PostgreSQL og 2 ende-til-ende-tester i Chromium – alle grønne. TED er **verifisert mot live API**. Doffin, Stripe, Resend, AI-leverandøren, Supabase og Render er bygget inn, men **ikke verifisert mot de ekte tjenestene**. Se [docs/STATUS.md](docs/STATUS.md) før lansering.
+> **Status (14. november 2026):** Kjører i produksjon på [anbudradar.com](https://anbudradar.com) (Render og Supabase, gratisplaner).
+> Ekte anbud fra **TED** og **Doffin** (begge verifisert mot live API) og e-post via **Resend** (verifisert).
+> **Ikke slått på i produksjon** (mangler nøkler eller valg fra eier): AI, kortbetaling (Stripe – kundene kan melde
+> interesse for en plan), fillagring i Supabase Storage (opplastede filer ligger på serverens disk og forsvinner ved ny
+> utrulling) og automatisk sikkerhetskopi. Koden på denne grenen lover ikke det som er av (hva som er rullet ut, står i STATUS).
+> Testresultater og verifisering: [docs/STATUS.md](docs/STATUS.md). Hva som blokkerer lansering:
+> [docs/TRANSFORMASJON.md](docs/TRANSFORMASJON.md#6-det-som-fortsatt-blokkerer-lansering-krever-eier).
 
 ## Innhold
 
@@ -17,7 +23,7 @@ Finner offentlige anbud som passer bedriften, forklarer kravene med kildehenvisn
 | Profit Intelligence | Lønnsomhet per anbud med bedriftens egne kostnader: selvkost, minstepris, prisintervall, følsomhet og formler. Kontraktsrisiko (dagbøter, betalingsfrist, prisregulering, garantier) med side og sitat. Kapasitet, kvalifikasjoner og anbefaling (Vurder å by / Undersøk nærmere / Høy risiko). Se [docs/PROFIT_INTELLIGENCE.md](docs/PROFIT_INTELLIGENCE.md). |
 | Anbudspartnere | Partnerprofil med samtykke, søk og forklarte forslag ut fra manglene, forespørsler med konkurranserettslig sperre og kontaktdeling bare ved godkjenning. |
 | Konto og sikkerhet | Registrering, e-postbekreftelse, glemt passord, organisasjoner, roller, invitasjoner, revisjonslogg, dataeksport, sletting. Radnivåsikkerhet i databasen. |
-| Abonnement | Gratis, Start 299 / Profesjonell 699 / Bedrift 1 490 kr per måned via Stripe, Enterprise fra 4 990 kr (manuelt). Tilgang styres kun av signerte webhooks; gamle hendelser kan ikke gjenopplive et avsluttet abonnement. |
+| Abonnement | Gratis, Start 299 / Profesjonell 699 / Bedrift 1 490 kr per måned via Stripe, Enterprise fra 4 990 kr (manuelt). Tilgang styres kun av signerte webhooks; gamle hendelser kan ikke gjenopplive et avsluttet abonnement. Så lenge Stripe ikke er satt opp, kan kunden «Meld interesse» for en plan (havner i Admin → Henvendelser), og administrator kan sette planen manuelt. |
 | Admin | Brukere, organisasjoner, manuelle avtaler, importkjøringer, kilder, AI-forbruk, e-postlogg, feilrapporter, revisjonslogg, systemhelse. |
 
 ## Kom i gang lokalt

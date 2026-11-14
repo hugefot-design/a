@@ -261,7 +261,7 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
 - **Tilbakerulling av kode:** Render → tjenesten → *Events* → velg forrige vellykkede deploy → *Rollback*. Gjør det samme for arbeideren.
 - **Tilbakerulling av database** (sjelden – bare hvis en migrering har ødelagt data): stopp arbeideren, gjenopprett med PITR til tidspunktet før deploy, rull tilbake koden, start arbeideren. Skriv ned hva som skjedde.
 - **Før hver deploy med ny migrering:** ta en manuell sikkerhetskopi (Supabase → Database → Backups), kjør migreringen mot en kopi eller staging først hvis den endrer eksisterende data.
-- Hold `autoDeploy: false` til dere har CI som må være grønn før deploy.
+- `render.yaml` har `autoDeploy: false`. Tjenesten i produksjon er satt opp for hånd (se under om `[skip render]`).
 - **Rutine fra 7. november 2026 (eiers beslutning: «rull ut hver oppdatering uten at jeg sier noe»):** hver
   kodeendring rulles ut uten egen godkjenning, men først når testene på GitHub er grønne for akkurat den versjonen.
   Endringene sendes med `[skip render]`, så Render ikke ruller ut av seg selv før testene er ferdige; utrullingen
@@ -276,6 +276,13 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
   GitHub er grønne for akkurat den versjonen (samme rutine som over). Unntakene gjelder fortsatt og krever eiers ja:
   priser og abonnementer, nye betalte tjenester eller leverandører, oppsett hos Render/Supabase, produksjonsdata og
   hemmeligheter, migreringer som endrer eksisterende data, og større nye funksjoner.
+- **Endret igjen 13. november 2026 (oppdraget «Full product transformation»):** eier skrev «Ikke deploy til
+  produksjon». **Dette er beskjeden som gjelder nå:** ingenting rulles ut før eier sier fra (f.eks. «rull ut»). Arbeidet
+  sendes til arbeidsgrenen med `[skip render]`, testene kjøres på GitHub, og produksjonen står på siste utrullede versjon
+  (`2d3e8ab`, kontrollert 13.11.2026).
+- **Om `autoDeploy`:** tjenesten i Render ruller ut fra arbeidsgrenen automatisk, men hver commit har `[skip render]`, så
+  det skjer ikke av seg selv. Utrulling startes for hånd (Render → *Manual Deploy*) eller med Render API og et bestemt
+  versjonsnummer – og bare når eier har sagt ja.
 
 ## 8. Kontinuerlig integrasjon (CI)
 

@@ -295,6 +295,7 @@ export const da: Messages = {
     trial: '{days} med alt i Professionel · Intet kort',
     /** Vises når ekte AI ikke er slått på. */
     aiNote: 'AI-funktionerne i planerne (resuméer, analyse og udkast) er ikke slået til endnu. Alt andet i planerne virker i dag.',
+    aiPending: 'ikke slået til endnu',
     recommended: 'Anbefalet',
     perMonth: 'NOK/md.',
     exVat: 'ekskl. moms',
@@ -344,13 +345,19 @@ export const da: Messages = {
       { q: 'Hvor kommer udbuddene fra?', a: 'Fra {sources}. Hver bekendtgørelse linker til originalen, så I altid kan tjekke kilden.' },
       {
         q: 'Hvad sker der efter prøveperioden?',
-        a: 'Prøveperioden varer {days} med alt i Professionel. Derefter overgår kontoen til gratisplanen: ægte udbud, 5 søgninger pr. dag, 3 gemte udbud og 1 AI-resumé pr. måned. I vælger selv, om I vil betale – der trækkes intet automatisk.',
+        a: 'Prøveperioden varer {days} med alt i Professionel. Derefter overgår kontoen til gratisplanen: ægte udbud, 5 søgninger pr. dag og 3 gemte udbud. I vælger selv, om I vil betale – der trækkes intet automatisk.',
       },
       { q: 'Kan vi opsige når som helst?', a: 'Ja. Abonnementet løber perioden ud, som I har betalt for, og fornyes ikke derefter.' },
-      { q: 'Har AI-analysen altid ret?', a: 'Nej. Den er et hjælpemiddel. Hver oplysning har en kilde, og udbudsmaterialet gælder altid ved afvigelser.' },
       { q: 'Afgiver I tilbuddet for os?', a: 'Nej. AnbudRadar hjælper jer med at finde, forstå og forberede. Tilbuddet afgiver I selv i ordregiverens system.' },
-      { q: 'Hvordan betaler vi?', a: 'Med kort via Stripe. Kvitteringer og fakturaer finder I under Abonnement i appen.' },
     ],
+    accuracy: {
+      ai: { q: 'Har AI-analysen altid ret?', a: 'Nej. Den er et hjælpemiddel. Hver oplysning har en kilde, og udbudsmaterialet gælder altid ved afvigelser.' },
+      plain: { q: 'Er vurderingerne altid rigtige?', a: 'Nej. De er et hjælpemiddel. Hver oplysning viser, hvor den kommer fra – bekendtgørelsen, en beregning eller et skøn – og udbudsmaterialet gælder altid ved afvigelser.' },
+    },
+    payment: {
+      open: { q: 'Hvordan betaler vi?', a: 'Med kort via Stripe. Kvitteringer og fakturaer finder I under Abonnement i appen.' },
+      notOpen: { q: 'Hvordan betaler vi?', a: 'Kortbetaling er ikke åbnet endnu. Prøveperioden og gratisplanen virker som normalt. Vil I have en betalt plan, så tryk på »Meld interesse« under Abonnement i appen – så kontakter vi jer.' },
+    },
     ai: { q: 'Hvad tæller som en AI-analyse?', a: 'Hver ny analyse af en bekendtgørelse. Analyser, der allerede findes for det samme indhold, tæller ikke.' },
     app: {
       q: 'Findes appen på dansk?',

@@ -309,16 +309,58 @@ export function subscriptionEndedTemplate(orgName: string, pricingUrl: string): 
   return { subject, html, text: `Abonnementet for ${orgName} er avsluttet. Velg en plan: ${pricingUrl}${textFooter()}` };
 }
 
-export function trialEndingTemplate(orgName: string, daysLeft: number, billingUrl: string): Rendered {
+export interface TrialEndingInfo {
+  /** Er ekte AI slått på? Ellers nevnes ikke AI-analyser (de har aldri vært tilgjengelige). */
+  aiReal: boolean;
+  /** Kan kundene betale med kort? Ellers inviteres de til å melde interesse. */
+  paymentsOpen: boolean;
+  /** Åpne anbud som passer profilen nå (rangering 60+). */
+  relevantOpen: number;
+  /** Lagrede anbud. */
+  saved: number;
+}
+
+/** Hva prøveperioden har gitt, med tall fra kontoen – bare det som faktisk er der. */
+function trialValueLine(i: TrialEndingInfo): string {
+  const parts = [
+    i.relevantOpen > 0 ? `${i.relevantOpen} åpne anbud som passer profilen akkurat nå` : '',
+    i.saved > 0 ? `${i.saved} ${i.saved === 1 ? 'lagret anbud' : 'lagrede anbud'}` : '',
+  ].filter(Boolean);
+  return parts.length ? `Dere har ${parts.join(' og ')}.` : '';
+}
+
+export function trialEndingTemplate(orgName: string, daysLeft: number, billingUrl: string, info: TrialEndingInfo): Rendered {
   const subject = daysLeft <= 1 ? 'Prøveperioden din slutter i morgen' : `Prøveperioden din slutter om ${daysLeft} dager`;
+  const stops = info.aiReal ? 'AI-analyser, varsler og personlig rangering' : 'automatiske varsler, personlig rangering og lønnsomhetskalkulatoren';
+  const value = trialValueLine(info);
+  const next = info.paymentsOpen
+    ? { text: 'Velg en plan for å fortsette uten avbrudd. Ingen binding – abonnementet kan sies opp når som helst.', cta: 'Velg plan' }
+    : { text: 'Kortbetaling er ikke åpnet ennå. Vil dere fortsette med alt, kan dere melde interesse for en plan – så tar vi kontakt.', cta: 'Meld interesse' };
   const html = layout(
     subject,
-    `<p>Prøveperioden for <strong>${esc(orgName)}</strong> slutter snart. Etterpå går kontoen over til gratisnivået, og AI-analyser, varsler og rangering stopper.</p>
-     <p>Velg en plan for å fortsette uten avbrudd. Ingen binding – abonnementet kan sies opp når som helst.</p>
-     ${button(billingUrl, 'Velg plan')}`,
-    { preheader: 'Velg en plan for å fortsette uten avbrudd.' },
+    `<p>Prøveperioden for <strong>${esc(orgName)}</strong> slutter snart. Etterpå går kontoen over til gratisplanen, og ${stops} stopper. Lagrede anbud blir liggende.</p>
+     ${value ? `<p>${esc(value)}</p>` : ''}
+     <p>${esc(next.text)}</p>
+     ${button(billingUrl, next.cta)}`,
+    { preheader: next.text },
   );
-  return { subject, html, text: `Prøveperioden for ${orgName} slutter om ${daysLeft} dag(er). Velg plan: ${billingUrl}${textFooter()}` };
+  return {
+    subject,
+    html,
+    text: `Prøveperioden for ${orgName} slutter ${daysLeft <= 1 ? 'i morgen' : `om ${daysLeft} dager`}. Etterpå stopper ${stops}.${value ? `\n${value}` : ''}\n${next.text}\n${next.cta}: ${billingUrl}${textFooter()}`,
+  };
+}
+
+/** Til eieren av tjenesten: en kunde vil ha en plan mens kortbetaling ikke er åpnet. */
+export function planInterestTemplate(orgName: string, planName: string, name: string, email: string): Rendered {
+  const subject = `Ønske om plan: ${planName} – ${orgName}`;
+  const html = layout(
+    'En kunde vil ha en betalt plan',
+    `<p><strong>${esc(name || email)}</strong> (${esc(email)}) i <strong>${esc(orgName)}</strong> ønsker planen <strong>${esc(planName)}</strong>.</p>
+     <p>Kortbetaling er ikke åpnet. Svar kunden på e-post. Planen kan settes manuelt under Admin → Organisasjoner.</p>`,
+    { footer: 'Sendt fra Abonnement i appen.' },
+  );
+  return { subject, html, text: `${name || email} (${email}) i ${orgName} ønsker planen ${planName}.\nKortbetaling er ikke åpnet. Svar kunden på e-post.` };
 }
 
 // ---------------------------------------------------------------------------

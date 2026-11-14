@@ -7,6 +7,8 @@ import { relatedNotices, signalMatch } from '@/domain/opportunities/opportunitie
 import { log } from '@/lib/logger';
 import { sha256Hex } from '@/lib/crypto';
 import { queueEmail } from '@/lib/email';
+import { paymentsOpen } from '@/lib/env';
+import { aiModeFor } from '@/domain/ai/provider';
 import { listUnsubscribeHeaders, unsubscribeUrl } from '@/domain/email/unsubscribe';
 import { entitlementsFor, resolveBilling, withAdminAccess, type Entitlements, type SubscriptionRow } from '@/domain/billing/plans';
 import { buildConditions } from '@/domain/tenders/queries';
@@ -422,10 +424,29 @@ export async function generateTrialReminders(now = new Date()): Promise<number> 
     where s.source = 'trial' and s.trial_ends_at > ${now} and s.trial_ends_at <= ${now}::timestamptz + interval '3 days'
   `) as unknown as { orgId: string; trialEndsAt: Date; orgName: string; userId: string; email: string }[];
   let queued = 0;
+  const ai = aiModeFor(null);
+  const open = paymentsOpen();
+  // Hva prøveperioden har gitt (ekte tall fra kontoen), én gang per organisasjon.
+  const orgIds = [...new Set(rows.map((r) => r.orgId))];
+  const value = new Map<string, { relevantOpen: number; saved: number }>();
+  if (orgIds.length) {
+    const counts = (await sql`
+      select o.id as org_id,
+        (select count(*)::int from match_results m join tenders t on t.id = m.tender_id
+          where m.org_id = o.id and not m.excluded and m.score >= 60 and t.deadline_at > ${now}) as relevant_open,
+        (select count(*)::int from bookmarks b where b.org_id = o.id) as saved
+      from organizations o where o.id = any(${orgIds}::uuid[])
+    `) as unknown as { orgId: string; relevantOpen: number; saved: number }[];
+    for (const c of counts) value.set(c.orgId, { relevantOpen: c.relevantOpen, saved: c.saved });
+  }
   for (const r of rows) {
     const daysLeft = Math.max(1, Math.ceil((r.trialEndsAt.getTime() - now.getTime()) / 86_400_000));
     const threshold = daysLeft <= 1 ? '1d' : '3d';
-    const tpl = trialEndingTemplate(r.orgName, daysLeft, absoluteUrl('/app/abonnement'));
+    const tpl = trialEndingTemplate(r.orgName, daysLeft, absoluteUrl('/app/abonnement'), {
+      aiReal: ai.configured && !ai.isMock,
+      paymentsOpen: open,
+      ...(value.get(r.orgId) ?? { relevantOpen: 0, saved: 0 }),
+    });
     const id = await queueEmail({
       to: r.email,
       ...tpl,

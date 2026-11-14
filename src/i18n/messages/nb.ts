@@ -323,6 +323,8 @@ export const nb = {
     trial: '{days} med alt i Profesjonell · Ingen kort',
     /** Vises når ekte AI ikke er slått på. */
     aiNote: 'AI-funksjonene i planene (sammendrag, analyse og utkast) er ikke slått på ennå. Alt annet i planene virker i dag.',
+    /** Merke ved AI-linjer i plankortene når AI ikke er slått på. */
+    aiPending: 'ikke slått på ennå',
     recommended: 'Anbefalt',
     perMonth: 'kr/mnd',
     exVat: 'eks. mva.',
@@ -372,13 +374,21 @@ export const nb = {
       { q: 'Hvor kommer anbudene fra?', a: 'Fra {sources}. Hver kunngjøring lenker til originalen, så dere alltid kan sjekke kilden.' },
       {
         q: 'Hva skjer etter prøveperioden?',
-        a: 'Prøveperioden varer i {days} med alt i Profesjonell. Etterpå går kontoen over til gratisplanen: ekte anbud, 5 søk per dag, 3 lagrede anbud og 1 AI-sammendrag per måned. Dere velger selv om dere vil betale – ingenting trekkes automatisk.',
+        a: 'Prøveperioden varer i {days} med alt i Profesjonell. Etterpå går kontoen over til gratisplanen: ekte anbud, 5 søk per dag og 3 lagrede anbud. Dere velger selv om dere vil betale – ingenting trekkes automatisk.',
       },
       { q: 'Kan vi si opp når som helst?', a: 'Ja. Abonnementet løper ut perioden dere har betalt for, og fornyes ikke etter det.' },
-      { q: 'Er AI-analysen alltid riktig?', a: 'Nei. Den er et hjelpemiddel. Hver opplysning har kilde, og konkurransegrunnlaget gjelder alltid ved avvik.' },
       { q: 'Sender dere inn tilbudet for oss?', a: 'Nei. AnbudRadar hjelper dere å finne, forstå og forberede. Tilbudet leverer dere selv i oppdragsgivers system.' },
-      { q: 'Hvordan betaler vi?', a: 'Med kort via Stripe. Kvittering og faktura finner dere under Abonnement.' },
     ],
+    /** Vises når ekte AI er slått på – ellers «plain». */
+    accuracy: {
+      ai: { q: 'Er AI-analysen alltid riktig?', a: 'Nei. Den er et hjelpemiddel. Hver opplysning har kilde, og konkurransegrunnlaget gjelder alltid ved avvik.' },
+      plain: { q: 'Er vurderingene alltid riktige?', a: 'Nei. De er et hjelpemiddel. Hver opplysning viser hvor den kommer fra – kunngjøringen, en beregning eller et anslag – og konkurransegrunnlaget gjelder alltid ved avvik.' },
+    },
+    /** «open» når kortbetaling er satt opp – ellers «notOpen» (meld interesse i appen). */
+    payment: {
+      open: { q: 'Hvordan betaler vi?', a: 'Med kort via Stripe. Kvittering og faktura finner dere under Abonnement.' },
+      notOpen: { q: 'Hvordan betaler vi?', a: 'Kortbetaling er ikke åpnet ennå. Prøveperioden og gratisplanen virker som vanlig. Vil dere ha en betalt plan, trykk «Meld interesse» under Abonnement i appen – så tar vi kontakt.' },
+    },
     ai: { q: 'Hva teller som en AI-analyse?', a: 'Hver ny analyse av en kunngjøring. Analyser som allerede finnes for samme innhold, teller ikke.' },
     /** Tom på norsk. På andre språk: at appen er på norsk. */
     app: { q: '', a: '' },

@@ -1,6 +1,6 @@
 # Lansering – sjekkliste og plan for de første kundene
 
-Sist oppdatert 2. november 2026. Ingenting her krever annonsekjøp eller andre utgifter enn driften i [STATUS.md](STATUS.md).
+Sist oppdatert 14. november 2026 (hva som blokkerer nå, står samlet i [TRANSFORMASJON.md](TRANSFORMASJON.md#6-det-som-fortsatt-blokkerer-lansering-krever-eier)). Ingenting her krever annonsekjøp eller andre utgifter enn driften i [STATUS.md](STATUS.md).
 
 ## 1. Rekkefølge – én oppgave om gangen
 
@@ -8,9 +8,9 @@ Hver oppgave gjøres i leverandørens kontrollpanel. Nøkler og passord legges *
 
 | # | Oppgave | Hvorfor | Ferdig når |
 | --- | --- | --- | --- |
-| 1 | **Doffin-nøkkel:** registrer deg i Doffins API-portal, abonner på det offentlige API-et, legg nøkkelen i `DOFFIN_API_KEY` | Norske anbud under EØS-terskel finnes bare i Doffin | `npm run ingest -- --source doffin --dry-run --limit 20` viser kunngjøringer som stemmer med doffin.no |
+| 1 | **Doffin-nøkkel:** registrer deg i Doffins API-portal, abonner på det offentlige API-et, legg nøkkelen i `DOFFIN_API_KEY`. **Gjort:** verifisert live 2.11.2026, nøkkelen ligger i Render | Norske anbud under EØS-terskel finnes bare i Doffin | `npm run ingest -- --source doffin --dry-run --limit 20` viser kunngjøringer som stemmer med doffin.no |
 | 2 | **Stripe i testmodus:** ett produkt med tre månedlige NOK-priser (299/699/1490), webhook til `/api/webhooks/stripe`, kundeportal på | Betaling | Admin → Helse → «Priser i Stripe» viser OK; testkjøp med `4242 4242 4242 4242` aktiverer planen først når webhooken kommer; oppsigelse og feilende kort testet |
-| 3 | **Resend:** verifiser avsenderdomenet (SPF/DKIM), API-nøkkel i `RESEND_API_KEY`. **Gjort 3.11.2026:** `anbudradar.com` bekreftet i EU-region, avsender `varsler@anbudradar.com`, e-post levert ende-til-ende (se [DRIFT.md](DRIFT.md) §0) | E-post | Registrering og glemt passord fungerer – **bare til egne testadresser** |
+| 3 | **Resend:** verifiser avsenderdomenet (SPF/DKIM), API-nøkkel i `RESEND_API_KEY`. **Gjort 3.11.2026:** `anbudradar.com` bekreftet i EU-region, avsender `varsler@anbudradar.com`, e-post levert ende-til-ende (se [DRIFT.md](DRIFT.md) §0) | E-post | Registrering og glemt passord fungerer. Testlisten ble fjernet 6.11.2026 etter eiers ja, så ekte kunder får e-post |
 | 4 | **Anthropic:** API-nøkkel med månedlig utgiftsgrense, `ANTHROPIC_MODEL` og `ANTHROPIC_MODEL_FAST` | AI | Analyse, egnethet og lønnsomhet på én ekte kunngjøring; sitater merket «Sitat kontrollert»; kostnad synlig i Admin → AI-bruk |
 | 5 | **Supabase:** prosjekt i EU-region, `db/supabase-app-role.sql`, privat bøtte | Database og filer | `node dist/migrate.js` kjører; RLS-testen fra `tests/integration/tenancy.test.ts` er gjentatt manuelt med to testkontoer |
 | 6 | **Render:** Blueprint fra `render.yaml` (staging først) | Drift | `/api/health` svarer `ok`, arbeideren vises i Admin → Helse |
@@ -26,7 +26,7 @@ Hver oppgave gjøres i leverandørens kontrollpanel. Nøkler og passord legges *
 - [ ] Alle integrasjoner over er verifisert i testmodus, og [INTEGRASJONER.md](INTEGRASJONER.md) er oppdatert fra «IKKE VERIFISERT»
 - [ ] TED og Doffin har gått i én uke uten feil i Admin → Importer, og antall åpne kunngjøringer er sammenlignet med doffin.no
 - [x] Oppetidsovervåking på `/api/health` (GitHub Actions hver time) og varsel på feil i loggen (Admin → Feil + e-post) – bygget 7.11.2026, se [DRIFT.md](DRIFT.md) §9
-- [ ] `ADMIN_NOTIFICATION_EMAIL` satt, og første e-post om feil mottatt etter utrulling
+- [ ] `ADMIN_NOTIFICATION_EMAIL` satt (ligger i Render, kontrollert 13.11.2026), og første e-post om feil mottatt etter utrulling (**IKKE VERIFISERT**)
 - [ ] AI-utgiftsgrense hos leverandøren og `AI_MONTHLY_COST_LIMIT_USD_PER_ORG`
 - [ ] Stripe byttet fra test- til live-nøkler **først etter** at alt over er grønt (egen beslutning)
 

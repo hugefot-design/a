@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { entitlementsFor, resolveBilling, type SubscriptionRow } from '../../src/domain/billing/plans';
+import { entitlementsFor, mentionsAi, resolveBilling, type SubscriptionRow } from '../../src/domain/billing/plans';
 import { encodeStripeParams, planFromPriceId, verifyStripeSignature } from '../../src/domain/billing/stripe';
 
 const NOW = new Date('2026-11-01T12:00:00Z');
@@ -140,4 +140,11 @@ test('avmeldingslenken er signert og kan ikke forfalskes', async () => {
   const headers = listUnsubscribeHeaders(userId, orgId);
   assert.equal(headers['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click');
   assert.match(headers['List-Unsubscribe']!, /^<https?:\/\/.+\/avmeld\?t=/);
+});
+
+test('mentionsAi: finner AI-linjene i planene på alle språk, men ikke ord som tilfeldigvis inneholder «AI»', () => {
+  for (const s of ['1 AI-sammendrag per måned', '10 enkle AI-sammendrag per måned', 'Profit Intelligence: AI finner kostnadsdrivere', 'Tilbudsarbeidsflate med AI-assistent', '1 AI summary per month', 'AI-analyser per måned'])
+    assert.equal(mentionsAi(s), true, s);
+  for (const s of ['Ekte anbud fra Doffin og TED', 'Fristvarsler og varsel om endringer', 'E-MAIL og FAIR pris', 'Inntil 25 lagrede anbud'])
+    assert.equal(mentionsAi(s), false, s);
 });

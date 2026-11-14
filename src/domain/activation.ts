@@ -10,7 +10,7 @@
 import { systemSql } from '@/lib/db';
 import { log } from '@/lib/logger';
 
-export const FEATURES = ['tender_viewed', 'intelligence_viewed', 'profit_opened', 'pdf_downloaded'] as const;
+export const FEATURES = ['tender_viewed', 'intelligence_viewed', 'profit_opened', 'pdf_downloaded', 'plan_interest'] as const;
 export type Feature = (typeof FEATURES)[number];
 
 const MAX_REMEMBERED = 50_000;

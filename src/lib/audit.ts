@@ -30,6 +30,7 @@ export type AuditAction =
   | 'org.deleted'
   | 'profile.updated'
   | 'billing.checkout_started'
+  | 'billing.plan_interest'
   | 'billing.subscription_changed'
   | 'billing.payment_failed'
   | 'billing.manual_override'

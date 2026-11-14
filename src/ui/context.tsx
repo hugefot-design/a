@@ -13,6 +13,8 @@ export interface UiContextValue {
   isDev: boolean;
   aiConfigured: boolean;
   aiIsMock: boolean;
+  /** Kan kundene betale med kort nå (Stripe satt opp, ikke testnøkler i produksjon)? */
+  paymentsOpen: boolean;
   legalReviewed: boolean;
   /** Datakilder som er verifisert mot ekte API ("ted", "doffin"). */
   liveSources: string[];
@@ -39,6 +41,7 @@ export const UiContext = createContext<UiContextValue>({
   isDev: false,
   aiConfigured: false,
   aiIsMock: false,
+  paymentsOpen: false,
   legalReviewed: false,
   liveSources: [],
   trialDays: 14,

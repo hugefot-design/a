@@ -1,5 +1,9 @@
 import { first } from '@/lib/db';
-import { integrationStatus, isProd } from '@/lib/env';
+import { env, integrationStatus, isProd } from '@/lib/env';
+import { rateLimit } from '@/lib/rate-limit';
+import { queueEmail } from '@/lib/email';
+import { planInterestTemplate } from '@/domain/email/templates';
+import { markFeatureUsed } from '@/domain/activation';
 import { audit } from '@/lib/audit';
 import { log } from '@/lib/logger';
 import { changePassword, deleteOtherSessions, nameSchema, SESSION_COOKIE } from '@/domain/auth/auth';
@@ -244,6 +248,34 @@ export function registerAccountRoutes(router: Router): void {
         log.error('stripe_checkout_failed', { err });
         return redirectWith(ctx, '/app/abonnement', 'error', err instanceof StripeError ? err.message : 'Kunne ikke starte betalingen. Prøv igjen.');
       }
+    },
+    { requireOnboarding: false },
+  );
+
+  // Så lenge kortbetaling ikke er åpnet: kunden melder interesse for en plan, og eieren får beskjed
+  // (Admin → Henvendelser og e-post). Ingen betaling, ingen endring av planen.
+  router.post(
+    '/app/abonnement/interesse',
+    'org',
+    async (ctx) => {
+      const { org, user } = requireManager(ctx);
+      const plan = formStr(await ctx.form(), 'plan', 20) as PaidPlanId;
+      if (!PAID_PLANS.includes(plan)) throw new HttpError(400, 'Ukjent plan.');
+      if (integrationStatus().stripe) return redirectWith(ctx, '/app/abonnement', 'info', 'Planene kan kjøpes direkte her.');
+      if (!(await rateLimit(`plan-interest:${org.id}`, 3, 86_400))) {
+        return redirectWith(ctx, '/app/abonnement', 'info', 'Vi har allerede fått beskjed fra dere i dag, og tar kontakt på e-post.');
+      }
+      const name = PLANS[plan].name;
+      const message = `Ønsker planen ${name} (${PLANS[plan].priceNok} kr/mnd eks. mva.) for ${org.name}. Nåværende plan: ${org.billing.label}. Sendt fra Abonnement i appen.`;
+      await ctx.tenant((tx) => tx`
+        insert into reports (kind, org_id, user_id, name, email, message) values ('plan_interest', ${org.id}, ${user.id}, ${user.name}, ${user.email}, ${message})
+      `);
+      await audit({ action: 'billing.plan_interest', orgId: org.id, actorUserId: user.id, metadata: { plan } });
+      await markFeatureUsed(org.id, user.id, 'plan_interest');
+      if (env.ADMIN_NOTIFICATION_EMAIL) {
+        await queueEmail({ to: env.ADMIN_NOTIFICATION_EMAIL, ...planInterestTemplate(org.name, name, user.name, user.email), kind: 'contact' });
+      }
+      return redirectWith(ctx, '/app/abonnement', 'success', `Takk! Vi har fått beskjed om at dere ønsker ${name}, og svarer på e-post til ${user.email}.`);
     },
     { requireOnboarding: false },
   );

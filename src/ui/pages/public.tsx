@@ -29,7 +29,7 @@ import {
 } from 'react-icons/lu';
 import { INDUSTRIES, REGION_BY_CODE } from '@/domain/reference';
 import { industryRegionPath, industrySlugNb, regionPath } from '@/domain/slugs';
-import { PLANS, type PlanId } from '@/domain/billing/plans';
+import { mentionsAi, PLANS, type PlanId } from '@/domain/billing/plans';
 import type { BoardRow, IndustryListing, MarketSnapshot, NoticeSpecimen } from '@/domain/tenders/market';
 import { companyConfigured } from '@/domain/legal/legal';
 import { useUi } from '../context';
@@ -53,15 +53,31 @@ function Check({ dark = false }: { dark?: boolean }) {
   );
 }
 
+/**
+ * Punktliste i plankortene. Når ekte AI ikke er slått på, merkes AI-linjene «ikke slått på ennå»
+ * rett ved påstanden – planene lover ikke AI som ikke virker.
+ */
 function Points({ items, dark = false, className }: { items: string[]; dark?: boolean; className?: string }) {
+  const { m, aiConfigured, aiIsMock } = useUi();
+  const aiOff = !aiConfigured || aiIsMock;
   return (
     <ul className={cn('space-y-2.5', className)}>
-      {items.map((x) => (
-        <li key={x} className={cn('flex gap-2.5 text-[15px] leading-snug', dark ? 'text-white/85' : 'text-ink')}>
-          <Check dark={dark} />
-          <span>{x}</span>
-        </li>
-      ))}
+      {items.map((x) => {
+        const pending = aiOff && mentionsAi(x);
+        return (
+          <li key={x} className={cn('flex gap-2.5 text-[15px] leading-snug', dark ? 'text-white/85' : 'text-ink', pending && (dark ? 'text-white/60' : 'text-muted'))}>
+            <Check dark={dark} />
+            <span>
+              {x}
+              {pending ? (
+                <span className={cn('ml-1.5 inline-block rounded-full border px-2 py-px text-[11.5px] font-semibold leading-snug', dark ? 'border-white/25 text-white/70' : 'border-line-strong text-muted')}>
+                  {m.pricing.aiPending}
+                </span>
+              ) : null}
+            </span>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -193,7 +209,7 @@ function PlanCard({ id }: { id: PlanId }) {
 }
 
 export function PricingPage() {
-  const { user, liveSources, trialDays, m, locale, lp, aiConfigured, aiIsMock } = useUi();
+  const { user, liveSources, trialDays, m, locale, lp, aiConfigured, aiIsMock, paymentsOpen } = useUi();
   const aiReal = aiConfigured && !aiIsMock;
   const t = m.pricing;
   const days = plural(locale, m.units.days, trialDays);
@@ -264,7 +280,12 @@ export function PricingPage() {
               <tbody>
                 {MATRIX.map(([key, fn]) => (
                   <tr key={key} className="border-b border-line last:border-0">
-                    <td className="sticky left-0 z-10 max-w-[11rem] bg-surface px-5 py-3.5 text-ink shadow-[1px_0_0_var(--color-line)] sm:max-w-none">{t.matrix[key]}</td>
+                    <td className="sticky left-0 z-10 max-w-[11rem] bg-surface px-5 py-3.5 text-ink shadow-[1px_0_0_var(--color-line)] sm:max-w-none">
+                      {t.matrix[key]}
+                      {!aiReal && mentionsAi(t.matrix[key]) ? (
+                        <span className="ml-1.5 inline-block rounded-full border border-line-strong px-2 py-px text-[11.5px] font-semibold leading-snug text-muted">{t.aiPending}</span>
+                      ) : null}
+                    </td>
                     {COMPARE.map((id) => (
                       <td key={id} className={cn('num px-4 py-3.5 text-center text-strong', id === 'professional' && 'bg-signal/[0.07] font-semibold')}>
                         {fn(PLANS[id].entitlements, m, locale)}
@@ -284,7 +305,7 @@ export function PricingPage() {
             <H2 className="mt-4">{t.faqTitle}</H2>
             <p className="mt-4 text-[17px] text-muted">{rich(t.faqLead, { contact: <a href={lp('/kontakt')}>{t.contactUs}</a> })}</p>
           </div>
-          <FaqList items={[...faqItems(m, { days, sources: sourcesText(m, liveSources, true) }), ...(aiReal ? [[m.faq.ai.q, m.faq.ai.a] as [string, string]] : [])]} />
+          <FaqList items={faqItems(m, { days, sources: sourcesText(m, liveSources, true), aiReal, paymentsOpen })} />
         </Wrap>
       </section>
       <SignalCta

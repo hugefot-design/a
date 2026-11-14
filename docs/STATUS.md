@@ -183,7 +183,7 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   PDF med sidetall, sjekkliste uten duplikater, annen organisasjon, låst tilbud, plankrav). Visuell kontroll 1280 og
   390 px.
 - **IKKE VERIFISERT:** treffsikkerhet på ekte konkurransegrunnlag fra Doffin (bare eksempel-PDF og konstruerte tekster er
-  testet). Ikke rullet ut.
+  testet). I produksjon fra utrullingen 7.–8.11.2026.
 
 ## Tilbudsresultat og læring (6. november 2026)
 
@@ -207,7 +207,7 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   har resultatene). Mutasjonssjekk: fjernet vern i begge tilfeller ga feilende test. Visuell kontroll 1280 og 390 px uten
   JavaScript-feil eller horisontal rulling.
 - **IKKE VERIFISERT:** med ekte kunder og ekte tildelinger i produksjon. Org.nr.-treff krever at kunden har lagt inn
-  organisasjonsnummer. Ikke rullet ut.
+  organisasjonsnummer. I produksjon fra utrullingen 7.–8.11.2026.
 
 ## Markedspris fra tidligere tildelinger (6. november 2026)
 
@@ -224,7 +224,7 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 - **Erfaring:** hvor målprisen i tidligere kalkyler lå mot det som vant (fra Resultater) vises i panelet.
 - **Rettet samtidig (fra punkt 3):** målprisen ble lest fra feil sted i lagrede kalkyler (`result->'calc'`), så
   «Kalkylen mot resultatet» og hjelpeteksten «Målpris i kalkylen» ville aldri vist noe. Funnet av den nye
-  integrasjonstesten; ikke rullet ut.
+  integrasjonstesten; i produksjon fra utrullingen 7.–8.11.2026.
 - **Diagram:** fordelingen tegnes som prikker (tidligere tildelinger, dempet) med bånd for midterste halvdel, strek for
   median og ruter for egne priser (fremhevet). Fargene er kjørt gjennom dataviz-validatoren; tall finnes også som tabell
   og i verktøytips (mus og piltaster).
@@ -232,7 +232,7 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   prisposisjon, akse) og `tests/integration/market.test.ts` (ekte side med tildelinger, kalkyle og testpris med
   håndregnede tall, for bred CPV, erfaring fra Resultater). Visuell kontroll 1280 og 390 px.
 - **IKKE VERIFISERT:** hvor mange tildelinger med verdi som finnes per bransje i produksjon (mange
-  tildelingskunngjøringer oppgir ikke verdi; Doffins søk gir aldri verdi). Ikke rullet ut.
+  tildelingskunngjøringer oppgir ikke verdi; Doffins søk gir aldri verdi). I produksjon fra utrullingen 7.–8.11.2026.
 
 ## Kontraktsutløp-radar (6. november 2026)
 
@@ -250,7 +250,7 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 - **Funnet underveis:** `duration_months` er desimaltall i databasen, og `make_interval` krever heltall – siden ga feil
   før det ble rundet av. Fanget av integrasjonstesten.
 - **Ikke bygget ennå:** varsel når en kontrakt i bransjen nærmer seg utløp (krever ny varselinnstilling, så kunden selv
-  styrer det). **IKKE VERIFISERT:** hvor mange tildelinger i produksjon som har varighet og dato. Ikke rullet ut.
+  styrer det). **IKKE VERIFISERT:** hvor mange tildelinger i produksjon som har varighet og dato. I produksjon fra utrullingen 7.–8.11.2026.
 
 ## Forhåndsvurdering av treff (6. november 2026)
 
@@ -266,7 +266,7 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   `tests/integration/screening.test.ts` (anbudssiden, søk og Oversikt med matching, Start-plan uten merkelapper).
   Visuell kontroll 1280 og 390 px.
 - **Begrensning:** bygger bare på kunngjøringen – konkurransegrunnlaget kan ha flere krav (det står under vurderingen).
-  Ikke rullet ut.
+  I produksjon fra utrullingen 7.–8.11.2026.
 
 ## Flere skjulte kostnader i vilkårssøket (7. november 2026)
 
@@ -277,7 +277,7 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 - **Vern mot falske treff:** «hvordan» gir ikke HVO, «Euro 60 000» gir ikke Euro 6; ord med æøå avgrenses ikke med `\b`.
 - **Tester:** `tests/unit/terms-costs.test.ts` (treff per kategori, falske treff, «ikke funnet») og
   `tests/integration/terms-costs.test.ts` (Lønnsomhet-siden med tips, nektelse av dagbot fortsatt merket).
-  Ikke rullet ut.
+  I produksjon fra utrullingen 7.–8.11.2026.
 
 ## «Til handling» på Oversikt (7. november 2026)
 
@@ -289,7 +289,7 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   sommertid). Uten noe som haster står en kort forklaring.
 - **Tester:** `tests/unit/actions.test.ts` (rekkefølge, kalenderdager rundt midnatt og sommertid) og
   `tests/integration/actions.test.ts` (alle punkttypene, rekkefølge, ingen arbeidspunkter fra andre organisasjoner,
-  tom liste). Visuell kontroll 1280 og 390 px. Ikke rullet ut.
+  tom liste). Visuell kontroll 1280 og 390 px. I produksjon fra utrullingen 7.–8.11.2026.
 
 ## Kapasitet per måned og sesong (7. november 2026)
 
@@ -304,7 +304,7 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
   for kalkylen lagres i kalkylens egne felt.
 - **Tester:** `tests/unit/capacity-season.test.ts` (måneder fra skjema, «nov–mar» over nyttår, sesongtopp, «stram» vs.
   «for lite», sesongkontrakt per år) og `tests/integration/capacity-season.test.ts` (registrering, lagret sesong,
-  panelet med håndregnede tall). Visuell kontroll 1280 og 390 px. Ikke rullet ut.
+  panelet med håndregnede tall). Visuell kontroll 1280 og 390 px. I produksjon fra utrullingen 7.–8.11.2026.
 
 ## Mobil og navigasjon i appen (7. november 2026)
 

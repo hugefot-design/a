@@ -21,10 +21,12 @@ export interface FreeUsage {
 
 /** Gratisplanen: hva som er brukt av grensene, og én rolig vei til oppgradering. */
 function FreeUsagePanel({ u }: { u: FreeUsage }) {
+  const { aiConfigured } = useUi();
   const rows: [string, number, number, string][] = [
     ['Søk i dag', u.searchesUsed, u.searchesLimit, 'nullstilles ved midnatt'],
     ['Lagrede anbud', u.bookmarksUsed, u.bookmarksLimit, ''],
-    ['AI-sammendrag', u.aiUsed, u.aiLimit, 'per måned'],
+    // AI-kvoten vises bare når AI faktisk er slått på.
+    ...(aiConfigured ? [['AI-sammendrag', u.aiUsed, u.aiLimit, 'per måned'] as [string, number, number, string]] : []),
   ];
   return (
     <Panel className="mb-6">
@@ -37,7 +39,7 @@ function FreeUsagePanel({ u }: { u: FreeUsage }) {
           </a>
         }
       />
-      <dl className="grid grid-cols-1 gap-5 p-5 sm:grid-cols-3">
+      <dl className={cn('grid grid-cols-1 gap-5 p-5', rows.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}>
         {rows.map(([label, used, limit, hint]) => (
           <div key={label} className="min-w-0">
             <div className="flex items-baseline justify-between gap-2 text-[14px]">

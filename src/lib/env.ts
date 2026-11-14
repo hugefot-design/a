@@ -211,3 +211,12 @@ export function integrationStatus() {
     cron: Boolean(env.CRON_SECRET),
   };
 }
+
+/**
+ * Kan kundene faktisk betale med kort? Krever at Stripe er satt opp – og i produksjon at nøklene
+ * ikke er testnøkler (da kan ingen betale ekte). Styrer hva sidene og e-postene lover.
+ */
+export function paymentsOpen(): boolean {
+  const s = integrationStatus();
+  return s.stripe && !(isProd && s.stripeTestMode);
+}

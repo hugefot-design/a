@@ -257,19 +257,20 @@ export function registerAdminRoutes(router: Router): void {
 
   router.get('/admin/rapporter', 'admin', async (ctx) => {
     const rows = (await systemSql()`
-      select r.id, r.kind, r.status, r.name, r.email, r.message, r.created_at, t.title as tender_title, r.tender_id
-      from reports r left join tenders t on t.id = r.tender_id order by (r.status = 'open') desc, r.created_at desc limit 100
-    `) as unknown as { id: string; kind: string; status: string; name: string | null; email: string | null; message: string; createdAt: Date; tenderTitle: string | null; tenderId: string | null }[];
+      select r.id, r.kind, r.status, r.name, r.email, r.message, r.created_at, t.title as tender_title, r.tender_id, o.name as org_name
+      from reports r left join tenders t on t.id = r.tender_id left join organizations o on o.id = r.org_id
+      order by (r.status = 'open') desc, r.created_at desc limit 100
+    `) as unknown as { id: string; kind: string; status: string; name: string | null; email: string | null; message: string; createdAt: Date; tenderTitle: string | null; tenderId: string | null; orgName: string | null }[];
     return render(
       ctx,
       <AdminListPage
         title="Henvendelser"
-        description="Kontaktskjema og rapporterte feil i kunngjøringer."
+        description="Kontaktskjema, ønsker om plan (mens kortbetaling ikke er åpnet) og rapporterte feil i kunngjøringer."
         head={['Tid', 'Type', 'Fra', 'Gjelder', 'Melding', 'Status']}
         rows={rows.map((r) => [
           formatDateTime(r.createdAt),
-          r.kind === 'contact' ? 'Kontakt' : 'Datafeil',
-          [r.name, r.email].filter(Boolean).join(' – '),
+          r.kind === 'contact' ? 'Kontakt' : r.kind === 'plan_interest' ? 'Planønske' : 'Datafeil',
+          [r.name, r.email, r.orgName].filter(Boolean).join(' – '),
           r.tenderId ? <a href={`/app/anbud/${r.tenderId}`}>{r.tenderTitle}</a> : '–',
           <span className="whitespace-pre-line">{r.message}</span>,
           r.status === 'open' ? (
