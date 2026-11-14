@@ -411,7 +411,7 @@ export function BidWorkspacePage(p: WorkspaceProps) {
             ) : null}
             {!locked ? (
               <PostForm action={`${base}/dokumenter`} multipart className="space-y-2 border-t border-line px-5 py-3">
-                <input type="file" name="file" required className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-surface file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900" />
+                <input type="file" name="file" required aria-label="Velg vedlegg" className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-surface file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900" />
                 <Field label="Type" htmlFor="doc-cat">
                   <select id="doc-cat" name="category" className="field-input">
                     <option value="vedlegg">Vedlegg</option>

@@ -1051,6 +1051,7 @@ function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; 
               type="file"
               name="file"
               required
+              aria-label="Velg konkurransedokument (PDF, DOCX eller TXT)"
               accept=".pdf,.docx,.txt,application/pdf"
               className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-surface file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900"
             />
