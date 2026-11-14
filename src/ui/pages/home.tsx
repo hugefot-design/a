@@ -19,6 +19,7 @@ import { cn } from '../components';
 import { PublicLayout } from '../layouts';
 import { BuyerTicker, FinalCta, H2, IndustryTiles, Kicker, Radar, TenderPing, Wrap } from '../site';
 import { JOURNEY_VISUALS } from '../showcase';
+import { FaqList, faqItems } from '../marketing';
 
 /** Fristen kort: «I dag 12.00», «I morgen», «fre. 07.11» (brukes også i eksempelkunngjøringen). */
 export function boardWhen(
@@ -38,13 +39,17 @@ export function Mono({ children, className }: { children: ReactNode; className?:
 }
 
 // ---------------------------------------------------------------------------
+/** De tre budskapene øverst – hvert lenker til samme del av det ekte eksempelet (/eksempel). */
+const PILLAR_ICONS = [LuTarget, LuShieldAlert, LuCalculator];
+const PILLAR_ANCHORS = ['passer', 'risiko', 'lonnsomhet'];
+
 function Hero({ market }: { market: MarketSnapshot }) {
   const { user, m, locale, lp, trialDays, liveSources } = useUi();
   const t = m.home;
   return (
     <section className="night relative overflow-hidden">
       <div className="dot-grid absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_70%_40%,#000_20%,transparent_70%)]" aria-hidden />
-      <Wrap className="relative grid grid-cols-1 items-center gap-14 pb-20 pt-14 sm:pt-20 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-10 lg:pb-28 lg:pt-24">
+      <Wrap className="relative grid grid-cols-1 items-center gap-14 pb-20 pt-12 sm:pt-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-10 lg:pb-24 lg:pt-14">
         <div className="min-w-0">
           {market.open > 0 ? (
             <p className="glass slide-in inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 text-[13.5px] font-medium text-white/90">
@@ -52,17 +57,35 @@ function Hero({ market }: { market: MarketSnapshot }) {
               {rich(pluralTemplate(locale, t.live, market.open), { n: <strong className="font-semibold text-white">{int(locale, market.open)}</strong> })}
             </p>
           ) : null}
-          <h1 className="mt-7 text-[40px] font-[800] leading-[1.02] tracking-[-0.04em] text-white sm:text-[56px] lg:text-[64px]">
+          <h1 className="mt-6 text-[40px] font-[800] leading-[1.02] tracking-[-0.04em] text-white sm:text-[56px] lg:text-[60px]">
             <span className="block">{t.title1}</span>
             <span className="text-gradient-signal block pb-1">{t.title2}</span>
           </h1>
-          <p className="mt-7 max-w-[36rem] text-[18px] leading-relaxed text-white/70 sm:text-[19px]">{fill(t.lead, { sources: sourcesText(m, liveSources) })}</p>
-          <div className="mt-9 flex flex-wrap items-center gap-3">
+          <p className="mt-6 max-w-[36rem] text-[18px] leading-relaxed text-white/70 sm:text-[19px]">{fill(t.lead, { sources: sourcesText(m, liveSources) })}</p>
+          <ul className="mt-7 max-w-[36rem] space-y-3">
+            {t.pillars.map((p, i) => {
+              const Icon = PILLAR_ICONS[i]!;
+              return (
+                <li key={p.title}>
+                  <a href={`/eksempel#${PILLAR_ANCHORS[i]}`} className="group flex items-start gap-3 no-underline">
+                    <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-signal">
+                      <Icon className="size-4" aria-hidden />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[16.5px] font-semibold leading-snug text-white group-hover:underline">{p.title}</span>
+                      <span className="mt-0.5 block text-[14.5px] leading-snug text-white/60">{p.text}</span>
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             <a href={user ? '/app' : lp('/registrer')} className="btn-signal">
               {user ? m.nav.toApp : m.nav.start} <LuArrowRight className="size-4" aria-hidden />
             </a>
-            <a href="#slik" className="btn-ghost-light">
-              {t.how}
+            <a href={lp('/eksempel')} className="btn-ghost-light">
+              {t.example}
             </a>
           </div>
           {user ? null : (
@@ -328,6 +351,27 @@ function Industries({ market }: { market: MarketSnapshot }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Spørsmål og svar – de samme som på prissiden (og i strukturerte data, se routes/public.tsx).
+// ---------------------------------------------------------------------------
+function HomeFaq() {
+  const { m, lp, locale, trialDays, liveSources, aiConfigured, aiIsMock, paymentsOpen } = useUi();
+  const t = m.pricing;
+  const items = faqItems(m, { days: plural(locale, m.units.days, trialDays), sources: sourcesText(m, liveSources, true), aiReal: aiConfigured && !aiIsMock, paymentsOpen });
+  return (
+    <section className="border-t border-line bg-surface py-20 sm:py-24">
+      <Wrap className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <div className="reveal">
+          <Kicker>{t.faqEyebrow}</Kicker>
+          <H2 className="mt-4">{t.faqTitle}</H2>
+          <p className="mt-4 text-[17px] text-muted">{rich(t.faqLead, { contact: <a href={lp('/kontakt')}>{t.contactUs}</a> })}</p>
+        </div>
+        <FaqList items={items} />
+      </Wrap>
+    </section>
+  );
+}
+
 export function HomePage({ market, showcase }: { market: MarketSnapshot; showcase: Showcase | null }) {
   const from = Math.min(...PAID_PLANS.map((p) => PLANS[p].priceNok ?? Number.POSITIVE_INFINITY));
   return (
@@ -339,6 +383,7 @@ export function HomePage({ market, showcase }: { market: MarketSnapshot; showcas
       <Compare />
       <Openness />
       <Industries market={market} />
+      <HomeFaq />
       <FinalCta next={market.board[0]?.deadlineAt ?? null} now={market.at} fromPrice={from} />
     </PublicLayout>
   );

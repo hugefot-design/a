@@ -101,7 +101,7 @@ Status oppdateres nederst i dokumentet etter hvert som arbeidet blir ferdig.
 | Fase 1 – gjennomgang og 15 forbedringer | Ferdig (dette dokumentet) | `70d0e17` |
 | Fase 3 – enklere start (punkt 1 og 5) | Ferdig og testet: ett kort oppstartsskjema (firma, bransjer, område, godkjenninger, hva dere leverer) som tar med seg anbudet kunden kom fra; «Kom i gang» med fem steg på Oversikt; «Passer fordi …» og lenke til vurderingen i listene | `49f75c7` |
 | Fase 6 – ærlighet om AI og betaling (punkt 4, 9, 12, 14, del av 15) | Ferdig og testet: «Meld interesse» for planer (Admin → Henvendelser + e-post til eier), AI-linjer merket, tomme AI-paneler skjult for kunder, spørsmål og svar og påminnelses-e-posten følger oppsettet, dokumentasjonen rettet (README, VEIKART, STATUS, INTEGRASJONER, LANSERING, DRIFT) | se git-loggen |
-| Fase 2 – forside, demo, priser | Ikke startet | |
+| Fase 2 – forside, demo, spørsmål og svar (punkt 2 og 6) | Ferdig og testet: offentlig eksempel `/eksempel` (et ekte, åpent anbud vurdert med appens egne regler og en tydelig merket eksempelbedrift – uten AI, kostnader eller leverandørnavn; PDF til nedlasting), tre budskap øverst på forsiden som lenker til hver sin del av eksempelet, «Se et ekte eksempel» som andre knapp, «Eksempel» i menyen, spørsmål og svar på forsiden, og strukturerte data (FAQPage) på forsiden og prissiden | se git-loggen |
 | Fase 4 – tydeligere grunnlag i vurderingen | Ikke startet | |
 | Fase 5 – offentlige anbudssider, ukesbrev, søk | Ikke startet | |
 | Fase 7 – måling av hele reisen | Delvis: første bruk og aktive dager lagres (fase 3); kilde ved registrering og visning i Admin gjenstår | |

@@ -35,11 +35,11 @@ import { RadarDecor } from './site';
 // ---------------------------------------------------------------------------
 // Offentlige sider
 // ---------------------------------------------------------------------------
-const PUBLIC_NAV = ['/funksjoner', '/bransjer', '/priser', '/om'] as const;
+const PUBLIC_NAV = ['/funksjoner', '/eksempel', '/bransjer', '/priser', '/om'] as const;
 
 function useNavLabels() {
   const { m } = useUi();
-  return { '/funksjoner': m.nav.features, '/bransjer': m.nav.industries, '/priser': m.nav.pricing, '/om': m.nav.about, '/kontakt': m.nav.contact } as Record<string, string>;
+  return { '/funksjoner': m.nav.features, '/eksempel': m.nav.example, '/bransjer': m.nav.industries, '/priser': m.nav.pricing, '/om': m.nav.about, '/kontakt': m.nav.contact } as Record<string, string>;
 }
 
 /**
@@ -124,7 +124,7 @@ export function PublicLayout({ children }: { children: ReactNode; heroDark?: boo
           <a href={lp('/')} className="no-underline" aria-label={m.nav.home}>
             <Logo inverse />
           </a>
-          <nav className="hidden items-center gap-1 md:flex" aria-label={m.nav.mainMenu}>
+          <nav className="hidden items-center gap-1 lg:flex" aria-label={m.nav.mainMenu}>
             {PUBLIC_NAV.map((href) => (
               <a
                 key={href}
@@ -156,7 +156,7 @@ export function PublicLayout({ children }: { children: ReactNode; heroDark?: boo
                 </a>
               </>
             )}
-            <details className="relative md:hidden">
+            <details className="relative lg:hidden">
               <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-full text-white hover:bg-white/10" aria-label={m.nav.menu}>
                 <LuMenu className="size-5" />
               </summary>

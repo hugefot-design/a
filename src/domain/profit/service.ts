@@ -601,7 +601,7 @@ export interface QualificationView {
   aiUnfulfilled: string[];
 }
 
-export function assessQualifications(sources: AnalysisSource[], profile: CompanyProfile | null, capacity: CapacityData, fitUnfulfilled: string[]): QualificationView {
+export function assessQualifications(sources: AnalysisSource[], profile: CompanyProfile | null, capacity: Pick<CapacityData, 'staffCertificationText'>, fitUnfulfilled: string[]): QualificationView {
   const text = sources.flatMap((s) => s.pages.map((p) => p.text)).join('\n').slice(0, 400_000);
   const required = detectCertifications(text).map((id) => {
     const cert = CERT_BY_ID.get(id)!;

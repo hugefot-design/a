@@ -19,6 +19,7 @@ export const sv: Messages = {
   units: { days: { one: '{n} dag', other: '{n} dagar' } },
   nav: {
     features: 'Funktioner',
+    example: 'Exempel',
     industries: 'Branscher',
     pricing: 'Priser',
     about: 'Om oss',
@@ -63,7 +64,12 @@ export const sv: Messages = {
     title2: 'Ta reda på om den är värd att vinna.',
     lead: 'Få en tydlig rekommendation för varje upphandling: om den passar, vad som kan fälla er och om den lönar sig med era egna kostnader – med källa för allt, från {sources}.',
     seePrices: 'Se priser',
-    how: 'Se hur det fungerar',
+    example: 'Se ett verkligt exempel',
+    pillars: [
+      { title: 'Hitta rätt upphandlingar', text: 'Rangordnade efter det ni levererar och där ni arbetar – med motivering.' },
+      { title: 'Upptäck krav, risker och problem innan ni lämnar anbud', text: 'Grunder för förkastande, minimikrav och kostsamma villkor – med var det står.' },
+      { title: 'Ta reda på om kontraktet faktiskt är lönsamt', text: 'Självkostnad och lägsta pris med era kostnader, och vad liknande kontrakt faktiskt tilldelades för.' },
+    ],
     note: '{days} med allt i Professionell · Inget kort · Ingen bindning',
     newTender: 'Ny upphandling',
     deadline: 'Sista dag {date}',

@@ -19,6 +19,7 @@ export const da: Messages = {
   units: { days: { one: '{n} dag', other: '{n} dage' } },
   nav: {
     features: 'Funktioner',
+    example: 'Eksempel',
     industries: 'Brancher',
     pricing: 'Priser',
     about: 'Om os',
@@ -63,7 +64,12 @@ export const da: Messages = {
     title2: 'Find ud af, om det er værd at vinde.',
     lead: 'Få en klar anbefaling for hvert udbud: om det passer, hvad der kan fælde jer, og om det kan betale sig med jeres egne omkostninger – med kilde på alt, fra {sources}.',
     seePrices: 'Se priser',
-    how: 'Se, hvordan det virker',
+    example: 'Se et ægte eksempel',
+    pillars: [
+      { title: 'Find de rigtige udbud', text: 'Rangeret efter det, I leverer, og hvor I arbejder – med begrundelse.' },
+      { title: 'Opdag krav, risici og problemer, før I byder', text: 'Afvisningsgrunde, mindstekrav og dyre vilkår – med hvor det står.' },
+      { title: 'Find ud af, om kontrakten faktisk kan betale sig', text: 'Selvkost og mindstepris med jeres omkostninger, og hvad lignende kontrakter faktisk blev tildelt for.' },
+    ],
     note: '{days} med alt i Professionel · Intet kort · Ingen binding',
     newTender: 'Nyt udbud',
     deadline: 'Frist {date}',

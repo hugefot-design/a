@@ -8,8 +8,9 @@ import assert from 'node:assert/strict';
 import { closeDb } from '../../src/lib/db';
 import { addMonths } from '../../src/domain/competitors/expiry';
 import { resetShowcaseCache, siteShowcase } from '../../src/domain/tenders/showcase';
+import { demoReport, resetDemoCache } from '../../src/domain/intelligence/demo';
 import type { NoticeAward } from '../../src/domain/tenders/normalize';
-import { ingest, makeNotice, startServer } from '../helpers';
+import { clientFor, createAccount, ingest, makeNotice, startServer } from '../helpers';
 
 let server: Awaited<ReturnType<typeof startServer>>;
 const day = (offsetMonths: number) => addMonths(new Date(), offsetMonths).toISOString().slice(0, 10);
@@ -80,6 +81,7 @@ before(async () => {
     }),
   ]);
   resetShowcaseCache();
+  resetDemoCache();
 });
 
 after(async () => {
@@ -135,4 +137,78 @@ test('forsiden viser de ekte eksemplene – uten leverandørnavn og uten AI-løf
   const en = await (await fetch(`${server.base}/en`)).text();
   assert.match(en, /Don’t just find the tender/);
   assert.match(en, /The app, emails and documents are in Norwegian/);
+});
+
+test('eksempelet (/eksempel): samme ekte anbud, vurdert med appens regler – uten AI, kostnader eller leverandørnavn', async () => {
+  const demo = await demoReport();
+  assert.ok(demo, 'eksempelet er laget');
+  const r = demo.report;
+  assert.equal(r.tender.title, COMP);
+  assert.equal(r.ai.mode, 'off');
+  assert.equal(r.ai.used, false);
+  assert.equal(demo.company.industry, 'Bygg og anlegg');
+  assert.ok(r.fit.score !== null && r.fit.score >= 0 && r.fit.score <= 100, 'treffet er regnet ut');
+  // Krav og vilkår står ordrett i kunngjøringen.
+  assert.ok(r.risk.rejection.some((p) => /avvist/.test(p.text)), JSON.stringify(r.risk.rejection));
+  assert.ok(r.risk.terms.some((t) => t.category === 'dagbot'), 'dagbøter er med');
+  assert.ok(r.risk.siteVisit.length > 0, 'befaring er med');
+  // Godkjenningen som kreves, mangler i eksempelprofilen – og det sies tydelig.
+  assert.ok(r.fit.qualifications.some((q) => !q.have), JSON.stringify(r.fit.qualifications));
+  // Lønnsomhet: ingen kostnader er fylt inn, men markedsprisen er ekte tildelinger.
+  assert.equal(r.profit.availability, 'no_costs');
+  assert.equal(r.profit.calc, null);
+  assert.ok(r.profit.market && r.profit.market.n >= 3, JSON.stringify(r.profit.market));
+  // Konkurranse (leverandørnavn) er ikke med i eksempelet.
+  assert.equal(r.competition.availability, 'locked');
+  assert.ok(!JSON.stringify(r).includes(SUPPLIER), 'ingen leverandørnavn');
+  assert.equal(await demoReport(), demo, 'mellomlagres');
+});
+
+test('eksempelsiden: tydelig merket, lenker via registrering, PDF og nettstedskart', async () => {
+  const demo = (await demoReport())!;
+  const res = await fetch(`${server.base}/eksempel`);
+  assert.equal(res.status, 200);
+  const body = (await res.text()).replaceAll('<!-- -->', '');
+  assert.equal((body.match(/<h1[ >]/g) ?? []).length, 1);
+  assert.ok(body.includes(COMP));
+  assert.match(body, /Eksempelbedriften – ikke en ekte kunde/);
+  assert.match(body, /Ingen AI er brukt, og ingenting er fylt inn/);
+  assert.match(body, /Godkjenninger og sertifiseringer: ingen registrert/);
+  assert.ok(!body.includes(SUPPLIER), 'leverandørnavn vises ikke');
+  const target = encodeURIComponent(`/app/anbud/${demo.report.tender.id}/intelligence`);
+  assert.ok(body.includes(`/registrer?neste=${target}`), 'vurder for egen bedrift går via registrering med anbudet');
+  assert.doesNotMatch(body, /href="\/app\//, 'besøkende sendes ikke inn i appen uten konto');
+
+  // Innloggede går rett til egen vurdering.
+  const acc = await createAccount();
+  const c = await clientFor(server.base, acc);
+  const inside = (await c.get('/eksempel')).body;
+  assert.ok(inside.includes(`href="/app/anbud/${demo.report.tender.id}/intelligence"`));
+
+  const pdf = await fetch(`${server.base}/eksempel/rapport.pdf`);
+  assert.equal(pdf.status, 200);
+  assert.equal(pdf.headers.get('content-type'), 'application/pdf');
+  assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0, 4).toString(), '%PDF');
+
+  const sitemap = await (await fetch(`${server.base}/sitemap.xml`)).text();
+  assert.match(sitemap, /<loc>[^<]+\/eksempel<\/loc>/);
+});
+
+test('forsiden: tre budskap som lenker til eksempelet, «Se et ekte eksempel» og spørsmål og svar med strukturerte data', async () => {
+  const body = (await (await fetch(`${server.base}/`)).text()).replaceAll('<!-- -->', '');
+  for (const t of ['Finn riktige anbud', 'Oppdag krav, risiko og problemer før du byr', 'Finn ut om kontrakten faktisk er lønnsom']) assert.ok(body.includes(t), t);
+  for (const a of ['passer', 'risiko', 'lonnsomhet']) assert.ok(body.includes(`href="/eksempel#${a}"`), a);
+  assert.match(body, /<a href="\/eksempel" class="btn-ghost-light">Se et ekte eksempel<\/a>/);
+  assert.match(body, /href="\/eksempel"[^>]*>Eksempel<\/a>/, 'Eksempel i menyen');
+  assert.match(body, /Hva skjer etter prøveperioden\?/);
+  const ld = [...body.matchAll(/<script type="application\/ld\+json"[^>]*>([^<]+)<\/script>/g)].map((m) => JSON.parse(m[1]!.replace(/\\u003c/g, '<')) as unknown);
+  const faq = ld.flat().find((x) => (x as { '@type'?: string })['@type'] === 'FAQPage') as { mainEntity: { name: string; acceptedAnswer: { text: string } }[] } | undefined;
+  assert.ok(faq, 'FAQPage finnes');
+  // De strukturerte svarene er de samme som vises på siden.
+  for (const q of faq.mainEntity) assert.ok(body.includes(q.name), q.name);
+  assert.ok(faq.mainEntity.some((q) => q.name === 'Hvordan betaler vi?'));
+  // Den engelske forsiden har de tre budskapene på engelsk.
+  const en = (await (await fetch(`${server.base}/en`)).text()).replaceAll('<!-- -->', '');
+  assert.ok(en.includes('Spot requirements, risks and problems before you bid'));
+  assert.match(en, /See a real example/);
 });

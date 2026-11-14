@@ -1,15 +1,21 @@
 import { z } from 'zod';
 import { systemSql } from '@/lib/db';
-import { env, isProd } from '@/lib/env';
+import { env, isProd, paymentsOpen } from '@/lib/env';
 import { rateLimit } from '@/lib/rate-limit';
 import { queueEmail } from '@/lib/email';
 import { countyOverview, industryListing, industryRegionCounts, marketSnapshot, noticeSpecimen } from '@/domain/tenders/market';
 import { siteShowcase } from '@/domain/tenders/showcase';
+import { demoReport } from '@/domain/intelligence/demo';
+import { intelligencePdf } from '@/domain/intelligence/pdf';
+import { DemoPage } from '@/ui/pages/demo';
 import { industryIdFromSlug, industryRegionPath, industrySlugNb, MIN_OPEN_FOR_INDEXING, regionCodeFromSlug, regionPath, REGION_SLUG } from '@/domain/slugs';
 import { CountiesPage, CountyPage } from '@/ui/pages/counties';
-import { fill } from '@/i18n/format';
+import { fill, plural } from '@/i18n/format';
 import { INDUSTRIES, REGION_BY_CODE, REGIONS } from '@/domain/reference';
-import { LOCALES, localePath, MARKETING_PATHS, messages } from '@/i18n';
+import { LOCALES, localePath, MARKETING_PATHS, messages, sourcesText } from '@/i18n';
+import { faqItems, faqJsonLd } from '@/ui/marketing';
+import { aiModeFor } from '@/domain/ai/provider';
+import { liveSources } from '@/domain/tenders/source-status';
 import { contactNotificationTemplate } from '@/domain/email/templates';
 import { zodErrors } from '@/domain/auth/auth';
 import { companyInfo, isPlaceholder, LEGAL_DOCS } from '@/domain/legal/legal';
@@ -64,16 +70,56 @@ function breadcrumbs(items: [name: string, path: string][]) {
   };
 }
 
+/**
+ * Spørsmål og svar som strukturerte data (FAQPage) – nøyaktig de samme som vises på forsiden og prissiden for en
+ * besøkende (AI og betaling slik de faktisk er slått på).
+ */
+function faqLd(ctx: RequestContext): unknown {
+  const m = messages(ctx.locale);
+  const ai = aiModeFor(null);
+  return faqJsonLd(
+    faqItems(m, {
+      days: plural(ctx.locale, m.units.days, env.TRIAL_DAYS),
+      sources: sourcesText(m, liveSources(), true),
+      aiReal: ai.configured && !ai.isMock,
+      paymentsOpen: paymentsOpen(),
+    }),
+  );
+}
+
 export function registerPublicRoutes(router: Router): void {
   router.get('/', 'public', async (ctx) => {
     const t = messages(ctx.locale);
     const [market, showcase] = await Promise.all([marketSnapshot(), siteShowcase()]);
-    return render(ctx, <HomePage market={market} showcase={showcase} />, { title: t.meta.homeTitle, description: t.meta.homeDescription });
+    return render(ctx, <HomePage market={market} showcase={showcase} />, { title: t.meta.homeTitle, description: t.meta.homeDescription, jsonLd: [faqLd(ctx)] });
+  });
+  // Eksempel på en samlet vurdering av et ekte, åpent anbud (bare norsk – appen og rapporten er på norsk).
+  router.get('/eksempel', 'public', async (ctx) => {
+    const demo = await demoReport();
+    return render(ctx, <DemoPage demo={demo} />, {
+      title: 'Eksempel: et ekte anbud, vurdert',
+      description: 'Se en ekte, åpen kunngjøring vurdert av AnbudRadar: om den passer, hva som kan gi avvisning, kostbare vilkår og hva lignende kontrakter ble tildelt for.',
+      canonical: '/eksempel',
+      noindex: !demo,
+    });
+  });
+  router.get('/eksempel/rapport.pdf', 'public', async (ctx) => {
+    if (!(await rateLimit(`demo-pdf:${ctx.ipHash}`, 20, 3600))) throw new HttpError(429, 'For mange nedlastinger. Prøv igjen om litt.');
+    const demo = await demoReport();
+    if (!demo) throw new HttpError(404, 'Eksempelet er ikke klart akkurat nå.');
+    const pdf = await intelligencePdf(demo.report, { orgName: 'en eksempelbedrift (ikke en ekte kunde)' });
+    return new Response(new Uint8Array(pdf), {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="anbudradar-eksempel.pdf"',
+        'Cache-Control': 'public, max-age=600',
+      },
+    });
   });
   router.get('/funksjoner', 'public', async (ctx) =>
     render(ctx, <FeaturesPage specimen={await noticeSpecimen()} />, { title: messages(ctx.locale).meta.features }),
   );
-  router.get('/priser', 'public', async (ctx) => render(ctx, <PricingPage />, { title: messages(ctx.locale).meta.pricing }));
+  router.get('/priser', 'public', async (ctx) => render(ctx, <PricingPage />, { title: messages(ctx.locale).meta.pricing, jsonLd: [faqLd(ctx)] }));
   router.get('/bransjer', 'public', async (ctx) => {
     const market = await marketSnapshot();
     const counts = Object.fromEntries(market.industries.map((i) => [i.id, i.n]));
@@ -224,6 +270,7 @@ export function registerPublicRoutes(router: Router): void {
     const pages = [...MARKETING_PATHS, ...INDUSTRIES.map((i) => `/bransjer/${industrySlugNb(i.id)}`)];
     const combos = await industryRegionCounts();
     const norwegianOnly = [
+      '/eksempel',
       '/fylker',
       ...REGIONS.map((r) => regionPath(r.code)),
       ...INDUSTRIES.flatMap((i) => REGIONS.filter((r) => (combos.get(`${i.id}|${r.code}`) ?? 0) >= MIN_OPEN_FOR_INDEXING).map((r) => industryRegionPath(i.id, r.code))),

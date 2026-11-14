@@ -37,6 +37,7 @@ export const nb = {
   },
   nav: {
     features: 'Funksjoner',
+    example: 'Eksempel',
     industries: 'Bransjer',
     pricing: 'Priser',
     about: 'Om oss',
@@ -90,7 +91,13 @@ export const nb = {
     title2: 'Finn ut om det er verdt å vinne.',
     lead: 'Få en tydelig anbefaling for hvert anbud: om det passer, hva som kan felle dere, og om det lønner seg med deres egne kostnader – med kilde på alt, fra {sources}.',
     seePrices: 'Se priser',
-    how: 'Se hvordan det virker',
+    example: 'Se et ekte eksempel',
+    /** De tre budskapene øverst. Hvert lenker til samme del av eksempelet på /eksempel. */
+    pillars: [
+      { title: 'Finn riktige anbud', text: 'Rangert etter det dere leverer og der dere jobber – med begrunnelse.' },
+      { title: 'Oppdag krav, risiko og problemer før du byr', text: 'Avvisningsgrunner, minstekrav og kostbare vilkår – med hvor det står.' },
+      { title: 'Finn ut om kontrakten faktisk er lønnsom', text: 'Selvkost og minstepris med deres kostnader, og hva lignende kontrakter faktisk ble tildelt for.' },
+    ],
     note: '{days} med alt i Profesjonell · Ingen kort · Ingen binding',
     newTender: 'Nytt anbud',
     deadline: 'Frist {date}',

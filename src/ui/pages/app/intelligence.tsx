@@ -3,7 +3,7 @@
  * handlingsplan og læring. Alt bygger på rapporten fra src/domain/intelligence – siden viser bare, den regner ikke.
  * Hvert punkt er merket Fakta, Beregning eller AI-vurdering, med kilde der den finnes.
  */
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import {
   LuArrowLeft,
   LuCalculator,
@@ -56,6 +56,15 @@ const CONFIDENCE_BAR: Record<Level, string> = { høy: 'bg-ok', middels: 'bg-navy
 
 const money = (n: number | null | undefined, currency: string) => (n === null || n === undefined ? 'Mangler' : currency === 'NOK' ? fmtKr(n) : `${fmtNumber(Math.round(n))} ${currency}`);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Lenker inn i appen. I appen er de uendret. I det offentlige eksempelet (/eksempel) går de til registrering med
+ * lenken som neste side – så den som vil prøve, havner på samme sted etter at kontoen er laget.
+ */
+const AppHref = createContext<(href: string) => string>((href) => href);
+export const AppHrefProvider = AppHref.Provider;
+const useAppHref = () => useContext(AppHref);
+const internal = (href: string) => href.startsWith('/');
 
 // ------------------------------------------------------------------------------------------------- Byggeklosser
 function BasisTag({ basis }: { basis: Basis }) {
@@ -123,12 +132,13 @@ function Meter({ value, max, className }: { value: number; max: number; classNam
 }
 
 function Locked({ what, plan }: { what: string; plan: string | undefined }) {
+  const app = useAppHref();
   return (
     <div className="flex items-start gap-3 rounded-xl border border-dashed border-line-strong bg-paper/50 px-4 py-3 text-[14px]">
       <LuLock className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
       <p>
         {what} er med i {plan ?? 'en høyere plan'}.{' '}
-        <a href="/app/abonnement" className="font-semibold">
+        <a href={app('/app/abonnement')} className="font-semibold">
           Se planene
         </a>
       </p>
@@ -171,6 +181,7 @@ function Sub({ title, children, aside }: { title: string; children: ReactNode; a
 
 // ------------------------------------------------------------------------------------------------- Beslutning
 function DecisionHero({ r }: { r: IntelligenceReport }) {
+  const app = useAppHref();
   const d = r.decision;
   const v = VERDICT[d.verdict];
   const Icon = v.icon;
@@ -233,7 +244,7 @@ function DecisionHero({ r }: { r: IntelligenceReport }) {
             </h3>
             <ul className="space-y-1.5 text-[14px]">
               {d.missing.map((m) => (
-                <li key={m.text}>{m.href ? <a href={m.href}>{m.text}</a> : m.text}</li>
+                <li key={m.text}>{m.href ? <a href={internal(m.href) ? app(m.href) : m.href}>{m.text}</a> : m.text}</li>
               ))}
             </ul>
           </div>
@@ -286,13 +297,14 @@ function Tiles({ r }: { r: IntelligenceReport }) {
 
 // ------------------------------------------------------------------------------------------------- Seksjoner
 function FitSection({ r }: { r: IntelligenceReport }) {
+  const app = useAppHref();
   const f = r.fit;
   return (
     <Section id="passer" num="1" icon={<LuTarget className="size-4 text-navy-600" aria-hidden />} title="Passer det for oss?" description="Treff mot bedriftsprofilen, kvalifikasjoner, geografi og kapasitet.">
       {f.availability === 'locked' ? <Locked what="Treff mot bedriftsprofilen" plan={r.lockedPlans.fit} /> : null}
       {f.availability === 'no_profile' ? (
         <Alert tone="warning" title="Bedriftsprofilen mangler">
-          <a href="/app/profil">Fyll ut profilen</a>, så regner vi ut hvor godt anbudet passer.
+          <a href={app('/app/profil')}>Fyll ut profilen</a>, så regner vi ut hvor godt anbudet passer.
         </Alert>
       ) : null}
       {f.availability === 'ok' && f.score === null ? <p className="text-[14px] text-muted">Treffet er ikke regnet ut for dette anbudet ennå.</p> : null}
@@ -401,6 +413,7 @@ function RiskGauge({ score, level }: { score: number; level: Level }) {
 }
 
 function RiskSection({ r }: { r: IntelligenceReport }) {
+  const app = useAppHref();
   const k = r.risk;
   const groups: { title: string; points: Point[]; count: number }[] = [
     { title: `${REQUIREMENT_KIND_LABEL.avvisning} og minstekrav`, points: k.rejection, count: k.counts.avvisning + k.counts.minstekrav },
@@ -474,7 +487,7 @@ function RiskSection({ r }: { r: IntelligenceReport }) {
           <p className="text-[13.5px]">
             {k.read.noticeOnly ? (
               <>
-                Bare kunngjøringen. <a href={`/app/anbud/${r.tender.id}#dokumenter-for-analyse`}>Last opp konkurransegrunnlaget</a> for alle krav og vilkår.
+                Bare kunngjøringen. <a href={app(`/app/anbud/${r.tender.id}#dokumenter-for-analyse`)}>Last opp konkurransegrunnlaget</a> for alle krav og vilkår.
               </>
             ) : (
               <>
@@ -497,7 +510,7 @@ function RiskSection({ r }: { r: IntelligenceReport }) {
               <Points points={g.points} empty="Ingen setninger funnet." />
               {g.count > g.points.length ? (
                 <p className="mt-2 text-[12.5px] text-muted">
-                  Viser {g.points.length} av {g.count}. <a href={`/app/anbud/${r.tender.id}#krav`}>Se alle på anbudssiden</a>.
+                  Viser {g.points.length} av {g.count}. <a href={app(`/app/anbud/${r.tender.id}#krav`)}>Se alle på anbudssiden</a>.
                 </p>
               ) : null}
             </div>
@@ -537,10 +550,11 @@ function RiskSection({ r }: { r: IntelligenceReport }) {
 }
 
 function ProfitSection({ r }: { r: IntelligenceReport }) {
+  const app = useAppHref();
   const p = r.profit;
   const c = p.calc;
   const cur = p.currency;
-  const link = `/app/anbud/${r.tender.id}/lonnsomhet`;
+  const link = app(`/app/anbud/${r.tender.id}/lonnsomhet`);
   // 0 % er det samme som «Som kalkulert» – vises én gang.
   const sens = c ? c.sensitivity.filter((s) => s.increasePct > 0 && s.profitAtContractValue !== null) : [];
   const maxAbs = c?.atContractValue ? Math.max(Math.abs(c.atContractValue.profit), ...sens.map((s) => Math.abs(s.profitAtContractValue!)), 1) : 1;
@@ -703,6 +717,7 @@ function CompetitionSection({ r }: { r: IntelligenceReport }) {
 }
 
 function LearningSection({ r }: { r: IntelligenceReport }) {
+  const app = useAppHref();
   const l = r.learning;
   const card = (title: string, g: typeof l.sameBuyer) => (
     <div className="rounded-xl bg-paper px-4 py-3">
@@ -730,7 +745,7 @@ function LearningSection({ r }: { r: IntelligenceReport }) {
         </Sub>
       ) : (
         <p className="text-[13.5px] text-muted">
-          Ikke nok avgjorte tilbud til at resultatene påvirker vurderingen ennå. <a href="/app/resultater">Registrer vunnet og tapt</a> på leverte tilbud.
+          Ikke nok avgjorte tilbud til at resultatene påvirker vurderingen ennå. <a href={app('/app/resultater')}>Registrer vunnet og tapt</a> på leverte tilbud.
         </p>
       )}
     </Section>
@@ -764,6 +779,7 @@ function PlanPanel({ r }: { r: IntelligenceReport }) {
 }
 
 function PlanItem({ s, n, last }: { s: PlanStep; n: number; last: boolean }) {
+  const app = useAppHref();
   const external = s.href?.startsWith('http');
   return (
     <li className="relative flex gap-3 pb-4">
@@ -786,7 +802,7 @@ function PlanItem({ s, n, last }: { s: PlanStep; n: number; last: boolean }) {
         ) : null}
         {s.detail ? <p className="mt-0.5 line-clamp-4 text-[13px] leading-snug text-muted">{s.detail}</p> : null}
         {s.href ? (
-          <a href={s.href} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className="mt-1 inline-flex min-h-6 items-center gap-1 text-[13px] font-semibold">
+          <a href={internal(s.href) ? app(s.href) : s.href} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className="mt-1 inline-flex min-h-6 items-center gap-1 text-[13px] font-semibold">
             {s.hrefLabel ?? 'Åpne'} {external ? <LuExternalLink className="size-3.5" aria-hidden /> : null}
           </a>
         ) : null}
@@ -880,6 +896,18 @@ export function IntelligencePage({ report: r }: { report: IntelligenceReport }) 
         </div>
       </header>
 
+      <IntelligenceBody report={r} />
+    </AppShell>
+  );
+}
+
+/**
+ * Selve vurderingen: merking, anbefaling, nøkkeltall, de fem delene og metoden. Brukes i appen og i det offentlige
+ * eksempelet (der lenkene inn i appen går via registrering – se AppHrefProvider).
+ */
+export function IntelligenceBody({ report: r }: { report: IntelligenceReport }) {
+  return (
+    <>
       <div className="mb-4 flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
         <span>Merking:</span>
         <BasisTag basis="fact" />
@@ -907,6 +935,6 @@ export function IntelligencePage({ report: r }: { report: IntelligenceReport }) 
           </div>
         </div>
       </div>
-    </AppShell>
+    </>
   );
 }

@@ -60,17 +60,26 @@ export function FaqList({ items }: { items: [string, ReactNode][] }) {
   );
 }
 
-/** Vanlige spørsmål – samme svar overalt, så de aldri spriker. Spørsmålet om appens språk vises bare på andre språk enn norsk. */
 /**
- * Vanlige spørsmål. Svarene om AI og betaling følger det som faktisk er slått på – siden lover aldri
- * AI-analyse eller kortbetaling som ikke virker.
+ * Vanlige spørsmål – samme svar overalt, så de aldri spriker. Svarene om AI og betaling følger det som faktisk er slått
+ * på – siden lover aldri AI-analyse eller kortbetaling som ikke virker. Spørsmålet om appens språk vises bare på andre
+ * språk enn norsk. Ren tekst, så de samme svarene kan gå i strukturerte data (faqJsonLd).
  */
-export function faqItems(m: Messages, o: { days: string; sources: string; aiReal: boolean; paymentsOpen: boolean }): [string, ReactNode][] {
+export function faqItems(m: Messages, o: { days: string; sources: string; aiReal: boolean; paymentsOpen: boolean }): [string, string][] {
   const vars = { days: o.days, sources: o.sources };
-  const items = m.faq.items.map((x): [string, ReactNode] => [x.q, fill(x.a, vars)]);
+  const items = m.faq.items.map((x): [string, string] => [x.q, fill(x.a, vars)]);
   const accuracy = o.aiReal ? m.faq.accuracy.ai : m.faq.accuracy.plain;
   const payment = o.paymentsOpen ? m.faq.payment.open : m.faq.payment.notOpen;
-  const all: [string, ReactNode][] = [...items, [accuracy.q, accuracy.a], [payment.q, payment.a]];
+  const all: [string, string][] = [...items, [accuracy.q, accuracy.a], [payment.q, payment.a]];
   if (o.aiReal) all.push([m.faq.ai.q, m.faq.ai.a]);
   return m.faq.app.q ? [...all, [m.faq.app.q, m.faq.app.a]] : all;
+}
+
+/** Strukturerte data for spørsmål og svar (schema.org FAQPage) – nøyaktig de samme som vises på siden. */
+export function faqJsonLd(items: [string, string][]): unknown {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+  };
 }

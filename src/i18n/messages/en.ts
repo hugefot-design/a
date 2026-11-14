@@ -21,6 +21,7 @@ export const en: Messages = {
   },
   nav: {
     features: 'Features',
+    example: 'Example',
     industries: 'Industries',
     pricing: 'Pricing',
     about: 'About us',
@@ -72,7 +73,12 @@ export const en: Messages = {
     title2: 'Find out if it’s worth winning.',
     lead: 'Get a clear recommendation for every tender: whether it fits, what could rule you out, and whether it pays with your own costs – with a source for everything, from {sources}.',
     seePrices: 'See pricing',
-    how: 'See how it works',
+    example: 'See a real example',
+    pillars: [
+      { title: 'Find the right tenders', text: 'Ranked by what you deliver and where you work – with reasons.' },
+      { title: 'Spot requirements, risks and problems before you bid', text: 'Grounds for rejection, minimum requirements and costly terms – with where they are stated.' },
+      { title: 'Find out whether the contract actually pays', text: 'Cost price and minimum price with your costs, and what similar contracts were actually awarded for.' },
+    ],
     note: '{days} with everything in Professional · No card · No lock-in',
     newTender: 'New tender',
     deadline: 'Deadline {date}',

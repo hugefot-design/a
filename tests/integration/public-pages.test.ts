@@ -26,7 +26,7 @@ const get = async (path: string) => {
 };
 
 test('alle offentlige sider svarer og har nøyaktig én h1', async () => {
-  for (const path of ['/', '/funksjoner', '/priser', '/bransjer', '/om', '/kontakt', '/personvern', '/vilkar']) {
+  for (const path of ['/', '/funksjoner', '/eksempel', '/priser', '/bransjer', '/om', '/kontakt', '/personvern', '/vilkar']) {
     const page = await get(path);
     assert.equal(page.status, 200, path);
     assert.equal((page.body.match(/<h1[\s>]/g) ?? []).length, 1, `én h1 på ${path}`);
@@ -104,13 +104,15 @@ test('ikoner for nettleser, Google, iPhone og Android finnes og er lenket fra si
   for (const icon of manifest.icons) assert.equal((await fetch(`${server.base}${icon.src}`)).status, 200, icon.src);
   const home = await get('/');
   for (const tag of ['href="/favicon.ico"', 'href="/favicon.svg"', 'href="/apple-touch-icon.png"', 'rel="manifest"']) assert.ok(home.body.includes(tag), tag);
-  // Strukturerte data: nettstedets navn og logo, bare på forsiden.
-  const ld = /<script type="application\/ld\+json"[^>]*>([^<]+)<\/script>/.exec(home.body)?.[1];
-  assert.ok(ld, 'JSON-LD på forsiden');
-  const data = JSON.parse(ld!) as { '@type': string; name: string; logo?: string }[];
+  // Strukturerte data: nettstedets navn og logo bare på forsiden; spørsmål og svar på forsiden og prissiden.
+  type Ld = { '@type': string; name?: string; logo?: string };
+  const ldBlocks = (html: string) => [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([^<]+)<\/script>/g)].map((m) => JSON.parse(m[1]!) as Ld[]);
+  const data = ldBlocks(home.body).find((b) => b.some((d) => d['@type'] === 'WebSite'));
+  assert.ok(data, 'JSON-LD på forsiden');
   assert.deepEqual(data.map((d) => [d['@type'], d.name]), [['WebSite', 'AnbudRadar'], ['Organization', 'AnbudRadar']]);
   assert.match(data[1]!.logo!, /\/icon-512\.png$/);
-  assert.doesNotMatch((await get('/priser')).body, /application\/ld\+json/);
+  assert.deepEqual(ldBlocks(home.body).flat().map((d) => d['@type']).sort(), ['FAQPage', 'Organization', 'WebSite']);
+  assert.deepEqual(ldBlocks((await get('/priser')).body).flat().map((d) => d['@type']), ['FAQPage']);
 });
 
 test('lenker som deles, får tittel, tekst og bilde på riktig språk (ikke i appen)', async () => {

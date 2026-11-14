@@ -25,7 +25,8 @@ import type { IntelligenceReport } from './types';
 
 const DEFAULT_MIN_DAYS = 5;
 
-function lockedPlans(e: Entitlements): IntelligenceReport['lockedPlans'] {
+/** Hva planen ikke gir (vises som låst med navnet på planen som har det). */
+export function lockedPlans(e: Entitlements): IntelligenceReport['lockedPlans'] {
   const plan = (f: keyof typeof FEATURE_LABELS) => PLANS[FEATURE_LABELS[f].minPlan].name;
   return {
     ...(e.matching ? {} : { fit: plan('matching') }),
