@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 14. november 2026 (produktløftet 13.–14.11 er ikke rullet ut – se under; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 14. november 2026 (produktløftet 13.–14.11 er rullet ut 14.11 – se under; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -390,10 +390,10 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
-## Produktløft (13.–14. november 2026) – IKKE rullet ut
+## Produktløft (13.–14. november 2026) – rullet ut 14.11.2026 (`bb0aa52`)
 
 Oppdraget «Full product transformation». Gjennomgang, prioritering, blokkeringer og status per fase:
-[TRANSFORMASJON.md](TRANSFORMASJON.md). Alt ligger på arbeidsgrenen med `[skip render]`; produksjonen står på `2d3e8ab`.
+[TRANSFORMASJON.md](TRANSFORMASJON.md). Rullet ut 14.11.2026 kl. 16.22 (UTC) etter eiers «rull ut»: versjon `bb0aa52` (koden er `944e501`, grønn i CI). Databaseendringene `0023` og `0024` ble kjørt («Ferdig: 2 migrering(er) kjørt», app-brukeren kan logge inn). Kontrollert på anbudradar.com: helsesjekk OK; alle offentlige sider 200; `/admin` 404; `/app/…` sender til innlogging; forsiden har de tre budskapene, «Se et ekte eksempel» og FAQPage; prissiden merker AI-linjene og sier at kortbetaling ikke er åpnet; `/eksempel` og eksempel-PDF-en svarer; 528 anbudssider i nettstedskartet, stikkprøver svarer 200; i 60 anbudssider var ingen e-postadresser synlige (ingen av dem hadde kontaktopplysninger i teksten, så skjulingen er bare bevist i de automatiske testene); ingen sidelengs rulling og ingen JavaScript-feil på mobil, nettbrett og PC i lys og mørk modus; 0 advarsler og 0 feil i loggen etter utrullingen. **IKKE VERIFISERT i produksjon:** registrering og oppstartsskjema med en ekte ny kunde, «Meld interesse» og e-posten før prøveperioden slutter (dekket av testene).
 Kort oppsummert:
 
 - **Enklere start:** ett kort oppstartsskjema (firma, bransjer, område, godkjenninger, hva dere leverer) som tar med seg

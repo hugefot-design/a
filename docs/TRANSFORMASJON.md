@@ -3,8 +3,7 @@
 Startet 13. november 2026 etter eiers oppdrag «Full product transformation». Målet er flere besøkende som blir
 registrerte, flere som kommer i gang, og flere som blir – ikke en ny fasade.
 
-> **Ingenting her er rullet ut.** Produksjonen (anbudradar.com) står på versjon `2d3e8ab` fra 8. november.
-> «Push ut» er gjort som `git push` til arbeidsgrenen – ikke utrulling til produksjon.
+> **Rullet ut 14.11.2026 kl. 16.22 (UTC) etter eiers «rull ut»:** versjon `bb0aa52` (koden er `944e501`, grønn i CI). Databaseendringene `0023` og `0024` ble kjørt («Ferdig: 2 migrering(er) kjørt», app-brukeren kan logge inn). Kontrollert på anbudradar.com: helsesjekk OK; alle offentlige sider 200; `/admin` 404; `/app/…` sender til innlogging; forsiden har de tre budskapene, «Se et ekte eksempel» og FAQPage; prissiden merker AI-linjene og sier at kortbetaling ikke er åpnet; `/eksempel` og eksempel-PDF-en svarer; 528 anbudssider i nettstedskartet, stikkprøver svarer 200; i 60 anbudssider var ingen e-postadresser synlige (ingen av dem hadde kontaktopplysninger i teksten, så skjulingen er bare bevist i de automatiske testene); ingen sidelengs rulling og ingen JavaScript-feil på mobil, nettbrett og PC i lys og mørk modus; 0 advarsler og 0 feil i loggen etter utrullingen. **IKKE VERIFISERT i produksjon:** registrering og oppstartsskjema med en ekte ny kunde, «Meld interesse» og e-posten før prøveperioden slutter (dekket av testene).
 > Arbeidet ligger på grenen `claude/anbudradar-saas-launch-eje0gv` (samme gren som Render ruller ut fra), og alle
 > endringer har `[skip render]`, så ingenting går ut av seg selv. Utrulling skjer først når eier sier fra.
 

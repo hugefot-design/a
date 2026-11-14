@@ -6,7 +6,7 @@ Finner offentlige anbud som passer bedriften, forklarer kravene med kildehenvisn
 > Ekte anbud fra **TED** og **Doffin** (begge verifisert mot live API) og e-post via **Resend** (verifisert).
 > **Ikke slått på i produksjon** (mangler nøkler eller valg fra eier): AI, kortbetaling (Stripe – kundene kan melde
 > interesse for en plan), fillagring i Supabase Storage (opplastede filer ligger på serverens disk og forsvinner ved ny
-> utrulling) og automatisk sikkerhetskopi. Koden på denne grenen lover ikke det som er av (hva som er rullet ut, står i STATUS).
+> utrulling) og automatisk sikkerhetskopi. Sidene og e-postene lover ikke det som er av (produktløftet rullet ut 14.11.2026 – se STATUS).
 > Testresultater og verifisering: [docs/STATUS.md](docs/STATUS.md). Hva som blokkerer lansering:
 > [docs/TRANSFORMASJON.md](docs/TRANSFORMASJON.md#6-det-som-fortsatt-blokkerer-lansering-krever-eier).
 

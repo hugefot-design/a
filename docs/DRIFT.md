@@ -278,8 +278,9 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
   hemmeligheter, migreringer som endrer eksisterende data, og større nye funksjoner.
 - **Endret igjen 13. november 2026 (oppdraget «Full product transformation»):** eier skrev «Ikke deploy til
   produksjon». **Dette er beskjeden som gjelder nå:** ingenting rulles ut før eier sier fra (f.eks. «rull ut»). Arbeidet
-  sendes til arbeidsgrenen med `[skip render]`, testene kjøres på GitHub, og produksjonen står på siste utrullede versjon
-  (`2d3e8ab`, kontrollert 13.11.2026).
+  sendes til arbeidsgrenen med `[skip render]`, testene kjøres på GitHub, og produksjonen står på siste utrullede versjon.
+- **14. november 2026:** eier skrev «rull ut» for produktløftet. Rullet ut `bb0aa52` med Render API (grønn CI for koden),
+  migreringene `0023`–`0024` kjørt, kontrollert etterpå (se STATUS). Regelen over gjelder fortsatt for neste endring.
 - **Om `autoDeploy`:** tjenesten i Render ruller ut fra arbeidsgrenen automatisk, men hver commit har `[skip render]`, så
   det skjer ikke av seg selv. Utrulling startes for hånd (Render → *Manual Deploy*) eller med Render API og et bestemt
   versjonsnummer – og bare når eier har sagt ja.

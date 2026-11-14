@@ -4,10 +4,10 @@ Sist oppdatert 14. november 2026. Rangert etter forretningsverdi, brukeropplevel
 Status skiller mellom **implementert** (koden finnes), **testet** (automatiske tester), **verifisert** (prøvd mot ekte
 tjenester/produksjon) og **forslag** (krever eiers godkjenning: nye leverandører, kostnader eller endring i produksjon).
 
-> Produksjon: punkt 1–11 og koden for punkt 15 ble rullet ut 7.–8. november 2026 og er med i versjonen som kjører
-> (`2d3e8ab`, kontrollert 13.11.2026). Nyere arbeid (fra 14.11.2026, se [TRANSFORMASJON.md](TRANSFORMASJON.md)) er
-> **ikke** rullet ut: eiers beskjed 13.11.2026 er at ingenting rulles ut uten ja. Commits har `[skip render]`, så Render
-> ikke ruller ut automatisk. Utrulling: Render → tjenesten → *Manual Deploy* → *Deploy latest commit* (migreringene kjøres da).
+> Produksjon: punkt 1–11 og koden for punkt 15 ble rullet ut 7.–8. november 2026. Produktløftet (se
+> [TRANSFORMASJON.md](TRANSFORMASJON.md)) ble rullet ut 14.11.2026 (`bb0aa52`) etter eiers «rull ut». Regelen står fast:
+> ingenting rulles ut uten eiers ja. Commits har `[skip render]`, så Render ikke ruller ut automatisk. Utrulling:
+> Render → tjenesten → *Manual Deploy* → *Deploy latest commit* (migreringene kjøres da).
 
 | # | Forbedring | Hvorfor | Status |
 | --- | --- | --- | --- |
