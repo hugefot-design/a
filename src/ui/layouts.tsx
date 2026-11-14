@@ -197,7 +197,7 @@ function FooterNav({ title, links }: { title: string; links: { href: string; lab
 }
 
 function PublicFooter() {
-  const { liveSources, m, lp, path, locale } = useUi();
+  const { liveSources, m, lp, path, locale, publicTools } = useUi();
   const labels = useNavLabels();
   const company = companyInfo();
   const legal = m.footer.legalDocs as Record<string, string>;
@@ -213,8 +213,14 @@ function PublicFooter() {
           title={m.footer.product}
           links={[
             ...['/funksjoner', '/bransjer', '/priser'].map((href) => ({ href: lp(href), label: labels[href]! })),
-            // Fylkessidene finnes bare på norsk.
+            // Fylkessidene og verktøyene uten konto finnes bare på norsk.
             ...(locale === 'nb' ? [{ href: '/fylker', label: 'Anbud per fylke' }] : []),
+            ...(locale === 'nb' && publicTools
+              ? [
+                  { href: '/prov', label: 'Prøv uten konto' },
+                  { href: '/kalkulator', label: 'Lønnsomhetssjekk' },
+                ]
+              : []),
           ]}
         />
         <FooterNav title={m.footer.company} links={['/om', '/kontakt'].map((href) => ({ href: lp(href), label: labels[href]! }))} />

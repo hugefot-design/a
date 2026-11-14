@@ -254,6 +254,13 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
   kilde. Innloggede brukere og roboter telles ikke. Lenker med `utm_source=…` vises med det navnet.
 - **LinkedIn (Admin → LinkedIn).** Ferdig tekst med ukens største nye anbud for valgt bransje/fylke, med lenke
   `utm_source=linkedin`. Les gjennom og post selv.
+- **Offentlig side per anbud (`/anbud/<id>`).** Bare åpne anbud med nok tekst indekseres. Slås av med
+  `PUBLIC_TENDER_PAGES=false`.
+- **Verktøy uten konto.** «Prøv uten konto» (`/prov`, og skjemaet på forsiden) rangerer de åpne anbudene for valgt
+  bransje og fylke med appens treffmotor og viser de fem beste. Lønnsomhetssjekken (`/kalkulator`, og fra hvert åpent
+  anbud) regner selvkost, målpris og margin med appens formler. Ingenting lagres. Begrenset per besøkende (40
+  rangeringer og 60 utregninger per 10 minutter). Åpne anbud per bransje mellomlagres i 15 minutter. Begge slås av med
+  `PUBLIC_TOOLS=false` – da peker forsiden til eksempelet som før. Bakgrunn: [KONKURRENTER.md](KONKURRENTER.md).
 
 ## 7. Utrulling og tilbakerulling
 

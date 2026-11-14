@@ -24,7 +24,7 @@ function Fact() {
 }
 
 export function PublicTenderPage({ t, origin }: { t: PublicTender; origin: string }) {
-  const { user, lp, m, locale, search } = useUi();
+  const { user, lp, m, locale, search, publicTools } = useUi();
   const j = m.home.journey;
   // Kilden besøket kom fra (f.eks. ukesbrevet) følger med til registreringen, så Admin → Kundereise ser den.
   const utm = new URLSearchParams(search).get('utm_source');
@@ -207,6 +207,11 @@ export function PublicTenderPage({ t, origin }: { t: PublicTender; origin: strin
               <a href={open ? assess : user ? '/app' : signup} className="btn-signal mt-5 w-full justify-center">
                 {open ? 'Se om anbudet passer dere' : 'Finn åpne anbud som passer'}
               </a>
+              {publicTools && open ? (
+                <a href={`/kalkulator?anbud=${t.id}`} className="btn-ghost-light mt-3 w-full justify-center">
+                  Regn på om det lønner seg
+                </a>
+              ) : null}
               <a href="/eksempel" className="mt-3 block text-center text-[14px] font-semibold text-white/80 no-underline hover:text-white">
                 Se et eksempel på en vurdering
               </a>

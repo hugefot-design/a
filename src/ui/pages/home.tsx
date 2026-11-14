@@ -20,6 +20,7 @@ import { PublicLayout } from '../layouts';
 import { BuyerTicker, FinalCta, H2, IndustryTiles, Kicker, Radar, TenderPing, Wrap } from '../site';
 import { JOURNEY_VISUALS } from '../showcase';
 import { FaqList, faqItems } from '../marketing';
+import { TryBand } from './tools';
 
 /** Fristen kort: «I dag 12.00», «I morgen», «fre. 07.11» (brukes også i eksempelkunngjøringen). */
 export function boardWhen(
@@ -39,13 +40,17 @@ export function Mono({ children, className }: { children: ReactNode; className?:
 }
 
 // ---------------------------------------------------------------------------
-/** De tre budskapene øverst – hvert lenker til samme del av det ekte eksempelet (/eksempel). */
+/**
+ * De tre budskapene øverst. Hvert lenker dit besøkende kan prøve det selv: rangerte anbud for egen bransje (#prov),
+ * krav og risiko i det ekte eksempelet, og lønnsomhetssjekken. Uten verktøyene: samme del av eksempelet.
+ */
 const PILLAR_ICONS = [LuTarget, LuShieldAlert, LuCalculator];
-const PILLAR_ANCHORS = ['passer', 'risiko', 'lonnsomhet'];
+const pillarLinks = (tools: boolean) => [tools ? '#prov' : '/eksempel#passer', '/eksempel#risiko', tools ? '/kalkulator' : '/eksempel#lonnsomhet'];
 
 function Hero({ market }: { market: MarketSnapshot }) {
-  const { user, m, locale, lp, trialDays, liveSources } = useUi();
+  const { user, m, locale, lp, trialDays, liveSources, publicTools } = useUi();
   const t = m.home;
+  const links = pillarLinks(publicTools);
   return (
     <section className="night relative overflow-hidden">
       <div className="dot-grid absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_70%_40%,#000_20%,transparent_70%)]" aria-hidden />
@@ -67,7 +72,7 @@ function Hero({ market }: { market: MarketSnapshot }) {
               const Icon = PILLAR_ICONS[i]!;
               return (
                 <li key={p.title}>
-                  <a href={`/eksempel#${PILLAR_ANCHORS[i]}`} className="group flex items-start gap-3 no-underline">
+                  <a href={links[i]} className="group flex items-start gap-3 no-underline">
                     <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-signal">
                       <Icon className="size-4" aria-hidden />
                     </span>
@@ -378,6 +383,7 @@ export function HomePage({ market, showcase }: { market: MarketSnapshot; showcas
     <PublicLayout>
       <Hero market={market} />
       <BuyerTicker buyers={market.topBuyers} />
+      <TryBand />
       <Why />
       <Journey showcase={showcase} />
       <Compare />

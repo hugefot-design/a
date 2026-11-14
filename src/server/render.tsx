@@ -49,6 +49,7 @@ function uiValue(ctx: RequestContext): UiContextValue {
     aiIsMock: ai.isMock,
     paymentsOpen: paymentsOpen(),
     publicTenderPages: env.PUBLIC_TENDER_PAGES,
+    publicTools: env.PUBLIC_TOOLS,
     legalReviewed: env.LEGAL_PAGES_REVIEWED,
     liveSources: liveSources(),
     trialDays: env.TRIAL_DAYS,

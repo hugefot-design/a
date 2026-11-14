@@ -194,10 +194,11 @@ test('eksempelsiden: tydelig merket, lenker via registrering, PDF og nettstedska
   assert.match(sitemap, /<loc>[^<]+\/eksempel<\/loc>/);
 });
 
-test('forsiden: tre budskap som lenker til eksempelet, «Se et ekte eksempel» og spørsmål og svar med strukturerte data', async () => {
+test('forsiden: tre budskap som lenker dit de kan prøves, «Se et ekte eksempel» og spørsmål og svar med strukturerte data', async () => {
   const body = (await (await fetch(`${server.base}/`)).text()).replaceAll('<!-- -->', '');
   for (const t of ['Finn riktige anbud', 'Oppdag krav, risiko og problemer før du byr', 'Finn ut om kontrakten faktisk er lønnsom']) assert.ok(body.includes(t), t);
-  for (const a of ['passer', 'risiko', 'lonnsomhet']) assert.ok(body.includes(`href="/eksempel#${a}"`), a);
+  // Budskapene lenker dit de kan prøves: «Prøv uten konto» på forsiden, eksempelet og lønnsomhetssjekken.
+  for (const href of ['#prov', '/eksempel#risiko', '/kalkulator']) assert.ok(body.includes(`href="${href}"`), href);
   assert.match(body, /<a href="\/eksempel" class="btn-ghost-light">Se et ekte eksempel<\/a>/);
   assert.match(body, /href="\/eksempel"[^>]*>Eksempel<\/a>/, 'Eksempel i menyen');
   assert.match(body, /Hva skjer etter prøveperioden\?/);

@@ -17,6 +17,8 @@ export interface UiContextValue {
   paymentsOpen: boolean;
   /** Offentlige anbudssider (/anbud/<id>) er slått på – lenkene fra nettsiden går dit i stedet for til registrering. */
   publicTenderPages: boolean;
+  /** Verktøyene uten konto (/prov og /kalkulator) er slått på. */
+  publicTools: boolean;
   legalReviewed: boolean;
   /** Datakilder som er verifisert mot ekte API ("ted", "doffin"). */
   liveSources: string[];
@@ -45,6 +47,7 @@ export const UiContext = createContext<UiContextValue>({
   aiIsMock: false,
   paymentsOpen: false,
   publicTenderPages: false,
+  publicTools: false,
   legalReviewed: false,
   liveSources: [],
   trialDays: 14,

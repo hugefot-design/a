@@ -94,7 +94,21 @@ export const nb = {
     lead: 'Få en tydelig anbefaling for hvert anbud: om det passer, hva som kan felle dere, og om det lønner seg med deres egne kostnader – med kilde på alt, fra {sources}.',
     seePrices: 'Se priser',
     example: 'Se et ekte eksempel',
-    /** De tre budskapene øverst. Hvert lenker til samme del av eksempelet på /eksempel. */
+    /** Skjemaet «Prøv uten konto» under toppen. languageNote er tom på norsk (resultatet er på norsk). */
+    try: {
+      eyebrow: 'Prøv uten konto',
+      title: 'Se anbudene som passer dere – nå.',
+      lead: 'Velg bransje og fylke. Vi rangerer de åpne anbudene med samme regler som i appen. Ingenting lagres.',
+      industry: 'Bransje',
+      chooseIndustry: 'Velg bransje',
+      region: 'Fylke',
+      allRegions: 'Hele landet',
+      words: 'Hva leverer dere? (valgfritt)',
+      wordsPlaceholder: 'f.eks. kontorrenhold, vinduspuss',
+      submit: 'Vis anbudene som passer',
+      languageNote: '',
+    },
+    /** De tre budskapene øverst. Hvert lenker dit det kan prøves: «Prøv uten konto», eksempelet og lønnsomhetssjekken. */
     pillars: [
       { title: 'Finn riktige anbud', text: 'Rangert etter det dere leverer og der dere jobber – med begrunnelse.' },
       { title: 'Oppdag krav, risiko og problemer før du byr', text: 'Avvisningsgrunner, minstekrav og kostbare vilkår – med hvor det står.' },

@@ -21,6 +21,7 @@ Finner offentlige anbud som passer bedriften, forklarer kravene med kildehenvisn
 | Konkurrentinnsikt | Tildelinger fra kunngjøringene, med tydelig dekningsgrad. Ingen anslag. |
 | Tilbudsarbeid | Sjekkliste, tekstseksjoner med AI-utkast (bare fakta fra profilen, ellers `[FYLL INN: …]`), sammenligning mot krav, vedlegg, godkjenningsflyt og eksport (Word, Markdown, utskrift/PDF). |
 | Profit Intelligence | Lønnsomhet per anbud med bedriftens egne kostnader: selvkost, minstepris, prisintervall, følsomhet og formler. Kontraktsrisiko (dagbøter, betalingsfrist, prisregulering, garantier) med side og sitat. Kapasitet, kvalifikasjoner og anbefaling (Vurder å by / Undersøk nærmere / Høy risiko). Se [docs/PROFIT_INTELLIGENCE.md](docs/PROFIT_INTELLIGENCE.md). |
+| Verktøy uten konto | «Prøv uten konto» (`/prov`, og skjemaet på forsiden): de åpne anbudene for valgt bransje og fylke rangert med samme treffmotor som i appen – de fem beste, med begrunnelse. Lønnsomhetssjekk (`/kalkulator`, og fra hvert åpent anbud): selvkost, målpris, margin ved kontraktsverdien og følsomhet med appens formler, og målprisen plassert blant ekte tidligere tildelinger. Ingenting lagres, ingen AI. Slås av med `PUBLIC_TOOLS=false`. |
 | Anbudspartnere | Partnerprofil med samtykke, søk og forklarte forslag ut fra manglene, forespørsler med konkurranserettslig sperre og kontaktdeling bare ved godkjenning. |
 | Konto og sikkerhet | Registrering, e-postbekreftelse, glemt passord, organisasjoner, roller, invitasjoner, revisjonslogg, dataeksport, sletting. Radnivåsikkerhet i databasen. |
 | Abonnement | Gratis, Start 299 / Profesjonell 699 / Bedrift 1 490 kr per måned via Stripe, Enterprise fra 4 990 kr (manuelt). Tilgang styres kun av signerte webhooks; gamle hendelser kan ikke gjenopplive et avsluttet abonnement. Så lenge Stripe ikke er satt opp, kan kunden «Meld interesse» for en plan (havner i Admin → Henvendelser), og administrator kan sette planen manuelt. |
@@ -90,6 +91,7 @@ docs/           drift, integrasjoner, importformat, personvern, status
 
 - [docs/STATUS.md](docs/STATUS.md) – testresultater, verifiseringsstatus, kjente begrensninger, kostnadsestimat og neste steg
 - [docs/LANSERING.md](docs/LANSERING.md) – lanseringssjekkliste og plan for de første 10/50/100 kundene
+- [docs/KONKURRENTER.md](docs/KONKURRENTER.md) – hva konkurrentene viser utad, hva som er AnbudRadars eget, og forslag som venter på eier
 - [docs/PROFIT_INTELLIGENCE.md](docs/PROFIT_INTELLIGENCE.md) – lønnsomhet, kontraktsrisiko, kapasitet og anbudspartnere
 - [docs/GJENNOMGANG.md](docs/GJENNOMGANG.md) – gjennomgangen av utgangspunktet (hva som var simulert, feil og risikoer)
 - [docs/DRIFT.md](docs/DRIFT.md) – produksjonssetting (Supabase + Render eller tilsvarende)

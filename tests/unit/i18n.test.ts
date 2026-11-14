@@ -15,7 +15,7 @@ import { LOCALE_INFO } from '../../src/i18n/locales';
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 const isPlural = (v: unknown): v is Plural => typeof v === 'object' && v !== null && !Array.isArray(v) && 'other' in v && typeof (v as Plural).other === 'string';
 /** Tekster som er tomme på norsk med vilje, men skal finnes på alle andre språk. */
-const EMPTY_IN_NB = new Set(['footer.legalNote', 'footer.translated', 'contact.replyLanguage', 'auth.register.languageNote', 'faq.app.q', 'faq.app.a']);
+const EMPTY_IN_NB = new Set(['footer.legalNote', 'footer.translated', 'contact.replyLanguage', 'auth.register.languageNote', 'faq.app.q', 'faq.app.a', 'home.try.languageNote']);
 const SAMPLES = [0, 1, 2, 3, 4, 5, 11, 12, 14, 21, 22, 25, 30, 100, 101, 102, 105, 111, 497, 1000, 1001];
 
 function compare(locale: string, ref: unknown, other: unknown, path: string, errors: string[]): void {

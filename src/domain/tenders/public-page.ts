@@ -50,6 +50,10 @@ export interface PublicTender {
   /** Antall treff i ordsøket (før utvalget over). */
   counts: { rejection: number; qualification: number; siteVisit: number; costlyTerms: number };
   market: Showcase['market'];
+  /** Alle sammenlignbare tildelte verdier (også de svært store) – til å plassere en pris blant dem. Tom uten markedspris. */
+  marketAll: number[];
+  /** Rammeavtale: oppgitt verdi er et anslag eller tak, ikke garantert omsetning. */
+  isFramework: boolean;
   indexable: boolean;
 }
 
@@ -113,7 +117,8 @@ async function load(sql: Tx, id: string): Promise<PublicTender | null> {
   const mask = (q: ShowcaseQuote) => ({ ...q, text: maskContacts(q.text) });
 
   const masked = description ? clipText(maskContacts(description)) : null;
-  const market = marketSummary(await marketPrice(sql, t));
+  const mp = await marketPrice(sql, t);
+  const market = marketSummary(mp);
   return {
     id: t.id,
     title: t.title,
@@ -146,6 +151,8 @@ async function load(sql: Tx, id: string): Promise<PublicTender | null> {
       costlyTerms: costly.size,
     },
     market,
+    marketAll: market ? mp.awards.map((a) => a.value) : [],
+    isFramework: t.isFramework === true,
     indexable: t.status === 'open' && description.trim().length >= MIN_TEXT_FOR_INDEXING,
   };
 }

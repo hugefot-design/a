@@ -66,6 +66,8 @@ test('forsiden: tydelig posisjonering, ekte data og ingen AI-løfter når AI er 
   const text = (page.body.match(/<main[^>]*>([\s\S]*)<\/main>/)?.[1] ?? '')
     .replace(/<(script|style|svg)[^>]*>[\s\S]*?<\/\1>/g, ' ')
     .replace(/<details[\s\S]*?<summary[^>]*>([\s\S]*?)<\/summary>[\s\S]*?<\/details>/g, ' $1 ')
+    // Valgene i nedtrekkslistene (bransjer og fylker i «Prøv uten konto») er ikke tekst som leses.
+    .replace(/<select[\s\S]*?<\/select>/g, ' ')
     .replace(/<[^>]+>/g, ' ');
   const words = text.split(/\s+/).filter((w) => /\p{L}|\d/u.test(w)).length;
   // Eier ba 7.11.2026 om fordeler, kundereise, sammenligning og åpenhet på forsiden – hver tekst skal likevel være kort.

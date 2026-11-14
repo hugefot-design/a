@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 14. november 2026 (produktløftet 13.–14.11 er rullet ut 14.11 – se under; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 14. november 2026 (verktøyene uten konto er ferdige, men **ikke rullet ut** – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -9,13 +9,14 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 229 av 229 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 14.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 213 av 213 bestått – 14.11.2026 |
+| Enhetstester | 234 av 234 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 14.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 227 av 227 bestått – 14.11.2026 |
 | Ende-til-ende i nettleser | 10 av 10 bestått (inkl. det nye oppstartsskjemaet, appen på telefon og lys/mørk modus) – 14.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | `npm audit` | 0 sårbarheter – 14.11.2026 |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
 | Tilgjengelighet, kontrast og bredde: forsiden (norsk og engelsk), `/eksempel`, `/anbud/<id>`, priser, funksjoner, registrering, bransjeside, Oversikt, Abonnement, anbudssiden, samlet vurdering og oppstartsskjemaet – 390, 768 og 1440 px, lys og mørk | Én h1 per side, `<main>`, etiketter på alle felt, navn på alle knapper og lenker, ingen doble id-er, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: filfeltene for opplasting manglet etikett – 14.11.2026 |
+| Tilgjengelighet, kontrast og bredde for verktøyene uten konto: forsiden (norsk og engelsk), `/prov` (tom, med treff og uten treff), `/kalkulator` (tom, for et anbud, med resultat og med feil) og `/anbud/<id>` – 390, 768 og 1440 px, lys og mørk | 60 av 60 kontroller OK: én h1 per side, etiketter på alle felt, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: følsomhetstabellen var for bred på mobil – 14.11.2026 |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av anbudssiden (regelverk/klima) og Admin → Datakilder (XML-berikelse), 1280 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av Admin → Feil, 1280 px og iPhone 13 | Ingen JavaScript-feil, ingen horisontal rulling, ingen e-postadresser synlige – 7.11.2026 |
@@ -389,6 +390,32 @@ kostnader, ingen endring i Render eller Supabase.
 - Tester: `tests/integration/admin-access.test.ts` (fant at vernet virker: uten privat lagring av simulerte svar feiler
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
+
+## Verktøy uten konto – «1 av 1» (14. november 2026) – IKKE rullet ut
+
+Eier spurte hva som kan gjøre nettsiden til den eneste i sitt slag. Konkurrentenes åpne sider ble lest
+([KONKURRENTER.md](KONKURRENTER.md)). Det som ikke sto beskrevet hos noen av dem: lønnsomhet med bedriftens egne
+kostnader, og å kunne prøve rangeringen og regnestykket uten konto. Det er bygd – med eksisterende data og funksjoner,
+uten AI, uten nye tjenester og uten sporing:
+
+- **Prøv uten konto** (`/prov`, og skjemaet under toppen på forsiden på alle språk): velg bransje og fylke og skriv
+  hva dere leverer. De åpne anbudene rangeres med samme treffmotor som i appen, med «Passer fordi …». Bare de fem
+  beste vises, og siden sier hvor mange som finnes. Valgene følger med til registreringen og står ferdig utfylt i
+  oppstartsskjemaet. Resultatsidene har `noindex`; selve verktøyet indekseres.
+- **Lønnsomhetssjekk** (`/kalkulator`, og «Regn på om det lønner seg» på hvert åpent anbud): timer, timekost,
+  materialer, annet, påslag og ønsket margin inn – selvkost, målpris, margin ved kontraktsverdien og følsomhet ut, med
+  appens formler og utregningen vist. For et anbud brukes oppdragsgivers anslag (merket som det, bare i kroner), og
+  målprisen plasseres blant ekte tidligere tildelinger når det finnes minst tre. Ugyldige tall gir feil per felt –
+  ingenting gjettes.
+- De tre budskapene øverst på forsiden lenker dit de kan prøves («Prøv uten konto», eksempelet og sjekken), og
+  bunnteksten har lenker til begge.
+- Ingenting lagres – verken valg, ord eller tall. Begrenset per besøkende (40 rangeringer og 60 utregninger per
+  10 minutter). Rangeringen tok 4–71 ms lokalt med 507 åpne anbud.
+- Bryter: `PUBLIC_TOOLS=false` fjerner begge, og forsiden peker da til eksempelet som før.
+
+**IKKE VERIFISERT:** alt i produksjon (ikke rullet ut), og hvor raskt rangeringen går på gratis-serveren med
+produksjonsdata. **Eiers valg:** lønnsomhetssjekken gir bort en enkel utgave av en betalt funksjon – kostnadslinjer,
+risikopåslag, minstepris, vilkår i kroner, kapasitet og lagring finnes fortsatt bare i appen.
 
 ## Produktløft (13.–14. november 2026) – rullet ut 14.11.2026 (`bb0aa52`)
 

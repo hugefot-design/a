@@ -26,6 +26,8 @@ Ikke lagret: kortnummer (håndteres av Stripe), IP-adresser i klartekst, sporing
 
 Besøkstelling (`page_views_daily`): bare dato, side og kilde (f.eks. «google») per sidevisning – ingen IP, informasjonskapsler eller nettleserdata, og innloggede brukere telles ikke. Ikke personopplysninger.
 
+Verktøyene uten konto («Prøv uten konto» på `/prov` og lønnsomhetssjekken på `/kalkulator`): ingenting lagres – verken bransje, fylke, ordene eller tallene besøkende skriver inn. Det eneste som finnes er en teller per IP-hash for å hindre misbruk (`rate_limits`, som for innlogging), som slettes etter to dager. Appens egen logg tar bare med stien, ikke valgene. Valgene til «Prøv uten konto» sendes i adressen (`/prov?bransje=…`) og kan derfor stå i driftsleverandørens tilgangslogg, som andre adresser. Tallene i lønnsomhetssjekken sendes ikke i adressen.
+
 Kunngjøringsdata er offentlige, men kan inneholde navn på kontaktpersoner og leverandører. De lagres slik kilden publiserer dem.
 
 ## Oppbevaring (automatisk sletting, daglig)

@@ -165,7 +165,8 @@ export function registerCoreAppRoutes(router: Router): void {
       industries: start.industry ? [start.industry] : [],
       regions: start.region ? [start.region] : [],
       certifications: [],
-      services: '',
+      // Fra «Prøv uten konto»: ordene besøkende skrev der, følger med hit.
+      services: (ctx.query.get('tjenester') ?? '').slice(0, 200),
     };
     return render(ctx, <OnboardingPage values={values} next={next} memberOnly={ctx.org?.role === 'member'} />, { title: 'Kom i gang' });
   });

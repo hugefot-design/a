@@ -3,11 +3,15 @@ import { systemSql } from '@/lib/db';
 import { env, isProd, paymentsOpen } from '@/lib/env';
 import { rateLimit } from '@/lib/rate-limit';
 import { queueEmail } from '@/lib/email';
-import { countyOverview, industryListing, industryRegionCounts, marketSnapshot, noticeSpecimen } from '@/domain/tenders/market';
+import { countyOverview, industryListing, industryRegionCounts, marketSnapshot, noticeSpecimen, parseBoardFilter } from '@/domain/tenders/market';
 import { siteShowcase } from '@/domain/tenders/showcase';
 import { demoReport } from '@/domain/intelligence/demo';
 import { intelligencePdf } from '@/domain/intelligence/pdf';
 import { DemoPage } from '@/ui/pages/demo';
+import { quickRanking } from '@/domain/matching/quick';
+import { EMPTY_QUICK_CALC, parseQuickCalc, quickCalc, type QuickCalcForm } from '@/domain/profit/quick-calc';
+import { shareAbove } from '@/domain/profit/market';
+import { CalculatorPage, TryPage } from '@/ui/pages/tools';
 import { PAID_PLANS, PLANS } from '@/domain/billing/plans';
 import { indexableTenderIds, publicTender } from '@/domain/tenders/public-page';
 import { PublicTenderPage } from '@/ui/pages/tender-public';
@@ -137,6 +141,54 @@ export function registerPublicRoutes(router: Router): void {
       jsonLd: industry ? [breadcrumbs([['Bransjer', '/bransjer'], [industry.name, `/bransjer/${industrySlugNb(industry.id)}`], [t.title, `/anbud/${t.id}`]])] : [],
     });
   });
+
+  // Verktøy uten konto. Ingenting lagres – verken valgene, ordene eller tallene besøkende skriver inn.
+  router.get('/prov', 'public', async (ctx) => {
+    if (!env.PUBLIC_TOOLS) throw new HttpError(404, messages(ctx.locale).errors.notFound);
+    const filter = parseBoardFilter(ctx.query.get('bransje'), ctx.query.get('fylke'));
+    const values = { industry: filter.industry ?? '', region: filter.region ?? '', words: (ctx.query.get('ord') ?? '').slice(0, 200) };
+    // Rangeringen regner på flere hundre anbud – begrenses per besøkende.
+    const limited = Boolean(values.industry) && !(await rateLimit(`prov:${ctx.ipHash}`, 40, 600));
+    const result = values.industry && !limited ? await quickRanking(values) : null;
+    return render(ctx, <TryPage values={values} result={result} limited={limited} />, {
+      title: 'Prøv uten konto: anbudene som passer dere',
+      description: 'Velg bransje og fylke og se de åpne offentlige anbudene som passer best – rangert med begrunnelse, uten konto. Ingenting lagres.',
+      canonical: '/prov',
+      // Selve verktøyet indekseres; hvert enkelt resultat gjør det ikke.
+      noindex: ctx.url.search.length > 0,
+      status: limited ? 429 : 200,
+    });
+  });
+
+  const calculator = async (ctx: RequestContext, post: boolean) => {
+    if (!env.PUBLIC_TOOLS) throw new HttpError(404, messages(ctx.locale).errors.notFound);
+    const id = ctx.query.get('anbud') ?? '';
+    const tender = env.PUBLIC_TENDER_PAGES && UUID.test(id) ? await publicTender(id) : null;
+    const meta = {
+      title: 'Lønnsomhetssjekk: lønner anbudet seg?',
+      description: 'Gratis kalkulator uten konto: legg inn timer og kostnader og se selvkost, prisen for ønsket margin og hva dere sitter igjen med ved kontraktsverdien.',
+      canonical: '/kalkulator',
+      noindex: ctx.url.search.length > 0,
+    };
+    if (!post) return render(ctx, <CalculatorPage form={EMPTY_QUICK_CALC} result={null} tender={tender} market={null} />, meta);
+    if (!(await rateLimit(`kalkulator:${ctx.ipHash}`, 60, 600))) throw new HttpError(429, 'For mange utregninger på kort tid. Prøv igjen om litt.');
+    const f = await ctx.form();
+    const form = Object.fromEntries((Object.keys(EMPTY_QUICK_CALC) as (keyof QuickCalcForm)[]).map((k) => [k, formStr(f, k, 40)])) as unknown as QuickCalcForm;
+    const parsed = parseQuickCalc(form);
+    if (!parsed.ok) return render(ctx, <CalculatorPage form={form} errors={parsed.errors} result={null} tender={tender} market={null} />, { ...meta, status: 422 });
+    // Kalkulatoren regner i kroner: anslått verdi og tildelinger i annen valuta brukes ikke.
+    const nok = tender?.currency === 'NOK';
+    const result = quickCalc(parsed.input, { value: nok ? (tender?.estimatedValue ?? null) : null, isFramework: tender?.isFramework ?? false });
+    const target = result.calc.targetPrice;
+    const mk = tender?.market && tender.market.currency === 'NOK' ? tender.market : null;
+    const market =
+      mk && target !== null
+        ? { label: mk.label, n: mk.n, values: mk.values, band: { p25: mk.p25, median: mk.median, p75: mk.p75 }, cheaperThanPct: tender!.marketAll.length ? shareAbove(tender!.marketAll, target) : null }
+        : null;
+    return render(ctx, <CalculatorPage form={form} result={result} tender={tender} market={market} />, meta);
+  };
+  router.get('/kalkulator', 'public', (ctx) => calculator(ctx, false));
+  router.post('/kalkulator', 'public', (ctx) => calculator(ctx, true));
 
   router.get('/funksjoner', 'public', async (ctx) =>
     render(ctx, <FeaturesPage specimen={await noticeSpecimen()} />, { title: messages(ctx.locale).meta.features, description: messages(ctx.locale).meta.featuresDescription }),
@@ -297,6 +349,7 @@ export function registerPublicRoutes(router: Router): void {
     const combos = await industryRegionCounts();
     const norwegianOnly = [
       '/eksempel',
+      ...(env.PUBLIC_TOOLS ? ['/prov', '/kalkulator'] : []),
       '/fylker',
       ...REGIONS.map((r) => regionPath(r.code)),
       ...INDUSTRIES.flatMap((i) => REGIONS.filter((r) => (combos.get(`${i.id}|${r.code}`) ?? 0) >= MIN_OPEN_FOR_INDEXING).map((r) => industryRegionPath(i.id, r.code))),

@@ -124,6 +124,8 @@ const schema = z.object({
   LEGAL_PAGES_REVIEWED: bool(false),
   /** Offentlig side per anbud (/anbud/<id>) for deling, ukesbrevet og søk. Kan slås av uten ny kode. */
   PUBLIC_TENDER_PAGES: bool(true),
+  /** Verktøy uten konto: «Prøv uten konto» (/prov) og lønnsomhetssjekken (/kalkulator). Kan slås av uten ny kode. */
+  PUBLIC_TOOLS: bool(true),
   COMPANY_LEGAL_NAME: z.string().default('[Selskapsnavn AS]'),
   COMPANY_ORG_NUMBER: z.string().default('[org.nr.]'),
   COMPANY_ADDRESS: z.string().default('[adresse]'),
