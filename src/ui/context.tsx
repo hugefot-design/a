@@ -15,6 +15,8 @@ export interface UiContextValue {
   aiIsMock: boolean;
   /** Kan kundene betale med kort nå (Stripe satt opp, ikke testnøkler i produksjon)? */
   paymentsOpen: boolean;
+  /** Offentlige anbudssider (/anbud/<id>) er slått på – lenkene fra nettsiden går dit i stedet for til registrering. */
+  publicTenderPages: boolean;
   legalReviewed: boolean;
   /** Datakilder som er verifisert mot ekte API ("ted", "doffin"). */
   liveSources: string[];
@@ -42,6 +44,7 @@ export const UiContext = createContext<UiContextValue>({
   aiConfigured: false,
   aiIsMock: false,
   paymentsOpen: false,
+  publicTenderPages: false,
   legalReviewed: false,
   liveSources: [],
   trialDays: 14,

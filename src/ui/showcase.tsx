@@ -28,7 +28,7 @@ export function AppFrame({ label, href, children, className }: { label: ReactNod
   );
 }
 
-function Quote({ q }: { q: ShowcaseQuote }) {
+export function Quote({ q }: { q: ShowcaseQuote }) {
   const i = q.match ? q.text.indexOf(q.match) : -1;
   if (i < 0) return <>{q.text}</>;
   // Uthev hele ordet, ikke bare treffet («minstekrav» i «minstekravene»).
@@ -43,14 +43,14 @@ function Quote({ q }: { q: ShowcaseQuote }) {
   );
 }
 
-const KIND_TONE: Record<string, string> = {
+export const KIND_TONE: Record<string, string> = {
   avvisning: 'bg-danger-soft text-danger',
   minstekrav: 'bg-urgent-soft text-urgent',
   kvalifikasjon: 'bg-navy-50 text-navy-800',
   befaring: 'bg-info-soft text-info',
 };
 
-function Chip({ className, children }: { className?: string; children: ReactNode }) {
+export function Chip({ className, children }: { className?: string; children: ReactNode }) {
   return <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-semibold leading-5', className)}>{children}</span>;
 }
 

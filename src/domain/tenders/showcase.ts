@@ -21,7 +21,7 @@ import { log } from '@/lib/logger';
 import { INDUSTRIES, REGIONS } from '@/domain/reference';
 import { scanRequirements, type RequirementKind } from '@/domain/documents/requirements';
 import { scanContractTerms, type TermCategory } from '@/domain/profit/terms-scan';
-import { marketPrice, MIN_COMPARABLES } from '@/domain/profit/market';
+import { marketPrice, MIN_COMPARABLES, type MarketPrice } from '@/domain/profit/market';
 import { expiringContracts, type ExpiryBasis } from '@/domain/competitors/expiry';
 import { scoreTender, type MatchProfile, type MatchTender } from '@/domain/matching/engine';
 import type { AnalysisSource } from '@/domain/ai/sources';
@@ -266,7 +266,11 @@ export function splitOutliers(values: number[], p25: number, p75: number): { sho
 
 /** 3. Markedspris fra tidligere tildelinger (samme som i kalkylen) – bare når det finnes nok sammenlignbare. */
 async function marketFor(tx: Tx, c: Candidate): Promise<Showcase['market']> {
-  const mp = await marketPrice(tx, { id: c.id, mainCpv: c.mainCpv, cpvCodes: c.cpvCodes, currency: c.currency });
+  return marketSummary(await marketPrice(tx, { id: c.id, mainCpv: c.mainCpv, cpvCodes: c.cpvCodes, currency: c.currency }));
+}
+
+/** Markedsprisen slik nettsiden viser den (median, midtre halvdel, svært store kontrakter skilt ut). Null når for få. */
+export function marketSummary(mp: MarketPrice): Showcase['market'] {
   if (!mp.total || mp.awards.length < MIN_COMPARABLES || !mp.match) return null;
   const { shown, hidden } = splitOutliers(
     mp.awards.map((a) => a.value),

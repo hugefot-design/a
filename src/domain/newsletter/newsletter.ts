@@ -19,6 +19,7 @@ import { systemSql } from '@/lib/db';
 import { queueEmail, sendEmailSoon } from '@/lib/email';
 import { log } from '@/lib/logger';
 import { rateLimit } from '@/lib/rate-limit';
+import { env } from '@/lib/env';
 
 const MAX_ITEMS = 10;
 
@@ -180,9 +181,10 @@ export async function sendWeeklyNewsletters(now = new Date(), force = false): Pr
     const { rows, total } = cache.get(key)!;
     if (!rows.length) continue;
     const listUrl = absoluteUrl(`${topicPath(s.industry, s.region)}?utm_source=ukesbrev`);
+    // Hver sak lenker til vår side for anbudet (krav, risiko og «se om det passer dere»), med kilden derfra.
     const items: NewsletterItem[] = rows.map((r) => ({
       title: r.title,
-      url: r.sourceUrl ?? listUrl,
+      url: env.PUBLIC_TENDER_PAGES ? absoluteUrl(`/anbud/${r.id}?utm_source=ukesbrev`) : (r.sourceUrl ?? listUrl),
       meta: [r.buyerName ? displayBuyer(r.buyerName) : null, `Frist ${deadlineFmt.format(r.deadlineAt)}`, valueText(r.estimatedValue === null ? null : Number(r.estimatedValue), r.currency)]
         .filter(Boolean)
         .join(' · '),

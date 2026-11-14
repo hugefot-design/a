@@ -8,6 +8,8 @@ export const sv: Messages = {
       'Hitta inte bara upphandlingen – ta reda på om den är värd att vinna. AnbudRadar rangordnar offentliga upphandlingar i Norge mot ert företag, visar krav och risker och räknar på lönsamheten med data från Doffin och TED.',
     features: 'Funktioner',
     pricing: 'Priser',
+    featuresDescription: 'En samlad bedömning av varje upphandling: matchning mot företaget, krav och risk för förkastande, kostsamma villkor, lönsamhet med egna kostnader och vad liknande kontrakt tilldelades för.',
+    pricingDescription: 'Gratisplan och planer från {price} NOK per månad exkl. moms. Prova allt i Professionell gratis, utan kort och utan bindning.',
     industries: 'Branscher',
     about: 'Om oss',
     contact: 'Kontakt',

@@ -56,7 +56,9 @@ export function trafficSource(referer: string | undefined, utmSource: string | n
 
 /** Teller én sidevisning. Feiler aldri forespørselen. */
 export async function recordPageView(path: string, source: string): Promise<void> {
-  const clean = path.length > 1 ? path.replace(/\/+$/, '') : path;
+  const trimmed = path.length > 1 ? path.replace(/\/+$/, '') : path;
+  // Anbudssidene telles samlet («/anbud/*»), så tabellen ikke får én rad per anbud per dag.
+  const clean = /^\/anbud\/[^/]+$/.test(trimmed) ? '/anbud/*' : trimmed;
   try {
     await systemSql()`
       insert into page_views_daily (day, path, source, views)

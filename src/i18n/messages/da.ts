@@ -8,6 +8,8 @@ export const da: Messages = {
       'Find ikke bare udbuddet – find ud af, om det er værd at vinde. AnbudRadar rangerer offentlige udbud i Norge efter jeres virksomhed, viser krav og risici og regner på rentabiliteten med data fra Doffin og TED.',
     features: 'Funktioner',
     pricing: 'Priser',
+    featuresDescription: 'En samlet vurdering af hvert udbud: match med virksomheden, krav og risiko for afvisning, dyre vilkår, rentabilitet med egne omkostninger og hvad lignende kontrakter blev tildelt for.',
+    pricingDescription: 'Gratisplan og planer fra {price} NOK pr. måned ekskl. moms. Prøv alt i Professionel gratis, uden kort og uden binding.',
     industries: 'Brancher',
     about: 'Om os',
     contact: 'Kontakt',

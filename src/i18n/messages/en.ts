@@ -8,6 +8,8 @@ export const en: Messages = {
       'Don’t just find the tender – find out if it’s worth winning. AnbudRadar ranks public tenders in Norway against your business, shows requirements and risks, and works out profitability with data from Doffin and TED.',
     features: 'Features',
     pricing: 'Pricing',
+    featuresDescription: 'A complete assessment of every tender: fit with your company, requirements and rejection risk, costly terms, profitability with your own costs and what similar contracts were awarded for.',
+    pricingDescription: 'Free plan and plans from NOK {price} per month excl. VAT. Try everything in Professional for free, with no card and no lock-in.',
     industries: 'Industries',
     about: 'About us',
     contact: 'Contact',

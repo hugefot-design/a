@@ -196,7 +196,7 @@ export function weeklyNewsletterTemplate(opts: {
     `<p>${esc(intro)}${opts.moreCount ? ` Her er de ${opts.items.length} med nærmest frist.` : ''}</p>
      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
      ${button(opts.listUrl, 'Se alle åpne anbud')}
-     <p style="margin:8px 0 0">Vil du ha beskjed med én gang nye anbud kommer – og bare de som passer bedriften din?
+     <p style="margin:8px 0 0"><strong>Få bare anbudene som passer bedriften</strong> – rangert, med krav, risiko og lønnsomhet for hvert anbud, og varsel med én gang de kommer.
        <a href="${esc(opts.signupUrl)}" style="color:${C.accent};font-weight:700">Prøv AnbudRadar gratis</a>.</p>`,
     {
       preheader: intro,
@@ -205,7 +205,7 @@ export function weeklyNewsletterTemplate(opts: {
       unsubscribeLabel: 'Meld av Ukens anbud',
     },
   );
-  const text = `Ukens anbud: ${opts.topic} (uke ${opts.week})\n\n${intro}\n\n${opts.items.map((i) => `- ${i.title}\n  ${i.meta}\n  ${i.url}`).join('\n\n')}\n\nSe alle åpne anbud: ${opts.listUrl}\nPrøv AnbudRadar gratis: ${opts.signupUrl}\n\n--\n${senderLine()}\nMeld av Ukens anbud: ${opts.unsubscribeUrl}`;
+  const text = `Ukens anbud: ${opts.topic} (uke ${opts.week})\n\n${intro}\n\n${opts.items.map((i) => `- ${i.title}\n  ${i.meta}\n  ${i.url}`).join('\n\n')}\n\nSe alle åpne anbud: ${opts.listUrl}\nFå bare anbudene som passer bedriften – prøv AnbudRadar gratis: ${opts.signupUrl}\n\n--\n${senderLine()}\nMeld av Ukens anbud: ${opts.unsubscribeUrl}`;
   return { subject, html, text };
 }
 

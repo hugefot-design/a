@@ -8,6 +8,9 @@ import { siteShowcase } from '@/domain/tenders/showcase';
 import { demoReport } from '@/domain/intelligence/demo';
 import { intelligencePdf } from '@/domain/intelligence/pdf';
 import { DemoPage } from '@/ui/pages/demo';
+import { PAID_PLANS, PLANS } from '@/domain/billing/plans';
+import { indexableTenderIds, publicTender } from '@/domain/tenders/public-page';
+import { PublicTenderPage } from '@/ui/pages/tender-public';
 import { industryIdFromSlug, industryRegionPath, industrySlugNb, MIN_OPEN_FOR_INDEXING, regionCodeFromSlug, regionPath, REGION_SLUG } from '@/domain/slugs';
 import { CountiesPage, CountyPage } from '@/ui/pages/counties';
 import { fill, plural } from '@/i18n/format';
@@ -61,6 +64,8 @@ function withUtm(ctx: RequestContext, path: string): string {
 }
 
 /** Brødsmuler for Google (schema.org/BreadcrumbList). */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 function breadcrumbs(items: [name: string, path: string][]) {
   const base = env.APP_URL.replace(/\/$/, '');
   return {
@@ -116,10 +121,31 @@ export function registerPublicRoutes(router: Router): void {
       },
     });
   });
+  // Offentlig side per anbud – til deling, ukesbrevet og søk. Bare åpne anbud med nok tekst indekseres (ingen tynne sider).
+  router.get('/anbud/:id', 'public', async (ctx) => {
+    const id = ctx.params.id ?? '';
+    if (!env.PUBLIC_TENDER_PAGES || !UUID.test(id)) throw new HttpError(404, 'Fant ikke anbudet.');
+    const t = await publicTender(id);
+    if (!t) throw new HttpError(404, 'Fant ikke anbudet.');
+    const industry = t.industries[0];
+    const deadline = t.deadlineAt ? ` Frist ${new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Oslo' }).format(t.deadlineAt)}.` : '';
+    return render(ctx, <PublicTenderPage t={t} origin={new URL(env.APP_URL).origin} />, {
+      title: `${t.title}${t.buyerName ? ` – ${t.buyerName}` : ''}`.slice(0, 150),
+      description: `${t.status === 'open' ? 'Åpent anbud' : 'Anbud'}${t.buyerName ? ` fra ${t.buyerName}` : ''}.${deadline} Se krav, avvisningsgrunner og kostbare vilkår fra kunngjøringen – og om det passer dere.`.slice(0, 300),
+      canonical: `/anbud/${t.id}`,
+      noindex: !t.indexable,
+      jsonLd: industry ? [breadcrumbs([['Bransjer', '/bransjer'], [industry.name, `/bransjer/${industrySlugNb(industry.id)}`], [t.title, `/anbud/${t.id}`]])] : [],
+    });
+  });
+
   router.get('/funksjoner', 'public', async (ctx) =>
-    render(ctx, <FeaturesPage specimen={await noticeSpecimen()} />, { title: messages(ctx.locale).meta.features }),
+    render(ctx, <FeaturesPage specimen={await noticeSpecimen()} />, { title: messages(ctx.locale).meta.features, description: messages(ctx.locale).meta.featuresDescription }),
   );
-  router.get('/priser', 'public', async (ctx) => render(ctx, <PricingPage />, { title: messages(ctx.locale).meta.pricing, jsonLd: [faqLd(ctx)] }));
+  router.get('/priser', 'public', async (ctx) => {
+    const t = messages(ctx.locale);
+    const from = Math.min(...PAID_PLANS.map((p) => PLANS[p].priceNok ?? Number.POSITIVE_INFINITY));
+    return render(ctx, <PricingPage />, { title: t.meta.pricing, description: fill(t.meta.pricingDescription, { price: from }), jsonLd: [faqLd(ctx)] });
+  });
   router.get('/bransjer', 'public', async (ctx) => {
     const market = await marketSnapshot();
     const counts = Object.fromEntries(market.industries.map((i) => [i.id, i.n]));
@@ -275,7 +301,8 @@ export function registerPublicRoutes(router: Router): void {
       ...REGIONS.map((r) => regionPath(r.code)),
       ...INDUSTRIES.flatMap((i) => REGIONS.filter((r) => (combos.get(`${i.id}|${r.code}`) ?? 0) >= MIN_OPEN_FOR_INDEXING).map((r) => industryRegionPath(i.id, r.code))),
     ];
-    const urls = [...LOCALES.flatMap((l) => pages.map((path) => localePath(l, path))), ...norwegianOnly, ...LEGAL_DOCS.map((d) => d.href)];
+    const tenders = env.PUBLIC_TENDER_PAGES ? (await indexableTenderIds()).map((id) => `/anbud/${id}`) : [];
+    const urls = [...LOCALES.flatMap((l) => pages.map((path) => localePath(l, path))), ...norwegianOnly, ...LEGAL_DOCS.map((d) => d.href), ...tenders];
     const base = env.APP_URL.replace(/\/$/, '');
     const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${base}${u}</loc></url>`).join('')}</urlset>`;
     return text(body, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } });

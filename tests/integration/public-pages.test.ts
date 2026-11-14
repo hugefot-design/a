@@ -164,3 +164,11 @@ test('feilsiden: besøkende får «Til forsiden», innloggede i appen også «Ti
   assert.equal(logged.status, 404);
   assert.match(logged.body, /href="\/app"[^>]*>Til oversikten/);
 });
+
+test('prissiden og funksjonssiden har egen beskrivelse for søk (ikke standardteksten)', async () => {
+  const desc = (html: string) => /<meta name="description" content="([^"]*)">/.exec(html)?.[1] ?? '';
+  const pricing = desc((await get('/priser')).body);
+  assert.match(pricing, /^Gratisplan og planer fra 299 kr per måned eks\. mva\./, 'laveste pris hentes fra planene');
+  assert.match(desc((await get('/funksjoner')).body), /^Samlet vurdering av hvert anbud/);
+  assert.match(desc((await get('/en/pricing')).body), /from NOK 299 per month/);
+});

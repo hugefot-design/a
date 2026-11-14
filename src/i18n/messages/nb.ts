@@ -24,6 +24,8 @@ export const nb = {
       'Ikke bare finn anbudet – finn ut om det er verdt å vinne. AnbudRadar rangerer offentlige anbud mot bedriften, viser krav og risiko, og regner på lønnsomheten med data fra Doffin og TED.',
     features: 'Funksjoner',
     pricing: 'Priser',
+    featuresDescription: 'Samlet vurdering av hvert anbud: treff mot bedriften, krav og avvisningsrisiko, kostbare vilkår, lønnsomhet med egne kostnader og hva lignende kontrakter ble tildelt for.',
+    pricingDescription: 'Gratisplan og planer fra {price} kr per måned eks. mva. Prøv alt i Profesjonell gratis, uten kort og uten binding.',
     industries: 'Bransjer',
     about: 'Om oss',
     contact: 'Kontakt',

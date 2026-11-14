@@ -98,6 +98,9 @@ test('utsending: nye anbud mandag, én gang per uke, med avmelding i hver e-post
   assert.match(weekly.textBody, /Testhelse Midt HF/, 'oppdragsgivere med store bokstaver vises pent');
   assert.match(weekly.textBody, /ca\. 4,5 mill\. kr/);
   assert.match(weekly.textBody, /utm_source=ukesbrev/);
+  // Hver sak lenker til vår side for anbudet (krav, risiko, «se om det passer dere») – ikke rett til kilden.
+  assert.match(weekly.textBody, /Avfallshenting Bodø havn \(test\)\n[^\n]*\n {2}https?:\/\/[^/\s]+\/anbud\/[0-9a-f-]{36}\?utm_source=ukesbrev/);
+  assert.match(weekly.textBody, /Få bare anbudene som passer bedriften/);
   assert.match(weekly.headers['List-Unsubscribe'] ?? '', /\/ukesbrev\/avmeld\?id=/);
   assert.equal(weekly.headers['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click');
   assert.ok((await row(email))?.lastSentAt);

@@ -122,6 +122,8 @@ const schema = z.object({
   /** Disse registrerte brukerne gjøres til plattform-admin ved hver deploy (komma-separert). Fjerner aldri tilgang. */
   PLATFORM_ADMIN_EMAILS: optionalString,
   LEGAL_PAGES_REVIEWED: bool(false),
+  /** Offentlig side per anbud (/anbud/<id>) for deling, ukesbrevet og søk. Kan slås av uten ny kode. */
+  PUBLIC_TENDER_PAGES: bool(true),
   COMPANY_LEGAL_NAME: z.string().default('[Selskapsnavn AS]'),
   COMPANY_ORG_NUMBER: z.string().default('[org.nr.]'),
   COMPANY_ADDRESS: z.string().default('[adresse]'),

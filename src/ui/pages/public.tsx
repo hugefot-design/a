@@ -384,14 +384,14 @@ export function CountyGrid({ regions }: { regions: MarketSnapshot['regions'] }) 
 
 /** Liste over åpne anbud med frist, oppdragsgiver og sted (bransje- og fylkessidene). */
 export function TenderRows({ rows }: { rows: (BoardRow & { estimatedValue?: number | null; currency?: string | null })[] }) {
-  const { user, m, lp, locale } = useUi();
+  const { user, m, lp, locale, publicTenderPages } = useUi();
   const t = m.industries;
   return (
     <ol className="mt-5 space-y-3">
       {rows.map((r) => (
         <li key={r.id}>
           <a
-            href={user ? `/app/anbud/${r.id}` : signupWith(lp, `/app/anbud/${r.id}`)}
+            href={user ? `/app/anbud/${r.id}` : publicTenderPages ? `/anbud/${r.id}` : signupWith(lp, `/app/anbud/${r.id}`)}
             className="card-lift group grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-4 rounded-2xl border border-line bg-surface p-4 text-strong no-underline sm:grid-cols-[4.25rem_minmax(0,1fr)_auto] sm:p-5"
           >
             <span className="flex flex-col items-center justify-center rounded-xl bg-cream py-2 text-center">
