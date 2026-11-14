@@ -1,7 +1,9 @@
 import { CERTIFICATIONS, COMPANY_SIZES, CONTRACT_NATURES, INDUSTRIES, REGIONS } from '@/domain/reference';
 import { MAX_REFERENCES, type CompanyProfile, type profileFormFromData } from '@/domain/profile/profile';
-import { Alert, Button, Checkbox, Field, Input, Panel, PostForm, Select, Textarea } from '../../components';
-import { AppShell, AuthLayout } from '../../layouts';
+import { LEGAL_REQUIREMENTS } from '@/domain/matching/engine';
+import { LuCheck } from 'react-icons/lu';
+import { Alert, Button, Checkbox, CsrfField, Field, FlashMessage, Input, Logo, Panel, PostForm, Select, Textarea } from '../../components';
+import { AppShell } from '../../layouts';
 
 type Errors = Record<string, string>;
 type Values = Partial<Record<string, string | string[]>>;
@@ -236,61 +238,154 @@ export function ProfileFields({ values, errors, readOnly = false }: { values: Va
   );
 }
 
-export function OnboardingOrgPage({
-  errors = {},
-  values = {},
-  carry,
-}: {
-  errors?: Errors;
-  values?: Values;
-  /** Bransje og fylke fra forsiden, som tas med videre til profilen. */
-  carry?: { industry: string | null; region: string | null };
-}) {
+/** Valgbar brikke (avkrysningsboks som ser ut som en knapp). Fungerer uten JavaScript. */
+function Chip({ name, value, label, checked }: { name: string; value: string; label: string; checked: boolean }) {
   return (
-    <AuthLayout title="Om bedriften" intro="Steg 1 av 2. Vi oppretter en organisasjon som dere kan dele med kolleger.">
-      <PostForm action="/app/onboarding/organisasjon" className="space-y-4">
-        {carry?.industry ? <input type="hidden" name="bransje" value={carry.industry} /> : null}
-        {carry?.region ? <input type="hidden" name="fylke" value={carry.region} /> : null}
-        <Field label="Firmanavn" htmlFor="name" error={errors.name}>
-          <Input id="name" name="name" required defaultValue={str(values, 'name')} invalid={Boolean(errors.name)} autoComplete="organization" />
-        </Field>
-        <Field label="Organisasjonsnummer" htmlFor="orgNumber" hint="Valgfritt." error={errors.orgNumber}>
-          <Input id="orgNumber" name="orgNumber" inputMode="numeric" defaultValue={str(values, 'orgNumber')} invalid={Boolean(errors.orgNumber)} />
-        </Field>
-        <Button type="submit" className="w-full">
-          Fortsett
-        </Button>
-      </PostForm>
-    </AuthLayout>
+    <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-line-strong bg-surface px-3 py-2 text-[14px] font-medium leading-snug text-ink transition-colors hover:border-strong has-checked:border-strong has-checked:bg-strong has-checked:text-surface has-focus-visible:ring-4 has-focus-visible:ring-signal/30">
+      <input type="checkbox" name={name} value={value} defaultChecked={checked} className="peer sr-only" />
+      <LuCheck className="hidden size-4 shrink-0 peer-checked:block" aria-hidden strokeWidth={3} />
+      <span className="min-w-0">{label}</span>
+    </label>
   );
 }
 
-export function OnboardingProfilePage({ values, errors = {} }: { values: Values; errors?: Errors }) {
+function Step({ n, title, hint, error, children }: { n: number; title: string; hint?: string; error?: string; children: React.ReactNode }) {
   return (
-    <AppShell>
-      <div className="mx-auto max-w-4xl">
-        <p className="text-[13px] font-semibold text-muted">Steg 2 av 2</p>
-        <h1 className="mt-1 font-serif text-[28px] font-semibold text-navy-900">Fortell oss hva dere leverer</h1>
-        <p className="mt-2 max-w-2xl text-[15px] text-muted">
-          Svarene brukes til å rangere anbud for dere. Dere kan endre alt senere under Bedriftsprofil.
+    <fieldset className="border-t border-line pt-6 first:border-t-0 first:pt-0">
+      <legend className="float-left mb-3 flex w-full items-baseline gap-3">
+        <span className="flex size-7 shrink-0 translate-y-0.5 items-center justify-center rounded-full bg-night font-mono text-[13px] font-medium text-signal" aria-hidden>
+          {n}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[17px] font-[720] tracking-[-0.01em] text-strong">{title}</span>
+          {hint ? <span className="mt-0.5 block text-[13.5px] font-normal text-muted">{hint}</span> : null}
+        </span>
+      </legend>
+      <div className="clear-both">{children}</div>
+      {error ? (
+        <p className="mt-2 text-[13px] font-medium text-danger" role="alert">
+          {error}
         </p>
-        {Object.keys(errors).length ? (
-          <Alert tone="danger" className="mt-5">
-            Noen felt må rettes. Se meldingene under.
+      ) : null}
+    </fieldset>
+  );
+}
+
+/**
+ * Oppstarten: ett kort skjema – firmanavn, bransje, område og stikkord – så vises anbudene som passer.
+ * Resten av profilen (sertifiseringer, kontraktsstørrelse, referanser) fylles ut senere under Bedriftsprofil.
+ */
+export function OnboardingPage({
+  values,
+  errors = {},
+  next,
+  memberOnly = false,
+}: {
+  values: Values;
+  errors?: Errors;
+  /** Siden kunden var på vei til (f.eks. et anbud fra en offentlig side). */
+  next?: string | null;
+  /** Medlemmer kan ikke fylle ut profilen – eier eller administrator må gjøre det. */
+  memberOnly?: boolean;
+}) {
+  const industries = arr(values, 'industries');
+  const regions = arr(values, 'regions');
+  const certs = arr(values, 'certifications');
+  return (
+    <div className="min-h-screen bg-cream">
+      <header className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-5 sm:px-6">
+        <Logo />
+        <form method="post" action="/logg-ut">
+          <CsrfField />
+          <button type="submit" className="inline-flex min-h-9 cursor-pointer items-center text-[13px] font-semibold text-muted hover:text-strong">
+            Logg ut
+          </button>
+        </form>
+      </header>
+      <main id="innhold" className="mx-auto max-w-3xl px-4 pb-20 sm:px-6">
+        <p className="font-mono text-[12px] font-medium uppercase tracking-[0.12em] text-muted">Kom i gang · ca. ett minutt</p>
+        <h1 className="mt-2 text-[30px] font-[780] leading-[1.08] tracking-[-0.03em] text-strong sm:text-[36px]">Hva leverer dere – og hvor?</h1>
+        <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-muted">
+          Svar på noen få spørsmål, så viser vi anbudene som passer bedriften – rangert, med begrunnelse. Alt kan endres senere.
+        </p>
+        <div className="mt-6">
+          <FlashMessage />
+        </div>
+        {memberOnly ? (
+          <Alert tone="info" title="Bedriftsprofilen er ikke fylt ut ennå">
+            Bare eier eller administrator kan fylle ut bedriftsprofilen. Be dem fullføre den, så får dere anbudene rangert.
           </Alert>
-        ) : null}
-        <Panel className="mt-6 p-5 sm:p-7">
-          <PostForm action="/app/onboarding/profil" className="space-y-8">
-            <ProfileFields values={values} errors={errors} />
-            <div className="flex justify-end border-t border-line pt-5">
-              <Button type="submit" size="lg" busyLabel="Finner anbud …">
-                Lagre og finn anbud
-              </Button>
-            </div>
-          </PostForm>
-        </Panel>
-      </div>
-    </AppShell>
+        ) : (
+          <Panel className="p-5 sm:p-7">
+            {Object.keys(errors).length ? (
+              <Alert tone="danger" className="mb-6">
+                Noe mangler. Se meldingene under.
+              </Alert>
+            ) : null}
+            <PostForm action="/app/onboarding">
+              {next ? <input type="hidden" name="neste" value={next} /> : null}
+              {/* Egen ramme rundt stegene: skjemaets første barn er skjulte felt, så «første steg uten strek» må regnes her. */}
+              <div className="space-y-7">
+              <Step n={1} title="Bedriften">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_13rem]">
+                  <Field label="Firmanavn" htmlFor="companyName" error={errors.companyName}>
+                    <Input id="companyName" name="companyName" required maxLength={160} autoComplete="organization" defaultValue={str(values, 'companyName')} invalid={Boolean(errors.companyName)} />
+                  </Field>
+                  <Field label="Org.nr. (valgfritt)" htmlFor="orgNumber" error={errors.orgNumber}>
+                    <Input id="orgNumber" name="orgNumber" inputMode="numeric" defaultValue={str(values, 'orgNumber')} invalid={Boolean(errors.orgNumber)} />
+                  </Field>
+                </div>
+              </Step>
+              <Step n={2} title="Hvilke bransjer leverer dere i?" hint="Velg én eller flere." error={errors.industries}>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {INDUSTRIES.map((i) => (
+                    <Chip key={i.id} name="industries" value={i.id} label={i.name} checked={industries.includes(i.id)} />
+                  ))}
+                </div>
+              </Step>
+              <Step n={3} title="Hvor kan dere levere?" hint="Anbud utenfor området rangeres lavere." error={errors.regions}>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <Chip name="regions" value="ALL" label="Hele landet" checked={regions.includes('ALL')} />
+                  {REGIONS.map((r) => (
+                    <Chip key={r.code} name="regions" value={r.code} label={r.name} checked={regions.includes(r.code)} />
+                  ))}
+                </div>
+              </Step>
+              <Step
+                n={4}
+                title="Har dere noen av disse godkjenningene?"
+                hint="Valgfritt. Noen anbud krever dem ved lov – uten kryss regner vi med at dere ikke har dem."
+              >
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {CERTIFICATIONS.filter((c) => LEGAL_REQUIREMENTS.has(c.id)).map((c) => (
+                    <Chip key={c.id} name="certifications" value={c.id} label={c.label} checked={certs.includes(c.id)} />
+                  ))}
+                </div>
+              </Step>
+              <div className="border-t border-line pt-6">
+                <Field
+                  label="Hva leverer dere? (valgfritt)"
+                  htmlFor="services"
+                  hint="Stikkord skilt med komma, f.eks. «vakthold, alarmmottak, resepsjon». Gir mer presise treff."
+                  error={errors.services}
+                >
+                  <Input id="services" name="services" maxLength={3000} defaultValue={str(values, 'services')} />
+                </Field>
+              </div>
+              <div className="flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
+                <p className="max-w-md text-[13px] leading-relaxed text-muted">
+                  Andre sertifiseringer, kontraktsstørrelse og referanser kan dere legge inn under Bedriftsprofil etterpå – det gir skarpere vurderinger.
+                </p>
+                <Button type="submit" variant="signal" size="lg" busyLabel="Finner anbud …" className="shrink-0">
+                  Finn anbud som passer
+                </Button>
+              </div>
+              </div>
+            </PostForm>
+          </Panel>
+        )}
+      </main>
+    </div>
   );
 }
 

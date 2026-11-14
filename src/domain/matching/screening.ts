@@ -43,6 +43,8 @@ export interface Screening {
   verdict: ScreeningVerdict;
   label: string;
   points: ScreeningPoint[];
+  /** Hvorfor anbudet passer profilen (fra treffet, høyst tre). Tom når organisasjonen ikke har matching. */
+  fit: string[];
 }
 
 export const VERDICT_LABEL: Record<ScreeningVerdict, string> = {
@@ -132,7 +134,8 @@ export function screenTender(input: ScreeningInput): Screening {
 
   points.sort((a, b) => ORDER[a.tone] - ORDER[b.tone]);
   const verdict: ScreeningVerdict = points.some((p) => p.tone === 'stop') ? 'passer_ikke' : points.some((p) => p.tone === 'warn') ? 'sjekk' : 'se_paa';
-  return { verdict, label: VERDICT_LABEL[verdict], points };
+  const fit = m && !m.excluded ? (m.breakdown.reasons ?? []).slice(0, 3) : [];
+  return { verdict, label: VERDICT_LABEL[verdict], points, fit };
 }
 
 /** Rad i en liste (søk, oversikt) med det som trengs for vurderingen. */

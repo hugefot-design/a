@@ -1,10 +1,11 @@
 import { INDUSTRY_BY_ID } from '@/domain/reference';
 import type { ReactNode } from 'react';
-import { LuClock, LuMapPin, LuMessageCircleQuestion, LuSend, LuSparkle, LuTrophy, LuUserCheck } from 'react-icons/lu';
+import { LuCheck, LuClock, LuMapPin, LuMessageCircleQuestion, LuSend, LuSparkle, LuTrophy, LuUserCheck } from 'react-icons/lu';
 import type { DashboardData } from '@/domain/dashboard';
 import type { ActionItem, ActionKind, Urgency } from '@/domain/actions';
+import type { StartStep } from '@/domain/activation';
 import { useUi } from '../../context';
-import { Alert, Badge, Button, buttonVariants, DeadlineChip, EmptyState, Panel, PanelHeader, PostForm, Stat } from '../../components';
+import { Alert, Badge, Button, buttonVariants, cn, DeadlineChip, EmptyState, Panel, PanelHeader, PostForm, Stat } from '../../components';
 import { AppShell } from '../../layouts';
 import { TenderRow } from '../../tender';
 import { formatDate, formatInt, formatMoney, relativeTime } from '../../format';
@@ -101,16 +102,73 @@ function ActionPanel({ items }: { items: ActionItem[] }) {
   );
 }
 
+/**
+ * «Kom i gang»: stegene fra første treff til første vurdering. Neste steg som ikke er gjort, får knappen.
+ * Vises de første ukene, til alt er gjort. Bygger bare på det kunden faktisk har gjort.
+ */
+function StartGuide({ steps, firstVisit }: { steps: StartStep[]; firstVisit: boolean }) {
+  const done = steps.filter((s) => s.done).length;
+  const next = steps.find((s) => !s.done) ?? null;
+  return (
+    <Panel className="mb-6 overflow-hidden" as="section">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+        <div>
+          <h2 className="text-[15.5px] font-[680] tracking-[-0.01em] text-strong">{firstVisit ? 'Profilen er klar – slik kommer dere i gang' : 'Kom i gang'}</h2>
+          <p className="mt-0.5 text-[13px] text-muted">
+            {next ? 'Anbudene under er rangert etter profilen. Neste steg tar under ett minutt.' : 'Alt er gjort. Nye anbud som passer dukker opp her etter hvert.'}
+          </p>
+        </div>
+        <p className="num shrink-0 text-[13px] font-semibold text-muted" aria-label={`${done} av ${steps.length} steg gjort`}>
+          {`${done} av ${steps.length}`}
+        </p>
+      </div>
+      <ol className="divide-y divide-line">
+        {steps.map((s, i) => {
+          const isNext = s === next;
+          return (
+            <li key={s.key} className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3', isNext && 'bg-marker-soft/40')}>
+              <span
+                className={cn(
+                  'flex size-7 shrink-0 items-center justify-center rounded-full text-[12.5px] font-bold',
+                  s.done ? 'bg-ok text-surface' : isNext ? 'bg-night text-signal' : 'border border-line-strong text-muted',
+                )}
+                aria-hidden
+              >
+                {s.done ? <LuCheck className="size-4" strokeWidth={3} /> : i + 1}
+              </span>
+              <div className="min-w-0 flex-1 basis-56">
+                <p className={cn('text-[14px] font-semibold leading-snug', s.done ? 'text-muted' : 'text-strong')}>
+                  {s.title}
+                  {s.done ? <span className="sr-only"> (gjort)</span> : null}
+                </p>
+                {!s.done ? <p className="text-[13px] leading-snug text-muted">{s.text}</p> : null}
+              </div>
+              {s.done ? null : (
+                <a href={s.href} className={buttonVariants({ variant: isNext ? 'signal' : 'secondary', size: 'sm', className: 'shrink-0' })}>
+                  {s.cta}
+                </a>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </Panel>
+  );
+}
+
 export function DashboardPage({
   data,
   aiAvailable,
   firstVisit,
   freeUsage,
+  startGuide,
 }: {
   data: DashboardData;
   aiAvailable: boolean;
   firstVisit: boolean;
   freeUsage?: FreeUsage | null;
+  /** Stegene i «Kom i gang» (null når panelet ikke skal vises). */
+  startGuide?: StartStep[] | null;
 }) {
   const { org, user } = useUi();
   const ent = org!.entitlements;
@@ -127,7 +185,9 @@ export function DashboardPage({
         </a>
       </header>
 
-      {firstVisit ? (
+      {startGuide ? (
+        <StartGuide steps={startGuide} firstVisit={firstVisit} />
+      ) : firstVisit ? (
         <Alert tone="ok" title="Profilen er klar" className="mb-6">
           Anbudene under er rangert etter profilen dere fylte ut. Lagre anbud dere vil følge med på, så minner vi dere på fristene.
         </Alert>

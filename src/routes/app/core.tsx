@@ -1,12 +1,12 @@
 import { parseBoardFilter } from '@/domain/tenders/market';
-import { z } from 'zod';
-import { first } from '@/lib/db';
+import { first, withTenant } from '@/lib/db';
 import { env } from '@/lib/env';
 import { aiModeFor } from '@/domain/ai/provider';
+import { featuresUsed, markFeatureUsed, startSteps } from '@/domain/activation';
 import { rateLimit } from '@/lib/rate-limit';
 import { consumeSearch, searchKey, searchQuota } from '@/domain/billing/quota';
-import { createOrganization, OrgLimitError, orgNumberSchema, switchOrganization } from '@/domain/org/org';
-import { afterProfileSaved, getProfile, profileFormFromData, profileFormSchema, saveProfile } from '@/domain/profile/profile';
+import { createOrganization, OrgLimitError, switchOrganization } from '@/domain/org/org';
+import { afterProfileSaved, getProfile, profileFormFromData, profileFormSchema, quickStartProfile, quickStartSchema, saveProfile } from '@/domain/profile/profile';
 import { zodErrors } from '@/domain/auth/auth';
 import { queryFromParams, queryToParams, restrictQuery, sanitizeQuery, type TenderQuery } from '@/domain/search/filters';
 import { parseNaturalQuery } from '@/domain/search/nl-parser';
@@ -33,7 +33,7 @@ async function profileMinDays(tx: Tx, orgId: string): Promise<number> {
 }
 import { ResultsPage } from '@/ui/pages/app/results';
 import { isoWeek, loadDashboard } from '@/domain/dashboard';
-import type { MatchBreakdown } from '@/domain/matching/engine';
+import { LEGAL_REQUIREMENTS, type MatchBreakdown } from '@/domain/matching/engine';
 import { redirectWith } from '@/server/flash';
 import { HttpError, json, redirect, safeRedirectPath } from '@/server/http';
 import { render } from '@/server/render';
@@ -44,8 +44,17 @@ import { LimitReachedPage } from '@/ui/pages/system';
 import { AnalysisPage, TenderPage } from '@/ui/pages/app/tender';
 import { calculationBadge } from '@/domain/profit/service';
 import { NotificationsPage, SavedSearchesPage, SavedTendersPage, type NotificationRow, type Prefs } from '@/ui/pages/app/lists';
-import { formValues, OnboardingOrgPage, OnboardingProfilePage, ProfilePage, profileToValues } from '@/ui/pages/app/profile';
+import { formValues, OnboardingPage, ProfilePage, profileToValues } from '@/ui/pages/app/profile';
 import { formBool, formStr, param, requireOrg, wantsJsonResponse } from '../helpers';
+
+/** Så mange dager etter oppstarten vises «Kom i gang» på Oversikt (til stegene er gjort). */
+const START_GUIDE_DAYS = 21;
+
+/** Målet etter oppstarten: bare sider inne i appen, aldri oppstarten selv. Alt annet gir null. */
+export function onboardingTarget(value: string | null | undefined): string | null {
+  const path = safeRedirectPath(value, '');
+  return path.startsWith('/app/') && !path.startsWith('/app/onboarding') ? path : null;
+}
 
 /** Sti fra Referer-headeren, bare hvis den peker til vår egen side. Ugyldige verdier gir null. */
 export function refererPath(referer: string | undefined): string | null {
@@ -76,7 +85,36 @@ export function registerCoreAppRoutes(router: Router): void {
         aiLimit: usage.analysesLimit,
       };
     }
-    return render(ctx, <DashboardPage data={data} aiAvailable={aiAvailable} firstVisit={ctx.query.get('velkommen') === '1'} freeUsage={freeUsage} />, {
+    // «Kom i gang»: stegene fra første treff til første vurdering, de tre første ukene eller til alt er gjort.
+    const firstVisit = ctx.query.get('velkommen') === '1';
+    const start = await ctx.tenant(async (tx) => {
+      const [row] = (await tx`
+        select p.onboarding_completed_at,
+               -- «Skarpere» = noe utover oppstarten (de lovpålagte godkjenningene spørres det om der).
+               (exists (select 1 from unnest(p.certifications) c where not (c = any(${[...LEGAL_REQUIREMENTS]}::text[])))
+                 or cardinality(p.cpv_codes) > 0 or p.annual_revenue is not null or p.min_contract_value is not null
+                 or p.max_contract_value is not null or p.experience is not null
+                 or jsonb_array_length(coalesce(p.reference_projects, '[]'::jsonb)) > 0) as sharpened,
+               exists (select 1 from tender_calculations c where c.org_id = p.org_id) as has_calculation
+        from company_profiles p where p.org_id = ${org.id}
+      `) as unknown as { onboardingCompletedAt: Date | null; sharpened: boolean; hasCalculation: boolean }[];
+      return row ?? null;
+    });
+    const recentlyStarted = Boolean(start?.onboardingCompletedAt && Date.now() - start.onboardingCompletedAt.getTime() < START_GUIDE_DAYS * 86_400_000);
+    const steps =
+      start && (firstVisit || recentlyStarted)
+        ? startSteps({
+            topTenderId: (org.entitlements.matching ? data.topMatches[0]?.id : data.recent[0]?.id) ?? null,
+            used: await featuresUsed(org.id),
+            savedCount: data.savedCount,
+            hasCalculation: start.hasCalculation,
+            profitCalculator: org.entitlements.profitCalculator,
+            profileSharpened: start.sharpened,
+          })
+        : null;
+    // Når alt er gjort, forsvinner panelet (unntatt rett etter oppstarten).
+    const startGuide = steps && (firstVisit || steps.some((s) => !s.done)) ? steps : null;
+    return render(ctx, <DashboardPage data={data} aiAvailable={aiAvailable} firstVisit={firstVisit} freeUsage={freeUsage} startGuide={startGuide} />, {
       title: 'Oversikt',
     });
   });
@@ -114,61 +152,56 @@ export function registerCoreAppRoutes(router: Router): void {
     return redirect('/app');
   });
 
-  // ---------------------------------------------------------------- Onboarding
-  router.get(
-    '/app/onboarding',
-    'user',
-    async (ctx) => {
-      // Bransje og fylke valgt på forsiden (?bransje=…&fylke=…) fylles inn i profilen.
-      const start = parseBoardFilter(ctx.query.get('bransje'), ctx.query.get('fylke'));
-      if (!ctx.org) return render(ctx, <OnboardingOrgPage carry={start} />, { title: 'Kom i gang' });
-      if (ctx.org.onboardingCompleted) return redirect('/app');
-      const profile = await ctx.tenant((tx) => getProfile(tx, ctx.org!.id));
-      const values = profileToValues(profile, ctx.org.name);
-      if (start.industry && !(values.industries as string[] | undefined)?.length) values.industries = [start.industry];
-      if (start.region && !(values.regions as string[] | undefined)?.length) values.regions = [start.region];
-      return render(ctx, <OnboardingProfilePage values={values} />, { title: 'Bedriftsprofil' });
-    },
-  );
-
-  router.post('/app/onboarding/organisasjon', 'user', async (ctx) => {
-    const form = await ctx.form();
-    const values = { name: formStr(form, 'name', 200), orgNumber: formStr(form, 'orgNumber', 30) };
-    const carry = parseBoardFilter(formStr(form, 'bransje', 40) || null, formStr(form, 'fylke', 10) || null);
-    if (ctx.org) return redirect('/app/onboarding');
-    const parsed = z.object({ name: z.string().trim().min(1, 'Skriv inn firmanavnet.').max(160), orgNumber: orgNumberSchema }).safeParse(values);
-    if (!parsed.success) return render(ctx, <OnboardingOrgPage errors={zodErrors(parsed.error)} values={values} carry={carry} />, { title: 'Kom i gang', status: 422 });
-    if (!(await rateLimit(`create-org:${ctx.user!.id}`, 5, 3600))) throw new HttpError(429, 'For mange forsøk. Prøv igjen senere.');
-    try {
-      await createOrganization(ctx.user!, { name: parsed.data.name, orgNumber: parsed.data.orgNumber }, ctx.ipHash);
-    } catch (err) {
-      if (err instanceof OrgLimitError) return render(ctx, <OnboardingOrgPage errors={{ name: err.message }} values={values} carry={carry} />, { title: 'Kom i gang', status: 422 });
-      throw err;
-    }
-    const q = new URLSearchParams();
-    if (carry.industry) q.set('bransje', carry.industry);
-    if (carry.region) q.set('fylke', carry.region);
-    return redirect(`/app/onboarding${q.size ? `?${q}` : ''}`);
+  // ---------------------------------------------------------------- Kom i gang
+  // Ett kort skjema: firmanavn, bransje, område og stikkord. Organisasjonen opprettes og profilen lagres i samme
+  // steg, og kunden sendes rett til anbudene (eller til siden de var på vei til, f.eks. et anbud fra en offentlig side).
+  router.get('/app/onboarding', 'user', async (ctx) => {
+    const start = parseBoardFilter(ctx.query.get('bransje'), ctx.query.get('fylke'));
+    const next = onboardingTarget(ctx.query.get('neste'));
+    if (ctx.org?.onboardingCompleted) return redirect(next ?? '/app');
+    const values = {
+      companyName: ctx.org?.name ?? '',
+      orgNumber: '',
+      industries: start.industry ? [start.industry] : [],
+      regions: start.region ? [start.region] : [],
+      certifications: [],
+      services: '',
+    };
+    return render(ctx, <OnboardingPage values={values} next={next} memberOnly={ctx.org?.role === 'member'} />, { title: 'Kom i gang' });
   });
 
-  router.post(
-    '/app/onboarding/profil',
-    'org',
-    async (ctx) => {
-      const { org, user } = requireOrg(ctx);
-      if (org.role === 'member') throw new HttpError(403, 'Bare eier eller administrator kan fylle ut bedriftsprofilen. Be dem fullføre den.');
-      const form = await ctx.form();
-      const raw = profileFormFromData(form);
-      const parsed = profileFormSchema.safeParse(raw);
-      if (!parsed.success) {
-        return render(ctx, <OnboardingProfilePage values={formValues(raw)} errors={zodErrors(parsed.error)} />, { title: 'Bedriftsprofil', status: 422 });
+  router.post('/app/onboarding', 'user', async (ctx) => {
+    const form = await ctx.form();
+    const next = onboardingTarget(formStr(form, 'neste', 500));
+    if (ctx.org?.onboardingCompleted) return redirect(next ?? '/app');
+    if (ctx.org?.role === 'member') throw new HttpError(403, 'Bare eier eller administrator kan fylle ut bedriftsprofilen. Be dem fullføre den.');
+    const all = (k: string) => form.getAll(k).filter((v): v is string => typeof v === 'string');
+    const raw = {
+      companyName: formStr(form, 'companyName', 200),
+      orgNumber: formStr(form, 'orgNumber', 30),
+      industries: all('industries'),
+      regions: all('regions'),
+      certifications: all('certifications'),
+      services: formStr(form, 'services', 3000),
+    };
+    const parsed = quickStartSchema.safeParse(raw);
+    if (!parsed.success) return render(ctx, <OnboardingPage values={raw} errors={zodErrors(parsed.error)} next={next} />, { title: 'Kom i gang', status: 422 });
+    const user = ctx.user!;
+    let orgId = ctx.org?.id ?? null;
+    if (!orgId) {
+      if (!(await rateLimit(`create-org:${user.id}`, 5, 3600))) throw new HttpError(429, 'For mange forsøk. Prøv igjen senere.');
+      try {
+        orgId = await createOrganization(user, { name: parsed.data.companyName, orgNumber: parsed.data.orgNumber }, ctx.ipHash);
+      } catch (err) {
+        if (err instanceof OrgLimitError) return render(ctx, <OnboardingPage values={raw} errors={{ companyName: err.message }} next={next} />, { title: 'Kom i gang', status: 422 });
+        throw err;
       }
-      await ctx.tenant((tx) => saveProfile(tx, { orgId: org.id, userId: user.id, ipHash: ctx.ipHash }, parsed.data));
-      await afterProfileSaved(org.id);
-      return redirect('/app?velkommen=1');
-    },
-    { requireOnboarding: false },
-  );
+    }
+    const org = orgId;
+    await withTenant({ userId: user.id, orgId: org }, (tx) => saveProfile(tx, { orgId: org, userId: user.id, ipHash: ctx.ipHash }, quickStartProfile(parsed.data)));
+    await afterProfileSaved(org);
+    return redirect(next ?? '/app?velkommen=1');
+  });
 
   router.post('/app/org/bytt', 'user', async (ctx) => {
     const form = await ctx.form();
@@ -263,6 +296,7 @@ export function registerCoreAppRoutes(router: Router): void {
       return { tender, extras, labels, analysis, fit, usage, profit, requirements, result, screening, chat };
     });
     if (!data) throw new HttpError(404, 'Fant ikke kunngjøringen.');
+    await markFeatureUsed(org.id, ctx.user?.id ?? null, 'tender_viewed');
     return render(
       ctx,
       <TenderPage

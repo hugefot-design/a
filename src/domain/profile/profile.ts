@@ -136,6 +136,72 @@ export const profileFormSchema = z
 
 export type ProfileForm = z.infer<typeof profileFormSchema>;
 
+// ---------------------------------------------------------------------------
+// Kort oppstart: bare det som trengs for å rangere anbud (firmanavn, bransje, område, stikkord).
+// Resten av profilen har trygge standardverdier og fylles ut senere under Bedriftsprofil.
+// ---------------------------------------------------------------------------
+export const quickStartSchema = z.object({
+  companyName: z.string().trim().min(1, 'Skriv inn firmanavnet.').max(160),
+  orgNumber: orgNumberSchema,
+  industries: z
+    .array(z.string())
+    .transform((a) => a.filter((i) => INDUSTRY_BY_ID.has(i)))
+    .refine((a) => a.length > 0, 'Velg minst én bransje.'),
+  regions: z
+    .array(z.string())
+    .transform((a) => (a.includes('ALL') ? ['ALL'] : a.filter((r) => REGION_BY_CODE.has(r))))
+    .refine((a) => a.length > 0, 'Velg minst ett fylke eller «Hele landet».'),
+  /**
+   * Lovpålagte godkjenninger (vaktvirksomhet, renholdsregisteret, sentral godkjenning …). Spørres om i oppstarten
+   * fordi anbud som krever dem ellers blir merket «passer trolig ikke» for bedrifter som faktisk har dem.
+   */
+  certifications: z
+    .array(z.string())
+    .default([])
+    .transform((a) => a.filter((c) => CERT_BY_ID.has(c))),
+  services: z.string().trim().max(3000),
+});
+export type QuickStart = z.infer<typeof quickStartSchema>;
+
+/**
+ * Stikkord fra feltet «Hva leverer dere?»: korte ledd skilt med komma blir nøkkelord («VVS», «stasjonært vakthold»).
+ * Hele setninger blir ikke nøkkelord – de brukes som tjenestebeskrivelse, der matchingen henter ordene selv.
+ */
+export function keywordsFromServices(text: string): string[] {
+  const parts = splitList(text)
+    .map((p) => p.toLowerCase())
+    .filter((p) => p.length >= 3 && p.length <= 40 && p.split(/\s+/).length <= 4);
+  return [...new Set(parts)].slice(0, 15);
+}
+
+/** Full profil fra den korte oppstarten (samme validering og standardverdier som det store skjemaet). */
+export function quickStartProfile(q: QuickStart): ProfileForm {
+  return profileFormSchema.parse({
+    companyName: q.companyName,
+    orgNumber: q.orgNumber ?? '',
+    description: '',
+    industries: q.industries,
+    services: q.services,
+    keywords: keywordsFromServices(q.services).join(', '),
+    cpvCodes: '',
+    regions: q.regions,
+    companySize: '',
+    certifications: q.certifications,
+    experience: '',
+    minContractValue: '',
+    maxContractValue: '',
+    contractTypes: [],
+    excludedCpv: '',
+    excludedKeywords: '',
+    minDaysToDeadline: '10',
+    products: '',
+    competencies: '',
+    employeeCount: '',
+    annualRevenue: '',
+    referenceProjects: [],
+  });
+}
+
 export function profileFormFromData(form: FormData) {
   const s = (k: string) => {
     const v = form.get(k);

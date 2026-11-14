@@ -53,6 +53,8 @@ export async function applyRetention(): Promise<Record<string, number>> {
   // Utløpte innloggings- og passkey-utfordringer.
   await run('login_challenges', sql`delete from login_challenges where expires_at < now() - interval '1 day' returning 1`);
   await run('webauthn_challenges', sql`delete from webauthn_challenges where expires_at < now() returning 1`);
+  // Måling av bruk (dager en bruker var inne i appen – ingen sider eller klokkeslett): 395 dager (13 måneder).
+  await run('user_active_days', sql`delete from user_active_days where day < (now() at time zone 'Europe/Oslo')::date - interval '395 days' returning 1`);
   // Feilovervåking: løste feil etter 90 dager, feil som ikke har skjedd på 180 dager.
   await run('app_errors', sql`delete from app_errors where (resolved_at is not null and resolved_at < now() - interval '90 days') or last_seen_at < now() - interval '180 days' returning 1`);
   log.info('retention_applied', out);

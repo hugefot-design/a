@@ -157,4 +157,6 @@ export const RETENTION: RetentionRule[] = [
   { what: 'Regnskapsopplysninger (fakturaer i Stripe)', how: 'Så lenge bokføringsloven krever (normalt 5 år).' },
   { what: 'Påmelding til ukesbrevet «Ukens anbud» (e-postadresse, bransje, fylke og når du bekreftet)', how: 'Til du melder deg av – da slettes den med en gang. Ubekreftede påmeldinger slettes etter 7 dager.' },
   { what: 'Besøkstelling (antall sidevisninger per dag, side og kilde – ingen opplysninger om deg)', how: '25 måneder.' },
+  { what: 'Bruk av tjenesten: hvilke dager du var innlogget (bare datoen), og første gang organisasjonen brukte en funksjon', how: 'Dagene i 395 dager (13 måneder). Første bruk så lenge organisasjonen finnes.' },
+  { what: 'Hvor registreringen kom fra (siden og kilden, f.eks. «/bransjer/renhold» og «google»)', how: 'Så lenge kontoen finnes.' },
 ];

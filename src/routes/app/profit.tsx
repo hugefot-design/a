@@ -3,6 +3,7 @@
  * Plansperrer: kalkulator (Profesjonell+), AI-analyse og partnersøk (Bedrift+), partnerprofil (Start+).
  * Endringer i bedriftens økonomi, kapasitet og partnerprofil krever eier/administrator (også i databasen).
  */
+import { markFeatureUsed } from '@/domain/activation';
 import { getTender } from '@/domain/tenders/queries';
 import { parseMonths } from '@/domain/profit/capacity';
 import { marketPrice } from '@/domain/profit/market';
@@ -78,6 +79,7 @@ async function renderWorkspace(ctx: RequestContext, tenderId: string, opts: { er
     return { ws, usage: await usageSummary(tx, org), market, calcHistory };
   });
   if (!data) throw new HttpError(404, 'Fant ikke kunngjøringen.');
+  await markFeatureUsed(org.id, ctx.user?.id ?? null, 'profit_opened');
   return render(
     ctx,
     <ProfitWorkspacePage

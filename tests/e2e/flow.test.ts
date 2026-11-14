@@ -74,15 +74,20 @@ test('ny kunde: fra registrering til tilbudsarbeid', async () => {
   assert.ok(token, 'fant bekreftelseslenke');
   await page.goto(`${BASE}/bekreft-epost?token=${token}`);
 
-  // Onboarding: organisasjon og profil
+  // Oppstart: ett kort skjema – firmanavn, bransje, område og stikkord
   await page.goto(`${BASE}/app/onboarding`);
-  await page.fill('#name', 'E2E Vakt AS (test)');
-  await Promise.all([page.waitForURL('**/app/onboarding'), page.getByRole('button', { name: 'Fortsett' }).click()]);
-  await page.getByLabel('Vakt og sikkerhet').check();
-  await page.getByLabel('Trøndelag').check();
-  await page.fill('#keywords', 'vakthold, resepsjon');
+  await page.fill('#companyName', 'E2E Vakt AS (test)');
+  await page.getByText('Vakt og sikkerhet', { exact: true }).click();
+  await page.getByText('Trøndelag', { exact: true }).click();
+  await page.fill('#services', 'vakthold, resepsjon');
+  await Promise.all([page.waitForURL('**/app?velkommen=1'), page.getByRole('button', { name: 'Finn anbud som passer' }).click()]);
+
+  // Resten av profilen fylles ut etterpå under Bedriftsprofil (her: en godkjenning)
+  await page.goto(`${BASE}/app/profil`);
+  assert.equal(await page.locator('#keywords').inputValue(), 'vakthold, resepsjon', 'stikkordene fra oppstarten står i profilen');
   await page.getByLabel('Godkjenning etter vaktvirksomhetsloven').check();
-  await Promise.all([page.waitForURL('**/app?velkommen=1'), page.getByRole('button', { name: 'Lagre og finn anbud' }).click()]);
+  await Promise.all([page.waitForURL('**/app/profil'), page.getByRole('button', { name: 'Lagre profil' }).click()]);
+  await page.goto(`${BASE}/app`);
 
   // Søk med naturlig språk fra toppfeltet
   await page.fill('#global-search', 'vakthold i Trøndelag');

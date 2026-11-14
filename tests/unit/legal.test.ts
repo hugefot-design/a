@@ -103,6 +103,7 @@ test('lagringstidene i personvernerklæringen stemmer med slettejobben', () => {
       'search_events',
       'search_usage',
       'sessions',
+      'user_active_days',
       'webauthn_challenges',
     ],
   );
@@ -124,6 +125,7 @@ test('lagringstidene i personvernerklæringen stemmer med slettejobben', () => {
     { table: 'import_runs', days: [365], row: /^Tekniske logger/, phrases: ['365 dager'] },
     { table: 'newsletter_unconfirmed', days: [7], row: /^Påmelding til ukesbrevet/, phrases: ['7 dager', 'slettes'] },
     { table: 'app_errors', days: [90, 180], row: /^Feillogg/, phrases: ['90 dager', '180 dager'] },
+    { table: 'user_active_days', days: [395], row: /^Bruk av tjenesten/, phrases: ['395 dager', '13 måneder'] },
   ];
   // Besøkstellingen har ingen persondata; 25 måneder står i erklæringen.
   assert.match(source('src/domain/ops/tasks.ts'), /page_views_daily where day < [^`]*interval '25 months'/);

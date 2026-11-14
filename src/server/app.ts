@@ -13,6 +13,7 @@ import { HttpError, homePath, json, parseCookies, redirect, safeRedirectPath, se
 import { decodeFlash, FLASH_COOKIE, redirectWith } from './flash';
 import { ADMIN_REVERIFY_MS, SENSITIVE_REVERIFY_MS, verifiedWithin } from '@/domain/auth/mfa';
 import { isBot, recordPageView, trafficSource } from '@/domain/admin/visits';
+import { recordActiveDay } from '@/domain/activation';
 import { render } from './render';
 import { serveStatic } from './static';
 import { canonicalRedirect } from './canonical';
@@ -269,8 +270,12 @@ async function dispatch(ctx: RequestContext, router: Router): Promise<Response> 
       }
       ctx.org = await loadOrgContext(ctx.user);
       if (route.access === 'org') {
-        if (!ctx.org) return redirect('/app/onboarding');
-        if (route.requireOnboarding !== false && !ctx.org.onboardingCompleted) return redirect('/app/onboarding');
+        // Siden kunden var på vei til (f.eks. et anbud fra en offentlig side) følger med gjennom oppstarten.
+        const onboarding = ctx.method === 'GET' && ctx.path !== '/app' ? `/app/onboarding?neste=${encodeURIComponent(ctx.path + ctx.url.search)}` : '/app/onboarding';
+        if (!ctx.org) return redirect(onboarding);
+        if (route.requireOnboarding !== false && !ctx.org.onboardingCompleted) return redirect(onboarding);
+        // Måling uten tredjepart: dager kontoen er i bruk (én rad per bruker per dag – se domain/activation.ts).
+        if (ctx.method === 'GET') await recordActiveDay(ctx.user.id);
         if (route.feature && !ctx.org.entitlements[route.feature]) {
           const label = FEATURE_LABELS[route.feature];
           return render(ctx, FeatureLockedPage({ feature: label.name, minPlan: label.minPlan }), {

@@ -115,7 +115,7 @@ test('en bruker som fjernes fra organisasjonen mister tilgangen med en gang', as
 
   const afterRemoval = await c.get('/app/lagret');
   assert.equal(afterRemoval.status, 303, 'samme sesjon har ikke lenger tilgang');
-  assert.equal(afterRemoval.location, '/app/onboarding');
+  assert.equal(afterRemoval.location, '/app/onboarding?neste=%2Fapp%2Flagret', 'sendes til oppstarten (siden hen var på vei til følger med)');
   const direct = await withTenant({ userId: leaving.user.id, orgId: owner.orgId }, (tx) => tx`select 1 from bookmarks`);
   assert.equal(direct.length, 0, 'databasen gir heller ingen rader med den gamle organisasjonskonteksten');
 });

@@ -2,6 +2,7 @@
  * AnbudRadar Intelligence: samlet vurdering per anbud og PDF av den. Alle planer har siden; hver del viser bare
  * det planen gir tilgang til (se src/domain/intelligence/load.ts). Data hentes innenfor organisasjonens tilgang.
  */
+import { markFeatureUsed } from '@/domain/activation';
 import { loadIntelligence } from '@/domain/intelligence/load';
 import { intelligencePdf } from '@/domain/intelligence/pdf';
 import { HttpError } from '@/server/http';
@@ -29,6 +30,7 @@ export function registerIntelligenceRoutes(router: Router): void {
     const { org } = requireOrg(ctx);
     const report = await ctx.tenant((tx) => loadIntelligence(tx, org, param(ctx, 'id')));
     if (!report) throw new HttpError(404, 'Fant ikke kunngjøringen.');
+    await markFeatureUsed(org.id, ctx.user?.id ?? null, 'intelligence_viewed');
     return render(ctx, <IntelligencePage report={report} />, { title: `Intelligence – ${report.tender.title}` });
   });
 
@@ -37,6 +39,7 @@ export function registerIntelligenceRoutes(router: Router): void {
     const report = await ctx.tenant((tx) => loadIntelligence(tx, org, param(ctx, 'id')));
     if (!report) throw new HttpError(404, 'Fant ikke kunngjøringen.');
     const pdf = await intelligencePdf(report, { orgName: org.name });
+    await markFeatureUsed(org.id, ctx.user?.id ?? null, 'pdf_downloaded');
     return new Response(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',

@@ -31,7 +31,7 @@ const requirements = scanRequirements([source], { selectionCriteria: [] });
 const terms = scanContractTerms([source]);
 
 const screening = (keys: { key: string; tone: 'stop' | 'warn' | 'info' | 'ok'; text: string }[]): Screening =>
-  ({ verdict: keys.some((k) => k.tone === 'stop') ? 'passer_ikke' : 'se_paa', label: '', points: keys }) as Screening;
+  ({ verdict: keys.some((k) => k.tone === 'stop') ? 'passer_ikke' : 'se_paa', label: '', points: keys, fit: [] }) as Screening;
 
 const quals = (missingLegal: boolean): QualificationView => ({
   required: [

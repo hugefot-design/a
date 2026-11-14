@@ -1,6 +1,6 @@
 import { displayBuyer } from '@/domain/tenders/market';
 import type { ReactNode } from 'react';
-import { LuBookmark, LuBookmarkCheck, LuBuilding2, LuCircleAlert, LuCircleCheck, LuCircleX, LuInfo, LuMapPin } from 'react-icons/lu';
+import { LuBookmark, LuBookmarkCheck, LuBuilding2, LuCircleAlert, LuCircleCheck, LuCircleX, LuInfo, LuMapPin, LuScale } from 'react-icons/lu';
 import { INDUSTRY_BY_ID, REGION_BY_CODE, STATUS_LABELS } from '@/domain/reference';
 import type { TenderListItem } from '@/domain/tenders/queries';
 import type { MatchBreakdown } from '@/domain/matching/engine';
@@ -113,10 +113,21 @@ export function TenderRow({ item, showScore }: { item: TenderListItem; showScore
         </div>
         <TenderMeta buyer={item.buyerName} place={item.placeText} regions={item.regionCodes} />
         {item.screening ? (
-          <div className="flex flex-wrap items-start gap-2 pt-0.5">
-            <ScreeningBadge screening={item.screening} />
-            {item.screening.points[0] && item.screening.points[0].tone !== 'info' && item.screening.points[0].tone !== 'ok' ? (
-              <span className="min-w-0 flex-1 text-[12.5px] leading-snug text-muted">{item.screening.points[0].text}</span>
+          <div className="space-y-1 pt-0.5">
+            <div className="flex flex-wrap items-start gap-2">
+              <ScreeningBadge screening={item.screening} />
+              {item.screening.points[0] && item.screening.points[0].tone !== 'info' && item.screening.points[0].tone !== 'ok' ? (
+                <span className="min-w-0 flex-1 text-[12.5px] leading-snug text-muted">{item.screening.points[0].text}</span>
+              ) : null}
+            </div>
+            {/* Hvorfor anbudet er relevant – fra treffet mot profilen. */}
+            {item.screening.fit?.length ? (
+              <p className="flex gap-1.5 text-[12.5px] leading-snug text-ink">
+                <LuCircleCheck className="mt-px size-3.5 shrink-0 text-ok" aria-hidden />
+                <span className="min-w-0">
+                  <span className="font-semibold">Passer fordi:</span> {item.screening.fit.slice(0, 2).join(' · ')}
+                </span>
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -135,7 +146,17 @@ export function TenderRow({ item, showScore }: { item: TenderListItem; showScore
         <DeadlineChip deadline={item.deadlineAt} timeKnown={item.deadlineTimeKnown} />
         <span className="num text-[14px] font-semibold text-ink">{item.estimatedValue !== null ? formatMoney(item.estimatedValue, item.currency) : 'Verdi ikke oppgitt'}</span>
         {showScore && item.score !== null ? <ScoreBar score={item.score} /> : null}
-        <BookmarkButton tenderId={item.id} bookmarked={item.bookmarked} compact />
+        <div className="flex items-center gap-2">
+          <a
+            href={`/app/anbud/${item.id}/intelligence`}
+            className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-[13px] font-semibold text-navy-700 no-underline hover:bg-strong/5 hover:text-strong"
+            title="Samlet vurdering: gå videre, avklar først eller ikke gå videre"
+          >
+            <LuScale className="size-3.5" aria-hidden />
+            Vurdering
+          </a>
+          <BookmarkButton tenderId={item.id} bookmarked={item.bookmarked} compact />
+        </div>
       </div>
     </li>
   );
