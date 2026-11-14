@@ -9,10 +9,13 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 218 av 218 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 8.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 187 av 187 bestått – 8.11.2026 |
-| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. appen på telefon og lys/mørk modus) – 8.11.2026 |
+| Enhetstester | 229 av 229 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 14.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 213 av 213 bestått – 14.11.2026 |
+| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. det nye oppstartsskjemaet, appen på telefon og lys/mørk modus) – 14.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
+| `npm audit` | 0 sårbarheter – 14.11.2026 |
+| CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
+| Tilgjengelighet, kontrast og bredde: forsiden (norsk og engelsk), `/eksempel`, `/anbud/<id>`, priser, funksjoner, registrering, bransjeside, Oversikt, Abonnement, anbudssiden, samlet vurdering og oppstartsskjemaet – 390, 768 og 1440 px, lys og mørk | Én h1 per side, `<main>`, etiketter på alle felt, navn på alle knapper og lenker, ingen doble id-er, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: filfeltene for opplasting manglet etikett – 14.11.2026 |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av anbudssiden (regelverk/klima) og Admin → Datakilder (XML-berikelse), 1280 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av Admin → Feil, 1280 px og iPhone 13 | Ingen JavaScript-feil, ingen horisontal rulling, ingen e-postadresser synlige – 7.11.2026 |
