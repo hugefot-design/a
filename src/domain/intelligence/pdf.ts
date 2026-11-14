@@ -10,6 +10,7 @@ import { fmtKr, fmtNumber } from '@/domain/profit/calculator';
 import { RECOMMENDATION_LABEL } from '@/domain/profit/recommendation';
 import { REQUIREMENT_KIND_LABEL } from './build';
 import type { Basis, IntelligenceReport, Point, SourceRef } from './types';
+import { basisLabel, uncertaintyList } from './basis';
 
 const C = {
   navy: '#0b1f3a',
@@ -27,7 +28,6 @@ const C = {
 };
 const VERDICT_COLOR = { go: C.ok, clarify: C.urgent, no_go: C.danger, insufficient: C.neutral } as const;
 const LEVEL_COLOR = { lav: C.ok, middels: C.urgent, høy: C.danger } as const;
-const BASIS_LABEL: Record<Basis, string> = { fact: 'FAKTA', calculation: 'BEREGNING', ai: 'AI' };
 
 // Tegn som finnes i Windows-1252 (standardskriften) – resten byttes ut eller fjernes.
 const CP1252_EXTRA = new Set('€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ');
@@ -111,7 +111,7 @@ class Writer {
     const w = this.width - 12;
     this.doc.y = y;
     if (p.basis) {
-      this.doc.font('Helvetica-Bold').fontSize(7).fillColor(C[p.basis]).text(`${BASIS_LABEL[p.basis]}  `, x, y, { continued: true, width: w });
+      this.doc.font('Helvetica-Bold').fontSize(7).fillColor(C[p.basis]).text(`${safe(basisLabel(p.basis, p.source).label.toUpperCase())}  `, x, y, { continued: true, width: w });
       this.doc.font('Helvetica').fontSize(9.5).fillColor(C.ink).text(safe(p.text), { width: w });
     } else {
       this.doc.font('Helvetica').fontSize(9.5).fillColor(C.ink).text(safe(p.text), x, y, { width: w });
@@ -213,6 +213,11 @@ export async function intelligencePdf(r: IntelligenceReport, meta: { orgName: st
   if (d.missing.length) {
     w.sub('Dette ville gjort vurderingen sikrere');
     for (const m of d.missing) w.point({ text: m.text });
+  }
+  const unknown = uncertaintyList(r);
+  if (unknown.length) {
+    w.sub('Det vi ikke vet sikkert');
+    for (const u of unknown) w.point({ text: u }, { bullet: '?', color: C.urgent });
   }
   w.note(`Datagrunnlag: ${d.coverage.map((c) => `${c.label}: ${c.detail}`).join(' · ')}.`);
 

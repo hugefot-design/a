@@ -16,7 +16,8 @@ import { decide, type DecisionInputs } from '../../src/domain/intelligence/decis
 import { buildPlan, type PlanInputs } from '../../src/domain/intelligence/plan';
 import { learningFor, MIN_DECIDED, type TenderMeta } from '../../src/domain/intelligence/learning';
 import { safe } from '../../src/domain/intelligence/pdf';
-import type { CompetitionSection, FitSection, LearningSection, ProfitSection, RiskSection } from '../../src/domain/intelligence/types';
+import type { CompetitionSection, FitSection, IntelligenceReport, LearningSection, ProfitSection, RiskSection } from '../../src/domain/intelligence/types';
+import { basisLabel, BASIS_LEGEND, uncertaintyList } from '../../src/domain/intelligence/basis';
 
 const DAY = 86_400_000;
 const NOW = new Date('2026-11-07T10:00:00Z');
@@ -311,4 +312,83 @@ test('PDF-tekst: norske tegn beholdes, tegn utenfor standardskriften byttes ut',
   assert.equal(safe('Æ Ø Å – «sitat» … 10 %'), 'Æ Ø Å – «sitat» … 10 %');
   assert.equal(safe('Pris → målpris ≥ 5 ✓'), 'Pris -> målpris >= 5 OK');
   assert.equal(safe('漢字'), '??');
+});
+
+// ---------------------------------------------------------------------------------------------- Merking og usikkerhet
+test('merking: fakta presiseres med kilden (kunngjøring, dokumenter, tildelinger, deres data); beregning og AI er egne', () => {
+  assert.equal(basisLabel('fact', { kind: 'notice', label: 'Kunngjøringen' }).label, 'Fra kunngjøringen');
+  assert.equal(basisLabel('fact', { kind: 'document', label: 'Konkurransegrunnlag.pdf', page: 4 }).label, 'Fra dokumentene');
+  assert.equal(basisLabel('fact', { kind: 'award', label: 'Tildelinger' }).label, 'Fra tildelinger');
+  assert.equal(basisLabel('fact', { kind: 'own', label: 'Profilen' }).label, 'Deres data');
+  assert.equal(basisLabel('fact').label, 'Fakta');
+  assert.equal(basisLabel('calculation', { kind: 'award', label: 'Tildelinger' }).label, 'Beregning', 'en beregning fra tildelinger er fortsatt en beregning');
+  assert.equal(basisLabel('ai', { kind: 'ai', label: 'AI', verified: true }).label, 'AI-vurdering');
+  assert.deepEqual(BASIS_LEGEND.map((b) => b.label), ['Fra kunngjøringen', 'Fra dokumentene', 'Fra tildelinger', 'Deres data', 'Beregning', 'AI-vurdering']);
+});
+
+const tenderInfo = (over: Partial<IntelligenceReport['tender']> = {}): IntelligenceReport['tender'] => ({
+  id: 't1',
+  title: 'Rehabilitering av skole',
+  buyerName: 'Testkommune',
+  status: 'open',
+  deadlineAt: new Date(NOW.getTime() + 20 * DAY),
+  deadlineTimeKnown: true,
+  deadlineKind: 'tender',
+  publishedAt: NOW,
+  countryCode: 'NO',
+  currency: 'NOK',
+  estimatedValue: 2_000_000,
+  durationText: null,
+  regionNames: ['Oslo'],
+  industryNames: ['Bygg og anlegg'],
+  sourceUrl: null,
+  documentsUrl: null,
+  submissionUrl: null,
+  sources: [],
+  isSample: false,
+  ...over,
+});
+
+test('usikkerhet: samlet liste over det vi ikke vet – og ingenting når grunnlaget er komplett', () => {
+  const full = uncertaintyList({
+    tender: tenderInfo(),
+    fit: fit(),
+    risk: riskSection(scoreRisk(riskInputs({ documentsRead: 1 }))),
+    profit: profit({ availability: 'ok' }),
+    competition: { ...competition, buyer: { winners: [], contracts: 3 } },
+    learning: learning({ sameBuyer: { delivered: 2, won: 1, lost: 1, pending: 0, winRatePct: 50 }, similar: { delivered: 2, won: 1, lost: 1, pending: 0, winRatePct: 50 } }),
+    ai: { mode: 'real', used: true },
+  });
+  assert.deepEqual(full, []);
+
+  const thin = uncertaintyList({
+    tender: tenderInfo({ deadlineTimeKnown: false, estimatedValue: null }),
+    fit: fit({ availability: 'no_profile', uncertainty: { level: 'høy', reasons: ['Kunngjøringen har lite beskrivende tekst'] }, turnover: { required: 10_000_000, have: null, ok: null } }),
+    risk: riskSection(scoreRisk(riskInputs({ documentsRead: 0 })), { read: { documents: 0, pages: 0, noticeOnly: true, notReadable: ['skannet.pdf'] } }),
+    profit: profit({ market: { label: 'x', n: 4, strength: 'few', unit: 'total', stats: null, values: [], positions: [], excluded: { frameworks: 0, otherCurrency: 0 } } }),
+    competition,
+    learning: learning(),
+    ai: { mode: 'off', used: false },
+  });
+  const text = thin.join('\n');
+  for (const want of [
+    'Bare kunngjøringen er lest',
+    'Kunne ikke lese: skannet.pdf',
+    'Ingen AI er brukt',
+    'Klokkeslettet for fristen er ikke oppgitt',
+    'ikke oppgitt anslått verdi',
+    'Bedriftsprofilen mangler',
+    'Kunngjøringen har lite beskrivende tekst.',
+    'Omsetningen deres er ikke lagt inn',
+    'Kostnadene er ikke lagt inn',
+    'Få sammenlignbare tildelinger (4)',
+    'For få avgjorte tilbud',
+  ])
+    assert.ok(text.includes(want), `mangler «${want}» i:\n${text}`);
+  assert.equal(new Set(thin).size, thin.length, 'ingen dubletter');
+
+  // AI i testmodus sies rett ut; ekte AI som ikke er brukt for anbudet gir samme forbehold som uten AI.
+  const base = { tender: tenderInfo(), fit: fit(), risk: riskSection(scoreRisk(riskInputs({ documentsRead: 1 }))), profit: profit({ availability: 'ok' as const }), competition, learning: learning() };
+  assert.ok(uncertaintyList({ ...base, ai: { mode: 'mock', used: true } }).some((t) => t.startsWith('AI-svarene her er simulert')));
+  assert.ok(uncertaintyList({ ...base, ai: { mode: 'real', used: false } }).some((t) => t.startsWith('Ingen AI er brukt')));
 });

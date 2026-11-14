@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 8. november 2026 (Intelligence og ny salgstekst på nettsiden er rullet ut; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 14. november 2026 (produktløftet 13.–14.11 er ikke rullet ut – se under; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -386,6 +386,28 @@ kostnader, ingen endring i Render eller Supabase.
 - Tester: `tests/integration/admin-access.test.ts` (fant at vernet virker: uten privat lagring av simulerte svar feiler
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
+
+## Produktløft (13.–14. november 2026) – IKKE rullet ut
+
+Oppdraget «Full product transformation». Gjennomgang, prioritering, blokkeringer og status per fase:
+[TRANSFORMASJON.md](TRANSFORMASJON.md). Alt ligger på arbeidsgrenen med `[skip render]`; produksjonen står på `2d3e8ab`.
+Kort oppsummert:
+
+- **Enklere start:** ett kort oppstartsskjema (firma, bransjer, område, godkjenninger, hva dere leverer) som tar med seg
+  anbudet kunden kom fra; «Kom i gang» med fem steg på Oversikt; «Passer fordi …» i listene.
+- **Ærlig om AI og betaling:** «Meld interesse» for planer mens kortbetaling ikke er åpnet (Admin → Henvendelser +
+  e-post), AI-linjer merket «ikke slått på ennå», tomme AI-paneler skjult for kunder, spørsmål og svar og
+  påminnelses-e-posten følger det som faktisk er slått på. Migrering `0024` utvider bare lovlige verdier.
+- **Nettsiden:** ekte eksempel på `/eksempel` (et åpent anbud vurdert med appens regler og en merket eksempelbedrift,
+  med PDF), tre budskap øverst på forsiden, «Se et ekte eksempel», spørsmål og svar med strukturerte data, «Eksempel»
+  i menyen.
+- **Vekst:** offentlig side per anbud (`/anbud/<id>`, bare åpne med nok tekst indekseres, kontaktopplysninger
+  skjult), lenket fra bransje- og fylkessidene og ukesbrevet; egne beskrivelser for pris- og funksjonssiden.
+- **Måling:** første bruk av funksjoner, aktive dager og hvor registreringen kom fra – uten informasjonskapsler.
+  Admin → Kundereise viser hele trakten, kom tilbake etter 7/30 dager, fra gratis til betalende og oppsigelser.
+  Migrering `0023` (nye tabeller og to kolonner; ingen eksisterende data endres).
+- **Vurderingen:** finere merking av grunnlaget (Fra kunngjøringen, Fra dokumentene, Fra tildelinger, Deres data,
+  Beregning, AI-vurdering) og en samlet liste «Det vi ikke vet sikkert» – på siden og i PDF-en.
 
 ## AnbudRadar Intelligence (7.–8. november 2026) – rullet ut 8.11.2026
 

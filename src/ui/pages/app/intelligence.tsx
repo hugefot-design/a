@@ -25,6 +25,7 @@ import {
   LuTriangleAlert,
 } from 'react-icons/lu';
 import { REQUIREMENT_KIND_LABEL } from '@/domain/intelligence/build';
+import { basisLabel, BASIS_LEGEND, uncertaintyList } from '@/domain/intelligence/basis';
 import type { Basis, IntelligenceReport, Level, PlanStep, Point, SourceRef, Verdict } from '@/domain/intelligence/types';
 import { fmtKr, fmtNumber } from '@/domain/profit/calculator';
 import { RECOMMENDATION_LABEL } from '@/domain/profit/recommendation';
@@ -36,11 +37,8 @@ import { daysUntil, formatDate, formatDateTime } from '../../format';
 import { compactNumber } from '@/i18n/format';
 import { AppShell } from '../../layouts';
 
-const BASIS: Record<Basis, { label: string; tone: 'ok' | 'info' | 'ai'; title: string }> = {
-  fact: { label: 'Fakta', tone: 'ok', title: 'Står i kunngjøringen, et dokument, en publisert tildeling eller i deres egne data' },
-  calculation: { label: 'Beregning', tone: 'info', title: 'Regnet ut av AnbudRadar fra fakta' },
-  ai: { label: 'AI-vurdering', tone: 'ai', title: 'Vurdert av AI – kontroller mot kilden' },
-};
+/** Fargen på merket følger grunnformen; teksten kommer fra basisLabel (presisert med kilden). */
+const BASIS_TONE: Record<Basis, 'ok' | 'info' | 'ai'> = { fact: 'ok', calculation: 'info', ai: 'ai' };
 
 const VERDICT: Record<Verdict, { icon: typeof LuCircleCheck; soft: string; text: string; border: string; bar: string }> = {
   go: { icon: LuCircleCheck, soft: 'bg-ok-soft', text: 'text-ok', border: 'border-ok/30', bar: 'bg-ok' },
@@ -67,12 +65,43 @@ const useAppHref = () => useContext(AppHref);
 const internal = (href: string) => href.startsWith('/');
 
 // ------------------------------------------------------------------------------------------------- Byggeklosser
-function BasisTag({ basis }: { basis: Basis }) {
-  const b = BASIS[basis];
+/**
+ * Merket for hva et punkt bygger på. Fakta presiseres med kilden («Fra kunngjøringen», «Fra dokumentene»,
+ * «Fra tildelinger», «Deres data») – se src/domain/intelligence/basis.ts.
+ */
+function BasisTag({ basis, source, kind }: { basis: Basis; source?: SourceRef | null; kind?: SourceRef['kind'] }) {
+  const l = basisLabel(basis, source ?? (kind ? { kind, label: '' } : null));
   return (
-    <Badge tone={b.tone} title={b.title} className="mr-1.5 px-1.5 py-0 align-[1px] text-[10.5px] uppercase tracking-[0.06em]">
-      {b.label}
+    <Badge tone={BASIS_TONE[basis]} title={l.title} className="mr-1.5 px-1.5 py-0 align-[1px] text-[10.5px] uppercase tracking-[0.06em]">
+      {l.label}
     </Badge>
+  );
+}
+
+/** Det vi ikke vet sikkert – samlet, så vurderingen ikke ser sikrere ut enn den er. */
+function UncertaintyPanel({ r }: { r: IntelligenceReport }) {
+  const items = uncertaintyList(r);
+  if (!items.length) return null;
+  return (
+    <Panel>
+      <div id="usikkerhet" className="scroll-mt-24" />
+      <PanelHeader
+        title={
+          <span className="flex items-center gap-2">
+            <LuCircleHelp className="size-4 text-urgent" aria-hidden /> Det vi ikke vet sikkert
+          </span>
+        }
+        description="Usikkerhet i grunnlaget. Les anbefalingen med dette i bakhodet – og fyll inn det som mangler der det går."
+      />
+      <ul className="grid grid-cols-1 gap-x-8 gap-y-2 px-5 py-4 text-[14px] leading-snug text-ink md:grid-cols-2">
+        {items.map((t) => (
+          <li key={t} className="flex gap-2.5">
+            <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-urgent" aria-hidden />
+            {t}
+          </li>
+        ))}
+      </ul>
+    </Panel>
   );
 }
 
@@ -112,7 +141,7 @@ function Points({ points, icon, empty }: { points: Point[]; icon?: ReactNode; em
         <li key={i} className="flex gap-2.5">
           {icon ?? <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-line-strong" aria-hidden />}
           <div className="min-w-0 text-[14px] leading-snug text-ink">
-            <BasisTag basis={p.basis} />
+            <BasisTag basis={p.basis} source={p.source} />
             {p.text}
             <SourceLine source={p.source} />
           </div>
@@ -445,7 +474,7 @@ function RiskSection({ r }: { r: IntelligenceReport }) {
                     <span className={cn('num rounded-md px-1.5 text-[12.5px] font-bold', f.severity === 'høy' ? 'bg-danger-soft text-danger' : f.severity === 'middels' ? 'bg-urgent-soft text-urgent' : 'bg-paper text-muted')}>+{f.points}</span>
                     <span className="text-[14px] font-semibold text-strong">{f.label}</span>
                     {f.blocker ? <Badge tone="danger">Hindring</Badge> : null}
-                    <BasisTag basis={f.basis} />
+                    <BasisTag basis={f.basis} source={f.sources[0]} />
                   </div>
                   <p className="mt-1 text-[13.5px] leading-snug text-ink">{f.explanation}</p>
                   {f.sources.slice(0, 2).map((s, i) => (
@@ -461,7 +490,7 @@ function RiskSection({ r }: { r: IntelligenceReport }) {
       </div>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <Sub title="Frister" aside={<BasisTag basis="fact" />}>
+        <Sub title="Frister" aside={<BasisTag basis="fact" kind="notice" />}>
           {k.deadlines.length ? (
             <ul className="space-y-1.5">
               {k.deadlines.map((d) => {
@@ -678,7 +707,7 @@ function CompetitionSection({ r }: { r: IntelligenceReport }) {
       ) : (
         <>
           {c.thisTender.length ? (
-            <Sub title="Tildelt i dette anbudet" aside={<BasisTag basis="fact" />}>
+            <Sub title="Tildelt i dette anbudet" aside={<BasisTag basis="fact" kind="award" />}>
               <ul className="space-y-1 text-[14px]">
                 {c.thisTender.map((a, i) => (
                   <li key={i}>
@@ -690,10 +719,10 @@ function CompetitionSection({ r }: { r: IntelligenceReport }) {
             </Sub>
           ) : null}
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <Sub title={`Hos oppdragsgiveren, samme bransje${c.buyer ? ` · ${c.buyer.contracts} kontrakter` : ''}`} aside={<BasisTag basis="fact" />}>
+            <Sub title={`Hos oppdragsgiveren, samme bransje${c.buyer ? ` · ${c.buyer.contracts} kontrakter` : ''}`} aside={<BasisTag basis="fact" kind="award" />}>
               {c.buyer?.winners.length ? <WinnerTable rows={c.buyer.winners} linkable /> : <p className="text-[13.5px] text-muted">Ingen publiserte tildelinger hos oppdragsgiveren i samme bransje.</p>}
             </Sub>
-            <Sub title={`Lignende kontrakter${c.similar ? ` · ${c.similar.contracts}` : ''}`} aside={<BasisTag basis="fact" />}>
+            <Sub title={`Lignende kontrakter${c.similar ? ` · ${c.similar.contracts}` : ''}`} aside={<BasisTag basis="fact" kind="award" />}>
               {c.similar?.winners.length ? (
                 <>
                   <p className="mb-2 text-[12.5px] text-muted">{c.similar.label}</p>
@@ -820,12 +849,17 @@ function Method({ r }: { r: IntelligenceReport }) {
         </summary>
         <div className="space-y-2 border-t border-line px-5 py-4 text-[14px] leading-relaxed">
           <p>
-            <BasisTag basis="fact" />
-            står i kunngjøringen, et dokument, en publisert tildeling eller i deres egne data – med kilde og side der den finnes.
+            <BasisTag basis="fact" kind="notice" />
+            <BasisTag basis="fact" kind="document" />
+            <BasisTag basis="fact" kind="award" />
+            <BasisTag basis="fact" kind="own" />
+            er fakta: det som står i kunngjøringen, i dokumentene dere har lastet opp, i publiserte tildelinger eller i deres egne data –
+            med kilde og side der den finnes.
           </p>
           <p>
             <BasisTag basis="calculation" />
-            er regnet ut av AnbudRadar fra fakta: treffet mot profilen, risikoscoren, kalkylen, markedsprisen og antall tilbud.
+            er regnet ut av AnbudRadar fra fakta: treffet mot profilen, risikoscoren, kalkylen, markedsprisen og antall tilbud. Foreslåtte
+            datoer i handlingsplanen er merket «foreslått». Det vi ikke vet sikkert, står samlet under «Det vi ikke vet sikkert».
           </p>
           <p>
             <BasisTag basis="ai" />
@@ -910,15 +944,16 @@ export function IntelligenceBody({ report: r }: { report: IntelligenceReport }) 
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
         <span>Merking:</span>
-        <BasisTag basis="fact" />
-        <BasisTag basis="calculation" />
-        <BasisTag basis="ai" />
+        {BASIS_LEGEND.map((b) => (
+          <BasisTag key={b.key} basis={b.basis} kind={b.key === 'calculation' || b.key === 'ai' || b.key === 'fact' ? undefined : b.key} />
+        ))}
         <span>{r.ai.mode === 'off' ? 'AI er ikke slått på – alt bygger på fakta og beregninger.' : r.ai.mode === 'mock' ? 'AI-svar er simulert (testmodus).' : ''}</span>
       </div>
 
       <div className="space-y-5">
         <DecisionHero r={r} />
         <Tiles r={r} />
+        <UncertaintyPanel r={r} />
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-5 lg:order-2">
             <div className="lg:sticky lg:top-24">

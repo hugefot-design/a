@@ -188,9 +188,13 @@ test('A: «Gå videre» med kilder, risikoscore, kalkyle, konkurranse, læring o
   assert.match(html, /Send spørsmål om det som er uklart/);
   assert.match(html, /Intern godkjenning av tilbudet/);
   assert.match(html, /href="https:\/\/kgv\.example\.no\/fjellvik\/lever"/);
-  // Merking og ingen sannsynlighet.
-  assert.match(html, />Fakta</);
+  // Merking (presisert med kilden), usikkerhet samlet, og ingen sannsynlighet.
+  assert.match(html, />Fra dokumentene</);
+  assert.match(html, />Fra kunngjøringen</);
+  assert.match(html, />Fra tildelinger</);
   assert.match(html, />Beregning</);
+  assert.match(html, /Det vi ikke vet sikkert/);
+  assert.match(html, /AI-svarene her er simulert \(testmodus\)/);
   assert.doesNotMatch(html, /sannsynlighet for å vinne:|vinnersjanse/i);
 });
 
@@ -209,8 +213,9 @@ test('A: PDF med samme vurdering, kilder og sidetall', async () => {
   assert.match(all, /Risikoscore: \d+ av 100/);
   assert.match(all, new RegExp(`Kilde: ${DOC.replace('.', '\\.')}, side`));
   assert.match(all, /Side 1 av \d+/);
-  assert.match(all, /FAKTA/);
+  assert.match(all, /FRA DOKUMENTENE|FRA KUNNGJØRINGEN/);
   assert.match(all, /BEREGNING/);
+  assert.match(all, /Det vi ikke vet sikkert/);
   assert.match(all, /anslår ikke sannsynligheten for å vinne/);
 });
 
