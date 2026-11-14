@@ -62,7 +62,18 @@ export function LoginPage({ email = '', error, next }: { email?: string; error?:
   );
 }
 
-export function RegisterPage({ values = {}, errors = {}, next }: { values?: Record<string, string>; errors?: Errors; next?: string }) {
+export function RegisterPage({
+  values = {},
+  errors = {},
+  next,
+  origin,
+}: {
+  values?: Record<string, string>;
+  errors?: Errors;
+  next?: string;
+  /** Siden og kilden som førte hit (måling uten informasjonskapsler – se recordSignupOrigin). */
+  origin?: { path: string | null; source: string | null };
+}) {
   const { trialDays, m, lp, locale } = useUi();
   const t = m.auth.register;
   const doc = (href: string, label: string) => (
@@ -81,6 +92,8 @@ export function RegisterPage({ values = {}, errors = {}, next }: { values?: Reco
       }
     >
       <PostForm action={`${lp('/registrer')}${next ? `?neste=${encodeURIComponent(next)}` : ''}`} className="space-y-4">
+        {origin?.path ? <input type="hidden" name="fra" value={origin.path} /> : null}
+        {origin?.source ? <input type="hidden" name="kilde" value={origin.source} /> : null}
         <Field label={t.name} htmlFor="name" error={errors.name}>
           <Input id="name" name="name" autoComplete="name" required defaultValue={values.name} invalid={Boolean(errors.name)} />
         </Field>

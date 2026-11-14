@@ -50,7 +50,7 @@ test('målet etter oppstarten: bare sider i appen, aldri oppstarten selv eller a
 // ---------------------------------------------------------------------------
 // «Kom i gang» på Oversikt
 // ---------------------------------------------------------------------------
-import { startSteps, type Feature } from '../../src/domain/activation';
+import { signupPathFrom, startSteps, type Feature } from '../../src/domain/activation';
 
 const base = { topTenderId: 'abc', used: new Set<Feature>(), savedCount: 0, hasCalculation: false, profitCalculator: true, profileSharpened: false };
 
@@ -75,4 +75,19 @@ test('kom i gang: uten kalkulatoren i planen og uten treff', () => {
   assert.deepEqual(steps.map((s) => s.key), ['profile', 'assessment', 'save', 'sharpen'], 'ikke noe steg kunden ikke kan bruke');
   assert.equal(steps[1]!.href, '/app/anbud');
   assert.equal(steps[1]!.cta, 'Finn et anbud');
+});
+
+test('signupPathFrom: bare sider på vårt eget nettsted, uten spørring, og ikke registrerings- eller innloggingssiden', () => {
+  const app = 'https://anbudradar.com';
+  assert.equal(signupPathFrom('https://anbudradar.com/anbud/123?utm_source=ukesbrev', app), '/anbud/123');
+  assert.equal(signupPathFrom('https://anbudradar.com/', app), '/');
+  assert.equal(signupPathFrom('https://anbudradar.com/en', app), '/en');
+  assert.equal(signupPathFrom('https://anbudradar.com/bransjer/renhold/', app), '/bransjer/renhold');
+  assert.equal(signupPathFrom('https://anbudradar.com/registrer', app), null);
+  assert.equal(signupPathFrom('https://anbudradar.com/en/register', app), null);
+  assert.equal(signupPathFrom('https://anbudradar.com/logg-inn', app), null);
+  assert.equal(signupPathFrom('https://www.google.com/search?q=anbud', app), null);
+  assert.equal(signupPathFrom('https://anbudradar.com.ondt.example/x', app), null);
+  assert.equal(signupPathFrom('ikke en adresse', app), null);
+  assert.equal(signupPathFrom(undefined, app), null);
 });

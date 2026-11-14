@@ -1,4 +1,6 @@
-import { isProd } from '@/lib/env';
+import { env, isProd } from '@/lib/env';
+import { recordSignupOrigin, signupPathFrom } from '@/domain/activation';
+import { trafficSource } from '@/domain/admin/visits';
 import { rateLimit } from '@/lib/rate-limit';
 import { audit } from '@/lib/audit';
 import {
@@ -121,16 +123,24 @@ export function registerAuthRoutes(router: Router): void {
   });
 
   router.get('/registrer', 'guest', async (ctx) =>
-    render(ctx, <RegisterPage next={ctx.query.get('neste') ?? undefined} />, { title: messages(ctx.locale).meta.register }),
+    render(
+      ctx,
+      <RegisterPage
+        next={ctx.query.get('neste') ?? undefined}
+        origin={{ path: signupPathFrom(ctx.req.headers.referer, env.APP_URL), source: trafficSource(ctx.req.headers.referer, ctx.query.get('utm_source')) }}
+      />,
+      { title: messages(ctx.locale).meta.register },
+    ),
   );
 
   router.post('/registrer', 'guest', async (ctx) => {
     const form = await ctx.form();
     const values = { name: str(form, 'name'), email: str(form, 'email') };
     const next = ctx.query.get('neste') ?? undefined;
+    const origin = { path: str(form, 'fra').slice(0, 200) || null, source: str(form, 'kilde').slice(0, 60) || null };
     const t = messages(ctx.locale);
     if (!(await rateLimit(`register:${ctx.ipHash}`, 10, 3600))) {
-      return render(ctx, <RegisterPage values={values} errors={{ email: t.auth.errors.tooMany }} next={next} />, {
+      return render(ctx, <RegisterPage values={values} errors={{ email: t.auth.errors.tooMany }} next={next} origin={origin} />, {
         title: t.meta.register,
         status: 429,
       });
@@ -142,12 +152,14 @@ export function registerAuthRoutes(router: Router): void {
       acceptTerms: form.get('acceptTerms') ?? undefined,
     });
     if (!parsed.success) {
-      return render(ctx, <RegisterPage values={values} errors={translateAuthErrors(t, zodErrors(parsed.error))} next={next} />, { title: t.meta.register, status: 422 });
+      return render(ctx, <RegisterPage values={values} errors={translateAuthErrors(t, zodErrors(parsed.error))} next={next} origin={origin} />, { title: t.meta.register, status: 422 });
     }
     const result = await registerUser(parsed.data, ctx.ipHash);
     if (!result.ok) {
-      return render(ctx, <RegisterPage values={values} errors={translateAuthErrors(t, result.errors)} next={next} />, { title: t.meta.register, status: 422 });
+      return render(ctx, <RegisterPage values={values} errors={translateAuthErrors(t, result.errors)} next={next} origin={origin} />, { title: t.meta.register, status: 422 });
     }
+    // Måling uten informasjonskapsler: siden og kilden som førte til registreringen (Admin → Kundereise).
+    await recordSignupOrigin(result.user.id, origin.path, origin.source);
     await startSession(ctx, result.user.id);
     return redirectWith(ctx, safeRedirectPath(next, '/app/onboarding'), 'success', 'Kontoen er opprettet. Vi har sendt deg en e-post for å bekrefte adressen.');
   });

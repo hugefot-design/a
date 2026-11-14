@@ -25,7 +25,8 @@ let closedId = '';
 before(async () => {
   server = await startServer();
   await ingest([
-    makeNotice({ sourceNoticeId: 'PUB-LONG', title: 'Vakthold ved rådhuset (offentlig side)', description: LONG }),
+    // Nærmest frist, så den står øverst på bransjesiden (som viser de 24 nærmeste) – også når andre tester har lagt inn vakthold.
+    makeNotice({ sourceNoticeId: 'PUB-LONG', title: 'Vakthold ved rådhuset (offentlig side)', description: LONG, deadlineAt: new Date(Date.now() + 2 * 3_600_000).toISOString() }),
     makeNotice({ sourceNoticeId: 'PUB-SHORT', title: 'Vakthold, kort tekst (offentlig side)', description: 'Vakthold ved skolen.' }),
     makeNotice({
       sourceNoticeId: 'PUB-CLOSED',

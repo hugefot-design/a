@@ -24,10 +24,14 @@ function Fact() {
 }
 
 export function PublicTenderPage({ t, origin }: { t: PublicTender; origin: string }) {
-  const { user, lp, m, locale } = useUi();
+  const { user, lp, m, locale, search } = useUi();
   const j = m.home.journey;
+  // Kilden besøket kom fra (f.eks. ukesbrevet) følger med til registreringen, så Admin → Kundereise ser den.
+  const utm = new URLSearchParams(search).get('utm_source');
+  const keepSource = (href: string) => (utm && href.includes('/registrer') ? `${href}${href.includes('?') ? '&' : '?'}utm_source=${encodeURIComponent(utm)}` : href);
   const assessPath = `/app/anbud/${t.id}/intelligence`;
-  const assess = user ? assessPath : signupWith(lp, assessPath);
+  const assess = user ? assessPath : keepSource(signupWith(lp, assessPath));
+  const signup = keepSource(lp('/registrer'));
   const open = t.status === 'open';
   const days = daysUntil(t.deadlineAt);
   const source = t.sources.find((s) => s.url);
@@ -91,7 +95,7 @@ export function PublicTenderPage({ t, origin }: { t: PublicTender; origin: strin
                 Se om anbudet passer dere <LuArrowRight className="size-4" aria-hidden />
               </a>
             ) : (
-              <a href={user ? '/app' : lp('/registrer')} className="btn-signal">
+              <a href={user ? '/app' : signup} className="btn-signal">
                 Finn åpne anbud som passer dere <LuArrowRight className="size-4" aria-hidden />
               </a>
             )}
@@ -200,7 +204,7 @@ export function PublicTenderPage({ t, origin }: { t: PublicTender; origin: strin
               <p className="mt-2 text-[15px] leading-relaxed text-white/70">
                 AnbudRadar vurderer anbudet mot bedriften: treff mot det dere leverer, krav dere må oppfylle, risiko og om det lønner seg med deres kostnader.
               </p>
-              <a href={open ? assess : user ? '/app' : lp('/registrer')} className="btn-signal mt-5 w-full justify-center">
+              <a href={open ? assess : user ? '/app' : signup} className="btn-signal mt-5 w-full justify-center">
                 {open ? 'Se om anbudet passer dere' : 'Finn åpne anbud som passer'}
               </a>
               <a href="/eksempel" className="mt-3 block text-center text-[14px] font-semibold text-white/80 no-underline hover:text-white">
@@ -222,7 +226,7 @@ export function PublicTenderPage({ t, origin }: { t: PublicTender; origin: strin
       <SignalCta
         title="Få bare anbudene som passer dere."
         lead="Rangert mot bedriften, med krav og risiko for hvert anbud. Ingen kort, og ingenting trekkes automatisk."
-        primary={user ? { href: '/app', label: 'Til appen' } : { href: lp('/registrer'), label: 'Start gratis' }}
+        primary={user ? { href: '/app', label: 'Til appen' } : { href: signup, label: 'Start gratis' }}
         secondary={{ href: '/eksempel', label: 'Se et ekte eksempel' }}
       />
     </PublicLayout>

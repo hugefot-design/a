@@ -135,3 +135,40 @@ export function startSteps(i: StartInput): StartStep[] {
   });
   return steps;
 }
+
+// ---------------------------------------------------------------------------
+// Hvor registreringen kom fra (uten informasjonskapsler)
+// ---------------------------------------------------------------------------
+const SAFE_PATH = /^\/[\p{L}\p{N}\-._~/%]*$/u;
+const SAFE_SOURCE = /^[a-z0-9._-]{1,60}$/;
+
+/** Siden på vårt eget nettsted som lenket til registreringen (fra Referer), uten spørring. Null ellers. */
+export function signupPathFrom(referer: string | undefined, appUrl: string): string | null {
+  if (!referer) return null;
+  try {
+    const ref = new URL(referer);
+    if (ref.host !== new URL(appUrl).host) return null;
+    const path = ref.pathname.length > 1 ? ref.pathname.replace(/\/+$/, '') : ref.pathname;
+    // Registrerings- og innloggingssiden selv sier ikke noe om hvor kunden kom fra.
+    if (/(^|\/)(registrer|logg-inn|register|login)$/.test(path)) return null;
+    return SAFE_PATH.test(path) ? path.slice(0, 200) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lagrer siden og kilden registreringen kom fra (f.eks. «/anbud/…» og «ukesbrev»). Bare én gang per bruker,
+ * og bare trygge verdier. Feiler aldri registreringen.
+ */
+export async function recordSignupOrigin(userId: string, path: string | null, source: string | null): Promise<void> {
+  const p = path && SAFE_PATH.test(path) ? path.slice(0, 200) : null;
+  const src = source && SAFE_SOURCE.test(source) ? source : null;
+  if (!p && !src) return;
+  try {
+    await systemSql()`update users set signup_path = ${p}, signup_source = ${src} where id = ${userId} and signup_path is null and signup_source is null`;
+  } catch (err) {
+    log.warn('signup_origin_failed', { message: err instanceof Error ? err.message : String(err) });
+  }
+}
+
