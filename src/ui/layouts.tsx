@@ -111,7 +111,7 @@ function LanguageSuggestion() {
 }
 
 export function PublicLayout({ children }: { children: ReactNode; heroDark?: boolean }) {
-  const { user, path, m, lp } = useUi();
+  const { user, path, m, lp, flash } = useUi();
   const labels = useNavLabels();
   return (
     <div className="flex min-h-screen flex-col bg-surface">
@@ -175,6 +175,12 @@ export function PublicLayout({ children }: { children: ReactNode; heroDark?: boo
         </div>
       </header>
       <main id="innhold" className="flex-1">
+        {/* Meldinger etter en handling, f.eks. «Kontoen er slettet.» (sidene lagres ikke i mellomlager: no-store). */}
+        {flash ? (
+          <div className="mx-auto max-w-7xl px-4 pt-5 sm:px-6" role="status">
+            <FlashMessage />
+          </div>
+        ) : null}
         {children}
       </main>
       <PublicFooter />

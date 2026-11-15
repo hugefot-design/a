@@ -44,6 +44,8 @@ Hver oppgave gjøres i leverandørens kontrollpanel. Nøkler og passord legges *
 **Produkt**
 
 - [ ] Gå gjennom kundereisen selv på mobil og PC: registrering → profil → søk → analyse → lønnsomhet → tilbudsarbeid → abonnement
+  - *Testet automatisk i produksjon 15.11.2026* (eiers ja): registrering → oppstartsskjema → første treff → anbudsside →
+    abonnement (prøveperiode) → søk → mobilmenyen → sletting av kontoen. Virker. Eier bør fortsatt gå gjennom selv.
 - [ ] Eksempeldata finnes ikke i produksjonsdatabasen
 - [ ] Kontaktadresse for support besvares
 

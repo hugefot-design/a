@@ -394,6 +394,28 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
+## Registreringen testet i produksjon (15. november 2026)
+
+Eier ba om det («test registrering»). Kjørt i en ekte nettleser mot anbudradar.com med Resends testmottaker
+(`delivered+anbudradar-test-…@resend.dev` – ingen person får e-posten):
+
+- Registrering → innlogget og videre til oppstartsskjemaet på 5 s, med melding om bekreftelses-e-post. Oversikt viser
+  «Bekreft e-postadressen din» med «Send lenken på nytt».
+- Oppstartsskjema (renhold, Oslo, «kontorrenhold, vinduspuss») → Oversikt med «Profilen er klar – slik kommer dere i
+  gang», rangerte treff og «Passer fordi …» etter ytterligere 7 s.
+- Anbudssiden, abonnementet («Profesjonell (prøveperiode)») og søk på oppdragsgiver svarer.
+- **Mobilmenyen bekreftet i produksjon** (iPhone): menyen er lengre enn skjermen, og bakgrunnen går helt ned.
+- «Slett kontoen» i appen → forsiden; innlogging etterpå avvist. Ingen JavaScript-feil underveis.
+
+**Funnet og rettet (ikke rullet ut):**
+- Forsiden viste ikke «Kontoen er slettet.» – offentlige sider viste ikke meldinger. Gjør det nå (sidene lagres ikke i
+  mellomlager, `no-store`, så meldingen kan ikke vises for andre).
+- Første testforsøk stoppet i testskriptet (oppstartsskjemaet bruker «brikker» med skjult avkrysningsboks), så den
+  testbrukeren fikk aldri organisasjon, kunne ikke slettes fra appen, og passordet var ikke lagret. Migrering `0025`
+  fjerner den ved neste utrulling: bare brukere med testadressen `delivered+anbudradar-test-…@resend.dev` uten
+  organisasjon (sjekket: treffer ikke testadresser med organisasjon eller vanlige brukere). Til da ligger én tydelig
+  merket testbruker («Test AnbudRadar (slettes)», kilde «intern-test») uten organisasjon i produksjonsdatabasen.
+
 ## Gjennomgang etter utrullingen (15. november 2026) – rettet og rullet ut 15.11.2026 (`3a68b4f`)
 
 Eier ba om en gjennomgang av alt. Gjort: kodegjennomgang av alt som er laget 13.–15.11, hele nettstedskartet i

@@ -213,6 +213,9 @@ test('personvern: dataeksport uten hemmeligheter, og sletting av konto', async (
   assert.equal(wrong.status, 422);
   const ok = await c.post('/app/innstillinger/slett-konto', { password: acc.password });
   assert.equal(ok.status, 303);
+  assert.equal(ok.location, '/');
+  // Bekreftelsen vises på forsiden (før 15.11.2026 forsvant den – offentlige sider viste ikke meldinger).
+  assert.match((await c.get('/')).body, /Kontoen er slettet\./);
   assert.equal((await systemSql()`select 1 from users where id = ${acc.user.id}`).length, 0);
   assert.equal((await systemSql()`select 1 from organizations where id = ${acc.orgId}`).length, 0, 'organisasjon med ett medlem slettes');
   assert.equal((await systemSql()`select 1 from company_profiles where org_id = ${acc.orgId}`).length, 0);
