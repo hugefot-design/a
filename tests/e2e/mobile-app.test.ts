@@ -86,11 +86,32 @@ test('mobil: de viktigste sidene i appen uten vannrett rulling, feil eller for s
   assert.ok(tops.frist < tops.beskrivelse && tops.vurdering < tops.beskrivelse, `frist og vurdering før beskrivelsen: ${JSON.stringify(tops)}`);
   assert.ok(tops.vurdering < 1400, `vurderingen innen omtrent to skjermbilder: ${tops.vurdering}px`);
 
+  // Menyen (gruppert etter reisen fra 15.11.2026): alle hovedvalgene – Oversikt, gruppene og Varsler – synlige uten å
+  // rulle, og gruppen med siden kunden står på er åpen. Alle sider nås med høyst to trykk i menyen.
+  for (const [path, group] of [['/app', null], ['/app/kapasitet', 'vurder'], ['/app/innstillinger', 'konto']] as const) {
+    await page.goto(`${BASE}${path}`);
+    await page.click('header summary[aria-label="Meny"]');
+    const nav = await page.locator('details[data-app-menu] > div.fixed.left-0').evaluate((el) => {
+      const main = Array.from(el.querySelectorAll('nav summary, nav > div > div > a, nav > div > a')) as HTMLElement[];
+      return {
+        viewport: window.innerHeight,
+        mainBottom: Math.round(Math.max(...main.map((x) => x.getBoundingClientRect().bottom))),
+        open: Array.from(el.querySelectorAll('details[data-nav-group][open]')).map((d) => (d as HTMLElement).dataset.navGroup),
+        links: el.querySelectorAll('nav a').length,
+      };
+    });
+    assert.ok(nav.mainBottom <= nav.viewport, `hovedvalgene uten å rulle på ${path}: ${JSON.stringify(nav)}`);
+    assert.deepEqual(nav.open, group ? [group] : [], `riktig gruppe er åpen på ${path}`);
+    assert.ok(nav.links >= 14, `alle sidene finnes i menyen: ${nav.links}`);
+  }
+
   // Menyen: den mørke bakgrunnen følger innholdet helt ned, også når menyen er lengre enn skjermen og rulles til
   // bunns. Før 15.11.2026 sluttet bakgrunnen ved skjermhøyden, og siden bak skinte grått gjennom nederst.
   await page.goto(`${BASE}/app`);
   await page.click('header summary[aria-label="Meny"]');
-  const menu = await page.locator('details[open] > div.fixed.left-0').evaluate((el) => {
+  // Åpne alle gruppene, så menyen blir lengre enn skjermen.
+  for (const g of ['finn', 'vurder', 'lever', 'laer', 'konto']) await page.click(`details[data-nav-group="${g}"] > summary`);
+  const menu = await page.locator('details[data-app-menu] > div.fixed.left-0').evaluate((el) => {
     el.scrollTop = el.scrollHeight;
     const inner = (el.firstElementChild as HTMLElement).getBoundingClientRect();
     const items = Array.from(el.querySelectorAll('a')) as HTMLElement[];
@@ -104,6 +125,7 @@ test('mobil: de viktigste sidene i appen uten vannrett rulling, feil eller for s
       panelBackground: getComputedStyle(el).backgroundColor,
     };
   });
+  assert.ok(menu.longerThanScreen, `alle gruppene åpne gjør menyen lengre enn skjermen: ${JSON.stringify(menu)}`);
   assert.ok(menu.innerBottom >= menu.viewport, `bakgrunnen dekker til bunnen: ${JSON.stringify(menu)}`);
   assert.ok(menu.lastBottom <= menu.viewport - 80, `siste valg («${menu.lastText}») kan rulles fri av verktøylinjen nederst: ${JSON.stringify(menu)}`);
   assert.notEqual(menu.panelBackground, 'rgba(0, 0, 0, 0)', 'selve panelet har bakgrunn');

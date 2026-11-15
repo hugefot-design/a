@@ -8,6 +8,7 @@ import {
   LuGlobe,
   LuCalculator,
   LuChartBar,
+  LuChevronDown,
   LuHandshake,
   LuClipboardList,
   LuCreditCard,
@@ -355,7 +356,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       href={item.href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group relative flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium no-underline transition-colors focus-visible:outline-white',
+        'group relative flex items-center gap-3 rounded-xl px-3 py-[7px] text-[14px] font-medium no-underline transition-colors focus-visible:outline-white',
         active ? 'bg-white/[0.08] text-white' : 'text-white/60 hover:bg-white/[0.05] hover:text-white',
       )}
     >
@@ -372,47 +373,135 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-function AppNav() {
+interface NavGroup {
+  id: string;
+  label: string;
+  icon: typeof LuSearch;
+  items: NavItem[];
+}
+
+/**
+ * Menyen i appen, gruppert etter reisen kunden går: finn → vurder og regn → lever → lær. Oversikt og Varsler (med
+ * tallet for uleste) står alltid øverst. Ingen adresser er endret, og alle sider nås med høyst to trykk.
+ * - PC (`drawer` false): alle grupper vises med overskrift – det er plass.
+ * - Mobilskuffen: gruppene kan åpnes og lukkes (details/summary – virker uten JavaScript), og gruppen med siden
+ *   kunden står på er åpen. Da får alle hovedvalgene plass uten å rulle på en telefon.
+ */
+function AppNav({ drawer = false }: { drawer?: boolean }) {
   const { path, unreadCount, user, org } = useUi();
-  const main: NavItem[] = [
-    { href: '/app', label: 'Oversikt', icon: LuLayoutDashboard, match: '/app' },
-    { href: '/app/anbud', label: 'Finn anbud', icon: LuSearch },
+  const top: NavItem[] = [{ href: '/app', label: 'Oversikt', icon: LuLayoutDashboard, match: '/app' }];
+  const groups: NavGroup[] = [
     {
-      href: '/app/fremtidige',
-      label: 'Fremtidige prosjekter',
-      icon: LuTelescope,
-      tag: org?.entitlements.futureOpportunities ? undefined : 'Enterprise',
+      id: 'finn',
+      label: 'Finn',
+      icon: LuSearch,
+      items: [
+        { href: '/app/anbud', label: 'Finn anbud', icon: LuSearch },
+        { href: '/app/sok', label: 'Lagrede søk', icon: LuSave },
+        {
+          href: '/app/fremtidige',
+          label: 'Fremtidige prosjekter',
+          icon: LuTelescope,
+          tag: org?.entitlements.futureOpportunities ? undefined : 'Enterprise',
+        },
+      ],
     },
-    { href: '/app/lagret', label: 'Lagrede anbud', icon: LuBookmark },
-    { href: '/app/resultater', label: 'Resultater', icon: LuTrophy },
-    { href: '/app/sok', label: 'Lagrede søk', icon: LuSave },
-    { href: '/app/lonnsomhet', label: 'Lønnsomhet', icon: LuCalculator },
-    { href: '/app/tilbud', label: 'Tilbudsarbeid', icon: LuClipboardList },
-    { href: '/app/partnere', label: 'Anbudspartnere', icon: LuHandshake },
-    { href: '/app/konkurrenter', label: 'Konkurrenter', icon: LuChartBar },
-    { href: '/app/varsler', label: 'Varsler', icon: LuBell, badge: unreadCount },
+    {
+      id: 'vurder',
+      label: 'Vurder og regn',
+      icon: LuCalculator,
+      items: [
+        { href: '/app/lagret', label: 'Lagrede anbud', icon: LuBookmark },
+        { href: '/app/lonnsomhet', label: 'Lønnsomhet', icon: LuCalculator },
+        { href: '/app/kapasitet', label: 'Kapasitet og økonomi', icon: LuUsers },
+      ],
+    },
+    {
+      id: 'lever',
+      label: 'Lever',
+      icon: LuClipboardList,
+      items: [
+        { href: '/app/tilbud', label: 'Tilbudsarbeid', icon: LuClipboardList },
+        { href: '/app/partnere', label: 'Anbudspartnere', icon: LuHandshake },
+      ],
+    },
+    {
+      id: 'laer',
+      label: 'Lær',
+      icon: LuTrophy,
+      items: [
+        { href: '/app/resultater', label: 'Resultater', icon: LuTrophy },
+        { href: '/app/konkurrenter', label: 'Konkurrenter', icon: LuChartBar },
+      ],
+    },
   ];
-  const secondary: NavItem[] = [
-    { href: '/app/profil', label: 'Bedriftsprofil', icon: LuBuilding2 },
-    { href: '/app/kapasitet', label: 'Kapasitet og økonomi', icon: LuUsers },
-    { href: '/app/abonnement', label: 'Abonnement', icon: LuCreditCard },
-    { href: '/app/innstillinger', label: 'Innstillinger', icon: LuSettings },
-    ...(user?.isPlatformAdmin ? [{ href: '/admin', label: 'Admin', icon: LuShield }] : []),
-  ];
+  const alerts: NavItem = { href: '/app/varsler', label: 'Varsler', icon: LuBell, badge: unreadCount };
+  const account: NavGroup = {
+    id: 'konto',
+    label: 'Konto',
+    icon: LuSettings,
+    items: [
+      { href: '/app/profil', label: 'Bedriftsprofil', icon: LuBuilding2 },
+      { href: '/app/abonnement', label: 'Abonnement', icon: LuCreditCard },
+      { href: '/app/innstillinger', label: 'Innstillinger', icon: LuSettings },
+      ...(user?.isPlatformAdmin ? [{ href: '/admin', label: 'Admin', icon: LuShield }] : []),
+    ],
+  };
   const isActive = (item: NavItem) => (item.match ? path === item.match : path === item.href || path.startsWith(item.href + '/'));
+  const group = (g: NavGroup) => <NavSection key={g.id} group={g} drawer={drawer} isActive={isActive} />;
   return (
-    <nav aria-label="Appmeny" className="flex flex-1 flex-col gap-6">
-      <div className="space-y-0.5">
-        {main.map((item) => (
-          <NavLink key={item.href} item={item} active={isActive(item)} />
-        ))}
+    <nav aria-label="Appmeny" className="flex flex-1 flex-col gap-4">
+      <div className={cn(drawer ? 'space-y-0.5' : 'space-y-2.5')}>
+        <div className="space-y-0.5">
+          {top.map((item) => (
+            <NavLink key={item.href} item={item} active={isActive(item)} />
+          ))}
+          {drawer ? null : <NavLink item={alerts} active={isActive(alerts)} />}
+        </div>
+        {groups.map(group)}
+        {drawer ? <NavLink item={alerts} active={isActive(alerts)} /> : null}
       </div>
-      <div className="space-y-0.5 border-t border-white/10 pt-4">
-        {secondary.map((item) => (
-          <NavLink key={item.href} item={item} active={isActive(item)} />
-        ))}
-      </div>
+      <div className="border-t border-white/10 pt-4">{group(account)}</div>
     </nav>
+  );
+}
+
+/** En gruppe i menyen: overskrift på PC, en sammenleggbar gruppe i mobilskuffen. */
+function NavSection({ group, drawer, isActive }: { group: NavGroup; drawer: boolean; isActive: (item: NavItem) => boolean }) {
+  const items = (
+    <div className={cn('space-y-0.5', drawer && 'mt-0.5 border-l border-white/10 pl-2 ml-[1.375rem]')}>
+      {group.items.map((item) => (
+        <NavLink key={item.href} item={item} active={isActive(item)} />
+      ))}
+    </div>
+  );
+  if (!drawer) {
+    return (
+      <div role="group" aria-labelledby={`meny-${group.id}`}>
+        <p id={`meny-${group.id}`} className="px-3 pb-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">
+          {group.label}
+        </p>
+        {items}
+      </div>
+    );
+  }
+  const Icon = group.icon;
+  const open = group.items.some(isActive);
+  return (
+    // data-keep-open: klikk andre steder på siden skal ikke lukke gruppen (det gjør klientskriptet med andre <details>).
+    <details open={open} data-keep-open="true" data-nav-group={group.id} className="group/nav">
+      <summary
+        className={cn(
+          'flex min-h-10 cursor-pointer list-none items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium transition-colors [&::-webkit-details-marker]:hidden',
+          open ? 'text-white' : 'text-white/60 hover:bg-white/[0.05] hover:text-white',
+        )}
+      >
+        <Icon className={cn('size-[18px] shrink-0', open ? 'text-signal' : 'text-white/45')} aria-hidden />
+        <span className="flex-1">{group.label}</span>
+        <LuChevronDown className="size-4 shrink-0 text-white/45 transition-transform group-open/nav:rotate-180" aria-hidden />
+      </summary>
+      {items}
+    </details>
   );
 }
 
@@ -462,12 +551,12 @@ function OrgSwitcher() {
  */
 function Sidebar({ drawer = false }: { drawer?: boolean }) {
   return (
-    <div className={cn('night flex min-h-full flex-col gap-6 px-3 py-5', drawer && 'pb-28')}>
+    <div className={cn('night flex min-h-full flex-col gap-5 px-3 py-4', drawer && 'pb-28')}>
       <a href="/app" className="px-3 no-underline" aria-label="AnbudRadar – oversikt">
         <Logo inverse />
       </a>
       <OrgSwitcher />
-      <AppNav />
+      <AppNav drawer={drawer} />
     </div>
   );
 }
@@ -548,7 +637,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
         {/* Ingen backdrop-filter her: det ville gjort at mobilmenyen (position: fixed) bare ble like høy som toppen. */}
         <header className="sticky top-0 z-20 border-b border-line bg-surface">
           <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
-            <details className="relative lg:hidden">
+            <details className="relative lg:hidden" data-app-menu="true">
               <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-full text-strong hover:bg-strong/5" aria-label="Meny">
                 <LuMenu className="size-5" />
               </summary>

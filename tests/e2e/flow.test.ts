@@ -116,17 +116,19 @@ test('ny kunde: fra registrering til tilbudsarbeid', async () => {
 
   assert.deepEqual(errors, [], 'ingen JavaScript- eller konsollfeil i flyten');
 
-  // Mobil: menyen i appen åpner seg i full høyde med alle menypunktene, og lukkes ved klikk utenfor.
+  // Mobil: menyen i appen åpner seg i full høyde, gruppene kan åpnes (to trykk til hver side), og menyen lukkes ved
+  // klikk utenfor.
   const mobileCtx = await browser.newContext({ storageState: await page.context().storageState(), viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const mobile = await mobileCtx.newPage();
   await mobile.goto(`${BASE}/app`);
   await mobile.locator('header summary[aria-label="Meny"]').click();
+  await mobile.locator('details[data-nav-group="konto"] > summary').click();
   const drawerLink = mobile.locator('header details[open] nav a', { hasText: 'Abonnement' });
   await drawerLink.waitFor();
   const box = await drawerLink.boundingBox();
   assert.ok(box && box.height > 0 && box.y > 100 && box.y + box.height <= 844, `menypunktet er synlig (${JSON.stringify(box)})`);
   await mobile.mouse.click(370, 400);
-  assert.equal(await mobile.locator('header details[open]').count(), 0, 'menyen lukkes ved klikk utenfor');
+  assert.equal(await mobile.locator('header details[data-app-menu][open]').count(), 0, 'menyen lukkes ved klikk utenfor');
   assert.ok(await noHorizontalScroll(mobile), 'ingen sidelengs rulling i appen på mobil');
   await mobileCtx.close();
 
