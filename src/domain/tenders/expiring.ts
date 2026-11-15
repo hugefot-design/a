@@ -7,15 +7,14 @@
  * - Kontrakter uten sluttdato eller varighet tas ikke med – de gjettes ikke.
  * - Mellomlagres i 30 minutter per bransje og fylke (og per oppdragsgiver). En feil skjuler bare listen; siden virker som før.
  */
-import { expiringContracts, type ExpiryFilter } from '@/domain/competitors/expiry';
+import { EXPIRY_ROW_LIMIT, expiringContracts, type ExpiryFilter } from '@/domain/competitors/expiry';
 import { systemSql, type Tx } from '@/lib/db';
 import { log } from '@/lib/logger';
 import { pickExpiring, type ExpiringTeaser } from './showcase';
 
 export const EXPIRING_SHOWN = 5;
-/** Øvre grense i spørringen (inkludert de siste tre månedene). Treffes den, vises antallet som «minst». */
-const QUERY_LIMIT = 300;
 const TTL_MS = 30 * 60_000;
+const MAX_CACHED = 500;
 
 export interface IndustryExpiring {
   /** Kontrakter som trolig utløper de neste 12 månedene. */
@@ -36,13 +35,14 @@ export function industryExpiring(industryId: string, region: string | null, now 
   return load(`b|${industryId}|${region ?? ''}`, { industries: [industryId], regions: region ? [region] : null, monthsAhead: 12 }, now);
 }
 
-/** Det samme for én oppdragsgiver (oppdragsgiversidene). */
+/** Det samme for én oppdragsgiver (oppdragsgiversidene). Mellomlagres sammen med resten av oppdragsgiversiden. */
 export function buyerExpiring(authorityId: string, now = new Date()): Promise<IndustryExpiring> {
-  return load(`o|${authorityId}`, { industries: null, regions: null, monthsAhead: 12, authorityId }, now);
+  return load(null, { industries: null, regions: null, monthsAhead: 12, authorityId }, now);
 }
 
-async function load(key: string, filter: ExpiryFilter, now: Date): Promise<IndustryExpiring> {
-  const hit = cache.get(key);
+/** `key` null = ikke mellomlagre her (den som kaller, mellomlagrer selv). */
+async function load(key: string | null, filter: ExpiryFilter, now: Date): Promise<IndustryExpiring> {
+  const hit = key ? cache.get(key) : undefined;
   if (hit && Date.now() - hit.at < TTL_MS) return hit.value;
   let value = EMPTY;
   try {
@@ -50,7 +50,7 @@ async function load(key: string, filter: ExpiryFilter, now: Date): Promise<Indus
       const r = await expiringContracts(tx as unknown as Tx, filter, now);
       return {
         upcoming: r.rows.filter((x) => x.expectedEnd >= now).length,
-        atLeast: r.rows.length >= QUERY_LIMIT,
+        atLeast: r.rows.length >= EXPIRY_ROW_LIMIT,
         rows: pickExpiring(r.rows, now, EXPIRING_SHOWN),
       };
     });
@@ -58,7 +58,10 @@ async function load(key: string, filter: ExpiryFilter, now: Date): Promise<Indus
     log.warn('industry_expiring_failed', { message: err instanceof Error ? err.message : String(err) });
     return EMPTY;
   }
-  if (cache.size > 500) cache.clear();
+  if (!key) return value;
+  // Fullt: den eldste ut – ikke tøm alt (da må alle bransjesidene regnes ut på nytt samtidig).
+  cache.delete(key);
+  if (cache.size >= MAX_CACHED) cache.delete(cache.keys().next().value!);
   cache.set(key, { at: Date.now(), value });
   return value;
 }

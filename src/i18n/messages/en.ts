@@ -468,7 +468,10 @@ export const en: Messages = {
     expiringCount: { one: '{n} awarded contract will probably end in the next 12 months.', other: '{n} awarded contracts will probably end in the next 12 months.' },
     expiringWhy: 'When a contract ends, the buyer may run a new competition. Here are the nearest.',
     expiringNote: 'Estimate from the award notices: the end date is stated or calculated from start and duration. Options (extensions) are rarely included, so a contract may last longer. Contracts without an end date or duration are not included.',
-    expiringCta: 'See all – and who holds the contract today',
+    expiringCta: 'Open the radar',
+    /** For dem uten Bedrift: radaren er med i {plan} (lenke til prisene). */
+    expiringPlan: 'Who holds the contract today – and the full radar – is included in {plan}.',
+    expiringPlanLink: 'See the plans',
     value: 'Estimated value {value}',
     see: 'See details',
     back: 'All industries',

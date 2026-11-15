@@ -265,6 +265,7 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
   organisasjonsnummer. Indekseres bare med minst ett åpent anbud og minst fem anbud og tildelinger siste 12 måneder
   (`BUYER_MIN_NOTICES` i `src/domain/tenders/buyer-page.ts`). Mellomlagres i 30 minutter. Slås av med
   `PUBLIC_BUYER_PAGES=false`.
+- **robots.txt** lages av appen (ikke en fil i `public/`) og peker til `<APP_URL>/sitemap.xml`.
 - **Metodesiden (`/metode`)** beskriver reglene i koden. Endres treffmotoren, feiler `tests/unit/method.test.ts` til
   beskrivelsen (`SCORE_PARTS`, `SCORE_CAPS` i `src/domain/matching/engine.ts`) er oppdatert.
 

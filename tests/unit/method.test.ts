@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SCORE_CAPS, SCORE_PARTS, scoreTender, type MatchProfile, type MatchTender } from '../../src/domain/matching/engine';
+import { DISQUALIFIED_MAX, SCORE_CAPS, SCORE_PARTS, scoreTender, type MatchProfile, type MatchTender } from '../../src/domain/matching/engine';
 
 const now = new Date('2026-11-15T10:00:00Z');
 const profile: MatchProfile = {
@@ -80,4 +80,9 @@ test('takene på poengsummen er de samme som metodesiden viser', () => {
     'Omsetningskravet er ikke oppfylt',
   );
   assert.equal(SCORE_CAPS.length, 5);
+});
+
+test('utenfor landene profilen dekker, eller etter fristen: aldri mer enn grensen metodesiden viser', () => {
+  assert.ok(scoreTender({ ...profile, countries: ['SE'] }, tender, now).score <= DISQUALIFIED_MAX);
+  assert.ok(scoreTender(profile, { ...tender, deadlineAt: new Date(now.getTime() - 86_400_000) }, now).score <= DISQUALIFIED_MAX);
 });

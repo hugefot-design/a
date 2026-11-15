@@ -13,8 +13,10 @@ import { ExpiringContracts, signupWith, TenderRows } from './public';
 export const formatOrgNumber = (n: string) => n.replace(/^(\d{3})(\d{3})(\d{3})$/, '$1 $2 $3');
 
 export function BuyerPage({ b }: { b: PublicBuyer }) {
-  const { user, lp } = useUi();
-  const search = `/app/sok?oppdragsgiver=${encodeURIComponent(b.name)}`;
+  const { user, lp, m } = useUi();
+  // Søket i appen (der søket kan lagres og gi varsel) filtrerer på oppdragsgivernavnet.
+  const search = `/app/anbud?oppdragsgiver=${encodeURIComponent(b.name)}`;
+  // Hvem som vinner, er med i Bedrift. Besøkende sendes til prisene – ikke gjennom registreringen til en låst side.
   const winners = `/app/konkurrenter/oppdragsgiver/${b.id}`;
   return (
     <PublicLayout>
@@ -41,7 +43,7 @@ export function BuyerPage({ b }: { b: PublicBuyer }) {
           <div className="min-w-0">
             <h2 className="text-[22px] font-[740] tracking-[-0.02em] text-strong">Åpne anbud</h2>
             {b.rows.length ? (
-              <TenderRows rows={b.rows} />
+              <TenderRows rows={b.rows} hideBuyer />
             ) : (
               <p className="mt-5 rounded-2xl border border-dashed border-line-strong p-6 text-[15px] text-muted">
                 Ingen åpne anbud fra {b.name} akkurat nå. Med varsel får dere beskjed når neste kommer.
@@ -52,7 +54,7 @@ export function BuyerPage({ b }: { b: PublicBuyer }) {
                 Viser de {b.rows.length} nærmeste fristene av {b.open.toLocaleString('nb-NO')}.
               </p>
             ) : null}
-            {b.expiring.rows.length ? <ExpiringContracts expiring={b.expiring} /> : null}
+            {b.expiring.rows.length ? <ExpiringContracts expiring={b.expiring} hideBuyer /> : null}
             <p className="mt-10 text-[13px] leading-relaxed text-muted">
               Fra kunngjøringene i Doffin og TED, oppdateres flere ganger i døgnet. Navnet vises slik kunngjøringene skriver det.{' '}
               <a href="/metode" className="font-semibold">
@@ -78,9 +80,11 @@ export function BuyerPage({ b }: { b: PublicBuyer }) {
             <div className="night rounded-3xl p-6">
               <LuTrophy className="size-6 text-signal" aria-hidden />
               <p className="mt-3 text-[18px] font-[720] leading-snug text-white">Hvem vinner hos {b.name}?</p>
-              <p className="mt-2 text-[14px] leading-relaxed text-white/70">Tildelinger, vinnere og hva kontraktene ble tildelt for – i appen.</p>
-              <a href={user ? winners : signupWith(lp, winners)} className="btn-signal mt-5 w-full justify-center">
-                Se tildelingene <LuArrowRight className="size-4" aria-hidden />
+              <p className="mt-2 text-[14px] leading-relaxed text-white/70">
+                Tildelinger, vinnere og hva kontraktene ble tildelt for er med i {m.plans.business.name}-planen.
+              </p>
+              <a href={user ? winners : lp('/priser')} className="btn-signal mt-5 w-full justify-center">
+                {user ? 'Se tildelingene' : 'Se planene'} <LuArrowRight className="size-4" aria-hidden />
               </a>
             </div>
           </aside>

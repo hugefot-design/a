@@ -12,7 +12,7 @@ import { addMonths } from '../../src/domain/competitors/expiry';
 import { buyerPath, orgNumberFromSlug, resetBuyerCache, slugify } from '../../src/domain/tenders/buyer-page';
 import { resetExpiringCache } from '../../src/domain/tenders/expiring';
 import { resetPublicTenderCache } from '../../src/domain/tenders/public-page';
-import { ingest, makeNotice, startServer, tenderIdFor } from '../helpers';
+import { clientFor, createAccount, ingest, makeNotice, startServer, tenderIdFor } from '../helpers';
 
 let server: Awaited<ReturnType<typeof startServer>>;
 const mutableEnv = env as unknown as Record<string, unknown>;
@@ -39,6 +39,8 @@ before(async () => {
       details: { contractEnd: monthDay(3) },
       awards: [{ lotTitle: null, supplierName: 'Hemmelig Vinner AS', supplierOrgNumber: null, value: 2_500_000, currency: 'NOK', awardDate: monthDay(-30) }],
     }),
+    // Åpen, men uten frist: telles ikke som åpen på siden, fordi listen bare viser anbud med frist.
+    big('BUY-NODL', 'Rammeavtale uten frist (oppdragsgiver-test)', { deadlineAt: null }),
     makeNotice({ sourceNoticeId: 'BUY-SMALL', title: 'Brøyting (oppdragsgiver-test)', buyerName: 'Liten kommune (oppdragsgiver-test)', buyerOrgNumber: SMALL, deadlineAt: days(9) }),
   ]);
   firstId = await tenderIdFor('manual', 'BUY-1');
@@ -82,23 +84,36 @@ test('oppdragsgiversiden viser åpne anbud, hva de kjøper mest og kontrakter so
   assert.match(t, /Testby kommune \(oppdragsgiver-test\)/);
   assert.match(t, /org\.nr\. 912 345 688/);
   assert.match(t, /5 åpne anbud akkurat nå/);
-  assert.match(t, /6 anbud og tildelinger siste 12 måneder/);
+  assert.match(t, /7 anbud og tildelinger siste 12 måneder/);
+  assert.doesNotMatch(t, /Viser de \d+ nærmeste/, 'telleren og listen viser det samme');
   for (const title of ['Vakthold ved rådhuset', 'Vakthold ved skolene', 'Resepsjon ved biblioteket', 'Renhold av rådhuset', 'Vinduspuss på skolene']) assert.ok(t.includes(title), title);
   assert.ok(body.indexOf('Vakthold ved rådhuset') < body.indexOf('Vinduspuss på skolene'), 'nærmeste frist først');
   // Hva de kjøper mest: CPV-hovedgrupper med antall.
   assert.match(t, /Dette kjøper de mest/);
-  assert.ok(t.includes(`${CPV_DIVISIONS['79']} 4`), 'vakthold og resepsjon (79)');
+  assert.ok(t.includes(`${CPV_DIVISIONS['79']} 5`), 'vakthold og resepsjon (79), også den uten frist');
   assert.ok(t.includes(`${CPV_DIVISIONS['90']} 2`), 'renhold (90)');
   // Kontrakter som snart utløper – uten hvem som har dem.
   assert.match(body, /aria-labelledby="utlop"/);
   assert.match(t, /Nattvakt ved havna/);
   assert.ok(!body.includes('Hemmelig Vinner'), 'ingen leverandørnavn');
-  // Videre til appen: varsel for oppdragsgiveren og hvem som vinner.
-  assert.ok(body.includes(`/registrer?neste=${encodeURIComponent(`/app/sok?oppdragsgiver=${encodeURIComponent(NAME)}`)}`), 'varsel via søk på oppdragsgiveren');
-  assert.ok(body.includes(`/registrer?neste=${encodeURIComponent('/app/konkurrenter/oppdragsgiver/')}`), 'tildelingene i appen');
+  // Videre til appen: søket på oppdragsgiveren (kan lagres og gi varsel).
+  assert.ok(body.includes(`/registrer?neste=${encodeURIComponent(`/app/anbud?oppdragsgiver=${encodeURIComponent(NAME)}`)}`), 'varsel via søk på oppdragsgiveren');
+  // Hvem som vinner, er med i Bedrift: besøkende sendes til prisene – ikke gjennom registreringen til en låst side.
+  assert.match(t, /er med i Bedrift-planen/);
+  assert.ok(!body.includes('/app/konkurrenter/'), 'ingen lenke til låste sider for besøkende');
+  assert.match(body, /href="\/priser"[^>]*>Se planene/);
   // Nok innhold: indekseres, med kanonisk adresse.
   assert.doesNotMatch(body, /noindex/);
   assert.ok(body.includes(`<link rel="canonical" href="${new URL(env.APP_URL).origin}${PATH}"`));
+});
+
+test('innlogget går lenkene rett inn i appen (planen står i teksten)', async () => {
+  const c = await clientFor(server.base, await createAccount({ plan: 'business' }));
+  const b = (await c.get(PATH)).body.replaceAll('<!-- -->', '').replaceAll('&amp;', '&');
+  assert.match(b, /href="\/app\/konkurrenter\/oppdragsgiver\/[0-9a-f-]{36}"/);
+  assert.match(b, /href="\/app\/konkurrenter\/utlop"/);
+  assert.ok(b.includes(`href="/app/anbud?oppdragsgiver=${encodeURIComponent(NAME)}"`));
+  assert.match(b, /er med i Bedrift-planen/);
 });
 
 test('feil eller kort adresse sendes videre; ukjente og andre språk gir 404', async () => {

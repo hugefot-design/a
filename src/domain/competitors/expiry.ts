@@ -74,6 +74,9 @@ export interface ExpiryFilter {
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
+/** Høyst så mange kontrakter per oppslag (inkludert de siste tre månedene). */
+export const EXPIRY_ROW_LIMIT = 300;
+
 export async function expiringContracts(
   tx: Tx,
   f: ExpiryFilter,
@@ -123,7 +126,7 @@ export async function expiringContracts(
     from e
     where expected_end between ${from}::date and ${to}::date
     order by expected_end asc
-    limit 300
+    limit ${EXPIRY_ROW_LIMIT}
   `) as unknown as ExpiringContract[];
   // Dekning: hvor mange tildelte kontrakter (med samme filter) vi kan anslå utløp for.
   const [cov] = (await tx`

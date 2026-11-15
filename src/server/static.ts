@@ -22,7 +22,7 @@ const TYPES: Record<string, string> = {
   '.webmanifest': 'application/manifest+json',
 };
 
-/** Filer på rotnivå: ikoner (nettleser, Google, iPhone, Android), manifest og robots.txt. */
+/** Filer på rotnivå: ikoner (nettleser, Google, iPhone, Android) og manifest. robots.txt lages i rutene (med nettstedskartet). */
 const ROOT_FILES = new Set([
   '/favicon.svg',
   '/favicon.ico',
@@ -31,7 +31,6 @@ const ROOT_FILES = new Set([
   '/icon-192.png',
   '/icon-512.png',
   '/site.webmanifest',
-  '/robots.txt',
 ]);
 
 /**

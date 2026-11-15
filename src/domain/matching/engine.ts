@@ -71,14 +71,19 @@ export const SCORE_PARTS = [
   },
 ] as const satisfies readonly { key: keyof MatchBreakdown['components']; label: string; max: number; rule: string }[];
 
-/** Tak på poengsummen (teksten er den samme som i forklaringen til hvert treff). */
+/** Tak på poengsummen. scoreTender bruker disse direkte, og teksten står i forklaringen til hvert treff. */
 export const SCORE_CAPS = [
-  { max: 25, text: 'Ingen faglige treff' },
-  { max: 45, text: 'Bare søkeordtreff, ingen bransje- eller CPV-treff' },
-  { max: 55, text: 'Bare treff på overordnet CPV-gruppe' },
-  { max: 40, text: 'Mulig absolutt krav som ikke er oppfylt' },
-  { max: 35, text: 'Omsetningskravet er ikke oppfylt' },
+  { key: 'noFit', max: 25, text: 'Ingen faglige treff' },
+  { key: 'keywordsOnly', max: 45, text: 'Bare søkeordtreff, ingen bransje- eller CPV-treff' },
+  { key: 'groupOnly', max: 55, text: 'Bare treff på overordnet CPV-gruppe' },
+  { key: 'legal', max: 40, text: 'Mulig absolutt krav som ikke er oppfylt' },
+  { key: 'turnover', max: 35, text: 'Omsetningskravet er ikke oppfylt' },
 ] as const;
+type CapKey = (typeof SCORE_CAPS)[number]['key'];
+const CAP_BY_KEY = new Map(SCORE_CAPS.map((c) => [c.key, c]));
+
+/** Utenfor landene profilen dekker, eller fristen har gått ut: aldri mer enn dette. */
+export const DISQUALIFIED_MAX = 20;
 
 export interface MatchBreakdown {
   reasons: string[];
@@ -354,27 +359,19 @@ export function scoreTender(profile: MatchProfile, tender: MatchTender, now = ne
   const uncertainty: Uncertainty = uncertaintyReasons.length >= 3 ? 'høy' : uncertaintyReasons.length >= 1 ? 'middels' : 'lav';
 
   let score = cpv + keywords + geography + value + type + deadline + requirements;
+  const cap = (key: CapKey) => {
+    const c = CAP_BY_KEY.get(key)!;
+    score = Math.min(score, c.max);
+    caps.push(`${c.text} – maks ${c.max}`);
+  };
   // Søkeord alene gir aldri høy score.
-  if (cpv === 0 && keywords === 0) {
-    score = Math.min(score, 25);
-    caps.push('Ingen faglige treff – maks 25');
-  } else if (cpv === 0) {
-    score = Math.min(score, 45);
-    caps.push('Bare søkeordtreff, ingen bransje- eller CPV-treff – maks 45');
-  } else if (cpv <= 10 && titleHits.length === 0) {
-    score = Math.min(score, 55);
-    caps.push('Bare treff på overordnet CPV-gruppe – maks 55');
-  }
-  if (legalMissing) {
-    score = Math.min(score, 40);
-    caps.push('Mulig absolutt krav som ikke er oppfylt – maks 40');
-  }
-  if (turnoverShort) {
-    score = Math.min(score, 35);
-    caps.push('Omsetningskravet er ikke oppfylt – maks 35');
-  }
-  if (disqualifiers.some((d) => d.startsWith('Oppdraget er utenfor'))) score = Math.min(score, 20);
-  if (disqualifiers.includes('Fristen har gått ut')) score = Math.min(score, 20);
+  if (cpv === 0 && keywords === 0) cap('noFit');
+  else if (cpv === 0) cap('keywordsOnly');
+  else if (cpv <= 10 && titleHits.length === 0) cap('groupOnly');
+  if (legalMissing) cap('legal');
+  if (turnoverShort) cap('turnover');
+  if (disqualifiers.some((d) => d.startsWith('Oppdraget er utenfor'))) score = Math.min(score, DISQUALIFIED_MAX);
+  if (disqualifiers.includes('Fristen har gått ut')) score = Math.min(score, DISQUALIFIED_MAX);
 
   // Ekskluderinger
   let excluded = false;

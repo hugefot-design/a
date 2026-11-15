@@ -459,7 +459,10 @@ export const sv: Messages = {
     expiringCount: { one: '{n} tilldelat kontrakt löper troligen ut inom 12 månader.', other: '{n} tilldelade kontrakt löper troligen ut inom 12 månader.' },
     expiringWhy: 'När ett kontrakt löper ut kan beställaren göra en ny upphandling. Här är de närmaste.',
     expiringNote: 'Uppskattning från tilldelningsmeddelandena: slutdatumet är angivet eller beräknat från start och löptid. Optioner (förlängningar) står sällan med, så kontraktet kan pågå längre. Kontrakt utan slutdatum eller löptid är inte med.',
-    expiringCta: 'Se alla – och vem som har kontraktet i dag',
+    expiringCta: 'Öppna radarn',
+    /** For dem uten Bedrift: radaren er med i {plan} (lenke til prisene). */
+    expiringPlan: 'Vem som har kontraktet i dag – och hela radarn – ingår i {plan}.',
+    expiringPlanLink: 'Se planerna',
     value: 'Uppskattat värde {value}',
     see: 'Se detaljer',
     back: 'Alla branscher',

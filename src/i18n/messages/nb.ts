@@ -434,7 +434,10 @@ export const nb = {
     expiringCount: p({ one: '{n} tildelt kontrakt utløper trolig de neste 12 månedene.', other: '{n} tildelte kontrakter utløper trolig de neste 12 månedene.' }),
     expiringWhy: 'Når en kontrakt går ut, kan det komme en ny konkurranse. Her er de nærmeste.',
     expiringNote: 'Anslag fra tildelingskunngjøringene: sluttdatoen er oppgitt eller regnet ut fra oppstart og varighet. Opsjoner (forlengelser) står sjelden der, så kontrakten kan vare lenger. Kontrakter uten sluttdato eller varighet er ikke med.',
-    expiringCta: 'Se alle – og hvem som har kontrakten i dag',
+    expiringCta: 'Åpne radaren',
+    /** For dem uten Bedrift: radaren er med i {plan} (lenke til prisene). */
+    expiringPlan: 'Hvem som har kontrakten i dag – og hele radaren – er med i {plan}.',
+    expiringPlanLink: 'Se planene',
     value: 'Anslått verdi {value}',
     see: 'Se detaljer',
     back: 'Alle bransjer',

@@ -459,7 +459,10 @@ export const da: Messages = {
     expiringCount: { one: '{n} tildelt kontrakt udløber sandsynligvis inden for 12 måneder.', other: '{n} tildelte kontrakter udløber sandsynligvis inden for 12 måneder.' },
     expiringWhy: 'Når en kontrakt udløber, kan ordregiveren lave et nyt udbud. Her er de nærmeste.',
     expiringNote: 'Skøn ud fra tildelingsbekendtgørelserne: slutdatoen er oplyst eller beregnet ud fra start og varighed. Optioner (forlængelser) står sjældent med, så kontrakten kan vare længere. Kontrakter uden slutdato eller varighet er ikke med.',
-    expiringCta: 'Se alle – og hvem der har kontrakten i dag',
+    expiringCta: 'Åbn radaren',
+    /** For dem uten Bedrift: radaren er med i {plan} (lenke til prisene). */
+    expiringPlan: 'Hvem der har kontrakten i dag – og hele radaren – er med i {plan}.',
+    expiringPlanLink: 'Se planerne',
     value: 'Anslået værdi {value}',
     see: 'Se detaljer',
     back: 'Alle brancher',

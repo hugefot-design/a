@@ -167,16 +167,19 @@ async function load(sql: Tx, id: string): Promise<PublicTender | null> {
   };
 }
 
-/** Den offentlige siden for ett anbud. Null for ukjente anbud og eksempeldata. */
+/**
+ * Den offentlige siden for ett anbud. Null for ukjente anbud og eksempeldata.
+ * En databasefeil kastes videre (500) – den skal ikke se ut som «finnes ikke» (404) for søkemotorene.
+ */
 export async function publicTender(id: string): Promise<PublicTender | null> {
   const hit = cache.get(id);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.value;
-  let value: PublicTender | null = null;
+  let value: PublicTender | null;
   try {
     value = await systemSql().begin((tx) => load(tx as unknown as Tx, id));
   } catch (err) {
     log.warn('public_tender_failed', { message: err instanceof Error ? err.message : String(err) });
-    return null;
+    throw err;
   }
   if (cache.size >= MAX_CACHED) cache.delete(cache.keys().next().value!);
   cache.set(id, { at: Date.now(), value });

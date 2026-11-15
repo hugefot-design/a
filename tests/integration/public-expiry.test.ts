@@ -10,7 +10,7 @@ import { env } from '../../src/lib/env';
 import { addMonths } from '../../src/domain/competitors/expiry';
 import { resetExpiringCache } from '../../src/domain/tenders/expiring';
 import type { NoticeAward } from '../../src/domain/tenders/normalize';
-import { ingest, makeNotice, startServer, tenderIdFor } from '../helpers';
+import { clientFor, createAccount, ingest, makeNotice, startServer, tenderIdFor } from '../helpers';
 
 let server: Awaited<ReturnType<typeof startServer>>;
 const mutableEnv = env as unknown as Record<string, unknown>;
@@ -81,7 +81,17 @@ test('bransjesiden viser kontraktene som snart utløper – nærmeste først, me
   // Hvem som har kontrakten i dag, vises bare i appen.
   assert.ok(!body.includes('Hemmelig'), 'ingen leverandørnavn på den offentlige siden');
   assert.ok(s.includes(`href="/anbud/${ids.varme}"`), 'lenke til den offentlige anbudssiden');
-  assert.ok(s.includes(`href="/registrer?neste=${encodeURIComponent('/app/konkurrenter/utlop')}"`), 'videre til radaren i appen');
+  // Radaren er med i Bedrift: besøkende sendes til prisene, ikke gjennom registreringen til en låst side.
+  assert.match(s, /Hvem som har kontrakten i dag – og hele radaren – er med i Bedrift\./);
+  assert.match(s, /href="\/priser"[^>]*>Se planene/);
+  assert.ok(!s.includes('/app/konkurrenter/utlop'));
+});
+
+test('innlogget lenker listen rett til radaren', async () => {
+  const c = await clientFor(server.base, await createAccount({ plan: 'business' }));
+  const s = section((await c.get('/bransjer/energi')).body.replaceAll('<!-- -->', ''));
+  assert.match(s, /href="\/app\/konkurrenter\/utlop"[^>]*>Åpne radaren/);
+  assert.match(s, /er med i Bedrift\./);
 });
 
 test('fylkessiden viser bare kontraktene i fylket', async () => {

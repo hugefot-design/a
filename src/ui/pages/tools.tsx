@@ -116,7 +116,6 @@ export function TryPage({ values, result, limited = false }: { values: TryValues
   const { user, publicTenderPages } = useUi();
   const signup = user ? '/app/anbud' : trySignupHref(values);
   const tenderHref = (id: string) => (user ? `/app/anbud/${id}` : publicTenderPages ? `/anbud/${id}` : `/registrer?neste=${encodeURIComponent(`/app/anbud/${id}`)}`);
-  const where = result ? `${result.industry.name}${result.region ? ` i ${result.region.name}` : ''}` : '';
   return (
     <PublicLayout>
       <NightHero
@@ -140,7 +139,7 @@ export function TryPage({ values, result, limited = false }: { values: TryValues
             <div className="mt-8">
               <h2 className="text-[22px] font-[760] leading-tight tracking-[-0.02em] text-strong sm:text-[26px]">
                 {result.open === 0
-                  ? `Ingen åpne anbud i ${where} akkurat nå`
+                  ? `Ingen åpne anbud i ${result.industry.name} akkurat nå`
                   : result.open === 1
                     ? `1 åpent anbud i ${result.industry.name} akkurat nå`
                     : `${result.open.toLocaleString('nb-NO')} åpne anbud i ${result.industry.name} – ${result.rows.length === result.open ? 'her er de' : `her er de ${result.rows.length} som passer best`}`}
@@ -154,13 +153,16 @@ export function TryPage({ values, result, limited = false }: { values: TryValues
                     : result.words.length
                       ? 'Ingen av dem skiller seg ut som gode treff på ordene deres ennå – prøv andre ord for det dere leverer.'
                       : 'Skriv hva dere leverer, så skiller vi de beste fra resten.'}{' '}
+                  {result.ranked < result.open ? `Rangert blant de ${result.ranked.toLocaleString('nb-NO')} med nærmest frist. ` : ''}
                   Tallet viser hvor godt anbudet passer – ikke sjansen for å vinne.{' '}
                   <a href="/metode#treff" className="font-semibold">
                     Slik regnes det
                   </a>
                 </p>
               ) : (
-                <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-muted">Prøv et annet fylke eller «Hele landet» – eller få beskjed når nye kommer.</p>
+                <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-muted">
+                  Nye anbud kommer fortløpende. Med konto får dere beskjed så snart det kommer noe som passer.
+                </p>
               )}
 
               <ol className="mt-6 space-y-3">

@@ -9,13 +9,14 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 237 av 237 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 15.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 238 av 238 bestått – 15.11.2026 |
+| Enhetstester | 238 av 238 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 15.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 243 av 243 bestått – 15.11.2026 |
 | Ende-til-ende i nettleser | 10 av 10 bestått (inkl. det nye oppstartsskjemaet, appen på telefon og lys/mørk modus) – 15.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | `npm audit` | 0 sårbarheter – 15.11.2026 |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
 | Tilgjengelighet, kontrast og bredde: forsiden (norsk og engelsk), `/eksempel`, `/anbud/<id>`, priser, funksjoner, registrering, bransjeside, Oversikt, Abonnement, anbudssiden, samlet vurdering og oppstartsskjemaet – 390, 768 og 1440 px, lys og mørk | Én h1 per side, `<main>`, etiketter på alle felt, navn på alle knapper og lenker, ingen doble id-er, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: filfeltene for opplasting manglet etikett – 14.11.2026 |
+| Etter gjennomgangen: tilgjengelighet, kontrast og bredde for oppdragsgiverside, bransjeside, `/prov` (med og uten treff), `/metode` og lønnsomhetssjekken – 390, 768 og 1440 px, lys og mørk | 42 av 42 kontroller OK – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for oppdragsgiversidene (Statsbygg og Sykehusinnkjøp med utviklingsdataene) og en anbudsside med lenke til oppdragsgiveren – 390, 768 og 1440 px, lys og mørk | 30 av 30 kontroller OK – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for metodesiden og bransjesidene med kontraktsutløp (`/metode`, `/bransjer/bygg-og-anlegg`, med fylke og på engelsk, `/bransjer/renhold`, pluss `/prov` og `/kalkulator` på nytt) – 390, 768 og 1440 px, lys og mørk | 54 av 54 kontroller OK. Rettet underveis: tekstcellene i metodetabellen fikk faste tallbredder fra den felles tabellstilen (luft rundt kolon og punktum) – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for verktøyene uten konto: forsiden (norsk og engelsk), `/prov` (tom, med treff og uten treff), `/kalkulator` (tom, for et anbud, med resultat og med feil) og `/anbud/<id>` – 390, 768 og 1440 px, lys og mørk | 60 av 60 kontroller OK: én h1 per side, etiketter på alle felt, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: følsomhetstabellen var for bred på mobil – 14.11.2026 |
@@ -392,6 +393,37 @@ kostnader, ingen endring i Render eller Supabase.
 - Tester: `tests/integration/admin-access.test.ts` (fant at vernet virker: uten privat lagring av simulerte svar feiler
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
+
+## Gjennomgang etter utrullingen (15. november 2026) – rettet, IKKE rullet ut
+
+Eier ba om en gjennomgang av alt. Gjort: kodegjennomgang av alt som er laget 13.–15.11, hele nettstedskartet i
+produksjon (833 sider, alle 200, ingen uten tittel, én h1, riktig kanonisk adresse, ingen over 2,5 s; 973 lenker videre
+fra sidene, ingen døde), språkvariantene av de norske sidene (404 med `noindex`, riktig), og loggen siste 48 timer (0
+advarsler, 0 feil).
+
+**Rettet:**
+- *Lenker til låste sider.* Prøveperioden gir Profesjonell, men utløpsradaren og «hvem som vinner» krever Bedrift.
+  Lenkene på bransje- og oppdragsgiversidene sendte nye brukere gjennom registreringen til en låst side. Nå står det at
+  det er med i Bedrift; besøkende får lenke til prisene, innloggede går rett inn.
+- *«Få varsel om nye anbud herfra»* gikk til listen over lagrede søk (som ignorerer filteret). Går nå til søket med
+  oppdragsgiveren fylt inn, der søket kan lagres.
+- *Oppdragsgiversiden* talte også åpne anbud uten frist, men viste bare dem med frist. Telleren og listen viser nå det
+  samme. Navnet på oppdragsgiveren gjentas ikke på hver rad.
+- *«Prøv uten konto»* tok med anbud fra andre land (hvis flere TED-land slås på), rangerte bare de 400 med nærmest frist
+  og viste 400 som antall. Nå: bare norske anbud, opptil 1 000 rangeres, og antallet er det ekte. Språket regnes ut én
+  gang per anbud (ikke i hver sammenligning). Uten åpne anbud i bransjen står det ikke lenger «prøv et annet fylke».
+- *Databasefeil* på anbuds- og oppdragsgiversidene ga «finnes ikke» (404), som kan få Google til å fjerne sidene. Gir nå
+  serverfeil (500), som Google prøver igjen. Lønnsomhetssjekken virker uten anbudet hvis det ikke kan hentes.
+- *Én kilde for reglene:* treffmotoren bruker takene fra `SCORE_CAPS` og grensen `DISQUALIFIED_MAX` direkte (det samme
+  som metodesiden viser). Utløpsradarens grense er én konstant.
+- *robots.txt* peker nå til nettstedskartet (lages ut fra `APP_URL`).
+- *Nettstedskartet* henter anbud, oppdragsgivere og fylker samtidig. Mellomlageret for utløp tømmes ikke lenger helt når
+  det er fullt.
+
+**Ikke endret (og hvorfor):**
+- Oppdragsgivere med engelsk navn fra TED (f.eks. «Bergen Municipality»). Bare 9 av 544 har et norsk navn fra Doffin;
+  riktige norske navn for alle krever oppslag i Brønnøysundregistrene – en ny ekstern tjeneste som venter på eier.
+- To anbud med helt lik tittel og oppdragsgiver får lik sidetittel. Sjeldent; ingen feil.
 
 ## Kontrakter som utløper på bransjesidene, metodesiden og oppdragsgiversidene (15. november 2026) – rullet ut 15.11.2026 (`7739133`)
 

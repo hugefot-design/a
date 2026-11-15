@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import { closeDb } from '../../src/lib/db';
 import { aiModeFor } from '../../src/domain/ai/provider';
 import { BASIS_LEGEND } from '../../src/domain/intelligence/basis';
-import { SCORE_CAPS, SCORE_PARTS } from '../../src/domain/matching/engine';
+import { DISQUALIFIED_MAX, SCORE_CAPS, SCORE_PARTS } from '../../src/domain/matching/engine';
+import { env } from '../../src/lib/env';
 import { MAX_AGE_YEARS, MIN_COMPARABLES } from '../../src/domain/profit/market';
 import { Client, ingest, makeNotice, startServer } from '../helpers';
 
@@ -49,6 +50,7 @@ test('metodesiden viser reglene med tallene fra koden', async () => {
   for (const p of SCORE_PARTS) assert.ok(t.includes(`${p.label} ${p.max} ${p.rule}`), p.key);
   assert.match(t, /Til sammen 100/);
   for (const c of SCORE_CAPS) assert.ok(t.includes(`${c.text}: maks ${c.max}.`), c.text);
+  assert.ok(t.includes(`fristen har gått ut: maks ${DISQUALIFIED_MAX}.`));
   assert.match(t, /ikke sjansen for å vinne/);
   // Merkingen er den samme som i vurderingene.
   for (const b of BASIS_LEGEND) assert.ok(t.includes(b.label), b.label);
@@ -77,4 +79,15 @@ test('metodesiden er lenket fra bunnteksten (norsk), verktøyene og nettstedskar
   assert.match(calc.body, /href="\/metode#kalkyle"/);
   const sitemap = await (await fetch(`${server.base}/sitemap.xml`)).text();
   assert.match(sitemap, /<loc>[^<]+\/metode<\/loc>/);
+});
+
+test('robots.txt peker til nettstedskartet og holder appen utenfor', async () => {
+  const res = await fetch(`${server.base}/robots.txt`);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type') ?? '', /text\/plain/);
+  const body = await res.text();
+  assert.match(body, /^User-agent: \*$/m);
+  assert.match(body, /^Disallow: \/app$/m);
+  assert.match(body, /^Disallow: \/api$/m);
+  assert.ok(body.includes(`Sitemap: ${env.APP_URL.replace(/\/$/, '')}/sitemap.xml`));
 });

@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { closeDb, systemSql } from '../../src/lib/db';
 import { env } from '../../src/lib/env';
-import { resetQuickCache } from '../../src/domain/matching/quick';
+import { quickRanking, resetQuickCache } from '../../src/domain/matching/quick';
 import { resetPublicTenderCache } from '../../src/domain/tenders/public-page';
 import type { NoticeAward } from '../../src/domain/tenders/normalize';
 import { Client, clientFor, createAccount, ingest, makeNotice, startServer, tenderIdFor } from '../helpers';
@@ -132,6 +132,37 @@ test('/prov: uten ord og med ukjente valg – ingenting gjettes', async () => {
   assert.equal(unknown.status, 200);
   assert.doesNotMatch(unknown.body, /åpne anbud i/);
   assert.match(unknown.body, /<meta name="robots" content="noindex/);
+});
+
+test('/prov: en bransje uten åpne anbud – ingen råd om å bytte fylke (det hjelper ikke)', async () => {
+  const { status, body } = await page('/prov?bransje=cybersecurity&fylke=50');
+  assert.equal(status, 200);
+  assert.match(text(body), /Ingen åpne anbud i Cybersikkerhet akkurat nå/);
+  assert.doesNotMatch(body, /Prøv et annet fylke/);
+});
+
+test('/prov rangerer bare norske anbud, og antallet er det ekte', async () => {
+  resetQuickCache();
+  const before = await quickRanking({ industry: 'telecom', region: null, words: '' });
+  await ingest([
+    makeNotice({
+      sourceNoticeId: 'TOOL-SE',
+      title: 'Fiberutbygging i Sverige (verktøy-test)',
+      countryCode: 'SE',
+      nutsCodes: ['SE110'],
+      placeText: 'Stockholm',
+      buyerCity: 'Stockholm',
+      cpvCodes: [CPV],
+      mainCpv: CPV,
+      deadlineAt: days(15),
+    }),
+  ]);
+  resetQuickCache();
+  const after = await quickRanking({ industry: 'telecom', region: null, words: UNIQUE });
+  assert.ok(before && after);
+  assert.equal(after.open, before.open, 'svenske anbud telles ikke');
+  assert.ok(!after.rows.some((r) => r.title.includes('Sverige')), 'og rangeres ikke');
+  assert.equal(after.ranked, after.open, 'alle åpne er rangert');
 });
 
 test('/prov begrenses per besøkende', async () => {

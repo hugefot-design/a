@@ -4,7 +4,9 @@
  *
  * - Bare de fem beste vises. Godkjenninger, kontraktsstørrelse, CPV-koder og ekskluderinger teller først i appen.
  * - Ingenting lagres: verken valgene eller ordene besøkende skriver.
- * - Åpne anbud per bransje mellomlagres i 15 minutter, så siden er lett for serveren.
+ * - Bare norske anbud (profilen dekker Norge). Åpne anbud per bransje mellomlagres i 15 minutter, med språket
+ *   regnet ut én gang per anbud, så siden er lett for serveren. Antallet som vises er det ekte antallet, også
+ *   når bare de POOL_LIMIT med nærmest frist rangeres.
  */
 import { keywordsFromServices } from '@/domain/profile/profile';
 import { INDUSTRY_BY_ID, REGION_BY_CODE } from '@/domain/reference';
@@ -16,11 +18,19 @@ import { scoreTender, type MatchProfile, type MatchTender } from './engine';
 export const QUICK_TOP = 5;
 /** Treff på 60 eller mer regnes som gode – samme grense som resten av appen. */
 export const QUICK_GOOD = 60;
-const POOL_LIMIT = 400;
+/** Så mange åpne anbud per bransje rangeres (nærmest frist først). */
+export const POOL_LIMIT = 1000;
+const MAX_DESCRIPTION = 3000;
 const TTL_MS = 15 * 60_000;
 const MAX_WORDS_LENGTH = 200;
 
-type PoolRow = MatchTender & { buyerName: string | null; placeText: string | null };
+type PoolRow = MatchTender & { buyerName: string | null; placeText: string | null; nb: boolean };
+interface Pool {
+  at: number;
+  rows: PoolRow[];
+  /** Alle åpne anbud i bransjen (også de som ikke kom med i utvalget). */
+  total: number;
+}
 
 export interface QuickMatch {
   id: string;
@@ -40,37 +50,50 @@ export interface QuickResult {
   region: { code: string; name: string } | null;
   /** Ordene som faktisk ble brukt i rangeringen (ryddet og begrenset). */
   words: string[];
-  /** Åpne anbud i bransjen som ble vurdert. */
+  /** Åpne anbud i bransjen (frist om mer enn et døgn). */
   open: number;
+  /** Hvor mange av dem som ble rangert (de med nærmest frist, høyst POOL_LIMIT). */
+  ranked: number;
   /** Hvor mange av dem som er gode treff (60+). */
   good: number;
   rows: QuickMatch[];
 }
 
-const pools = new Map<string, { at: number; rows: PoolRow[] }>();
+const pools = new Map<string, Pool>();
 
 export function resetQuickCache(): void {
   pools.clear();
 }
 
-async function pool(industry: string): Promise<PoolRow[]> {
+async function pool(industry: string): Promise<Pool> {
   const hit = pools.get(industry);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.rows;
-  const rows = (await systemSql()`
-    select t.id, t.title, left(t.description, 6000) as description, t.cpv_codes, t.industry_ids, t.region_codes, t.country_code,
-           t.estimated_value::float8 as estimated_value, t.currency, t.contract_nature, t.deadline_at, t.lifecycle, t.buyer_name, t.place_text,
-           coalesce((select array_agg(left(x, 2000)) from jsonb_array_elements_text(t.selection_criteria) x), '{}') as selection_criteria
-    from tenders t
-    where not t.is_sample and t.lifecycle = 'competition' and t.deadline_at > now() + interval '1 day'
-      and t.industry_ids @> array[${industry}]::text[]
-    order by t.deadline_at asc, t.id
-    limit ${POOL_LIMIT}
-  `) as unknown as PoolRow[];
-  pools.set(industry, { at: Date.now(), rows });
-  return rows;
+  if (hit && Date.now() - hit.at < TTL_MS) return hit;
+  const sql = systemSql();
+  const where = sql`
+    not t.is_sample and t.country_code = 'NO' and t.lifecycle = 'competition' and t.deadline_at > now() + interval '1 day'
+    and t.industry_ids @> array[${industry}]::text[]
+  `;
+  const [rows, [count]] = await Promise.all([
+    sql`
+      select t.id, t.title, left(t.description, ${MAX_DESCRIPTION}) as description, t.cpv_codes, t.industry_ids, t.region_codes, t.country_code,
+             t.estimated_value::float8 as estimated_value, t.currency, t.contract_nature, t.deadline_at, t.lifecycle, t.buyer_name, t.place_text,
+             coalesce((select array_agg(left(x, 2000)) from jsonb_array_elements_text(t.selection_criteria) x), '{}') as selection_criteria
+      from tenders t
+      where ${where}
+      order by t.deadline_at asc, t.id
+      limit ${POOL_LIMIT}
+    ` as unknown as Promise<Omit<PoolRow, 'nb'>[]>,
+    sql`select count(*)::int as n from tenders t where ${where}` as unknown as Promise<{ n: number }[]>,
+  ]);
+  const value: Pool = {
+    at: Date.now(),
+    // Språket regnes ut én gang her – ikke i hver sammenligning når listen sorteres.
+    rows: rows.map((r) => ({ ...r, nb: guessLanguage(`${r.title} ${r.description ?? ''}`) === 'nb' })),
+    total: count?.n ?? rows.length,
+  };
+  pools.set(industry, value);
+  return value;
 }
-
-const norwegian = (t: PoolRow) => (guessLanguage(`${t.title} ${t.description ?? ''}`) === 'nb' ? 1 : 0);
 
 /** «Trøndelag», «Oslo, Akershus og 2 til» eller «Hele landet» – ikke en lang liste med alle fylkene. */
 export function placeText(t: Pick<PoolRow, 'regionCodes' | 'placeText'>): string | null {
@@ -106,17 +129,19 @@ export async function quickRanking(input: { industry: string; region: string | n
   if (!industry) return null;
   const region = input.region ? REGION_BY_CODE.get(input.region) : null;
   const profile = quickProfile(industry.id, region ? region.code : null, input.words);
-  const scored = (await pool(industry.id))
+  const p = await pool(industry.id);
+  const scored = p.rows
     .filter((t) => t.deadlineAt && t.deadlineAt > now)
     .map((t) => ({ t, r: scoreTender(profile, t, now) }))
     .filter((x) => !x.r.excluded)
     // Likt treff: norsk tekst først (de fleste besøkende er norske; TED publiserer norske kunngjøringer på engelsk), så nærmeste frist.
-    .sort((a, b) => b.r.score - a.r.score || norwegian(b.t) - norwegian(a.t) || (a.t.deadlineAt?.getTime() ?? 0) - (b.t.deadlineAt?.getTime() ?? 0));
+    .sort((a, b) => b.r.score - a.r.score || Number(b.t.nb) - Number(a.t.nb) || (a.t.deadlineAt?.getTime() ?? 0) - (b.t.deadlineAt?.getTime() ?? 0));
   return {
     industry: { id: industry.id, name: industry.name },
     region: region ? { code: region.code, name: region.name } : null,
     words: profile.keywords,
-    open: scored.length,
+    open: Math.max(p.total, scored.length),
+    ranked: scored.length,
     good: scored.filter((x) => x.r.score >= QUICK_GOOD).length,
     rows: scored.slice(0, QUICK_TOP).map(({ t, r }) => ({
       id: t.id,

@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import { LuArrowRight } from 'react-icons/lu';
 import { BASIS_LEGEND } from '@/domain/intelligence/basis';
 import { QUICK_GOOD } from '@/domain/matching/quick';
-import { SCORE_CAPS, SCORE_PARTS } from '@/domain/matching/engine';
+import { DISQUALIFIED_MAX, SCORE_CAPS, SCORE_PARTS } from '@/domain/matching/engine';
 import { SENSITIVITY_STEPS } from '@/domain/profit/calculator';
 import { MAX_AGE_YEARS, MIN_COMPARABLES, SOLID_COMPARABLES } from '@/domain/profit/market';
 import { TERM_LABELS } from '@/domain/profit/terms-scan';
@@ -131,7 +131,7 @@ export function MethodPage() {
                     {c.text}: maks {c.max}.
                   </li>
                 ))}
-                <li>Utenfor landene dere dekker, eller fristen har gått ut: maks 20.</li>
+                <li>Utenfor landene dere dekker, eller fristen har gått ut: maks {DISQUALIFIED_MAX}.</li>
                 <li>Det dere har sagt nei takk til (CPV-koder og ord), vises ikke.</li>
               </List>
               <p>
@@ -231,7 +231,7 @@ export function MethodPage() {
               <List>
                 <li>Opsjoner (forlengelser) står sjelden i dataene, så en kontrakt kan vare lenger enn anslått.</li>
                 <li>Kontrakter uten sluttdato eller varighet gjettes ikke, og er ikke med.</li>
-                <li>På de offentlige sidene vises ikke hvem som har kontrakten i dag. Det står i appen.</li>
+                <li>På de offentlige sidene vises ikke hvem som har kontrakten i dag. Det står i appen, i Bedrift-planen.</li>
               </List>
             </Part>
 

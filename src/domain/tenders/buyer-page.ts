@@ -13,13 +13,14 @@ import { systemSql } from '@/lib/db';
 import { log } from '@/lib/logger';
 import { buyerExpiring, type IndustryExpiring } from './expiring';
 import { displayBuyer, type BoardRow } from './market';
-import { statusCondition } from './queries';
 
 /** Så mange anbud og tildelinger siste 12 måneder må oppdragsgiveren ha før siden står i Google. */
 export const BUYER_MIN_NOTICES = 5;
 const SHOWN = 30;
 const TTL_MS = 30 * 60_000;
 const MAX_CACHED = 500;
+/** Åpne anbud slik siden teller og viser dem: konkurranser med frist frem i tid. */
+const openListed = (sql: ReturnType<typeof systemSql>) => sql`t.lifecycle in ('competition', 'other') and t.deadline_at > now()`;
 
 /** «Sykehusinnkjøp HF» → «sykehusinnkjop-hf». */
 export function slugify(text: string): string {
@@ -76,10 +77,10 @@ async function load(orgNumber: string): Promise<PublicBuyer | null> {
     select id, name, org_number, city from authorities where country_code = 'NO' and org_number = ${orgNumber}
   `) as unknown as { id: string; name: string; orgNumber: string; city: string | null }[];
   if (!a) return null;
-  const open = statusCondition(sql, 'open');
   const [[counts], rows, divisions, expiring] = await Promise.all([
+    // «Åpne» er det samme utvalget som listen viser: konkurranser med frist frem i tid.
     sql`
-      select count(*) filter (where ${open})::int as open,
+      select count(*) filter (where ${openListed(sql)})::int as open,
              count(*) filter (where coalesce(t.published_at, t.first_seen_at) > now() - interval '12 months')::int as notices
       from tenders t where t.authority_id = ${a.id} and not t.is_sample
     ` as unknown as Promise<{ open: number; notices: number }[]>,
@@ -89,7 +90,7 @@ async function load(orgNumber: string): Promise<PublicBuyer | null> {
              (select s.source from tender_sources s where s.tender_id = t.id and s.removed_at is null
                order by (s.source = 'doffin') desc, s.fetched_at desc limit 1) as source
       from tenders t
-      where t.authority_id = ${a.id} and not t.is_sample and t.lifecycle in ('competition', 'other') and t.deadline_at > now()
+      where t.authority_id = ${a.id} and not t.is_sample and ${openListed(sql)}
       order by t.deadline_at asc, t.id
       limit ${SHOWN}
     ` as unknown as Promise<
@@ -140,16 +141,19 @@ async function load(orgNumber: string): Promise<PublicBuyer | null> {
   };
 }
 
-/** Siden for én oppdragsgiver. Null for ukjente organisasjonsnumre og oppdragsgivere utenfor Norge. */
+/**
+ * Siden for én oppdragsgiver. Null for ukjente organisasjonsnumre og oppdragsgivere utenfor Norge.
+ * En databasefeil kastes videre (500) – den skal ikke se ut som «finnes ikke» (404) for søkemotorene.
+ */
 export async function publicBuyer(orgNumber: string): Promise<PublicBuyer | null> {
   const hit = cache.get(orgNumber);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.value;
-  let value: PublicBuyer | null = null;
+  let value: PublicBuyer | null;
   try {
     value = await load(orgNumber);
   } catch (err) {
     log.warn('public_buyer_failed', { message: err instanceof Error ? err.message : String(err) });
-    return null;
+    throw err;
   }
   if (cache.size >= MAX_CACHED) cache.delete(cache.keys().next().value!);
   cache.set(orgNumber, { at: Date.now(), value });
@@ -159,16 +163,15 @@ export async function publicBuyer(orgNumber: string): Promise<PublicBuyer | null
 /** Oppdragsgiverne som står i nettstedskartet (samme terskel som indekseringen). */
 export async function indexableBuyers(limit = 2000): Promise<{ name: string; orgNumber: string }[]> {
   const sql = systemSql();
-  const open = statusCondition(sql, 'open');
   return (await sql`
     select a.name, a.org_number
     from authorities a
     join tenders t on t.authority_id = a.id and not t.is_sample
     where a.country_code = 'NO' and a.org_number is not null
     group by a.id
-    having count(*) filter (where ${open}) >= 1
+    having count(*) filter (where ${openListed(sql)}) >= 1
        and count(*) filter (where coalesce(t.published_at, t.first_seen_at) > now() - interval '12 months') >= ${BUYER_MIN_NOTICES}
-    order by count(*) filter (where ${open}) desc, a.name
+    order by count(*) filter (where ${openListed(sql)}) desc, a.name
     limit ${limit}
   `) as unknown as { name: string; orgNumber: string }[];
 }

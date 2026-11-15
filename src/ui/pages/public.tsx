@@ -385,7 +385,14 @@ export function CountyGrid({ regions }: { regions: MarketSnapshot['regions'] }) 
 }
 
 /** Liste over åpne anbud med frist, oppdragsgiver og sted (bransje- og fylkessidene). */
-export function TenderRows({ rows }: { rows: (BoardRow & { estimatedValue?: number | null; currency?: string | null })[] }) {
+export function TenderRows({
+  rows,
+  hideBuyer = false,
+}: {
+  rows: (BoardRow & { estimatedValue?: number | null; currency?: string | null })[];
+  /** Oppdragsgiversiden: navnet står allerede øverst. */
+  hideBuyer?: boolean;
+}) {
   const { user, m, lp, locale, publicTenderPages } = useUi();
   const t = m.industries;
   return (
@@ -404,7 +411,7 @@ export function TenderRows({ rows }: { rows: (BoardRow & { estimatedValue?: numb
             <span className="min-w-0">
               <span className="block text-[16px] font-semibold leading-snug group-hover:underline">{r.title}</span>
               <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13.5px] text-muted">
-                {r.buyerName ? <span className="truncate">{r.buyerName}</span> : null}
+                {r.buyerName && !hideBuyer ? <span className="truncate">{r.buyerName}</span> : null}
                 {r.place ? (
                   <span className="inline-flex items-center gap-1">
                     <LuMapPin className="size-3.5" aria-hidden />
@@ -539,7 +546,7 @@ export function IndustryPage({
  * Kontrakter som trolig utløper de neste 12 månedene (samme anslag som radaren i appen). Uten leverandørnavn og
  * verdi – det er for appen. Vises bare når det finnes noen.
  */
-export function ExpiringContracts({ expiring }: { expiring: IndustryExpiring }) {
+export function ExpiringContracts({ expiring, hideBuyer = false }: { expiring: IndustryExpiring; hideBuyer?: boolean }) {
   const { user, m, lp, locale, publicTenderPages } = useUi();
   const t = m.industries;
   const j = m.home.journey;
@@ -570,7 +577,7 @@ export function ExpiringContracts({ expiring }: { expiring: IndustryExpiring }) 
                     <span className="text-strong">{x.title}</span>
                   )}
                 </p>
-                {x.buyerName ? <p className="mt-0.5 text-[13.5px] text-muted">{x.buyerName}</p> : null}
+                {x.buyerName && !hideBuyer ? <p className="mt-0.5 text-[13.5px] text-muted">{x.buyerName}</p> : null}
                 <p className="mt-1 text-[13.5px] text-ink">
                   <span className="font-semibold">{fill(j.expires, { date: monthYear(locale, x.expectedEnd) })}</span>
                   <span className="text-muted"> · {j.basis[x.basis]}</span>
@@ -581,9 +588,14 @@ export function ExpiringContracts({ expiring }: { expiring: IndustryExpiring }) 
         })}
       </ul>
       <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-muted">{t.expiringNote}</p>
-      <a href={user ? radar : signupWith(lp, radar)} className="mt-4 inline-flex items-center gap-1.5 text-[15px] font-semibold">
-        {t.expiringCta} <LuArrowRight className="size-4" aria-hidden />
-      </a>
+      {/* Radaren er med i Bedrift. Besøkende sendes til prisene – ikke gjennom registreringen til en låst side.
+          Innloggede går rett inn (appen sier selv fra om planen mangler). */}
+      <p className="mt-4 text-[15px] text-ink">
+        {fill(t.expiringPlan, { plan: m.plans.business.name })}{' '}
+        <a href={user ? radar : lp('/priser')} className="inline-flex items-center gap-1.5 font-semibold">
+          {user ? t.expiringCta : t.expiringPlanLink} <LuArrowRight className="size-4" aria-hidden />
+        </a>
+      </p>
     </section>
   );
 }

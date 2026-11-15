@@ -191,7 +191,8 @@ export function registerPublicRoutes(router: Router): void {
   const calculator = async (ctx: RequestContext, post: boolean) => {
     if (!env.PUBLIC_TOOLS) throw new HttpError(404, messages(ctx.locale).errors.notFound);
     const id = ctx.query.get('anbud') ?? '';
-    const tender = env.PUBLIC_TENDER_PAGES && UUID.test(id) ? await publicTender(id) : null;
+    // Uten anbudet (ukjent, eller en feil ved henting) virker kalkulatoren som vanlig.
+    const tender = env.PUBLIC_TENDER_PAGES && UUID.test(id) ? await publicTender(id).catch(() => null) : null;
     const meta = {
       title: 'Lønnsomhetssjekk: lønner anbudet seg?',
       description: 'Gratis kalkulator uten konto: legg inn timer og kostnader og se selvkost, prisen for ønsket margin og hva dere sitter igjen med ved kontraktsverdien.',
@@ -370,11 +371,22 @@ export function registerPublicRoutes(router: Router): void {
   router.get('/avmeld', 'public', (ctx) => unsubscribe(ctx, false));
   router.post('/avmeld', 'public', (ctx) => unsubscribe(ctx, true), { csrf: false });
 
+  // robots.txt med lenke til nettstedskartet (adressen følger APP_URL). Appen, API-et og admin holdes utenfor.
+  router.get('/robots.txt', 'public', async () =>
+    text(`User-agent: *\nDisallow: /app\nDisallow: /api\nAllow: /\n\nSitemap: ${env.APP_URL.replace(/\/$/, '')}/sitemap.xml\n`, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    }),
+  );
   router.get('/sitemap.xml', 'public', async () => {
     // Markedssidene på alle språk, de juridiske dokumentene, og (bare norsk) fylkessidene og bransje per fylke
     // når det er nok åpne anbud til at siden er nyttig.
     const pages = [...MARKETING_PATHS, ...INDUSTRIES.map((i) => `/bransjer/${industrySlugNb(i.id)}`)];
-    const combos = await industryRegionCounts();
+    // De tre oppslagene er uavhengige – kjøres samtidig.
+    const [combos, tenderIds, buyerRows] = await Promise.all([
+      industryRegionCounts(),
+      env.PUBLIC_TENDER_PAGES ? indexableTenderIds() : Promise.resolve([] as string[]),
+      env.PUBLIC_BUYER_PAGES ? indexableBuyers() : Promise.resolve([] as { name: string; orgNumber: string }[]),
+    ]);
     const norwegianOnly = [
       '/eksempel',
       '/metode',
@@ -383,8 +395,8 @@ export function registerPublicRoutes(router: Router): void {
       ...REGIONS.map((r) => regionPath(r.code)),
       ...INDUSTRIES.flatMap((i) => REGIONS.filter((r) => (combos.get(`${i.id}|${r.code}`) ?? 0) >= MIN_OPEN_FOR_INDEXING).map((r) => industryRegionPath(i.id, r.code))),
     ];
-    const tenders = env.PUBLIC_TENDER_PAGES ? (await indexableTenderIds()).map((id) => `/anbud/${id}`) : [];
-    const buyers = env.PUBLIC_BUYER_PAGES ? (await indexableBuyers()).map((b) => buyerPath(b.name, b.orgNumber)) : [];
+    const tenders = tenderIds.map((id) => `/anbud/${id}`);
+    const buyers = buyerRows.map((b) => buyerPath(b.name, b.orgNumber));
     const urls = [...LOCALES.flatMap((l) => pages.map((path) => localePath(l, path))), ...norwegianOnly, ...LEGAL_DOCS.map((d) => d.href), ...tenders, ...buyers];
     const base = env.APP_URL.replace(/\/$/, '');
     const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${base}${u}</loc></url>`).join('')}</urlset>`;
