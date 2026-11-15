@@ -8,6 +8,7 @@ import {
   LuArrowRight,
   LuBellRing,
   LuCalculator,
+  LuCalendarClock,
   LuCalendarRange,
   LuChartColumn,
   LuCheck,
@@ -31,13 +32,14 @@ import { INDUSTRIES, REGION_BY_CODE } from '@/domain/reference';
 import { industryRegionPath, industrySlugNb, regionPath } from '@/domain/slugs';
 import { mentionsAi, PLANS, type PlanId } from '@/domain/billing/plans';
 import type { BoardRow, IndustryListing, MarketSnapshot, NoticeSpecimen } from '@/domain/tenders/market';
+import type { IndustryExpiring } from '@/domain/tenders/expiring';
 import { companyConfigured } from '@/domain/legal/legal';
 import { useUi } from '../context';
 import { Alert, Button, cn, Field, Input, PostForm, Textarea } from '../components';
 import { PublicLayout } from '../layouts';
 import { NewsletterSignup } from '../newsletter';
 import { sourcesText, type Locale, type Messages } from '@/i18n';
-import { clockTime, dayOfMonth, fill, int, money, monthShort, plural, pluralTemplate, rich } from '@/i18n/format';
+import { clockTime, dayOfMonth, fill, int, money, monthShort, monthYear, plural, pluralTemplate, rich } from '@/i18n/format';
 import { FaqList, faqItems, INDUSTRY_ICONS } from '../marketing';
 import { H2, IndustryTiles, Kicker, NightHero, SignalCta, Wrap } from '../site';
 import { NoticeExample } from './notice-example';
@@ -422,7 +424,17 @@ export function TenderRows({ rows }: { rows: (BoardRow & { estimatedValue?: numb
   );
 }
 
-export function IndustryPage({ industryId, region, listing }: { industryId: string; region: string | null; listing: IndustryListing }) {
+export function IndustryPage({
+  industryId,
+  region,
+  listing,
+  expiring = null,
+}: {
+  industryId: string;
+  region: string | null;
+  listing: IndustryListing;
+  expiring?: IndustryExpiring | null;
+}) {
   const { user, m, lp, locale } = useUi();
   const t = m.industries;
   const ref = INDUSTRIES.find((i) => i.id === industryId)!;
@@ -498,6 +510,7 @@ export function IndustryPage({ industryId, region, listing }: { industryId: stri
                 </a>
               </p>
             ) : null}
+            {expiring?.rows.length ? <ExpiringContracts expiring={expiring} /> : null}
           </div>
           <aside className="h-fit space-y-4 lg:sticky lg:top-24">
             <div className="rounded-3xl bg-cream p-6">
@@ -519,6 +532,59 @@ export function IndustryPage({ industryId, region, listing }: { industryId: stri
         </Wrap>
       </section>
     </PublicLayout>
+  );
+}
+
+/**
+ * Kontrakter som trolig utløper de neste 12 månedene (samme anslag som radaren i appen). Uten leverandørnavn og
+ * verdi – det er for appen. Vises bare når det finnes noen.
+ */
+function ExpiringContracts({ expiring }: { expiring: IndustryExpiring }) {
+  const { user, m, lp, locale, publicTenderPages } = useUi();
+  const t = m.industries;
+  const j = m.home.journey;
+  const radar = '/app/konkurrenter/utlop';
+  const href = (id: string) => (user ? `/app/anbud/${id}` : publicTenderPages ? `/anbud/${id}` : null);
+  const n = `${int(locale, expiring.upcoming)}${expiring.atLeast ? '+' : ''}`;
+  return (
+    <section aria-labelledby="utlop" className="mt-14">
+      <h2 id="utlop" className="text-[22px] font-[740] tracking-[-0.02em] text-strong">
+        {j.soon}
+      </h2>
+      <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-muted">
+        {fill(pluralTemplate(locale, t.expiringCount, expiring.upcoming), { n })} {t.expiringWhy}
+      </p>
+      <ul className="mt-5 divide-y divide-line rounded-2xl border border-line bg-surface">
+        {expiring.rows.map((x) => {
+          const link = href(x.id);
+          return (
+            <li key={x.id} className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
+              <LuCalendarClock className="mt-1 size-4 shrink-0 text-navy-600" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold leading-snug [overflow-wrap:anywhere]">
+                  {link ? (
+                    <a href={link} className="text-strong no-underline hover:underline">
+                      {x.title}
+                    </a>
+                  ) : (
+                    <span className="text-strong">{x.title}</span>
+                  )}
+                </p>
+                {x.buyerName ? <p className="mt-0.5 text-[13.5px] text-muted">{x.buyerName}</p> : null}
+                <p className="mt-1 text-[13.5px] text-ink">
+                  <span className="font-semibold">{fill(j.expires, { date: monthYear(locale, x.expectedEnd) })}</span>
+                  <span className="text-muted"> · {j.basis[x.basis]}</span>
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-muted">{t.expiringNote}</p>
+      <a href={user ? radar : signupWith(lp, radar)} className="mt-4 inline-flex items-center gap-1.5 text-[15px] font-semibold">
+        {t.expiringCta} <LuArrowRight className="size-4" aria-hidden />
+      </a>
+    </section>
   );
 }
 

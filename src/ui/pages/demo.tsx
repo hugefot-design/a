@@ -109,6 +109,12 @@ export function DemoPage({ demo }: { demo: DemoReport | null }) {
                 <LuInfo className="mt-0.5 size-4 shrink-0" aria-hidden />
                 Med deres egen profil blir vurderingen deres: hvilke krav dere oppfyller, og lønnsomhet regnet med deres kostnader.
               </p>
+              <p className="mt-3 text-[13.5px]">
+                <a href="/metode" className="font-semibold">
+                  Slik regner vi
+                </a>{' '}
+                <span className="text-muted">– reglene bak hvert tall.</span>
+              </p>
             </aside>
           </div>
         </Wrap>

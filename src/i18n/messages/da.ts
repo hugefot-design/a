@@ -455,6 +455,11 @@ export const da: Messages = {
     allRegions: 'Hele Norge',
     listTitle: 'Nærmeste frister',
     none: 'Ingen åbne udbud med dette valg lige nu.',
+    /** «Kontrakter som snart utløper» på bransjesidene (overskrift, «Utløper ca.» og grunnlag fra home.journey). */
+    expiringCount: { one: '{n} tildelt kontrakt udløber sandsynligvis inden for 12 måneder.', other: '{n} tildelte kontrakter udløber sandsynligvis inden for 12 måneder.' },
+    expiringWhy: 'Når en kontrakt udløber, kan ordregiveren lave et nyt udbud. Her er de nærmeste.',
+    expiringNote: 'Skøn ud fra tildelingsbekendtgørelserne: slutdatoen er oplyst eller beregnet ud fra start og varighed. Optioner (forlængelser) står sjældent med, så kontrakten kan vare længere. Kontrakter uden slutdato eller varighet er ikke med.',
+    expiringCta: 'Se alle – og hvem der har kontrakten i dag',
     value: 'Anslået værdi {value}',
     see: 'Se detaljer',
     back: 'Alle brancher',

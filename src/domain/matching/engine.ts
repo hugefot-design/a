@@ -52,6 +52,34 @@ export interface MatchTender {
 
 export type Uncertainty = 'lav' | 'middels' | 'høy';
 
+/**
+ * Reglene i poengsummen, slik de vises på metodesiden (/metode). Bare dokumentasjon – selve utregningen står i
+ * scoreTender, og testene sjekker at de stemmer med hverandre. Summen av maks er 100.
+ */
+export const SCORE_PARTS = [
+  { key: 'cpv', label: 'Fagområde (CPV-kode eller bransje)', max: 40, rule: 'Samme CPV-kode: 40. Nær kode: 10–34 – jo flere like sifre, jo mer. Samme bransje: minst 22.' },
+  { key: 'keywords', label: 'Det dere leverer (ordene i profilen)', max: 15, rule: '8 per ord i tittelen og 3 per ord i beskrivelsen. Maks 10 når fagområdet gir under 20.' },
+  { key: 'geography', label: 'Område', max: 15, rule: 'Fylke dere dekker, eller hele landet: 15. Sted ikke oppgitt: 8. Utenfor: 0.' },
+  { key: 'value', label: 'Kontraktsverdi', max: 10, rule: 'Innenfor størrelsen dere ønsker (eller ingen grense satt): 10. Ikke oppgitt eller i annen valuta: 5. Under minstegrensen: 4. Over maksgrensen: 2.' },
+  { key: 'type', label: 'Kontraktstype', max: 5, rule: 'Typen dere ønsker: 5. Ingen type valgt: 4. Ikke oppgitt i kunngjøringen: 3. En annen type: 0.' },
+  { key: 'deadline', label: 'Tid til fristen', max: 5, rule: 'Nok tid: 5. Frist ikke oppgitt: 3. Kortere enn minimumet dere har satt: 1. Gått ut: 0.' },
+  {
+    key: 'requirements',
+    label: 'Krav dere oppfyller',
+    max: 10,
+    rule: '5 for hver godkjenning eller sertifisering kunngjøringen nevner og dere har, 3 når dere oppfyller omsetningskravet, 2 når det bes om referanser og dere har det.',
+  },
+] as const satisfies readonly { key: keyof MatchBreakdown['components']; label: string; max: number; rule: string }[];
+
+/** Tak på poengsummen (teksten er den samme som i forklaringen til hvert treff). */
+export const SCORE_CAPS = [
+  { max: 25, text: 'Ingen faglige treff' },
+  { max: 45, text: 'Bare søkeordtreff, ingen bransje- eller CPV-treff' },
+  { max: 55, text: 'Bare treff på overordnet CPV-gruppe' },
+  { max: 40, text: 'Mulig absolutt krav som ikke er oppfylt' },
+  { max: 35, text: 'Omsetningskravet er ikke oppfylt' },
+] as const;
+
 export interface MatchBreakdown {
   reasons: string[];
   gaps: string[];

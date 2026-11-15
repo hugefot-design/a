@@ -5,6 +5,8 @@ import { rateLimit } from '@/lib/rate-limit';
 import { queueEmail } from '@/lib/email';
 import { countyOverview, industryListing, industryRegionCounts, marketSnapshot, noticeSpecimen, parseBoardFilter } from '@/domain/tenders/market';
 import { siteShowcase } from '@/domain/tenders/showcase';
+import { industryExpiring } from '@/domain/tenders/expiring';
+import { MethodPage } from '@/ui/pages/method';
 import { demoReport } from '@/domain/intelligence/demo';
 import { intelligencePdf } from '@/domain/intelligence/pdf';
 import { DemoPage } from '@/ui/pages/demo';
@@ -142,6 +144,15 @@ export function registerPublicRoutes(router: Router): void {
     });
   });
 
+  // Åpen metode: reglene bak treff, merking, markedspris, lønnsomhet og utløp (bare norsk).
+  router.get('/metode', 'public', async (ctx) =>
+    render(ctx, <MethodPage />, {
+      title: 'Slik regner vi: treff, markedspris og lønnsomhet',
+      description: 'Åpen metode: hvordan AnbudRadar regner treffpoeng, markedspris og lønnsomhet, hva hvert punkt bygger på – og hva vi ikke vet.',
+      canonical: '/metode',
+    }),
+  );
+
   // Verktøy uten konto. Ingenting lagres – verken valgene, ordene eller tallene besøkende skriver inn.
   router.get('/prov', 'public', async (ctx) => {
     if (!env.PUBLIC_TOOLS) throw new HttpError(404, messages(ctx.locale).errors.notFound);
@@ -214,9 +225,9 @@ export function registerPublicRoutes(router: Router): void {
     if (ctx.locale === 'nb' && (ctx.params.id !== industrySlugNb(industry) || region)) {
       return redirect(withUtm(ctx, region ? industryRegionPath(industry, region) : `/bransjer/${industrySlugNb(industry)}`), 301);
     }
-    const listing = await industryListing(industry, region);
+    const [listing, expiring] = await Promise.all([industryListing(industry, region), industryExpiring(industry, region)]);
     const name = t.industries.names[industry]?.name ?? industry;
-    return render(ctx, <IndustryPage industryId={industry} region={region} listing={listing} />, {
+    return render(ctx, <IndustryPage industryId={industry} region={region} listing={listing} expiring={expiring} />, {
       title: fill(t.industries.pageTitle, { industry: name }),
       description: fill(t.industries.pageDescription, { industry: name }),
     });
@@ -229,10 +240,10 @@ export function registerPublicRoutes(router: Router): void {
     if (!industry || !region || ctx.locale !== 'nb') throw new HttpError(404, t.errors.notFound);
     const path = industryRegionPath(industry, region);
     if (ctx.params.id !== industrySlugNb(industry)) return redirect(withUtm(ctx, path), 301);
-    const listing = await industryListing(industry, region);
+    const [listing, expiring] = await Promise.all([industryListing(industry, region), industryExpiring(industry, region)]);
     const name = t.industries.names[industry]?.name ?? industry;
     const county = REGION_BY_CODE.get(region)!.name;
-    return render(ctx, <IndustryPage industryId={industry} region={region} listing={listing} />, {
+    return render(ctx, <IndustryPage industryId={industry} region={region} listing={listing} expiring={expiring} />, {
       title: `Anbud: ${name} i ${county}`,
       description: `${openText(listing.open)} innen ${lowerFirst(name)} i ${county}, med frister og oppdragsgivere. Oppdateres flere ganger i døgnet fra Doffin og TED. Få varsel om nye anbud.`,
       canonical: path,
@@ -349,6 +360,7 @@ export function registerPublicRoutes(router: Router): void {
     const combos = await industryRegionCounts();
     const norwegianOnly = [
       '/eksempel',
+      '/metode',
       ...(env.PUBLIC_TOOLS ? ['/prov', '/kalkulator'] : []),
       '/fylker',
       ...REGIONS.map((r) => regionPath(r.code)),

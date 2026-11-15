@@ -154,7 +154,10 @@ export function TryPage({ values, result, limited = false }: { values: TryValues
                     : result.words.length
                       ? 'Ingen av dem skiller seg ut som gode treff på ordene deres ennå – prøv andre ord for det dere leverer.'
                       : 'Skriv hva dere leverer, så skiller vi de beste fra resten.'}{' '}
-                  Tallet viser hvor godt anbudet passer – ikke sjansen for å vinne.
+                  Tallet viser hvor godt anbudet passer – ikke sjansen for å vinne.{' '}
+                  <a href="/metode#treff" className="font-semibold">
+                    Slik regnes det
+                  </a>
                 </p>
               ) : (
                 <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-muted">Prøv et annet fylke eller «Hele landet» – eller få beskjed når nye kommer.</p>
@@ -429,6 +432,12 @@ export function CalculatorPage({
                         </li>
                       ))}
                     </ul>
+                    <p className="border-t border-line px-4 py-3 text-[13.5px]">
+                      <a href="/metode#kalkyle" className="font-semibold">
+                        Hele metoden
+                      </a>{' '}
+                      <span className="text-muted">– også markedspris og hva vi ikke vet.</span>
+                    </p>
                   </details>
                 </article>
 

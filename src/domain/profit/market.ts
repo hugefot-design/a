@@ -20,7 +20,8 @@ import { CPV_DIVISIONS } from '@/domain/reference';
 export const MIN_COMPARABLES = 3;
 /** Fra så mange regnes grunnlaget som brukbart (færre vises med advarsel). */
 export const SOLID_COMPARABLES = 8;
-const MAX_AGE_YEARS = 5;
+/** Eldre tildelinger enn dette tas ikke med. */
+export const MAX_AGE_YEARS = 5;
 
 export interface MarketAward {
   tenderId: string;

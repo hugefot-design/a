@@ -22,7 +22,7 @@ import { INDUSTRIES, REGIONS } from '@/domain/reference';
 import { scanRequirements, type RequirementKind } from '@/domain/documents/requirements';
 import { scanContractTerms, type TermCategory } from '@/domain/profit/terms-scan';
 import { marketPrice, MIN_COMPARABLES, type MarketPrice } from '@/domain/profit/market';
-import { expiringContracts, type ExpiryBasis } from '@/domain/competitors/expiry';
+import { expiringContracts, type ExpiringContract, type ExpiryBasis } from '@/domain/competitors/expiry';
 import { scoreTender, type MatchProfile, type MatchTender } from '@/domain/matching/engine';
 import type { AnalysisSource } from '@/domain/ai/sources';
 import { guessLanguage } from '@/connectors/doffin';
@@ -73,7 +73,16 @@ export interface Showcase {
     currency: string;
   } | null;
   award: { title: string; buyerName: string | null; value: number; currency: string; awardDate: Date } | null;
-  expiring: { title: string; buyerName: string | null; expectedEnd: Date; basis: ExpiryBasis }[];
+  expiring: ExpiringTeaser[];
+}
+
+/** En kontrakt som trolig utløper snart – uten leverandørnavn (det er for appen). */
+export interface ExpiringTeaser {
+  id: string;
+  title: string;
+  buyerName: string | null;
+  expectedEnd: Date;
+  basis: ExpiryBasis;
 }
 
 const KEY_KINDS: RequirementKind[] = ['avvisning', 'minstekrav', 'kvalifikasjon', 'befaring'];
@@ -289,16 +298,24 @@ export function marketSummary(mp: MarketPrice): Showcase['market'] {
   };
 }
 
-/** 6. Kontrakter som snart utløper i bransjen (samme anslag som radaren i appen). */
-async function expiringFor(tx: Tx, industryId: string, now: Date): Promise<Showcase['expiring']> {
-  const expiry = await expiringContracts(tx, { industries: [industryId], regions: null, monthsAhead: 12 }, now);
-  const upcoming = expiry.rows
+/**
+ * De nærmeste kontraktene som trolig utløper (ikke de som alt er utløpt): lesbare, norske titler først, så sortert
+ * på dato. Brukes på forsiden og bransjesidene. Leverandørnavn tas ikke med – de vises bare i appen.
+ */
+export function pickExpiring(rows: ExpiringContract[], now: Date, limit: number): ExpiringTeaser[] {
+  const upcoming = rows
     .filter((r) => r.expectedEnd >= now)
     .sort((a, b) => norwegianFirst(b.title) - norwegianFirst(a.title) || a.expectedEnd.getTime() - b.expectedEnd.getTime());
   return readableFirst(upcoming, (r) => r.title)
-    .slice(0, 3)
+    .slice(0, limit)
     .sort((a, b) => a.expectedEnd.getTime() - b.expectedEnd.getTime())
-    .map((r) => ({ title: r.title, buyerName: r.buyerName ? displayBuyer(r.buyerName) : null, expectedEnd: r.expectedEnd, basis: r.basis }));
+    .map((r) => ({ id: r.tenderId, title: r.title, buyerName: r.buyerName ? displayBuyer(r.buyerName) : null, expectedEnd: r.expectedEnd, basis: r.basis }));
+}
+
+/** 6. Kontrakter som snart utløper i bransjen (samme anslag som radaren i appen). */
+async function expiringFor(tx: Tx, industryId: string, now: Date): Promise<Showcase['expiring']> {
+  const expiry = await expiringContracts(tx, { industries: [industryId], regions: null, monthsAhead: 12 }, now);
+  return pickExpiring(expiry.rows, now, 3);
 }
 
 const knownIndustry = (c: Candidate) => c.industryIds.find((i) => INDUSTRIES.some((x) => x.id === i))!;

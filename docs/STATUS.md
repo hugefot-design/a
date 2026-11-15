@@ -9,13 +9,14 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 234 av 234 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 14.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 227 av 227 bestått – 14.11.2026 |
-| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. det nye oppstartsskjemaet, appen på telefon og lys/mørk modus) – 14.11.2026 |
+| Enhetstester | 237 av 237 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 15.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 232 av 232 bestått – 15.11.2026 |
+| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. det nye oppstartsskjemaet, appen på telefon og lys/mørk modus) – 15.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
-| `npm audit` | 0 sårbarheter – 14.11.2026 |
+| `npm audit` | 0 sårbarheter – 15.11.2026 |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
 | Tilgjengelighet, kontrast og bredde: forsiden (norsk og engelsk), `/eksempel`, `/anbud/<id>`, priser, funksjoner, registrering, bransjeside, Oversikt, Abonnement, anbudssiden, samlet vurdering og oppstartsskjemaet – 390, 768 og 1440 px, lys og mørk | Én h1 per side, `<main>`, etiketter på alle felt, navn på alle knapper og lenker, ingen doble id-er, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: filfeltene for opplasting manglet etikett – 14.11.2026 |
+| Tilgjengelighet, kontrast og bredde for metodesiden og bransjesidene med kontraktsutløp (`/metode`, `/bransjer/bygg-og-anlegg`, med fylke og på engelsk, `/bransjer/renhold`, pluss `/prov` og `/kalkulator` på nytt) – 390, 768 og 1440 px, lys og mørk | 54 av 54 kontroller OK. Rettet underveis: tekstcellene i metodetabellen fikk faste tallbredder fra den felles tabellstilen (luft rundt kolon og punktum) – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for verktøyene uten konto: forsiden (norsk og engelsk), `/prov` (tom, med treff og uten treff), `/kalkulator` (tom, for et anbud, med resultat og med feil) og `/anbud/<id>` – 390, 768 og 1440 px, lys og mørk | 60 av 60 kontroller OK: én h1 per side, etiketter på alle felt, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: følsomhetstabellen var for bred på mobil – 14.11.2026 |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av anbudssiden (regelverk/klima) og Admin → Datakilder (XML-berikelse), 1280 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -391,7 +392,22 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
-## Verktøy uten konto – «1 av 1» (14. november 2026) – IKKE rullet ut
+## Kontrakter som utløper på bransjesidene og metodesiden (15. november 2026)
+
+Fortsettelse av «1 av 1» (punkt 4 og 8 på lista til eier – de som ikke krever beslutning):
+
+- **Kontrakter som snart utløper** på alle bransjesider (og bransje per fylke, alle språk): antall tildelte kontrakter
+  som trolig utløper de neste 12 månedene og de fem nærmeste – tittel, oppdragsgiver, «Utløper ca. <måned år>» og hva
+  anslaget bygger på (oppgitt sluttdato eller beregnet fra varighet). Samme regel som radaren i appen og forsiden.
+  **Ikke** hvem som har kontrakten eller verdien – det står i appen. Kontrakter uten sluttdato eller varighet gjettes
+  ikke. Mellomlagres i 30 minutter; en feil skjuler bare listen.
+- **«Slik regner vi»** (`/metode`, norsk): treffpoengene del for del med maks og regel, takene, merkingen av grunnlag,
+  ordsøket etter krav og vilkår, markedspris, kalkyleformlene, kontraktsutløp, AI (sier at AI ikke er slått på når den
+  ikke er det) og det vi ikke vet. Tallene hentes fra konstantene koden bruker, og enhetstestene sjekker at
+  beskrivelsen stemmer med treffmotoren (et perfekt treff gir 100, og hvert tak slår inn som beskrevet). Lenket fra
+  bunnteksten, «Prøv uten konto», utregningen i lønnsomhetssjekken og eksempelet.
+
+## Verktøy uten konto – «1 av 1» (14. november 2026) – rullet ut 15.11.2026 (`b28c997`)
 
 Eier spurte hva som kan gjøre nettsiden til den eneste i sitt slag. Konkurrentenes åpne sider ble lest
 ([KONKURRENTER.md](KONKURRENTER.md)). Det som ikke sto beskrevet hos noen av dem: lønnsomhet med bedriftens egne
@@ -413,8 +429,12 @@ uten AI, uten nye tjenester og uten sporing:
   10 minutter). Rangeringen tok 4–71 ms lokalt med 507 åpne anbud.
 - Bryter: `PUBLIC_TOOLS=false` fjerner begge, og forsiden peker da til eksempelet som før.
 
-**IKKE VERIFISERT:** alt i produksjon (ikke rullet ut), og hvor raskt rangeringen går på gratis-serveren med
-produksjonsdata. **Eiers valg:** lønnsomhetssjekken gir bort en enkel utgave av en betalt funksjon – kostnadslinjer,
+**Rullet ut 15.11.2026 kl. 04.40 (UTC)** etter eiers «forsett og push ut» (versjon `b28c997`, ingen databaseendringer). Kontrollert
+på anbudradar.com: alle sider 200; skjemaet på forsiden (også engelsk), `/prov` med treff og `noindex` på resultatsider,
+`/kalkulator` med riktig utregning (selvkost 51 472 800 kr, målpris 57 192 000 kr, 1,01 % margin), lenken fra
+anbudssidene og nettstedskartet. Hele flyten forside → treff → lønnsomhetssjekk klikket gjennom i nettleser på
+390/768/1440 px i lys og mørk modus: ingen JavaScript-feil, ingen sidelengs rulling. Rangeringen tok 0,3–0,6 s.
+0 advarsler og 0 feil i loggen. **Eiers valg:** lønnsomhetssjekken gir bort en enkel utgave av en betalt funksjon – kostnadslinjer,
 risikopåslag, minstepris, vilkår i kroner, kapasitet og lagring finnes fortsatt bare i appen.
 
 ## Produktløft (13.–14. november 2026) – rullet ut 14.11.2026 (`bb0aa52`)

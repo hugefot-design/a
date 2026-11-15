@@ -47,7 +47,7 @@ anbudsradar.no, mercell.com/nb-no, tendium.ai.
 Derfor er posisjonen: **«Er dette anbudet verdt å vinne?»** – ikke «finn flere anbud». Det er her AnbudRadar
 allerede har mest ferdig (Profit Intelligence), og der konkurrentene sier minst.
 
-## Det som er bygd på grunnlag av dette (14. november 2026)
+## Det som er bygd på grunnlag av dette (14.–15. november 2026)
 
 | Tiltak | Hva | Hvorfor |
 | --- | --- | --- |
@@ -55,7 +55,10 @@ allerede har mest ferdig (Profit Intelligence), og der konkurrentene sier minst.
 | **Lønnsomhetssjekk uten konto** (`/kalkulator`, og fra hvert åpent anbud) | Timer, timekost, materialer, annet, påslag og ønsket margin inn – selvkost, målpris, margin ved kontraktsverdien og følsomhet ut, med appens formler og utregningen vist. Knyttet til et anbud: oppdragsgivers anslag (merket) og målprisen plassert blant ekte tidligere tildelinger | Viser det som er AnbudRadars eget, på ett minutt. En enkel utgave – kostnadslinjer, risikopåslag, vilkår i kroner, kapasitet og lagring finnes bare i appen |
 | Bryter | `PUBLIC_TOOLS=false` fjerner begge (forsiden peker da til eksempelet som før) | Eier bestemmer |
 
-Begge bruker bare eksisterende data og funksjoner. Ingen AI, ingen nye tjenester, ingen sporing, ingen kostnad.
+| **Kontrakter som snart utløper** på bransjesidene (15.11.2026) | De nærmeste tildelte kontraktene som trolig utløper, med grunnlaget for anslaget – uten leverandørnavn | Gir besøkende noe å forberede seg på før anbudet kommer. Ikke funnet åpent hos konkurrentene |
+| **«Slik regner vi»** (`/metode`, 15.11.2026) | Hele metoden åpent: treffpoeng del for del, tak, merking, markedspris, kalkyle, hva vi ikke vet | Konkurrentene sier «ingen hallusinasjoner». Vi viser reglene |
+
+Alt bruker bare eksisterende data og funksjoner. Ingen AI, ingen nye tjenester, ingen sporing, ingen kostnad.
 
 ## Forslag som krever eiers beslutning (ikke gjort)
 

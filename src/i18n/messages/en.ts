@@ -464,6 +464,11 @@ export const en: Messages = {
     allRegions: 'All of Norway',
     listTitle: 'Closest deadlines',
     none: 'No open tenders for this selection right now.',
+    /** «Kontrakter som snart utløper» på bransjesidene (overskrift, «Utløper ca.» og grunnlag fra home.journey). */
+    expiringCount: { one: '{n} awarded contract will probably end in the next 12 months.', other: '{n} awarded contracts will probably end in the next 12 months.' },
+    expiringWhy: 'When a contract ends, the buyer may run a new competition. Here are the nearest.',
+    expiringNote: 'Estimate from the award notices: the end date is stated or calculated from start and duration. Options (extensions) are rarely included, so a contract may last longer. Contracts without an end date or duration are not included.',
+    expiringCta: 'See all – and who holds the contract today',
     value: 'Estimated value {value}',
     see: 'See details',
     back: 'All industries',

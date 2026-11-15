@@ -455,6 +455,11 @@ export const sv: Messages = {
     allRegions: 'Hela Norge',
     listTitle: 'Närmaste sista dag',
     none: 'Inga öppna upphandlingar med det här valet just nu.',
+    /** «Kontrakter som snart utløper» på bransjesidene (overskrift, «Utløper ca.» og grunnlag fra home.journey). */
+    expiringCount: { one: '{n} tilldelat kontrakt löper troligen ut inom 12 månader.', other: '{n} tilldelade kontrakt löper troligen ut inom 12 månader.' },
+    expiringWhy: 'När ett kontrakt löper ut kan beställaren göra en ny upphandling. Här är de närmaste.',
+    expiringNote: 'Uppskattning från tilldelningsmeddelandena: slutdatumet är angivet eller beräknat från start och löptid. Optioner (förlängningar) står sällan med, så kontraktet kan pågå längre. Kontrakt utan slutdatum eller löptid är inte med.',
+    expiringCta: 'Se alla – och vem som har kontraktet i dag',
     value: 'Uppskattat värde {value}',
     see: 'Se detaljer',
     back: 'Alla branscher',
