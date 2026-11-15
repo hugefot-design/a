@@ -68,6 +68,8 @@ export interface ExpiryFilter {
   regions: string[] | null;
   /** Hvor langt frem (måneder). Kontrakter som utløp de siste tre månedene tas også med. */
   monthsAhead: number;
+  /** Bare én oppdragsgiver (authorities.id). Utelatt = alle. */
+  authorityId?: string | null;
 }
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
@@ -79,6 +81,7 @@ export async function expiringContracts(
 ): Promise<{ rows: ExpiringContract[]; coverage: { awarded: number; withEnd: number } }> {
   const industries = f.industries?.length ? f.industries : null;
   const regions = f.regions?.length ? f.regions : null;
+  const authority = f.authorityId ?? null;
   const months = Math.min(Math.max(Math.round(f.monthsAhead), 1), 36);
   const from = isoDate(addMonths(now, -3));
   const to = isoDate(addMonths(now, months));
@@ -91,6 +94,7 @@ export async function expiringContracts(
         and exists (select 1 from contract_awards a where a.tender_id = t.id)
         and (${industries}::text[] is null or t.industry_ids && ${industries}::text[])
         and (${regions}::text[] is null or t.region_codes && ${regions}::text[])
+        and (${authority}::uuid is null or t.authority_id = ${authority}::uuid)
     ),
     d as (
       select distinct on (a.tender_id, coalesce(s.org_number, lower(a.supplier_name)), coalesce(lower(a.lot_title), ''))
@@ -134,6 +138,7 @@ export async function expiringContracts(
       and exists (select 1 from contract_awards a where a.tender_id = t.id)
       and (${industries}::text[] is null or t.industry_ids && ${industries}::text[])
       and (${regions}::text[] is null or t.region_codes && ${regions}::text[])
+      and (${authority}::uuid is null or t.authority_id = ${authority}::uuid)
   `) as unknown as { awarded: number; withEnd: number }[];
   return {
     rows: rows.map((r) => ({ ...r, suppliers: [...(r.suppliers ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'nb')) })),

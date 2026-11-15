@@ -7,6 +7,8 @@ import { countyOverview, industryListing, industryRegionCounts, marketSnapshot, 
 import { siteShowcase } from '@/domain/tenders/showcase';
 import { industryExpiring } from '@/domain/tenders/expiring';
 import { MethodPage } from '@/ui/pages/method';
+import { BuyerPage } from '@/ui/pages/buyer';
+import { buyerPath, indexableBuyers, orgNumberFromSlug, publicBuyer } from '@/domain/tenders/buyer-page';
 import { demoReport } from '@/domain/intelligence/demo';
 import { intelligencePdf } from '@/domain/intelligence/pdf';
 import { DemoPage } from '@/ui/pages/demo';
@@ -141,6 +143,21 @@ export function registerPublicRoutes(router: Router): void {
       canonical: `/anbud/${t.id}`,
       noindex: !t.indexable,
       jsonLd: industry ? [breadcrumbs([['Bransjer', '/bransjer'], [industry.name, `/bransjer/${industrySlugNb(industry.id)}`], [t.title, `/anbud/${t.id}`]])] : [],
+    });
+  });
+
+  // Offentlig side per oppdragsgiver (bare norsk). Adressen slutter på organisasjonsnummeret; feil navn sendes videre.
+  router.get('/oppdragsgiver/:slug', 'public', async (ctx) => {
+    if (!env.PUBLIC_BUYER_PAGES || ctx.locale !== 'nb') throw new HttpError(404, messages(ctx.locale).errors.notFound);
+    const org = orgNumberFromSlug(ctx.params.slug ?? '');
+    const b = org ? await publicBuyer(org) : null;
+    if (!b) throw new HttpError(404, messages(ctx.locale).errors.notFound);
+    if (`/oppdragsgiver/${ctx.params.slug}` !== b.path) return redirect(withUtm(ctx, b.path), 301);
+    return render(ctx, <BuyerPage b={b} />, {
+      title: `Anbud fra ${b.name}`,
+      description: `${b.open === 1 ? '1 åpent anbud' : `${b.open} åpne anbud`} fra ${b.name}, med frister. Se hva de kjøper mest og kontrakter som snart utløper. Oppdateres flere ganger i døgnet fra Doffin og TED.`,
+      canonical: b.path,
+      noindex: !b.indexable,
     });
   });
 
@@ -367,7 +384,8 @@ export function registerPublicRoutes(router: Router): void {
       ...INDUSTRIES.flatMap((i) => REGIONS.filter((r) => (combos.get(`${i.id}|${r.code}`) ?? 0) >= MIN_OPEN_FOR_INDEXING).map((r) => industryRegionPath(i.id, r.code))),
     ];
     const tenders = env.PUBLIC_TENDER_PAGES ? (await indexableTenderIds()).map((id) => `/anbud/${id}`) : [];
-    const urls = [...LOCALES.flatMap((l) => pages.map((path) => localePath(l, path))), ...norwegianOnly, ...LEGAL_DOCS.map((d) => d.href), ...tenders];
+    const buyers = env.PUBLIC_BUYER_PAGES ? (await indexableBuyers()).map((b) => buyerPath(b.name, b.orgNumber)) : [];
+    const urls = [...LOCALES.flatMap((l) => pages.map((path) => localePath(l, path))), ...norwegianOnly, ...LEGAL_DOCS.map((d) => d.href), ...tenders, ...buyers];
     const base = env.APP_URL.replace(/\/$/, '');
     const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${base}${u}</loc></url>`).join('')}</urlset>`;
     return text(body, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } });

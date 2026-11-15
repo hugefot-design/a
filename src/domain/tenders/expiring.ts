@@ -1,13 +1,13 @@
 /**
- * «Kontrakter som snart utløper» på bransjesidene (offentlig): de nærmeste tildelte kontraktene i bransjen (og
+ * «Kontrakter som snart utløper» på bransjesidene og oppdragsgiversidene (offentlig): de nærmeste tildelte kontraktene i bransjen (og
  * fylket) som trolig utløper de neste 12 månedene – samme anslag og samme grunnlag som radaren i appen.
  *
  * - Bare tittel, oppdragsgiver, ventet slutt og hva anslaget bygger på. Hvem som har kontrakten i dag, og hva den
  *   ble tildelt for, vises bare i appen.
  * - Kontrakter uten sluttdato eller varighet tas ikke med – de gjettes ikke.
- * - Mellomlagres i 30 minutter per bransje og fylke. En feil skjuler bare listen; siden virker som før.
+ * - Mellomlagres i 30 minutter per bransje og fylke (og per oppdragsgiver). En feil skjuler bare listen; siden virker som før.
  */
-import { expiringContracts } from '@/domain/competitors/expiry';
+import { expiringContracts, type ExpiryFilter } from '@/domain/competitors/expiry';
 import { systemSql, type Tx } from '@/lib/db';
 import { log } from '@/lib/logger';
 import { pickExpiring, type ExpiringTeaser } from './showcase';
@@ -32,14 +32,22 @@ export function resetExpiringCache(): void {
   cache.clear();
 }
 
-export async function industryExpiring(industryId: string, region: string | null, now = new Date()): Promise<IndustryExpiring> {
-  const key = `${industryId}|${region ?? ''}`;
+export function industryExpiring(industryId: string, region: string | null, now = new Date()): Promise<IndustryExpiring> {
+  return load(`b|${industryId}|${region ?? ''}`, { industries: [industryId], regions: region ? [region] : null, monthsAhead: 12 }, now);
+}
+
+/** Det samme for én oppdragsgiver (oppdragsgiversidene). */
+export function buyerExpiring(authorityId: string, now = new Date()): Promise<IndustryExpiring> {
+  return load(`o|${authorityId}`, { industries: null, regions: null, monthsAhead: 12, authorityId }, now);
+}
+
+async function load(key: string, filter: ExpiryFilter, now: Date): Promise<IndustryExpiring> {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.value;
   let value = EMPTY;
   try {
     value = await systemSql().begin(async (tx) => {
-      const r = await expiringContracts(tx as unknown as Tx, { industries: [industryId], regions: region ? [region] : null, monthsAhead: 12 }, now);
+      const r = await expiringContracts(tx as unknown as Tx, filter, now);
       return {
         upcoming: r.rows.filter((x) => x.expectedEnd >= now).length,
         atLeast: r.rows.length >= QUERY_LIMIT,

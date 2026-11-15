@@ -67,7 +67,15 @@ export function PublicTenderPage({ t, origin }: { t: PublicTender; origin: strin
           <dl className="mt-7 grid max-w-5xl grid-cols-1 gap-x-8 gap-y-4 text-[14.5px] sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <dt className="text-white/55">Oppdragsgiver</dt>
-              <dd className="mt-0.5 font-semibold text-white">{t.buyerName ?? 'Ikke oppgitt'}</dd>
+              <dd className="mt-0.5 font-semibold text-white">
+                {t.buyerName && t.buyerPath ? (
+                  <a href={t.buyerPath} className="text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+                    {t.buyerName}
+                  </a>
+                ) : (
+                  (t.buyerName ?? 'Ikke oppgitt')
+                )}
+              </dd>
             </div>
             <div>
               <dt className="text-white/55">Sted</dt>

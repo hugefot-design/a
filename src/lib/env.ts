@@ -126,6 +126,8 @@ const schema = z.object({
   PUBLIC_TENDER_PAGES: bool(true),
   /** Verktøy uten konto: «Prøv uten konto» (/prov) og lønnsomhetssjekken (/kalkulator). Kan slås av uten ny kode. */
   PUBLIC_TOOLS: bool(true),
+  /** Offentlig side per oppdragsgiver (/oppdragsgiver/<navn>-<orgnr>). Kan slås av uten ny kode. */
+  PUBLIC_BUYER_PAGES: bool(true),
   COMPANY_LEGAL_NAME: z.string().default('[Selskapsnavn AS]'),
   COMPANY_ORG_NUMBER: z.string().default('[org.nr.]'),
   COMPANY_ADDRESS: z.string().default('[adresse]'),

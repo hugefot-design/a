@@ -539,7 +539,7 @@ export function IndustryPage({
  * Kontrakter som trolig utløper de neste 12 månedene (samme anslag som radaren i appen). Uten leverandørnavn og
  * verdi – det er for appen. Vises bare når det finnes noen.
  */
-function ExpiringContracts({ expiring }: { expiring: IndustryExpiring }) {
+export function ExpiringContracts({ expiring }: { expiring: IndustryExpiring }) {
   const { user, m, lp, locale, publicTenderPages } = useUi();
   const t = m.industries;
   const j = m.home.journey;

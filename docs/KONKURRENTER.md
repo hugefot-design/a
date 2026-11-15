@@ -57,6 +57,7 @@ allerede har mest ferdig (Profit Intelligence), og der konkurrentene sier minst.
 
 | **Kontrakter som snart utløper** på bransjesidene (15.11.2026) | De nærmeste tildelte kontraktene som trolig utløper, med grunnlaget for anslaget – uten leverandørnavn | Gir besøkende noe å forberede seg på før anbudet kommer. Ikke funnet åpent hos konkurrentene |
 | **«Slik regner vi»** (`/metode`, 15.11.2026) | Hele metoden åpent: treffpoeng del for del, tak, merking, markedspris, kalkyle, hva vi ikke vet | Konkurrentene sier «ingen hallusinasjoner». Vi viser reglene |
+| **Oppdragsgiversider** (`/oppdragsgiver/…`, 15.11.2026) | Åpne anbud, hva de kjøper mest og kontrakter som snart utløper per oppdragsgiver – uten leverandørnavn | Folk søker på «anbud <kommune>». Anbudsregisteret har lister per oppdragsgiver; dette legger til utløp og hva de kjøper |
 
 Alt bruker bare eksisterende data og funksjoner. Ingen AI, ingen nye tjenester, ingen sporing, ingen kostnad.
 

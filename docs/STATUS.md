@@ -10,12 +10,13 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
 | Enhetstester | 237 av 237 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 15.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 232 av 232 bestått – 15.11.2026 |
+| Integrasjonstester (ekte database, ekte HTTP) | 238 av 238 bestått – 15.11.2026 |
 | Ende-til-ende i nettleser | 10 av 10 bestått (inkl. det nye oppstartsskjemaet, appen på telefon og lys/mørk modus) – 15.11.2026 |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | `npm audit` | 0 sårbarheter – 15.11.2026 |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
 | Tilgjengelighet, kontrast og bredde: forsiden (norsk og engelsk), `/eksempel`, `/anbud/<id>`, priser, funksjoner, registrering, bransjeside, Oversikt, Abonnement, anbudssiden, samlet vurdering og oppstartsskjemaet – 390, 768 og 1440 px, lys og mørk | Én h1 per side, `<main>`, etiketter på alle felt, navn på alle knapper og lenker, ingen doble id-er, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: filfeltene for opplasting manglet etikett – 14.11.2026 |
+| Tilgjengelighet, kontrast og bredde for oppdragsgiversidene (Statsbygg og Sykehusinnkjøp med utviklingsdataene) og en anbudsside med lenke til oppdragsgiveren – 390, 768 og 1440 px, lys og mørk | 30 av 30 kontroller OK – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for metodesiden og bransjesidene med kontraktsutløp (`/metode`, `/bransjer/bygg-og-anlegg`, med fylke og på engelsk, `/bransjer/renhold`, pluss `/prov` og `/kalkulator` på nytt) – 390, 768 og 1440 px, lys og mørk | 54 av 54 kontroller OK. Rettet underveis: tekstcellene i metodetabellen fikk faste tallbredder fra den felles tabellstilen (luft rundt kolon og punktum) – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for verktøyene uten konto: forsiden (norsk og engelsk), `/prov` (tom, med treff og uten treff), `/kalkulator` (tom, for et anbud, med resultat og med feil) og `/anbud/<id>` – 390, 768 og 1440 px, lys og mørk | 60 av 60 kontroller OK: én h1 per side, etiketter på alle felt, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: følsomhetstabellen var for bred på mobil – 14.11.2026 |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -392,7 +393,7 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
-## Kontrakter som utløper på bransjesidene og metodesiden (15. november 2026)
+## Kontrakter som utløper på bransjesidene, metodesiden og oppdragsgiversidene (15. november 2026) – IKKE rullet ut
 
 Fortsettelse av «1 av 1» (punkt 4 og 8 på lista til eier – de som ikke krever beslutning):
 
@@ -406,6 +407,17 @@ Fortsettelse av «1 av 1» (punkt 4 og 8 på lista til eier – de som ikke krev
   ikke er det) og det vi ikke vet. Tallene hentes fra konstantene koden bruker, og enhetstestene sjekker at
   beskrivelsen stemmer med treffmotoren (et perfekt treff gir 100, og hvert tak slår inn som beskrevet). Lenket fra
   bunnteksten, «Prøv uten konto», utregningen i lønnsomhetssjekken og eksempelet.
+- **Oppdragsgiversider** (`/oppdragsgiver/<navn>-<orgnr>`, norsk): de åpne anbudene fra oppdragsgiveren, hva de kjøper
+  mest (CPV-hovedgrupper siste 12 måneder), kontrakter som snart utløper, og videre til varsel (søk på
+  oppdragsgiveren) og tildelingene i appen. Uten leverandørnavn og tildelte verdier. Bare norske oppdragsgivere med
+  gyldig organisasjonsnummer; adressen er stabil og feil navn sendes videre (301). Indekseres og står i
+  nettstedskartet bare med minst ett åpent anbud og minst fem anbud og tildelinger siste 12 måneder (121 med
+  utviklingsdataene) – resten har `noindex`. Anbudssidene lenker til oppdragsgiveren. Slås av med
+  `PUBLIC_BUYER_PAGES=false`.
+
+**Ikke rullet ut:** Utrullingen av `3ae9a72` (kontraktsutløp og metodesiden) ble stoppet av tillatelsessystemet i
+økten 15.11 – de er nye funksjoner som eier ikke har sett. Alt over er testet og pushet (CI grønn for `3ae9a72`), men
+venter på eiers «rull ut». Produksjonen er `b28c997`.
 
 ## Verktøy uten konto – «1 av 1» (14. november 2026) – rullet ut 15.11.2026 (`b28c997`)
 

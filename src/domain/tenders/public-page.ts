@@ -15,7 +15,9 @@ import { marketPrice } from '@/domain/profit/market';
 import { scanContractTerms, type TermCategory } from '@/domain/profit/terms-scan';
 import { INDUSTRY_BY_ID, REGION_BY_CODE } from '@/domain/reference';
 import { systemSql, type Tx } from '@/lib/db';
+import { env } from '@/lib/env';
 import { log } from '@/lib/logger';
+import { buyerPath } from './buyer-page';
 import { displayBuyer } from './market';
 import { getTender } from './queries';
 import { marketSummary, scanCandidate, type Showcase, type ShowcaseQuote } from './showcase';
@@ -31,6 +33,8 @@ export interface PublicTender {
   id: string;
   title: string;
   buyerName: string | null;
+  /** Oppdragsgiversiden (norske oppdragsgivere med organisasjonsnummer). */
+  buyerPath: string | null;
   place: string | null;
   regions: { code: string; name: string }[];
   industries: { id: string; name: string }[];
@@ -117,12 +121,18 @@ async function load(sql: Tx, id: string): Promise<PublicTender | null> {
   const mask = (q: ShowcaseQuote) => ({ ...q, text: maskContacts(q.text) });
 
   const masked = description ? clipText(maskContacts(description)) : null;
+  const [authority] = t.authorityId
+    ? ((await sql`
+        select name, org_number from authorities where id = ${t.authorityId} and country_code = 'NO' and org_number is not null
+      `) as unknown as { name: string; orgNumber: string }[])
+    : [];
   const mp = await marketPrice(sql, t);
   const market = marketSummary(mp);
   return {
     id: t.id,
     title: t.title,
     buyerName: t.buyerName ? displayBuyer(t.buyerName) : null,
+    buyerPath: env.PUBLIC_BUYER_PAGES && authority ? buyerPath(authority.name, authority.orgNumber) : null,
     place: t.placeText,
     regions: t.regionCodes.flatMap((code) => {
       const r = REGION_BY_CODE.get(code);
