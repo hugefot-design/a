@@ -1,6 +1,6 @@
 /**
  * «Slik regner vi» (/metode, bare norsk): reglene bak treffpoeng, merkingen av grunnlag, ordsøket etter krav og
- * vilkår, markedspris, lønnsomhet og kontraktsutløp – og det vi ikke vet.
+ * vilkår, markedspris, lønnsomhet, tildeling (pris mot kvalitet) og kontraktsutløp – og det vi ikke vet.
  *
  * Tallene hentes fra de samme konstantene som koden bruker (SCORE_PARTS, SCORE_CAPS, MIN_COMPARABLES osv.), og
  * testene sjekker at beskrivelsen stemmer med motoren. Ingen nye påstander: står det her, gjør koden det.
@@ -10,6 +10,7 @@ import { LuArrowRight } from 'react-icons/lu';
 import { BASIS_LEGEND } from '@/domain/intelligence/basis';
 import { QUICK_GOOD } from '@/domain/matching/quick';
 import { DISQUALIFIED_MAX, SCORE_CAPS, SCORE_PARTS } from '@/domain/matching/engine';
+import { DFO_PRICE_SOURCE, PRICE_MODELS } from '@/domain/profit/award-sim';
 import { SENSITIVITY_STEPS } from '@/domain/profit/calculator';
 import { MAX_AGE_YEARS, MIN_COMPARABLES, SOLID_COMPARABLES } from '@/domain/profit/market';
 import { TERM_LABELS } from '@/domain/profit/terms-scan';
@@ -25,6 +26,7 @@ const PARTS: [id: string, title: string][] = [
   ['krav', 'Krav, avvisning og kostbare vilkår'],
   ['markedspris', 'Markedspris fra tidligere tildelinger'],
   ['kalkyle', 'Lønnsomhet'],
+  ['tildeling', 'Tildeling: pris mot kvalitet'],
   ['utlop', 'Kontrakter som utløper'],
   ['ai', 'AI'],
   ['vet-ikke', 'Det vi ikke vet'],
@@ -219,6 +221,47 @@ export function MethodPage() {
                 <p>
                   <a href="/kalkulator" className="inline-flex items-center gap-1.5 font-semibold">
                     Prøv lønnsomhetssjekken <LuArrowRight className="size-4" aria-hidden />
+                  </a>
+                </p>
+              ) : null}
+            </Part>
+
+            <Part id="tildeling">
+              <p>Tildelingssimulatoren regner om pris til poeng med de to modellene i DFØs veileder, på en skala fra 0 til 10:</p>
+              <dl className="space-y-2 rounded-2xl border border-line p-4 text-[15px] sm:p-5">
+                {[
+                  ...PRICE_MODELS.map((p) => [p.label, `${p.formula}. ${p.note}`] as const),
+                  ['Sum', 'prispoeng × vekten på pris + kvalitetspoeng × resten av vekten'] as const,
+                  ['Likt ved', 'prisen der de to summene blir like – regnet ut av formlene over'] as const,
+                ].map(([term, def]) => (
+                  <div key={term} className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                    <dt className="shrink-0 font-semibold text-strong sm:w-56">{term}</dt>
+                    <dd className="text-ink">{def}</dd>
+                  </div>
+                ))}
+              </dl>
+              <List>
+                <li>
+                  Kilde:{' '}
+                  <a href={DFO_PRICE_SOURCE} target="_blank" rel="noopener noreferrer">
+                    DFØs veileder «Regne om pris til poeng»
+                  </a>{' '}
+                  (anskaffelser.no). Står noe annet i konkurransegrunnlaget, gjelder det.
+                </li>
+                <li>
+                  Vekten på pris fylles inn fra kunngjøringen bare når den kan leses sikkert: alle kriteriene har vekt, summen er 100, og nøyaktig ett kriterium er pris eller
+                  kostnad. Ellers skriver dere den inn selv.
+                </li>
+                <li>Konkurrentens pris og poeng er deres egne antakelser. Vi vet ikke hva andre byr.</li>
+                <li>
+                  Regnet med to tilbud, og med kvalitet og alle andre kriterier enn pris som ett kriterium. Justerer oppdragsgiver kvalitetspoengene (normalisering), er det ikke
+                  med.
+                </li>
+              </List>
+              {publicTools ? (
+                <p>
+                  <a href="/tildeling" className="inline-flex items-center gap-1.5 font-semibold">
+                    Prøv tildelingssimulatoren <LuArrowRight className="size-4" aria-hidden />
                   </a>
                 </p>
               ) : null}

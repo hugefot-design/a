@@ -11,6 +11,7 @@
  */
 import type { AnalysisSource } from '@/domain/ai/sources';
 import { scanRequirements, type RequirementKind } from '@/domain/documents/requirements';
+import { noticeWeights, type NoticeWeights } from '@/domain/profit/award-sim';
 import { marketPrice } from '@/domain/profit/market';
 import { scanContractTerms, type TermCategory } from '@/domain/profit/terms-scan';
 import { INDUSTRY_BY_ID, REGION_BY_CODE } from '@/domain/reference';
@@ -58,6 +59,8 @@ export interface PublicTender {
   marketAll: number[];
   /** Rammeavtale: oppgitt verdi er et anslag eller tak, ikke garantert omsetning. */
   isFramework: boolean;
+  /** Tildelingskriteriene med vekt fra kunngjøringen – bare når vekten på pris kan leses sikkert (til tildelingssimulatoren). */
+  awardWeights: NoticeWeights | null;
   indexable: boolean;
 }
 
@@ -163,6 +166,7 @@ async function load(sql: Tx, id: string): Promise<PublicTender | null> {
     market,
     marketAll: market ? mp.awards.map((a) => a.value) : [],
     isFramework: t.isFramework === true,
+    awardWeights: noticeWeights(t.awardCriteria),
     indexable: t.status === 'open' && description.trim().length >= MIN_TEXT_FOR_INDEXING,
   };
 }

@@ -6,7 +6,7 @@ import type { StoredFitAssessment, StoredTenderAnalysis } from '@/domain/ai/anal
 import type { MatchBreakdown } from '@/domain/matching/engine';
 import type { RefCheck } from '@/domain/ai/sources';
 import { BOOKMARK_STATUSES } from '@/domain/tenders/bookmarks';
-import { eformsFacts, type EformsFacts } from '@/domain/tenders/eforms-facts';
+import { eformsFacts, isEnvironmentNonCriterion, type EformsFacts } from '@/domain/tenders/eforms-facts';
 import { useUi } from '../../context';
 import {
   Alert,
@@ -112,7 +112,7 @@ function DeadlineBlock({ tender }: { tender: TenderDetail }) {
 }
 
 export function TenderPage(p: TenderPageProps) {
-  const { org, user, aiConfigured, aiIsMock } = useUi();
+  const { org, user, aiConfigured, aiIsMock, publicTools } = useUi();
   // Når AI ikke er slått på, ser kundene ikke tomme AI-paneler (administratorer ser dem, med beskjed om hva som mangler).
   const showAi = aiConfigured || Boolean(user?.isPlatformAdmin);
   const t = p.tender;
@@ -120,6 +120,8 @@ export function TenderPage(p: TenderPageProps) {
   const regionNames = t.regionCodes.map((r) => REGION_BY_CODE.get(r)?.name ?? r);
   // Nyeste kilde med full eForms-XML (Doffin) gir regelverk og klima/miljø.
   const ef = eformsFacts([...p.sources].reverse().find((s) => s.eforms)?.eforms);
+  // Tildelingskriteriene fra kunngjøringen (miljø som bare er krav i spesifikasjonen, er ikke kriterier).
+  const criteria = (t.awardCriteria ?? []).filter((c) => !isEnvironmentNonCriterion(c.type));
   const verified: { term: ReactNode; detail: ReactNode }[] = [
     { term: 'Oppdragsgiver', detail: t.buyerName ?? 'Ikke oppgitt' },
     ...(t.buyerOrgNumber ? [{ term: 'Org.nr. oppdragsgiver', detail: <span className="num">{t.buyerOrgNumber}</span> }] : []),
@@ -155,6 +157,30 @@ export function TenderPage(p: TenderPageProps) {
       ),
     },
     ...(t.receivedTenders !== null ? [{ term: 'Antall tilbud mottatt', detail: <span className="num">{formatInt(t.receivedTenders)}</span> }] : []),
+    ...(criteria.length
+      ? [
+          {
+            term: 'Tildelingskriterier',
+            detail: (
+              <>
+                <ul className="space-y-0.5">
+                  {criteria.map((c, i) => (
+                    <li key={i}>
+                      {c.name}
+                      {c.weight ? <strong className="num"> – {c.weight}</strong> : null}
+                    </li>
+                  ))}
+                </ul>
+                {publicTools ? (
+                  <a href={`/tildeling?anbud=${t.id}`} className="mt-1.5 inline-block text-[13px] font-semibold">
+                    Regn på vektene: hvor mye dyrere kan dere være?
+                  </a>
+                ) : null}
+              </>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (

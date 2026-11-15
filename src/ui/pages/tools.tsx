@@ -4,6 +4,7 @@
  * - «Prøv uten konto» (/prov): velg bransje og fylke og skriv hva dere leverer – de åpne anbudene rangeres med
  *   samme treffmotor som i appen. Bare de fem beste vises, og ingenting lagres.
  * - Lønnsomhetssjekken (/kalkulator): egne tall inn, selvkost, målpris og margin ut – med appens formler.
+ *   Hvilken pris som vinner, regner tildelingssimulatoren (/tildeling, egen fil) på.
  *
  * Skjemaet til «Prøv uten konto» står også på forsiden (TryBand) på alle språk.
  */
@@ -278,6 +279,7 @@ export function CalculatorPage({
 }) {
   const { user, locale } = useUi();
   const action = `/kalkulator${tender ? `?anbud=${tender.id}` : ''}`;
+  const award = `/tildeling${tender ? `?anbud=${tender.id}` : ''}`;
   const appPath = tender ? `/app/anbud/${tender.id}/lonnsomhet` : '/app/lonnsomhet';
   const signup = user ? appPath : `/registrer?neste=${encodeURIComponent(appPath)}`;
   const c = result?.calc ?? null;
@@ -441,6 +443,12 @@ export function CalculatorPage({
                       <span className="text-muted">– også markedspris og hva vi ikke vet.</span>
                     </p>
                   </details>
+                  <p className="mt-4 text-[14px] text-ink">
+                    Vinner prisen?{' '}
+                    <a href={award} className="inline-flex items-center gap-1 font-semibold">
+                      Se hvor mye dyrere dere kan være med bedre kvalitet <LuArrowRight className="size-3.5" aria-hidden />
+                    </a>
+                  </p>
                 </article>
 
                 {market && c.targetPrice !== null ? (
@@ -505,7 +513,13 @@ export function CalculatorPage({
                 </ul>
                 <p className="mt-5 flex gap-2 text-[13.5px] leading-relaxed text-muted">
                   <LuTriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-                  Regnestykket bruker bare tallene dere skriver inn. Det sier ingenting om hvilken pris som vinner.
+                  <span>
+                    Regnestykket bruker bare tallene dere skriver inn. Det sier ingenting om hvilken pris som vinner – det regner{' '}
+                    <a href={award} className="font-semibold">
+                      tildelingssimulatoren
+                    </a>{' '}
+                    på.
+                  </span>
                 </p>
                 {!tender ? (
                   <p className="mt-4 text-[14px]">

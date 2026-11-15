@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 15. november 2026 (verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 15. november 2026 (byggeplanens første runde er under arbeid og ikke rullet ut – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -9,9 +9,9 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 238 av 238 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 15.11.2026 |
-| Integrasjonstester (ekte database, ekte HTTP) | 243 av 243 bestått – 15.11.2026 |
-| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. det nye oppstartsskjemaet, appen på telefon og lys/mørk modus) – 15.11.2026 |
+| Enhetstester | 246 av 246 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 15.11.2026 (pakke 2) |
+| Integrasjonstester (ekte database, ekte HTTP) | 254 av 254 bestått – 15.11.2026 (pakke 2) |
+| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 15.11.2026 (pakke 2) |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | `npm audit` | 0 sårbarheter – 15.11.2026 |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
@@ -19,6 +19,7 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Etter gjennomgangen: tilgjengelighet, kontrast og bredde for oppdragsgiverside, bransjeside, `/prov` (med og uten treff), `/metode` og lønnsomhetssjekken – 390, 768 og 1440 px, lys og mørk | 42 av 42 kontroller OK – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for oppdragsgiversidene (Statsbygg og Sykehusinnkjøp med utviklingsdataene) og en anbudsside med lenke til oppdragsgiveren – 390, 768 og 1440 px, lys og mørk | 30 av 30 kontroller OK – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for metodesiden og bransjesidene med kontraktsutløp (`/metode`, `/bransjer/bygg-og-anlegg`, med fylke og på engelsk, `/bransjer/renhold`, pluss `/prov` og `/kalkulator` på nytt) – 390, 768 og 1440 px, lys og mørk | 54 av 54 kontroller OK. Rettet underveis: tekstcellene i metodetabellen fikk faste tallbredder fra den felles tabellstilen (luft rundt kolon og punktum) – 15.11.2026 |
+| Tilgjengelighet, kontrast og bredde for tildelingssimulatoren (`/tildeling` tom, for et anbud, med resultat og med feil), anbudssiden med den nye boksen, `/metode` og `/kalkulator` – 390, 768 og 1440 px, lys og mørk | 42 av 42 kontroller OK: én h1 per side, etiketter på alle felt, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for verktøyene uten konto: forsiden (norsk og engelsk), `/prov` (tom, med treff og uten treff), `/kalkulator` (tom, for et anbud, med resultat og med feil) og `/anbud/<id>` – 390, 768 og 1440 px, lys og mørk | 60 av 60 kontroller OK: én h1 per side, etiketter på alle felt, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: følsomhetstabellen var for bred på mobil – 14.11.2026 |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
 | Visuell kontroll av anbudssiden (regelverk/klima) og Admin → Datakilder (XML-berikelse), 1280 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -393,6 +394,41 @@ kostnader, ingen endring i Render eller Supabase.
 - Tester: `tests/integration/admin-access.test.ts` (fant at vernet virker: uten privat lagring av simulerte svar feiler
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
+
+## Byggeplanen, første runde (15. november 2026) – ikke rullet ut
+
+Bygget etter [BYGGEPLAN.md](BYGGEPLAN.md) på eiers «ok nå bygg de idene». Ingenting er rullet ut – det venter på
+«rull ut». Alle commits har `[skip render]`.
+
+**Pakke 1 – menyen i appen gruppert etter reisen** (`90054c6`)
+- Oversikt og Varsler øverst, så Finn · Vurder og regn · Lever · Lær · Konto. Ingen adresser er endret, ingenting fjernet.
+- PC: gruppene står med overskrift, og alt får plass på 1440 × 900.
+- Mobilskuffen: gruppene kan åpnes og lukkes (virker uten JavaScript), gruppen med aktiv side er åpen, og hovedvalgene
+  får plass uten å rulle på iPhone 13. Alle sider nås med høyst to trykk.
+- Nettlesertestene sjekker hovedvalgene uten rulling, riktig åpen gruppe, at alle sidene finnes i menyen og at
+  bakgrunnen dekker helt ned.
+
+**Pakke 2 – tildelingssimulator (`/tildeling`)**
+- Inn: vekten på pris, prisene og kvalitetspoengene. Ut: hvem som vinner, prisen der to tilbud står likt, og hvor mye
+  ett kvalitetspoeng mer flytter den prisen i kroner. Utregningen vises steg for steg, med en kontroll til slutt.
+- Prismodellene er sjekket mot DFØs veileder «Regne om pris til poeng» (anskaffelser.no), som er lenket på siden og på
+  metodesiden: forholdsmessig 10 × Pb ÷ Pe, og lineær 10 − 10 × (Pe − Pb) ÷ Pb. **Avvik fra planen:** planen sa
+  «null poeng ved en pris kunden oppgir». DFØs lineære modell har fast nullpunkt ved dobbel pris av laveste (og
+  minuspoeng over det), så det er den som er bygget.
+- Bare norsk, bak `PUBLIC_TOOLS`, ingenting lagres, høyst 60 utregninger per 10 minutter per besøkende, og `noindex`
+  når adressen har valg i seg.
+- For et anbud (`/tildeling?anbud=<id>`) fylles vekten på pris inn fra kunngjøringen og merkes «Fra kunngjøringen» –
+  bare når den kan leses sikkert: alle kriteriene har vekt i samme enhet, summen er 100, og nøyaktig ett kriterium er
+  pris eller kostnad. I utviklingsdataene gjelder det 101 av de 119 åpne anbudene som har tildelingskriterier.
+- Konkurrentens pris og poeng er merket som antakelser. Siden sier at simulatoren ikke vet hva andre byr, at
+  prismodellen står i konkurransegrunnlaget, og at den regner med to tilbud og med kvalitet og alle andre kriterier som
+  ett kriterium. Justering av kvalitetspoeng (normalisering) er ikke med, og det står på siden.
+- Lenker: den offentlige anbudssiden (ny boks «Slik velges vinneren» med kriteriene og vektene, merket som fakta),
+  anbudssiden i appen (kriteriene fra kunngjøringen står nå i faktalisten), lønnsomhetssjekken (begge veier),
+  metodesiden (ny del «Tildeling: pris mot kvalitet»), bunnteksten og nettstedskartet.
+- Tester: 8 enhetstester med tall regnet for hånd (begge modellene, dyrere og billigere enn konkurrenten, «uansett
+  pris», «aldri på pris», bare pris, feil i skjemaet, vektene fra kunngjøringen) og 11 integrasjonstester (visning,
+  utregning, feil per felt, forhåndsutfylling, at ingenting lagres, grensen og bryterne).
 
 ## Registreringen testet i produksjon (15. november 2026) – rettingene rullet ut 15.11.2026 (`bf8a2d6`)
 

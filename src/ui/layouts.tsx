@@ -226,6 +226,7 @@ function PublicFooter() {
               ? [
                   { href: '/prov', label: 'Prøv uten konto' },
                   { href: '/kalkulator', label: 'Lønnsomhetssjekk' },
+                  { href: '/tildeling', label: 'Tildelingssimulator' },
                 ]
               : []),
           ]}

@@ -15,6 +15,7 @@ import { PublicLayout } from '../layouts';
 import { NewsletterSignup } from '../newsletter';
 import { Chip, KIND_TONE, Quote } from '../showcase';
 import { SignalCta, Wrap } from '../site';
+import { WeightChips } from './award-sim';
 import { signupWith } from './public';
 
 const SOURCE_NAME: Record<string, string> = { doffin: 'Doffin', ted: 'TED' };
@@ -166,6 +167,26 @@ export function PublicTenderPage({ t, origin }: { t: PublicTender; origin: strin
                 </p>
               ) : null}
             </article>
+
+            {t.awardWeights ? (
+              <article className="rounded-3xl border border-line bg-surface p-6 sm:p-7" aria-labelledby="tildeling">
+                <h2 id="tildeling" className="text-[20px] font-[740] tracking-[-0.015em] text-strong">
+                  Slik velges vinneren
+                </h2>
+                <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
+                  Tildelingskriteriene og vektene fra kunngjøringen. <Fact />
+                </p>
+                <WeightChips weights={t.awardWeights} className="mt-4" />
+                {publicTools && open ? (
+                  <p className="mt-5 text-[14.5px]">
+                    <a href={`/tildeling?anbud=${t.id}`} className="font-semibold">
+                      Hvor mye dyrere kan dere være med bedre kvalitet? Regn på det
+                      <LuArrowRight className="ml-1 inline size-4 align-[-3px]" aria-hidden />
+                    </a>
+                  </p>
+                ) : null}
+              </article>
+            ) : null}
 
             {t.market ? (
               <article className="rounded-3xl border border-line bg-surface p-6 sm:p-7">

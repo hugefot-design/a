@@ -16,6 +16,9 @@ import { quickRanking } from '@/domain/matching/quick';
 import { EMPTY_QUICK_CALC, parseQuickCalc, quickCalc, type QuickCalcForm } from '@/domain/profit/quick-calc';
 import { shareAbove } from '@/domain/profit/market';
 import { CalculatorPage, TryPage } from '@/ui/pages/tools';
+import { EMPTY_AWARD_SIM, parseAwardSim, simulateAward, type AwardSimForm } from '@/domain/profit/award-sim';
+import { fmtNumber } from '@/domain/profit/calculator';
+import { AwardSimPage } from '@/ui/pages/award-sim';
 import { PAID_PLANS, PLANS } from '@/domain/billing/plans';
 import { indexableTenderIds, publicTender } from '@/domain/tenders/public-page';
 import { PublicTenderPage } from '@/ui/pages/tender-public';
@@ -219,6 +222,32 @@ export function registerPublicRoutes(router: Router): void {
   router.get('/kalkulator', 'public', (ctx) => calculator(ctx, false));
   router.post('/kalkulator', 'public', (ctx) => calculator(ctx, true));
 
+  // Tildelingssimulatoren: samme mønster som kalkulatoren – bare norsk, ingenting lagres, grense per besøkende.
+  const awardSim = async (ctx: RequestContext, post: boolean) => {
+    if (!env.PUBLIC_TOOLS) throw new HttpError(404, messages(ctx.locale).errors.notFound);
+    const id = ctx.query.get('anbud') ?? '';
+    const tender = env.PUBLIC_TENDER_PAGES && UUID.test(id) ? await publicTender(id).catch(() => null) : null;
+    const meta = {
+      title: 'Tildelingssimulator: hvor mye dyrere kan dere være?',
+      description: 'Gratis, uten konto: legg inn vekten på pris, prisene og kvalitetspoengene og se hvem som vinner – og prisen der dere står likt. DFØs prismodeller. Ingenting lagres.',
+      canonical: '/tildeling',
+      noindex: ctx.url.search.length > 0,
+    };
+    if (!post) {
+      // Vekten på pris fylles inn fra kunngjøringen når den kan leses sikkert.
+      const w = tender?.awardWeights;
+      return render(ctx, <AwardSimPage form={w ? { ...EMPTY_AWARD_SIM, pricePct: fmtNumber(w.pricePct) } : EMPTY_AWARD_SIM} result={null} tender={tender} />, meta);
+    }
+    if (!(await rateLimit(`tildeling:${ctx.ipHash}`, 60, 600))) throw new HttpError(429, 'For mange utregninger på kort tid. Prøv igjen om litt.');
+    const f = await ctx.form();
+    const form = Object.fromEntries((Object.keys(EMPTY_AWARD_SIM) as (keyof AwardSimForm)[]).map((k) => [k, formStr(f, k, 40)])) as unknown as AwardSimForm;
+    const parsed = parseAwardSim(form);
+    if (!parsed.ok) return render(ctx, <AwardSimPage form={form} errors={parsed.errors} result={null} tender={tender} />, { ...meta, status: 422 });
+    return render(ctx, <AwardSimPage form={form} result={simulateAward(parsed.input)} tender={tender} />, meta);
+  };
+  router.get('/tildeling', 'public', (ctx) => awardSim(ctx, false));
+  router.post('/tildeling', 'public', (ctx) => awardSim(ctx, true));
+
   router.get('/funksjoner', 'public', async (ctx) =>
     render(ctx, <FeaturesPage specimen={await noticeSpecimen()} />, { title: messages(ctx.locale).meta.features, description: messages(ctx.locale).meta.featuresDescription }),
   );
@@ -390,7 +419,7 @@ export function registerPublicRoutes(router: Router): void {
     const norwegianOnly = [
       '/eksempel',
       '/metode',
-      ...(env.PUBLIC_TOOLS ? ['/prov', '/kalkulator'] : []),
+      ...(env.PUBLIC_TOOLS ? ['/prov', '/kalkulator', '/tildeling'] : []),
       '/fylker',
       ...REGIONS.map((r) => regionPath(r.code)),
       ...INDUSTRIES.flatMap((i) => REGIONS.filter((r) => (combos.get(`${i.id}|${r.code}`) ?? 0) >= MIN_OPEN_FOR_INDEXING).map((r) => industryRegionPath(i.id, r.code))),

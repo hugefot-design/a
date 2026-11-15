@@ -366,8 +366,8 @@ Oppdater denne når en pakke er ferdig.
 
 | Pakke | Status | Versjon |
 | --- | --- | --- |
-| 1 Forenkle appen | Ikke startet | |
-| 2 Tildelingssimulator | Ikke startet | |
+| 1 Forenkle appen | Ferdig, ikke rullet ut | `90054c6` |
+| 2 Tildelingssimulator | Ferdig, ikke rullet ut. Lineær modell som DFØ (0 poeng ved dobbel pris), ikke et nullpunkt kunden velger | se git-loggen |
 | 3 Følg en oppdragsgiver | Ikke startet | |
 | 4 Poeng fra tildelingsbrevet | Ikke startet | |
 | 5 ZIP og Excel | Ikke startet | |
