@@ -394,7 +394,7 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
-## Registreringen testet i produksjon (15. november 2026)
+## Registreringen testet i produksjon (15. november 2026) – rettingene rullet ut 15.11.2026 (`bf8a2d6`)
 
 Eier ba om det («test registrering»). Kjørt i en ekte nettleser mot anbudradar.com med Resends testmottaker
 (`delivered+anbudradar-test-…@resend.dev` – ingen person får e-posten):
@@ -407,7 +407,7 @@ Eier ba om det («test registrering»). Kjørt i en ekte nettleser mot anbudrada
 - **Mobilmenyen bekreftet i produksjon** (iPhone): menyen er lengre enn skjermen, og bakgrunnen går helt ned.
 - «Slett kontoen» i appen → forsiden; innlogging etterpå avvist. Ingen JavaScript-feil underveis.
 
-**Funnet og rettet (ikke rullet ut):**
+**Funnet og rettet (rullet ut 15.11.2026 kl. 11.36 UTC etter eiers «rull ut»):**
 - Forsiden viste ikke «Kontoen er slettet.» – offentlige sider viste ikke meldinger. Gjør det nå (sidene lagres ikke i
   mellomlager, `no-store`, så meldingen kan ikke vises for andre).
 - Første testforsøk stoppet i testskriptet (oppstartsskjemaet bruker «brikker» med skjult avkrysningsboks), så den
@@ -415,6 +415,13 @@ Eier ba om det («test registrering»). Kjørt i en ekte nettleser mot anbudrada
   fjerner den ved neste utrulling: bare brukere med testadressen `delivered+anbudradar-test-…@resend.dev` uten
   organisasjon (sjekket: treffer ikke testadresser med organisasjon eller vanlige brukere). Til da ligger én tydelig
   merket testbruker («Test AnbudRadar (slettes)», kilde «intern-test») uten organisasjon i produksjonsdatabasen.
+
+**Etter utrullingen:** loggen viser «→ 0025_signup_test_cleanup.sql», «Ferdig: 1 migrering(er) kjørt» og «App-brukeren
+kan logge inn i databasen». Selve slettingen av den gjenværende testbrukeren er ikke sett direkte (ingen tilgang til
+produksjonsdatabasen), men SQL-en er sjekket mot testdatabasen. Hele testen ble kjørt på nytt: registrering,
+oppstartsskjema, Oversikt med treff, anbudssiden med forhåndsvurdering, samlet vurdering og lønnsomhet (200),
+abonnement, søk, mobilmenyen, «Slett kontoen» → forsiden **med «Kontoen er slettet.»**, og innlogging etterpå avvist.
+Ingen JavaScript-feil, 0 advarsler og 0 feil i loggen. Begge testbrukerne fra denne runden er slettet.
 
 ## Gjennomgang etter utrullingen (15. november 2026) – rettet og rullet ut 15.11.2026 (`3a68b4f`)
 
