@@ -394,7 +394,7 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
-## Gjennomgang etter utrullingen (15. november 2026) – rettet, IKKE rullet ut
+## Gjennomgang etter utrullingen (15. november 2026) – rettet og rullet ut 15.11.2026 (`3a68b4f`)
 
 Eier ba om en gjennomgang av alt. Gjort: kodegjennomgang av alt som er laget 13.–15.11, hele nettstedskartet i
 produksjon (833 sider, alle 200, ingen uten tittel, én h1, riktig kanonisk adresse, ingen over 2,5 s; 973 lenker videre
@@ -424,6 +424,14 @@ advarsler, 0 feil).
   Nettlesertesten for telefon sjekker dette (den feilet med den gamle koden).
 - *Nettstedskartet* henter anbud, oppdragsgivere og fylker samtidig. Mellomlageret for utløp tømmes ikke lenger helt når
   det er fullt.
+
+**Rullet ut 15.11.2026 kl. 06.09 (UTC)** etter eiers «rull ut» (versjon `3a68b4f`, med `ac69771`; CI grønn, ingen
+databaseendringer). Kontrollert på anbudradar.com: alle sider 200; robots.txt med `Sitemap:`-linjen; bransje- og
+oppdragsgiversidene sier «er med i Bedrift» og lenker ikke til låste sider for besøkende; varsel-lenken går til søket
+(`/app/anbud?oppdragsgiver=…`); «Prøv uten konto» viser ekte antall (337 i Bygg og anlegg); lønnsomhetssjekken regner
+som før; de offentlige sidene uten JavaScript-feil på 390/768/1440 px i lys og mørk modus; 0 advarsler og 0 feil i
+loggen. Mobilmenyen ligger bak innlogging og er ikke åpnet i produksjon (stilene den bruker er i det publiserte
+stilarket, og nettlesertesten for telefon dekker den) – **IKKE VERIFISERT** med en ekte innlogging i produksjon.
 
 **Ikke endret (og hvorfor):**
 - Oppdragsgivere med engelsk navn fra TED (f.eks. «Bergen Municipality»). Bare 9 av 544 har et norsk navn fra Doffin;
