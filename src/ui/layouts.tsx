@@ -449,9 +449,14 @@ function OrgSwitcher() {
   );
 }
 
-function Sidebar() {
+/**
+ * Menyen i appen. `drawer`: mobilmenyen (skuffen). Bakgrunnen vokser med innholdet (min-h-full, ikke h-full) –
+ * ellers slutter den mørke bakgrunnen ved skjermhøyden når menyen er lengre enn skjermen og rulles, og siden bak
+ * skinner gjennom nederst. Ekstra luft nederst i skuffen, så siste valg kan rulles fri av nettleserens verktøylinje.
+ */
+function Sidebar({ drawer = false }: { drawer?: boolean }) {
   return (
-    <div className="night flex h-full flex-col gap-6 px-3 py-5">
+    <div className={cn('night flex min-h-full flex-col gap-6 px-3 py-5', drawer && 'pb-28')}>
       <a href="/app" className="px-3 no-underline" aria-label="AnbudRadar – oversikt">
         <Logo inverse />
       </a>
@@ -542,8 +547,8 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
                 <LuMenu className="size-5" />
               </summary>
               <div className="fixed inset-0 z-30 bg-strong/50" data-close-details aria-hidden />
-              <div className="fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] overflow-y-auto shadow-2xl">
-                <Sidebar />
+              <div className="night fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] overflow-y-auto overscroll-contain shadow-2xl">
+                <Sidebar drawer />
               </div>
             </details>
             <form action="/app/anbud" method="get" role="search" className="relative min-w-0 flex-1 sm:max-w-xl">

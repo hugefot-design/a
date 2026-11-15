@@ -417,6 +417,11 @@ advarsler, 0 feil).
 - *Én kilde for reglene:* treffmotoren bruker takene fra `SCORE_CAPS` og grensen `DISQUALIFIED_MAX` direkte (det samme
   som metodesiden viser). Utløpsradarens grense er én konstant.
 - *robots.txt* peker nå til nettstedskartet (lages ut fra `APP_URL`).
+- *Mobilmenyen i appen* (meldt av eier med skjermbilde fra iPhone): når menyen var lengre enn skjermen og ble rullet,
+  sluttet den mørke bakgrunnen ved skjermhøyden, og den gråtonede siden bak skinte gjennom nederst (under
+  «Kapasitet og økonomi», «Abonnement», «Innstillinger»). Bakgrunnen vokser nå med innholdet, panelet har egen
+  bakgrunn, rullingen stopper i menyen, og det er luft nederst så siste valg kan rulles fri av Safari-linjen.
+  Nettlesertesten for telefon sjekker dette (den feilet med den gamle koden).
 - *Nettstedskartet* henter anbud, oppdragsgivere og fylker samtidig. Mellomlageret for utløp tømmes ikke lenger helt når
   det er fullt.
 

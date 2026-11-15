@@ -85,5 +85,27 @@ test('mobil: de viktigste sidene i appen uten vannrett rulling, feil eller for s
   assert.ok(tops.frist > 0 && tops.vurdering > 0, JSON.stringify(tops));
   assert.ok(tops.frist < tops.beskrivelse && tops.vurdering < tops.beskrivelse, `frist og vurdering før beskrivelsen: ${JSON.stringify(tops)}`);
   assert.ok(tops.vurdering < 1400, `vurderingen innen omtrent to skjermbilder: ${tops.vurdering}px`);
+
+  // Menyen: den mørke bakgrunnen følger innholdet helt ned, også når menyen er lengre enn skjermen og rulles til
+  // bunns. Før 15.11.2026 sluttet bakgrunnen ved skjermhøyden, og siden bak skinte grått gjennom nederst.
+  await page.goto(`${BASE}/app`);
+  await page.click('header summary[aria-label="Meny"]');
+  const menu = await page.locator('details[open] > div.fixed.left-0').evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+    const inner = (el.firstElementChild as HTMLElement).getBoundingClientRect();
+    const items = Array.from(el.querySelectorAll('a')) as HTMLElement[];
+    const last = items[items.length - 1]!.getBoundingClientRect();
+    return {
+      viewport: window.innerHeight,
+      innerBottom: Math.round(inner.bottom),
+      lastBottom: Math.round(last.bottom),
+      lastText: items[items.length - 1]!.innerText.trim(),
+      longerThanScreen: el.scrollHeight > el.clientHeight,
+      panelBackground: getComputedStyle(el).backgroundColor,
+    };
+  });
+  assert.ok(menu.innerBottom >= menu.viewport, `bakgrunnen dekker til bunnen: ${JSON.stringify(menu)}`);
+  assert.ok(menu.lastBottom <= menu.viewport - 80, `siste valg («${menu.lastText}») kan rulles fri av verktøylinjen nederst: ${JSON.stringify(menu)}`);
+  assert.notEqual(menu.panelBackground, 'rgba(0, 0, 0, 0)', 'selve panelet har bakgrunn');
   await ctx.close();
 });
