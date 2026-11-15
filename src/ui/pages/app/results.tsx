@@ -158,6 +158,32 @@ export function ResultsPage({ learning: l, rows }: { learning: Learning; rows: R
             </Panel>
           ) : null}
 
+          {l.scores.rows.length ? (
+            <Panel>
+              <PanelHeader
+                title="Poeng fra tildelingsbrevene"
+                description={`Hvor dere tapte, regnet ut fra poengene dere har registrert fra brevene (${formatInt(l.scores.rows.length)} ${l.scores.rows.length === 1 ? 'tapt anbud' : 'tapte anbud'}).`}
+              />
+              {l.scores.pris + l.scores.kvalitet + l.scores.begge ? (
+                <div className="flex flex-wrap gap-2 border-b border-line px-5 py-3">
+                  <Badge tone="neutral">Tapte på pris: {formatInt(l.scores.pris)}</Badge>
+                  <Badge tone="neutral">Tapte på kvalitet og andre kriterier: {formatInt(l.scores.kvalitet)}</Badge>
+                  <Badge tone="neutral">Bak på begge: {formatInt(l.scores.begge)}</Badge>
+                </div>
+              ) : null}
+              <ul className="divide-y divide-line">
+                {l.scores.rows.map((r) => (
+                  <li key={r.tenderId} className="px-5 py-3">
+                    <a href={`/app/anbud/${r.tenderId}#resultat`} className="font-semibold">
+                      {r.title}
+                    </a>
+                    <p className="mt-0.5 text-[13.5px] text-ink">{r.summary}</p>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          ) : null}
+
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {l.reasons.length ? (
               <Panel>

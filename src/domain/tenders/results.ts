@@ -9,8 +9,9 @@
  * Verdien i en tildelingskunngjøring er vinnerens tilbudsverdi i eForms (BT-720) og samlet tildelt verdi i TED.
  * For rammeavtaler er den ofte et anslag, så den brukes bare automatisk når det er én vinner og ikke rammeavtale.
  */
-import { first, type Tx } from '@/lib/db';
+import { first, toJson, type Tx } from '@/lib/db';
 import { parseNumber } from '@/domain/profit/service';
+import { analyzeScores, parseScoreForm, readScoreDetails, scoreSummary, type ScoreAnalysis, type ScoreDetails } from './award-scores';
 
 export const OUTCOME_REASONS = {
   pris: 'Pris',
@@ -29,6 +30,8 @@ export interface ResultFields {
   winningPrice: number | null;
   winnerName: string | null;
   reason: OutcomeReason | null;
+  /** Poeng fra tildelingsbrevet. `undefined` = ikke med i skjemaet (beholdes), `null` = tømmes. */
+  scores?: ScoreDetails | null;
 }
 
 const MAX_PRICE = 1e13;
@@ -51,9 +54,18 @@ export function parseResultForm(form: FormData): { ok: true; data: ResultFields 
   if (typeof winningPrice === 'string') return { ok: false, error: winningPrice };
   const reasonRaw = str('reason', 20);
   if (reasonRaw && !(reasonRaw in OUTCOME_REASONS)) return { ok: false, error: 'Velg hva som avgjorde fra listen.' };
+  // Poengene sendes bare når poengdelen er med i skjemaet (ikke når anbudet er vunnet).
+  const scores = form.get('scoreForm') === '1' ? parseScoreForm(form) : null;
+  if (scores && !scores.ok) return { ok: false, error: scores.error };
   return {
     ok: true,
-    data: { ourPrice, winningPrice, winnerName: str('winnerName', 200) || null, reason: (reasonRaw || null) as OutcomeReason | null },
+    data: {
+      ourPrice,
+      winningPrice,
+      winnerName: str('winnerName', 200) || null,
+      reason: (reasonRaw || null) as OutcomeReason | null,
+      ...(scores?.ok ? { scores: scores.data } : {}),
+    },
   };
 }
 
@@ -63,6 +75,12 @@ export async function saveResultFields(tx: Tx, orgId: string, bookmarkId: string
       outcome_reason = ${data.reason}
     where id = ${bookmarkId} and org_id = ${orgId} returning id
   `;
+  if (rows.length && data.scores !== undefined) {
+    await tx`
+      update bookmarks set score_details = ${data.scores === null ? null : toJson(data.scores)}::text::jsonb
+      where id = ${bookmarkId} and org_id = ${orgId}
+    `;
+  }
   return rows.length > 0;
 }
 
@@ -217,6 +235,8 @@ export interface ResultRow {
   currency: string | null;
   calcTargetPrice: number | null;
   awards: DistinctAward[];
+  /** Poeng fra tildelingsbrevet, når bedriften har registrert dem. */
+  scoreDetails: ScoreDetails | null;
 }
 
 export interface PriceComparison {
@@ -246,6 +266,13 @@ export interface Learning {
   buyers: { name: string; authorityId: string | null; delivered: number; won: number; lost: number }[];
   /** Leverte tilbud uten resultat – med tildelingen hvis den er publisert. */
   awaiting: ResultRow[];
+  /** Hva poengene fra tildelingsbrevene viser for tapte anbud: hvor dere tapte, per anbud og samlet. */
+  scores: {
+    rows: { tenderId: string; title: string; summary: string; verdict: ScoreAnalysis['verdict'] }[];
+    pris: number;
+    kvalitet: number;
+    begge: number;
+  };
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -345,6 +372,14 @@ export function learningSummary(rows: ResultRow[]): Learning {
     buyers.set(key, b);
   }
 
+  // Poengene fra tildelingsbrevene (bare tapte anbud – der «hvor tapte dere?» gir mening).
+  const scored = lost.flatMap((r) => {
+    if (!r.scoreDetails) return [];
+    const a = analyzeScores(r.scoreDetails);
+    const summary = scoreSummary(a);
+    return summary ? [{ tenderId: r.tenderId, title: r.title, summary, verdict: a.verdict }] : [];
+  });
+
   return {
     delivered: rows.length,
     won: won.length,
@@ -359,6 +394,12 @@ export function learningSummary(rows: ResultRow[]): Learning {
     winnersAgainstUs: [...winners.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'nb')).slice(0, 8),
     buyers: [...buyers.values()].sort((a, b) => b.delivered - a.delivered || a.name.localeCompare(b.name, 'nb')).slice(0, 10),
     awaiting: rows.filter((r) => r.status === 'submitted'),
+    scores: {
+      rows: scored,
+      pris: scored.filter((x) => x.verdict === 'pris').length,
+      kvalitet: scored.filter((x) => x.verdict === 'kvalitet').length,
+      begge: scored.filter((x) => x.verdict === 'begge').length,
+    },
   };
 }
 
@@ -367,7 +408,7 @@ export async function loadResults(tx: Tx, orgId: string): Promise<{ rows: Result
   const raw = (await tx`
     select b.id as bookmark_id, b.tender_id, t.title, t.buyer_name, t.authority_id, b.status,
            b.our_price::float8 as our_price, b.winning_price::float8 as winning_price, b.winner_name, b.outcome_reason as reason,
-           b.outcome_source, b.decided_at, b.submitted_at, t.deadline_at, t.is_framework, t.currency,
+           b.outcome_source, b.decided_at, b.submitted_at, t.deadline_at, t.is_framework, t.currency, b.score_details,
            (c.result->'calc'->>'targetPrice')::float8 as calc_target_price
     from bookmarks b
     join tenders t on t.id = b.tender_id
@@ -375,11 +416,15 @@ export async function loadResults(tx: Tx, orgId: string): Promise<{ rows: Result
     where b.org_id = ${orgId} and b.status in ('submitted', 'won', 'lost')
     order by coalesce(b.decided_at, b.submitted_at, b.updated_at) desc
     limit 500
-  `) as unknown as Omit<ResultRow, 'awards'>[];
+  `) as unknown as (Omit<ResultRow, 'awards' | 'scoreDetails'> & { scoreDetails: unknown })[];
   const awards = await awardsFor(
     tx,
     raw.map((r) => r.tenderId),
   );
-  const rows = raw.map((r) => ({ ...r, awards: distinctAwards(awards.filter((a) => a.tenderId === r.tenderId), ourOrgNumber) }));
+  const rows = raw.map((r) => ({
+    ...r,
+    scoreDetails: readScoreDetails(r.scoreDetails),
+    awards: distinctAwards(awards.filter((a) => a.tenderId === r.tenderId), ourOrgNumber),
+  }));
   return { rows, ourOrgNumber };
 }

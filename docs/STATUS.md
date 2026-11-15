@@ -9,9 +9,9 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 246 av 246 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 15.11.2026 (pakke 3) |
-| Integrasjonstester (ekte database, ekte HTTP) | 264 av 264 bestått – 15.11.2026 (pakke 3) |
-| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 15.11.2026 (pakke 3) |
+| Enhetstester | 254 av 254 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 15.11.2026 (pakke 4) |
+| Integrasjonstester (ekte database, ekte HTTP) | 267 av 267 bestått – 15.11.2026 (pakke 4) |
+| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 15.11.2026 (pakke 4) |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | `npm audit` | 0 sårbarheter – 15.11.2026 |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
@@ -459,6 +459,25 @@ Bygget etter [BYGGEPLAN.md](BYGGEPLAN.md) på eiers «ok nå bygg de idene». In
 - Tester: 10 nye integrasjonstester (skjemaet, påmelding og bekreftelse, innholdet i e-posten uten leverandørnavn, ingen
   e-post uten nye anbud, avmelding som sletter, feil og grenser, oversikten, lenkene i listene, varselet i Admin,
   plassholdere og bryteren `PUBLIC_BUYER_PAGES`).
+
+**Pakke 4 – poeng fra tildelingsbrevet**
+- Under resultatet på anbudssiden i appen (når tilbudet er levert eller ikke vunnet): frivillige felt for egne og
+  vinnerens poeng, samlet og per kriterium (høyst seks). Kriteriene og vektene fylles inn fra kunngjøringen når de
+  finnes, og merkes. Poeng kan stå før vekting (0–10, ganges med vekten) eller etter (som «28 av 30») – brukeren
+  krysser av.
+- «Dere tapte på …» regnes ut av tallene: vektet forskjell på pris og på de andre kriteriene («Dere tapte på pris: 1,60
+  poeng bak på pris, +0,60 på de andre kriteriene»), med forskjellen per kriterium. Mangler vekter eller pris, sier den
+  bare det tallene viser (kriteriet dere tapte mest på, eller summene).
+- Resultater har en ny del «Poeng fra tildelingsbrevene» med hvor dere tapte per anbud og samlet. Læringsdelen i den
+  samlede vurderingen tar det med når minst to tildelingsbrev kan regnes ut (og gruppen har minst tre avgjorte).
+- Lagres på det lagrede anbudet (migrering `0027`, bare en ny kolonne). Bare organisasjonen ser tallene
+  (radnivåsikkerhet), og de er med i personverneksporten. Statusskjemaet i listen rører ikke poengene; tomme poengfelt
+  tømmer dem.
+- Tester: 7 enhetstester for utregningen (regnet for hånd), 1 for læringsdelen, og 3 integrasjonstester – også at en
+  annen organisasjon verken ser eller kan endre tallene, i appen eller direkte i databasen.
+- Tilgjengelighet, kontrast og bredde: anbudssiden (tapt med poeng, og levert med kriteriene fra kunngjøringen) og
+  Resultater – 390, 768 og 1440 px, lys og mørk: 18 av 18 OK. Rettet underveis: kriterienavnene ble kuttet i det smale
+  panelet; nå står navnet på egen linje og tallene med synlige etiketter under.
 
 ## Registreringen testet i produksjon (15. november 2026) – rettingene rullet ut 15.11.2026 (`bf8a2d6`)
 

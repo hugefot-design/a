@@ -7,12 +7,15 @@ import type { MatchBreakdown } from '@/domain/matching/engine';
 import type { RefCheck } from '@/domain/ai/sources';
 import { BOOKMARK_STATUSES } from '@/domain/tenders/bookmarks';
 import { eformsFacts, isEnvironmentNonCriterion, type EformsFacts } from '@/domain/tenders/eforms-facts';
+import { fmtNumber } from '@/domain/profit/calculator';
+import { analyzeScores, readScoreDetails, scoreFormRows, scoreSummary, signedPoints } from '@/domain/tenders/award-scores';
 import { useUi } from '../../context';
 import {
   Alert,
   Badge,
   Button,
   buttonVariants,
+  Checkbox,
   DefinitionList,
   Field,
   Input,
@@ -51,6 +54,8 @@ export interface TenderPageProps {
     outcomeReason?: string | null;
     outcomeSource?: string | null;
     decidedAt?: Date | null;
+    /** Poeng fra tildelingsbrevet (jsonb), når de er registrert. */
+    scoreDetails?: unknown;
   } | null;
   match: { score: number; breakdown: MatchBreakdown; excluded: boolean; computedAt: Date } | null;
   documents: { id: string; title: string; pageCount: number | null; textStatus: string; textError: string | null; orgId: string | null; createdAt: Date; sizeBytes: number | null }[];
@@ -401,7 +406,7 @@ export function TenderPage(p: TenderPageProps) {
           </Panel>
           {showAi || p.fit ? <FitPanel tenderId={t.id} fit={p.fit} canAssess={p.canAssessFit} aiConfigured={aiConfigured} quota={p.aiQuota} /> : null}
           <TenderProfitTeaser tenderId={t.id} badge={p.profit ?? null} enabled={ent.profitCalculator} />
-          {p.bookmark ? <StatusPanel tenderId={t.id} bookmark={p.bookmark} result={p.result ?? null} awards={p.awards} /> : null}
+          {p.bookmark ? <StatusPanel tenderId={t.id} bookmark={p.bookmark} result={p.result ?? null} awards={p.awards} criteria={t.awardCriteria} /> : null}
           {!p.bookmark && p.result?.buyerHistory ? (
             <Panel>
               <BuyerHistory history={p.result.buyerHistory} />
@@ -768,13 +773,22 @@ function StatusPanel({
   bookmark,
   result,
   awards,
+  criteria,
 }: {
   tenderId: string;
   bookmark: NonNullable<TenderPageProps['bookmark']>;
   result: TenderResultInfo | null;
   awards: TenderPageProps['awards'];
+  /** Tildelingskriteriene fra kunngjøringen – fyller inn poengskjemaet. */
+  criteria: { name: string; type: string | null; weight: string | null }[];
 }) {
   const delivered = DECIDED_OR_DELIVERED.has(bookmark.status);
+  // Poeng fra tildelingsbrevet: det som er registrert, og hva det viser.
+  const scoreDetails = readScoreDetails(bookmark.scoreDetails);
+  const scoreAnalysis = scoreDetails ? analyzeScores(scoreDetails) : null;
+  const scoreText = scoreAnalysis ? scoreSummary(scoreAnalysis) : null;
+  const scoreRows = scoreFormRows(scoreDetails, criteria);
+  const plainPoints = (n: number | null | undefined) => (n === null || n === undefined ? '' : fmtNumber(n));
   const back = `/app/anbud/${tenderId}#resultat`;
   const others = awards.filter((a) => !(a.supplierId && result?.ourSupplierIds.includes(a.supplierId)));
   const firstWinner = others[0]?.supplierName ?? '';
@@ -796,6 +810,23 @@ function StatusPanel({
           Tildelingen er publisert ({others.map((a) => a.supplierName).slice(0, 3).join(', ') || 'se under'}). Registrer resultatet – det gjør
           statistikken deres bedre.
         </p>
+      ) : null}
+      {scoreText && bookmark.status !== 'won' ? (
+        <div className="border-b border-line bg-info-soft px-5 py-3 text-[13.5px]">
+          <p className="font-semibold text-navy-900">Fra poengene i tildelingsbrevet</p>
+          <p className="mt-0.5 text-ink">{scoreText}</p>
+          {scoreAnalysis?.criteria.some((c) => c.weighted !== null) ? (
+            <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[12.5px] text-muted">
+              {scoreAnalysis.criteria
+                .filter((c) => c.weighted !== null)
+                .map((c) => (
+                  <li key={c.name}>
+                    {c.name} <span className="num font-semibold text-ink">{signedPoints(c.weighted!)}</span>
+                  </li>
+                ))}
+            </ul>
+          ) : null}
+        </div>
       ) : null}
       <PostForm action={`/app/lagret/${bookmark.id}`} className="space-y-3 p-5">
         <input type="hidden" name="back" value={back} />
@@ -827,6 +858,60 @@ function StatusPanel({
                 <Field label="Vinnerens pris (eks. mva.)" htmlFor="r-winning" hint="Står ofte i tildelingsbrevet.">
                   <Input id="r-winning" name="winningPrice" inputMode="decimal" maxLength={40} defaultValue={plainNumber(bookmark.winningPrice)} />
                 </Field>
+                <details className="rounded-lg border border-line" open={Boolean(scoreDetails)}>
+                  <summary className="flex min-h-10 cursor-pointer select-none items-center px-3 text-[13px] font-semibold text-navy-900">
+                    Poeng fra tildelingsbrevet (valgfritt)
+                  </summary>
+                  <div className="space-y-3 border-t border-line px-3 pb-3 pt-2">
+                    <input type="hidden" name="scoreForm" value="1" />
+                    <p className="text-[12px] text-muted">Skriv inn poengene fra brevet, så ser dere om dere tapte på pris eller kvalitet. Bare dere ser tallene, og ingen AI leser brevet.</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Deres sum" htmlFor="s-our-total">
+                        <Input id="s-our-total" name="scoreOurTotal" inputMode="decimal" maxLength={20} defaultValue={plainPoints(scoreDetails?.ourTotal)} />
+                      </Field>
+                      <Field label="Vinnerens sum" htmlFor="s-win-total">
+                        <Input id="s-win-total" name="scoreWinnerTotal" inputMode="decimal" maxLength={20} defaultValue={plainPoints(scoreDetails?.winnerTotal)} />
+                      </Field>
+                    </div>
+                    <div>
+                      <p className="text-[12.5px] font-semibold text-ink">Per kriterium</p>
+                      {scoreRows.map((r, i) => (
+                        <div key={i} className="mt-2 space-y-1.5 rounded-lg bg-paper p-2">
+                          <label htmlFor={`s-name-${i}`} className="sr-only">
+                            Kriterium {i + 1}
+                          </label>
+                          <Input id={`s-name-${i}`} name="scoreName" maxLength={120} defaultValue={r.name} placeholder={`Kriterium ${i + 1}`} className="!px-2 !py-1.5 text-[13px]" />
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {(
+                              [
+                                ['weight', 'scoreWeight', 'Vekt %', r.weight],
+                                ['ours', 'scoreOurs', 'Dere', r.ours],
+                                ['winner', 'scoreWinner', 'Vinner', r.winner],
+                              ] as const
+                            ).map(([key, name, label, value]) => (
+                              <div key={key}>
+                                <label htmlFor={`s-${key}-${i}`} className="block text-[11.5px] text-muted">
+                                  {label}
+                                  <span className="sr-only">, kriterium {i + 1}</span>
+                                </label>
+                                <Input id={`s-${key}-${i}`} name={name} inputMode="decimal" maxLength={10} defaultValue={value} className="mt-0.5 !px-2 !py-1.5 text-[13px]" />
+                              </div>
+                            ))}
+                          </div>
+                          <input type="hidden" name="scorePrice" value={r.price} />
+                        </div>
+                      ))}
+                      {scoreRows.some((r) => r.fromNotice) ? <p className="mt-1.5 text-[12px] text-muted">Kriteriene er fylt inn fra kunngjøringen – rett dem om brevet sier noe annet.</p> : null}
+                    </div>
+                    <Checkbox
+                      name="scoreWeighted"
+                      value="1"
+                      defaultChecked={scoreDetails?.weighted ?? false}
+                      label="Poengene per kriterium er allerede vektet"
+                      hint="Som «28 av 30». Da brukes ikke vekten en gang til."
+                    />
+                  </div>
+                </details>
               </>
             ) : null}
             <Field label="Hva avgjorde?" htmlFor="r-reason">

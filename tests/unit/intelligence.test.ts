@@ -260,6 +260,7 @@ test('handlingsplan: gjort-markering, «Velg bort» ved Ikke gå videre, og inge
 // ---------------------------------------------------------------------------------------------- Læring
 const row = (over: Partial<ResultRow>): ResultRow => ({
   bookmarkId: crypto.randomUUID(),
+  scoreDetails: null,
   tenderId: crypto.randomUUID(),
   title: 'Tidligere anbud',
   buyerName: 'Fjellvik kommune',
@@ -391,4 +392,31 @@ test('usikkerhet: samlet liste over det vi ikke vet – og ingenting når grunnl
   const base = { tender: tenderInfo(), fit: fit(), risk: riskSection(scoreRisk(riskInputs({ documentsRead: 1 }))), profit: profit({ availability: 'ok' as const }), competition, learning: learning() };
   assert.ok(uncertaintyList({ ...base, ai: { mode: 'mock', used: true } }).some((t) => t.startsWith('AI-svarene her er simulert')));
   assert.ok(uncertaintyList({ ...base, ai: { mode: 'real', used: false } }).some((t) => t.startsWith('Ingen AI er brukt')));
+});
+
+test('læring: poengene fra tildelingsbrevene sier hvor dere tapte – med nok tapte anbud', () => {
+  const tender = { id: 'nå', authorityId: 'a1', buyerName: 'Fjellvik kommune', industryIds: ['cleaning'], cpvCodes: ['90910000'], mainCpv: '90910000' };
+  const scored = (pris: [number, number], kvalitet: [number, number]) =>
+    row({
+      status: 'lost',
+      scoreDetails: {
+        ourTotal: null,
+        winnerTotal: null,
+        weighted: false,
+        criteria: [
+          { name: 'Pris', weightPct: 40, ours: pris[0], winner: pris[1], price: true },
+          { name: 'Kvalitet', weightPct: 60, ours: kvalitet[0], winner: kvalitet[1], price: false },
+        ],
+      },
+    });
+  // To tapte på pris (bak på pris, foran på kvalitet) og ett på kvalitet.
+  const rows = [scored([6, 10], [8, 7]), scored([7, 10], [9, 8]), scored([10, 9], [5, 8])];
+  const l = learningFor(rows, new Map(), tender);
+  assert.ok(
+    l.insights.some((i) => i.text === 'Hos denne oppdragsgiveren: poengene fra 3 tildelingsbrev viser at dere tapte på pris i 2 og på kvalitet og de andre kriteriene i 1.' && i.basis === 'calculation'),
+    JSON.stringify(l.insights.map((i) => i.text)),
+  );
+  // Ett tildelingsbrev er for lite til å si noe.
+  const one = learningFor([scored([6, 10], [8, 7]), row({ status: 'lost' }), row({ status: 'lost' })], new Map(), tender);
+  assert.ok(!one.insights.some((i) => /tildelingsbrev/.test(i.text)));
 });

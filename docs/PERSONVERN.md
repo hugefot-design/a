@@ -10,7 +10,7 @@ Grunnlag for personvernerklæringen og databehandleravtaler. Ikke juridisk rådg
 | Sesjoner (hash av token), nettleser, IP-hash | Innlogging, sikkerhet | `sessions` |
 | Medlemskap og roller | Tilgangskontroll | `organization_members` |
 | Bedriftsprofil (oppgitt av kunden) | Matching og tilbudsutkast | `company_profiles` |
-| Lagrede søk, lagrede anbud, notater | Funksjonalitet | `saved_searches`, `bookmarks` |
+| Lagrede søk, lagrede anbud, notater – og resultatet fra tildelingsbrevet (egen pris, vinner, vinnerpris, hva som avgjorde, og egne og vinnerens poeng samlet og per kriterium). Bedriften skriver tallene selv; ingen AI leser brevet. Bare organisasjonen ser dem (radnivåsikkerhet), og de er med i eksporten | Funksjonalitet | `saved_searches`, `bookmarks` |
 | Opplastede dokumenter og tilbudstekster | Analyse og tilbudsarbeid | `tender_documents`, `bid_*`, fillagring |
 | Varsler og e-postlogg | Varsling | `notifications`, `email_outbox` |
 | Revisjonslogg (hvem gjorde hva, IP-hash) | Sikkerhet og sporbarhet | `audit_logs` |

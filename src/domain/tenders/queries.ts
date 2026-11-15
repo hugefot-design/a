@@ -240,7 +240,8 @@ export async function getTenderExtras(tx: Tx, tenderId: string, orgId: string) {
   }[];
   const bookmark = first(
     (await tx`
-      select id, status, note, our_price::float8 as our_price, winning_price::float8 as winning_price, winner_name, outcome_reason, outcome_source, decided_at
+      select id, status, note, our_price::float8 as our_price, winning_price::float8 as winning_price, winner_name, outcome_reason, outcome_source, decided_at,
+             score_details
       from bookmarks where tender_id = ${tenderId} and org_id = ${orgId}
     `) as unknown as {
       id: string;
@@ -252,6 +253,7 @@ export async function getTenderExtras(tx: Tx, tenderId: string, orgId: string) {
       outcomeReason: string | null;
       outcomeSource: string | null;
       decidedAt: Date | null;
+      scoreDetails: unknown;
     }[],
   );
   const match = first(

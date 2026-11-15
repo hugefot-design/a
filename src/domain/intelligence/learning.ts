@@ -61,6 +61,20 @@ function insightsFor(l: Learning, scope: string): Point[] {
       source: own,
     });
   }
+  // Poengene fra tildelingsbrevene: hvor dere tapte (bare tapte anbud der det kan regnes ut).
+  const judged = l.scores.pris + l.scores.kvalitet + l.scores.begge;
+  if (judged >= 2) {
+    const parts = [
+      l.scores.pris ? `på pris i ${l.scores.pris}` : null,
+      l.scores.kvalitet ? `på kvalitet og de andre kriteriene i ${l.scores.kvalitet}` : null,
+      l.scores.begge ? `på begge i ${l.scores.begge}` : null,
+    ].filter(Boolean);
+    out.push({
+      text: `${scope}: poengene fra ${judged} tildelingsbrev viser at dere tapte ${parts.join(', ').replace(/, ([^,]*)$/, ' og $1')}.`,
+      basis: 'calculation',
+      source: own,
+    });
+  }
   if (l.medianCalcDiffPct !== null && l.calcVsResult.length >= 2) {
     const d = l.medianCalcDiffPct;
     out.push({

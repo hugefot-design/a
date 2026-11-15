@@ -44,7 +44,7 @@ export async function exportData(user: AuthUser, org: OrgContext | null): Promis
         companyProfile: first(await tx`select * from company_profiles where org_id = ${org.id}`),
         bookmarks: await tx`
           select b.status, b.note, b.created_at, b.our_price, b.winning_price, b.winner_name, b.outcome_reason, b.outcome_source,
-                 b.submitted_at, b.decided_at, t.title, t.id as tender_id
+                 b.submitted_at, b.decided_at, b.score_details, t.title, t.id as tender_id
           from bookmarks b join tenders t on t.id = b.tender_id
         `,
         bidWorkspaces: await tx`

@@ -17,6 +17,7 @@ const award = (over: Partial<AwardRow> = {}): AwardRow => ({
 let n = 0;
 const row = (over: Partial<ResultRow> = {}): ResultRow => ({
   bookmarkId: `b${++n}`,
+  scoreDetails: null,
   tenderId: `t${n}`,
   title: `Anbud ${n}`,
   buyerName: 'Kommunen',
