@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 14. november 2026 (verktøyene uten konto er ferdige, men **ikke rullet ut** – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 15. november 2026 (verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -393,7 +393,7 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
-## Kontrakter som utløper på bransjesidene, metodesiden og oppdragsgiversidene (15. november 2026) – IKKE rullet ut
+## Kontrakter som utløper på bransjesidene, metodesiden og oppdragsgiversidene (15. november 2026) – rullet ut 15.11.2026 (`7739133`)
 
 Fortsettelse av «1 av 1» (punkt 4 og 8 på lista til eier – de som ikke krever beslutning):
 
@@ -415,9 +415,13 @@ Fortsettelse av «1 av 1» (punkt 4 og 8 på lista til eier – de som ikke krev
   utviklingsdataene) – resten har `noindex`. Anbudssidene lenker til oppdragsgiveren. Slås av med
   `PUBLIC_BUYER_PAGES=false`.
 
-**Ikke rullet ut:** Utrullingen av `3ae9a72` (kontraktsutløp og metodesiden) ble stoppet av tillatelsessystemet i
-økten 15.11 – de er nye funksjoner som eier ikke har sett. Alt over er testet og pushet (CI grønn for `3ae9a72`), men
-venter på eiers «rull ut». Produksjonen er `b28c997`.
+**Rullet ut 15.11.2026 kl. 05.23 (UTC)** etter eiers «rull ut» (versjon `7739133`, som også har `3ae9a72`; CI grønn,
+ingen databaseendringer). Et første forsøk på å rulle ut `3ae9a72` uten eget ja ble stoppet av tillatelsessystemet.
+Kontrollert på anbudradar.com: alle sider 200; `/metode` med tabellen og «AI er ikke slått på ennå»; «Kontrakter som
+snart utløper» på bransjesiden (norsk og engelsk), uten lenker til leverandører; 77 oppdragsgivere i nettstedskartet,
+oppdragsgiversiden svarer uten `noindex`, kort adresse sendes videre (301), ukjent gir 404, og 8 av 8 anbudssider
+lenker til oppdragsgiveren. De nye sidene åpnet i nettleser på 390/768/1440 px i lys og mørk modus: ingen
+JavaScript-feil, ingen sidelengs rulling. Verktøyene uten konto virker som før. 0 advarsler og 0 feil i loggen.
 
 ## Verktøy uten konto – «1 av 1» (14. november 2026) – rullet ut 15.11.2026 (`b28c997`)
 
