@@ -17,8 +17,10 @@ export interface UiContextValue {
   paymentsOpen: boolean;
   /** Offentlige anbudssider (/anbud/<id>) er slått på – lenkene fra nettsiden går dit i stedet for til registrering. */
   publicTenderPages: boolean;
-  /** Verktøyene uten konto (/prov og /kalkulator) er slått på. */
+  /** Verktøyene uten konto (/prov, /kalkulator og /tildeling) er slått på. */
   publicTools: boolean;
+  /** Offentlige oppdragsgiversider (/oppdragsgiver/<navn>-<orgnr> og /oppdragsgivere) er slått på. */
+  publicBuyerPages: boolean;
   legalReviewed: boolean;
   /** Datakilder som er verifisert mot ekte API ("ted", "doffin"). */
   liveSources: string[];
@@ -48,6 +50,7 @@ export const UiContext = createContext<UiContextValue>({
   paymentsOpen: false,
   publicTenderPages: false,
   publicTools: false,
+  publicBuyerPages: false,
   legalReviewed: false,
   liveSources: [],
   trialDays: 14,

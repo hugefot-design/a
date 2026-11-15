@@ -45,7 +45,7 @@ export function AdminVisitsPage({ v }: { v: VisitStats }) {
           hint="siste 7 dager"
           trend={{ values: last14.map((d) => d.signups), label: `Nye kontoer per dag siste 14 dager: ${last14.map((d) => d.signups).join(', ')}` }}
         />
-        <Kpi label="Nye på ukesbrevet" value={formatInt(t.subscribers7)} hint="bekreftet siste 7 dager" />
+        <Kpi label="Nye på e-postlistene" value={formatInt(t.subscribers7)} hint="ukesbrev og oppdragsgivere, bekreftet siste 7 dager" />
         <Kpi
           label="Kontoer per 100 besøk"
           value={perHundred === null ? '–' : perHundred.toLocaleString('nb-NO', { maximumFractionDigits: 1 })}

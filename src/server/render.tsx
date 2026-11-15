@@ -50,6 +50,7 @@ function uiValue(ctx: RequestContext): UiContextValue {
     paymentsOpen: paymentsOpen(),
     publicTenderPages: env.PUBLIC_TENDER_PAGES,
     publicTools: env.PUBLIC_TOOLS,
+    publicBuyerPages: env.PUBLIC_BUYER_PAGES,
     legalReviewed: env.LEGAL_PAGES_REVIEWED,
     liveSources: liveSources(),
     trialDays: env.TRIAL_DAYS,

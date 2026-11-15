@@ -689,7 +689,10 @@ export function PrivacyPage() {
             ['Fakturering og bokføring', 'Rettslig forpliktelse (art. 6 nr. 1 c), bokføringsloven'],
             ['Svare på henvendelser', 'Berettiget interesse (art. 6 nr. 1 f)'],
             ['Publisere partnerprofil', 'Samtykke (art. 6 nr. 1 a). Kan trekkes tilbake når som helst ved å skjule profilen.'],
-            ['Ukesbrevet «Ukens anbud» til de som har meldt seg på uten konto', 'Samtykke (art. 6 nr. 1 a), gitt ved påmelding og bekreftet med lenke i e-post. Trekkes tilbake med avmeldingslenken i hver e-post.'],
+            [
+              'Ukesbrevet «Ukens anbud» til de som har meldt seg på uten konto – for en bransje (og eventuelt et fylke) eller for én oppdragsgiver de følger',
+              'Samtykke (art. 6 nr. 1 a), gitt ved påmelding og bekreftet med lenke i e-post. Trekkes tilbake med avmeldingslenken i hver e-post.',
+            ],
             ['Vise offentlige kunngjøringer', 'Berettiget interesse i å gjøre offentlig publiserte kunngjøringer tilgjengelige (art. 6 nr. 1 f)'],
           ]}
         />
@@ -700,9 +703,9 @@ export function PrivacyPage() {
       title: 'Markedsføring',
       body: () => (
         <p>
-          Vi sender ikke markedsføring på e-post uten samtykke. Ukesbrevet «Ukens anbud» får bare de som har meldt seg på og bekreftet adressen sin via en
-          lenke i e-post. Hver utsending har en avmeldingslenke, og når du melder deg av, sletter vi adressen. Ellers gjelder e-postene vi sender, tjenesten
-          du bruker.
+          Vi sender ikke markedsføring på e-post uten samtykke. Ukesbrevet «Ukens anbud» – for en bransje eller for en oppdragsgiver du følger – får bare de
+          som har meldt seg på og bekreftet adressen sin via en lenke i e-post. Hver utsending har en avmeldingslenke, og når du melder deg av, sletter vi
+          adressen. Ellers gjelder e-postene vi sender, tjenesten du bruker.
         </p>
       ),
     },

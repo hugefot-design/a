@@ -204,7 +204,7 @@ function FooterNav({ title, links }: { title: string; links: { href: string; lab
 }
 
 function PublicFooter() {
-  const { liveSources, m, lp, path, locale, publicTools } = useUi();
+  const { liveSources, m, lp, path, locale, publicTools, publicBuyerPages } = useUi();
   const labels = useNavLabels();
   const company = companyInfo();
   const legal = m.footer.legalDocs as Record<string, string>;
@@ -220,8 +220,9 @@ function PublicFooter() {
           title={m.footer.product}
           links={[
             ...['/funksjoner', '/bransjer', '/priser'].map((href) => ({ href: lp(href), label: labels[href]! })),
-            // Fylkessidene og verktøyene uten konto finnes bare på norsk.
+            // Fylkessidene, oppdragsgiverne og verktøyene uten konto finnes bare på norsk.
             ...(locale === 'nb' ? [{ href: '/fylker', label: 'Anbud per fylke' }] : []),
+            ...(locale === 'nb' && publicBuyerPages ? [{ href: '/oppdragsgivere', label: 'Oppdragsgivere' }] : []),
             ...(locale === 'nb' && publicTools
               ? [
                   { href: '/prov', label: 'Prøv uten konto' },

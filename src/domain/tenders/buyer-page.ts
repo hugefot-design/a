@@ -47,6 +47,14 @@ export function orgNumberFromSlug(slug: string): string | null {
   return /(?:^|-)(\d{9})$/.exec(slug)?.[1] ?? null;
 }
 
+/**
+ * Navn som ikke er et navn: TED-dataene har av og til plassholdere («__NEEDS_TRANSLATION_90b94fc__») der navnet
+ * mangler. Slike oppdragsgivere får ikke stå i oversikten, nettstedskartet eller Google (siden finnes fortsatt).
+ */
+export function isPlaceholderName(name: string): boolean {
+  return /NEEDS_TRANSLATION|^__\w+__$/.test(name.trim());
+}
+
 export interface PublicBuyer {
   id: string;
   name: string;
@@ -69,6 +77,7 @@ const cache = new Map<string, { at: number; value: PublicBuyer | null }>();
 
 export function resetBuyerCache(): void {
   cache.clear();
+  indexCache = null;
 }
 
 async function load(orgNumber: string): Promise<PublicBuyer | null> {
@@ -137,7 +146,7 @@ async function load(orgNumber: string): Promise<PublicBuyer | null> {
     notices12m: counts?.notices ?? 0,
     divisions: divisions.flatMap((d) => (CPV_DIVISIONS[d.code] ? [{ code: d.code, label: CPV_DIVISIONS[d.code]!, n: d.n }] : [])).slice(0, 5),
     expiring,
-    indexable: (counts?.open ?? 0) >= 1 && (counts?.notices ?? 0) >= BUYER_MIN_NOTICES,
+    indexable: !isPlaceholderName(a.name) && (counts?.open ?? 0) >= 1 && (counts?.notices ?? 0) >= BUYER_MIN_NOTICES,
   };
 }
 
@@ -160,18 +169,45 @@ export async function publicBuyer(orgNumber: string): Promise<PublicBuyer | null
   return value;
 }
 
-/** Oppdragsgiverne som står i nettstedskartet (samme terskel som indekseringen). */
-export async function indexableBuyers(limit = 2000): Promise<{ name: string; orgNumber: string }[]> {
+/** Oppdragsgiverne med nok innhold til å indekseres (samme terskel som siden selv), flest åpne anbud først. */
+async function indexableBuyerRows(limit: number): Promise<{ name: string; orgNumber: string; city: string | null; open: number }[]> {
   const sql = systemSql();
   return (await sql`
-    select a.name, a.org_number
+    select a.name, a.org_number, a.city, count(*) filter (where ${openListed(sql)})::int as open
     from authorities a
     join tenders t on t.authority_id = a.id and not t.is_sample
-    where a.country_code = 'NO' and a.org_number is not null
+    where a.country_code = 'NO' and a.org_number is not null and a.name !~ 'NEEDS_TRANSLATION' and a.name !~ '^__\w+__$'
     group by a.id
     having count(*) filter (where ${openListed(sql)}) >= 1
        and count(*) filter (where coalesce(t.published_at, t.first_seen_at) > now() - interval '12 months') >= ${BUYER_MIN_NOTICES}
     order by count(*) filter (where ${openListed(sql)}) desc, a.name
     limit ${limit}
-  `) as unknown as { name: string; orgNumber: string }[];
+  `) as unknown as { name: string; orgNumber: string; city: string | null; open: number }[];
+}
+
+/** Oppdragsgiverne som står i nettstedskartet (samme terskel som indekseringen). */
+export async function indexableBuyers(limit = 2000): Promise<{ name: string; orgNumber: string }[]> {
+  return (await indexableBuyerRows(limit)).map(({ name, orgNumber }) => ({ name, orgNumber }));
+}
+
+export interface BuyerIndexEntry {
+  name: string;
+  path: string;
+  city: string | null;
+  /** Åpne anbud nå (samme telling som på oppdragsgiversiden). */
+  open: number;
+}
+let indexCache: { at: number; value: BuyerIndexEntry[] } | null = null;
+
+/**
+ * Oversikten /oppdragsgivere: de samme oppdragsgiverne som står i nettstedskartet – ingen tynne sider – i alfabetisk
+ * rekkefølge. Mellomlagres like lenge som oppdragsgiversidene.
+ */
+export async function buyerIndex(): Promise<BuyerIndexEntry[]> {
+  if (indexCache && Date.now() - indexCache.at < TTL_MS) return indexCache.value;
+  const value = (await indexableBuyerRows(2000))
+    .map((r) => ({ name: displayBuyer(r.name), path: buyerPath(r.name, r.orgNumber), city: r.city ? displayBuyer(r.city) : null, open: r.open }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+  indexCache = { at: Date.now(), value };
+  return value;
 }

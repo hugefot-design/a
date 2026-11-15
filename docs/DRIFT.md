@@ -250,6 +250,13 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
 - **Ukesbrevet «Ukens anbud».** Påmelding uten konto på bransje- og fylkessidene, dobbel bekreftelse, sendes mandag fra
   kl. 07 med nye anbud siste uke (oppgaven `weekly`), ettklikks-avmelding som sletter adressen. Resend gratis tillater
   et begrenset antall e-poster per dag; med mange påmeldte må planen hos Resend vurderes (koster penger – avklar med eier).
+- **Følg en oppdragsgiver.** Samme påmelding fra skjemaet på oppdragsgiversidene (feltet `oppdragsgiver`), samme
+  tabell og samme utsending: mandag morgen de ukene oppdragsgiveren har nye anbud, med kontrakter som snart utløper
+  (uten leverandørnavn). Av når `PUBLIC_BUYER_PAGES=false`. Oversikten `/oppdragsgivere` viser de samme
+  oppdragsgiverne som nettstedskartet.
+- **Dagstaket for e-post.** Admin → Oversikt varsler når e-postlistene har 70 eller flere bekreftede påmeldinger
+  (`EMAIL_DAILY_CAP` = 100 i `src/domain/admin/overview.ts`, Resends gratisplan sjekket 2.11.2026). Alt sendes mandag
+  morgen, så taket nås samme dag.
 - **Besøk (Admin → Besøk).** Teller sidevisninger på offentlige sider uten informasjonskapsler og uten IP: dato, side og
   kilde. Innloggede brukere og roboter telles ikke. Lenker med `utm_source=…` vises med det navnet.
 - **LinkedIn (Admin → LinkedIn).** Ferdig tekst med ukens største nye anbud for valgt bransje/fylke, med lenke

@@ -7,13 +7,18 @@
  * - Avmelding sletter raden. Ubekreftede påmeldinger slettes etter 7 dager (applyRetention).
  * - Sendes mandag fra kl. 07 (norsk tid) med nye åpne anbud fra siste uke. Ingen e-post om det
  *   ikke er noe nytt.
+ * - En påmelding gjelder enten en bransje (og eventuelt et fylke) eller én oppdragsgiver («følg en oppdragsgiver»,
+ *   fra oppdragsgiversiden). For en oppdragsgiver tas også kontraktene som trolig utløper med – uten leverandørnavn.
+ *   Følgingen finnes bare når de offentlige oppdragsgiversidene er slått på (PUBLIC_BUYER_PAGES).
  */
 import { emailSchema } from '@/domain/auth/auth';
 import { isoWeek } from '@/domain/dashboard';
-import { absoluteUrl, newsletterConfirmTemplate, weeklyNewsletterTemplate, type NewsletterItem } from '@/domain/email/templates';
+import { absoluteUrl, buyerNewsletterTemplate, newsletterConfirmTemplate, weeklyNewsletterTemplate, type NewsletterItem } from '@/domain/email/templates';
 import { INDUSTRY_BY_ID, REGION_BY_CODE } from '@/domain/reference';
 import { industryRegionPath, industrySlugNb } from '@/domain/slugs';
 import { displayBuyer } from '@/domain/tenders/market';
+import { buyerPath } from '@/domain/tenders/buyer-page';
+import { buyerExpiring } from '@/domain/tenders/expiring';
 import { hmacHex, safeEqual, sha256Hex } from '@/lib/crypto';
 import { systemSql } from '@/lib/db';
 import { queueEmail, sendEmailSoon } from '@/lib/email';
@@ -23,12 +28,35 @@ import { env } from '@/lib/env';
 
 const MAX_ITEMS = 10;
 
+const MAX_EXPIRING = 5;
+/** Samtykketeksten for å følge en oppdragsgiver (ukesbrevet har 'ukesbrev-v1', standardverdien i tabellen). */
+export const BUYER_CONSENT_VERSION = 'oppdragsgiver-v1';
+
 export interface Subscription {
   id: string;
   email: string;
-  industry: string;
+  /** Bransjen – null når påmeldingen gjelder en oppdragsgiver. */
+  industry: string | null;
   region: string | null;
+  /** Oppdragsgiveren påmeldingen følger (navnet slik kunngjøringene skriver det, og organisasjonsnummeret). */
+  buyer: { name: string; orgNumber: string } | null;
   confirmedAt: Date | null;
+}
+
+type SubscriptionRow = Omit<Subscription, 'buyer'> & { buyerName: string | null; buyerOrg: string | null };
+const toSubscription = ({ buyerName, buyerOrg, ...r }: SubscriptionRow): Subscription => ({
+  ...r,
+  buyer: buyerName && buyerOrg ? { name: buyerName, orgNumber: buyerOrg } : null,
+});
+
+/** Temaet for en påmelding: «Vakt og sikkerhet i Trøndelag» eller oppdragsgiveren («Statsbygg»). */
+export function subscriptionTopic(s: Pick<Subscription, 'industry' | 'region' | 'buyer'>): string {
+  return s.buyer ? displayBuyer(s.buyer.name) : topicName(s.industry ?? '', s.region);
+}
+
+/** Den offentlige siden for temaet: bransje- eller fylkessiden, eller oppdragsgiversiden. */
+export function subscriptionPath(s: Pick<Subscription, 'industry' | 'region' | 'buyer'>): string {
+  return s.buyer ? buyerPath(s.buyer.name, s.buyer.orgNumber) : topicPath(s.industry ?? '', s.region);
 }
 
 /** «Vakt og sikkerhet i Trøndelag» / «Vakt og sikkerhet (hele landet)». */
@@ -91,24 +119,69 @@ export async function subscribe(input: { email: string; industry: string; region
   return { ok: true, email, topic };
 }
 
+/**
+ * Følg en oppdragsgiver uten konto (fra oppdragsgiversiden): samme dobbel bekreftelse og samme grenser som
+ * ukesbrevet. Bare norske oppdragsgivere med organisasjonsnummer – de som har en offentlig side.
+ */
+export async function subscribeBuyer(input: { email: string; orgNumber: string; sourcePath?: string | null; ipHash: string }): Promise<SubscribeResult> {
+  if (!env.PUBLIC_BUYER_PAGES) return { ok: false, error: 'Siden finnes ikke.', status: 404 };
+  const parsed = emailSchema.safeParse(input.email);
+  if (!parsed.success) return { ok: false, error: 'Skriv inn en gyldig e-postadresse.', status: 422 };
+  const sql = systemSql();
+  const [a] = /^\d{9}$/.test(input.orgNumber)
+    ? ((await sql`select id, name from authorities where country_code = 'NO' and org_number = ${input.orgNumber}`) as unknown as { id: string; name: string }[])
+    : [];
+  if (!a) return { ok: false, error: 'Fant ikke oppdragsgiveren. Gå tilbake til siden og prøv igjen.', status: 422 };
+  const email = parsed.data;
+  if (!(await rateLimit(`newsletter:ip:${input.ipHash}`, 10, 3600)) || !(await rateLimit(`newsletter:email:${sha256Hex(email)}`, 3, 86_400))) {
+    return { ok: false, error: 'For mange påmeldinger på kort tid. Prøv igjen senere.', status: 429 };
+  }
+  const [row] = (await sql`
+    insert into newsletter_subscribers (email, authority_id, consent_version, source_path)
+    values (${email}, ${a.id}, ${BUYER_CONSENT_VERSION}, ${input.sourcePath?.slice(0, 200) ?? null})
+    on conflict (email, authority_id) where authority_id is not null do update set
+      created_at = case when newsletter_subscribers.confirmed_at is null then now() else newsletter_subscribers.created_at end
+    returning id, confirmed_at
+  `) as unknown as { id: string; confirmedAt: Date | null }[];
+  const topic = displayBuyer(a.name);
+  // Allerede bekreftet: samme svar, men ingen ny e-post (avslører ikke hvem som er påmeldt).
+  if (row && !row.confirmedAt) {
+    const tpl = newsletterConfirmTemplate(topic, linkFor('confirm', row.id), { buyer: true });
+    await sendEmailSoon({ to: email, ...tpl, kind: 'newsletter_confirm' });
+  }
+  return { ok: true, email, topic };
+}
+
 export async function confirmSubscription(id: string): Promise<Subscription | null> {
   const [row] = (await systemSql()`
-    update newsletter_subscribers set confirmed_at = coalesce(confirmed_at, now())
-    where id = ${id}
-    returning id, email, industry, region, confirmed_at
-  `) as unknown as Subscription[];
-  return row ?? null;
+    with u as (
+      update newsletter_subscribers set confirmed_at = coalesce(confirmed_at, now())
+      where id = ${id}
+      returning id, email, industry, region, authority_id, confirmed_at
+    )
+    select u.id, u.email, u.industry, u.region, u.confirmed_at, a.name as buyer_name, a.org_number as buyer_org
+    from u left join authorities a on a.id = u.authority_id
+  `) as unknown as SubscriptionRow[];
+  return row ? toSubscription(row) : null;
 }
 
 export async function findSubscription(id: string): Promise<Subscription | null> {
-  const [row] = (await systemSql()`select id, email, industry, region, confirmed_at from newsletter_subscribers where id = ${id}`) as unknown as Subscription[];
-  return row ?? null;
+  const [row] = (await systemSql()`
+    select s.id, s.email, s.industry, s.region, s.confirmed_at, a.name as buyer_name, a.org_number as buyer_org
+    from newsletter_subscribers s left join authorities a on a.id = s.authority_id
+    where s.id = ${id}
+  `) as unknown as SubscriptionRow[];
+  return row ? toSubscription(row) : null;
 }
 
 /** Sletter påmeldingen. Returnerer temaet, eller null om den allerede er borte. */
 export async function unsubscribe(id: string): Promise<string | null> {
-  const [row] = (await systemSql()`delete from newsletter_subscribers where id = ${id} returning industry, region`) as unknown as { industry: string; region: string | null }[];
-  return row ? topicName(row.industry, row.region) : null;
+  const [row] = (await systemSql()`
+    with d as (delete from newsletter_subscribers where id = ${id} returning id, email, industry, region, authority_id, confirmed_at)
+    select d.id, d.email, d.industry, d.region, d.confirmed_at, a.name as buyer_name, a.org_number as buyer_org
+    from d left join authorities a on a.id = d.authority_id
+  `) as unknown as SubscriptionRow[];
+  return row ? subscriptionTopic(toSubscription(row)) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +241,7 @@ export async function sendWeeklyNewsletters(now = new Date(), force = false): Pr
   const sql = systemSql();
   const due = (await sql`
     select id, email, industry, region from newsletter_subscribers
-    where confirmed_at is not null and (last_sent_at is null or last_sent_at < now() - interval '6 days')
+    where confirmed_at is not null and industry is not null and (last_sent_at is null or last_sent_at < now() - interval '6 days')
     order by industry, region nulls first, id
   `) as unknown as { id: string; email: string; industry: string; region: string | null }[];
   const week = isoWeek(now);
@@ -214,5 +287,91 @@ export async function sendWeeklyNewsletters(now = new Date(), force = false): Pr
     }
   }
   if (sent) log.info('newsletter_sent', { sent, week });
+  return sent + (await sendBuyerNewsletters(now, week));
+}
+
+/** Nye, åpne anbud siste 7 dager fra én oppdragsgiver, nærmeste frist først (samme utvalg som ukesbrevet). */
+async function tendersFromBuyer(authorityId: string): Promise<{ rows: TenderRow[]; total: number }> {
+  const rows = (await systemSql()`
+    select t.id, t.title, t.buyer_name, t.deadline_at, t.estimated_value, t.currency,
+      (select s.source_url from tender_sources s where s.tender_id = t.id and s.removed_at is null and s.source_url is not null
+        order by (s.source = 'doffin') desc, s.fetched_at desc limit 1) as source_url,
+      count(*) over () as total
+    from tenders t
+    where not t.is_sample and t.lifecycle in ('competition', 'other') and t.deadline_at > now() + interval '2 days'
+      and t.first_seen_at > now() - interval '7 days' and t.authority_id = ${authorityId}
+    order by t.deadline_at asc, t.id
+    limit ${MAX_ITEMS}
+  `) as unknown as (TenderRow & { total: string | number })[];
+  return { rows, total: rows.length ? Number(rows[0]!.total) : 0 };
+}
+
+const monthYearFmt = new Intl.DateTimeFormat('nb-NO', { month: 'long', year: 'numeric', timeZone: 'Europe/Oslo' });
+const BASIS_TEXT = { oppgitt: 'oppgitt i kunngjøringen', beregnet: 'beregnet fra varigheten' } as const;
+
+/**
+ * Ukens anbud for dem som følger en oppdragsgiver: nye anbud derfra siste uke, og kontraktene som trolig utløper
+ * (uten leverandørnavn). Ingen e-post de ukene oppdragsgiveren ikke har lagt ut noe nytt – som ukesbrevet.
+ * Stoppet når de offentlige oppdragsgiversidene er slått av (lenkene ville ikke virket).
+ */
+async function sendBuyerNewsletters(now: Date, week: string): Promise<number> {
+  if (!env.PUBLIC_BUYER_PAGES) return 0;
+  const sql = systemSql();
+  const due = (await sql`
+    select s.id, s.email, s.authority_id, a.name, a.org_number
+    from newsletter_subscribers s join authorities a on a.id = s.authority_id
+    where s.confirmed_at is not null and a.org_number is not null and (s.last_sent_at is null or s.last_sent_at < now() - interval '6 days')
+    order by s.authority_id, s.id
+  `) as unknown as { id: string; email: string; authorityId: string; name: string; orgNumber: string }[];
+  const weekNo = Number(week.split('-W')[1]);
+  const cache = new Map<string, { tenders: Awaited<ReturnType<typeof tendersFromBuyer>>; expiring: Awaited<ReturnType<typeof buyerExpiring>> }>();
+  let sent = 0;
+  for (const s of due) {
+    if (!cache.has(s.authorityId)) {
+      const tenders = await tendersFromBuyer(s.authorityId);
+      cache.set(s.authorityId, { tenders, expiring: tenders.rows.length ? await buyerExpiring(s.authorityId, now) : { upcoming: 0, atLeast: false, rows: [] } });
+    }
+    const { tenders, expiring } = cache.get(s.authorityId)!;
+    if (!tenders.rows.length) continue;
+    const buyer = displayBuyer(s.name);
+    const pageUrl = absoluteUrl(`${buyerPath(s.name, s.orgNumber)}?utm_source=ukesbrev`);
+    const tenderUrl = (id: string, fallback: string | null) => (env.PUBLIC_TENDER_PAGES ? absoluteUrl(`/anbud/${id}?utm_source=ukesbrev`) : (fallback ?? pageUrl));
+    const items: NewsletterItem[] = tenders.rows.map((r) => ({
+      title: r.title,
+      url: tenderUrl(r.id, r.sourceUrl),
+      meta: [`Frist ${deadlineFmt.format(r.deadlineAt)}`, valueText(r.estimatedValue === null ? null : Number(r.estimatedValue), r.currency)].filter(Boolean).join(' · '),
+    }));
+    const expiringItems: NewsletterItem[] = expiring.rows.slice(0, MAX_EXPIRING).map((x) => ({
+      title: x.title,
+      url: tenderUrl(x.id, null),
+      meta: `Utløper ca. ${monthYearFmt.format(x.expectedEnd)} · ${BASIS_TEXT[x.basis]}`,
+    }));
+    const unsubscribeUrl = linkFor('unsubscribe', s.id);
+    const tpl = buyerNewsletterTemplate({
+      buyer,
+      week: weekNo,
+      items,
+      moreCount: Math.max(0, tenders.total - tenders.rows.length),
+      expiring: expiringItems,
+      expiringTotal: expiring.upcoming,
+      pageUrl,
+      signupUrl: absoluteUrl('/registrer?utm_source=ukesbrev'),
+      unsubscribeUrl,
+    });
+    try {
+      const id = await queueEmail({
+        to: s.email,
+        ...tpl,
+        kind: 'newsletter_buyer',
+        dedupeKey: `newsletter:${s.id}:${week}`,
+        headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+      });
+      await sql`update newsletter_subscribers set last_sent_at = now() where id = ${s.id}`;
+      if (id) sent++;
+    } catch (err) {
+      log.error('newsletter_queue_failed', { err });
+    }
+  }
+  if (sent) log.info('newsletter_buyer_sent', { sent, week });
   return sent;
 }

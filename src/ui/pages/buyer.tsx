@@ -1,11 +1,13 @@
 /**
  * Offentlig side per oppdragsgiver (/oppdragsgiver/<navn>-<orgnr>, bare norsk): åpne anbud, hva de kjøper mest og
  * kontrakter som trolig utløper. Ingen leverandørnavn og ingen tildelte verdier – hvem som vinner, står i appen.
+ * Besøkende kan følge oppdragsgiveren på e-post uten konto (samme påmelding som ukesbrevet).
  */
-import { LuArrowRight, LuBellRing, LuTrophy } from 'react-icons/lu';
+import { LuArrowRight, LuBellRing, LuMail, LuTrophy } from 'react-icons/lu';
 import type { PublicBuyer } from '@/domain/tenders/buyer-page';
 import { useUi } from '../context';
 import { PublicLayout } from '../layouts';
+import { NewsletterSignup } from '../newsletter';
 import { NightHero, Wrap } from '../site';
 import { ExpiringContracts, signupWith, TenderRows } from './public';
 
@@ -36,6 +38,12 @@ export function BuyerPage({ b }: { b: PublicBuyer }) {
           <a href={user ? search : signupWith(lp, search)} className="btn-signal">
             <LuBellRing className="size-4" aria-hidden /> Få varsel om nye anbud herfra
           </a>
+          {/* Uten konto: følg oppdragsgiveren på e-post (skjemaet i høyre kolonne). */}
+          {!user ? (
+            <a href="#folg" className="btn-ghost-light">
+              <LuMail className="size-4" aria-hidden /> Følg på e-post uten konto
+            </a>
+          ) : null}
         </div>
       </NightHero>
       <section className="bg-surface py-14 sm:py-20">
@@ -63,6 +71,7 @@ export function BuyerPage({ b }: { b: PublicBuyer }) {
             </p>
           </div>
           <aside className="h-fit space-y-4 lg:sticky lg:top-24">
+            <NewsletterSignup id="folg" buyer={{ name: b.name, orgNumber: b.orgNumber }} sourcePath={b.path} className="bg-surface" />
             {b.divisions.length ? (
               <div className="rounded-3xl bg-cream p-6">
                 <h2 className="text-[17px] font-semibold text-strong">Dette kjøper de mest</h2>

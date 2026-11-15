@@ -153,16 +153,18 @@ export function securityNoticeTemplate(opts: {
 // ---------------------------------------------------------------------------
 // Ukesbrevet «Ukens anbud» (uten konto, dobbel bekreftelse)
 // ---------------------------------------------------------------------------
-export function newsletterConfirmTemplate(topic: string, confirmUrl: string): Rendered {
+export function newsletterConfirmTemplate(topic: string, confirmUrl: string, opts: { buyer?: boolean } = {}): Rendered {
   const subject = 'Bekreft påmeldingen til Ukens anbud';
+  // Følger en oppdragsgiver: e-posten kommer bare de ukene oppdragsgiveren har lagt ut nye anbud.
+  const what = opts.buyer ? 'på e-post de mandagene det er nye anbud derfra, med kontrakter som snart utløper' : 'på e-post hver mandag';
   const html = layout(
     subject,
-    `<p>Du (eller noen som skrev inn adressen din) ba om å få <strong>Ukens anbud – ${esc(topic)}</strong> på e-post hver mandag.</p>
+    `<p>Du (eller noen som skrev inn adressen din) ba om å få <strong>Ukens anbud – ${esc(topic)}</strong> ${what}.</p>
      ${button(confirmUrl, 'Bekreft påmeldingen')}
      ${note('Ba du ikke om dette? Da kan du se bort fra e-posten – du blir ikke påmeldt, og adressen slettes etter 7 dager.')}`,
     { preheader: 'Ett klikk, så får du ukens nye anbud hver mandag.', footer: 'Du får denne e-posten fordi adressen ble skrevet inn på anbudradar.com.' },
   );
-  const text = `Du (eller noen som skrev inn adressen din) ba om å få Ukens anbud – ${topic} hver mandag.\n\nBekreft her:\n${confirmUrl}\n\nBa du ikke om dette, kan du se bort fra e-posten. Du blir ikke påmeldt.${textFooter()}`;
+  const text = `Du (eller noen som skrev inn adressen din) ba om å få Ukens anbud – ${topic} ${what}.\n\nBekreft her:\n${confirmUrl}\n\nBa du ikke om dette, kan du se bort fra e-posten. Du blir ikke påmeldt.${textFooter()}`;
   return { subject, html, text };
 }
 
@@ -206,6 +208,65 @@ export function weeklyNewsletterTemplate(opts: {
     },
   );
   const text = `Ukens anbud: ${opts.topic} (uke ${opts.week})\n\n${intro}\n\n${opts.items.map((i) => `- ${i.title}\n  ${i.meta}\n  ${i.url}`).join('\n\n')}\n\nSe alle åpne anbud: ${opts.listUrl}\nFå bare anbudene som passer bedriften – prøv AnbudRadar gratis: ${opts.signupUrl}\n\n--\n${senderLine()}\nMeld av Ukens anbud: ${opts.unsubscribeUrl}`;
+  return { subject, html, text };
+}
+
+/**
+ * Ukens anbud for én oppdragsgiver: nye anbud derfra siste uke, og kontraktene som trolig utløper de neste 12 månedene
+ * (uten leverandørnavn – hvem som har kontrakten, står i appen). Sendes bare de ukene det er nye anbud.
+ */
+export function buyerNewsletterTemplate(opts: {
+  buyer: string;
+  week: number;
+  items: NewsletterItem[];
+  moreCount: number;
+  expiring: NewsletterItem[];
+  /** Hvor mange kontrakter som trolig utløper de neste 12 månedene (kan være flere enn de som vises). */
+  expiringTotal: number;
+  pageUrl: string;
+  signupUrl: string;
+  unsubscribeUrl: string;
+}): Rendered {
+  const subject = `Ukens anbud: ${opts.buyer} (uke ${opts.week})`;
+  const n = opts.items.length + opts.moreCount;
+  const intro = n === 1 ? `1 nytt anbud fra ${opts.buyer} siste uke.` : `${n} nye anbud fra ${opts.buyer} siste uke.`;
+  const rows = (items: NewsletterItem[]) =>
+    items
+      .map(
+        (i) => `<tr><td style="padding:12px 0;border-bottom:1px solid ${C.line}">
+        <a href="${esc(i.url)}" style="font-weight:700;color:${C.navy};text-decoration:none;font-size:15px;line-height:1.35">${esc(i.title)}</a>
+        <div style="margin-top:4px;font-size:13px;color:${C.muted}">${esc(i.meta)}</div></td></tr>`,
+      )
+      .join('');
+  const expiringTitle = 'Kontrakter som trolig utløper de neste 12 månedene';
+  const expiringLead =
+    opts.expiringTotal > opts.expiring.length
+      ? `${opts.expiringTotal} i alt – her er de ${opts.expiring.length} nærmeste. Opsjoner (forlengelser) står sjelden i kunngjøringene, så en kontrakt kan vare lenger.`
+      : 'Opsjoner (forlengelser) står sjelden i kunngjøringene, så en kontrakt kan vare lenger.';
+  const expiringHtml = opts.expiring.length
+    ? `<p style="margin:24px 0 2px;font-weight:700;color:${C.navy}">${esc(expiringTitle)}</p>
+     <p style="margin:0;font-size:13px;color:${C.muted}">${esc(expiringLead)}</p>
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows(opts.expiring)}</table>`
+    : '';
+  const html = layout(
+    `Ukens anbud: ${opts.buyer}`,
+    `<p>${esc(intro)}${opts.moreCount ? ` Her er de ${opts.items.length} med nærmest frist.` : ''}</p>
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows(opts.items)}</table>
+     ${expiringHtml}
+     ${button(opts.pageUrl, `Se alt fra ${opts.buyer}`)}
+     <p style="margin:8px 0 0"><strong>Få bare anbudene som passer bedriften</strong> – fra alle oppdragsgivere, rangert, med krav, risiko og lønnsomhet for hvert anbud.
+       <a href="${esc(opts.signupUrl)}" style="color:${C.accent};font-weight:700">Prøv AnbudRadar gratis</a>.</p>`,
+    {
+      preheader: intro,
+      footer: `Du får dette fordi du meldte deg på og bekreftet adressen på anbudradar.com for å følge ${esc(opts.buyer)}. Kunngjøringene er offentlige og hentet fra Doffin og TED.`,
+      unsubscribeUrl: opts.unsubscribeUrl,
+      unsubscribeLabel: `Slutt å følge ${opts.buyer}`,
+    },
+  );
+  const list = (items: NewsletterItem[]) => items.map((i) => `- ${i.title}\n  ${i.meta}\n  ${i.url}`).join('\n\n');
+  const text = `Ukens anbud: ${opts.buyer} (uke ${opts.week})\n\n${intro}\n\n${list(opts.items)}${
+    opts.expiring.length ? `\n\n${expiringTitle}\n${expiringLead}\n\n${list(opts.expiring)}` : ''
+  }\n\nSe alt fra ${opts.buyer}: ${opts.pageUrl}\nFå bare anbudene som passer bedriften – prøv AnbudRadar gratis: ${opts.signupUrl}\n\n--\n${senderLine()}\nSlutt å følge ${opts.buyer}: ${opts.unsubscribeUrl}`;
   return { subject, html, text };
 }
 

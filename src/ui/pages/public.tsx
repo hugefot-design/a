@@ -32,6 +32,7 @@ import { INDUSTRIES, REGION_BY_CODE } from '@/domain/reference';
 import { industryRegionPath, industrySlugNb, regionPath } from '@/domain/slugs';
 import { mentionsAi, PLANS, type PlanId } from '@/domain/billing/plans';
 import type { BoardRow, IndustryListing, MarketSnapshot, NoticeSpecimen } from '@/domain/tenders/market';
+import { buyerPath } from '@/domain/tenders/buyer-page';
 import type { IndustryExpiring } from '@/domain/tenders/expiring';
 import { companyConfigured } from '@/domain/legal/legal';
 import { useUi } from '../context';
@@ -393,15 +394,18 @@ export function TenderRows({
   /** Oppdragsgiversiden: navnet står allerede øverst. */
   hideBuyer?: boolean;
 }) {
-  const { user, m, lp, locale, publicTenderPages } = useUi();
+  const { user, m, lp, locale, publicTenderPages, publicBuyerPages } = useUi();
   const t = m.industries;
   return (
     <ol className="mt-5 space-y-3">
-      {rows.map((r) => (
-        <li key={r.id}>
-          <a
-            href={user ? `/app/anbud/${r.id}` : publicTenderPages ? `/anbud/${r.id}` : signupWith(lp, `/app/anbud/${r.id}`)}
-            className="card-lift group grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-4 rounded-2xl border border-line bg-surface p-4 text-strong no-underline sm:grid-cols-[4.25rem_minmax(0,1fr)_auto] sm:p-5"
+      {rows.map((r) => {
+        // Oppdragsgivernavnet lenker til oppdragsgiversiden når den finnes (norsk oppdragsgiver med organisasjonsnummer).
+        const buyerHref = publicBuyerPages && r.buyerOrg ? buyerPath(r.buyerOrg.name, r.buyerOrg.orgNumber) : null;
+        return (
+          // Hele kortet er klikkbart via tittellenken (::after dekker kortet); oppdragsgiverlenken ligger over den.
+          <li
+            key={r.id}
+            className="card-lift group relative grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-4 rounded-2xl border border-line bg-surface p-4 text-strong sm:grid-cols-[4.25rem_minmax(0,1fr)_auto] sm:p-5"
           >
             <span className="flex flex-col items-center justify-center rounded-xl bg-cream py-2 text-center">
               <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{monthShort(locale, r.deadlineAt)}</span>
@@ -409,9 +413,22 @@ export function TenderRows({
               {r.deadlineTimeKnown ? <span className="mt-0.5 font-mono text-[11px] text-muted">{clockTime(locale, r.deadlineAt)}</span> : null}
             </span>
             <span className="min-w-0">
-              <span className="block text-[16px] font-semibold leading-snug group-hover:underline">{r.title}</span>
+              <a
+                href={user ? `/app/anbud/${r.id}` : publicTenderPages ? `/anbud/${r.id}` : signupWith(lp, `/app/anbud/${r.id}`)}
+                className="block text-[16px] font-semibold leading-snug text-strong no-underline after:absolute after:inset-0 after:rounded-2xl after:content-[''] group-hover:underline"
+              >
+                {r.title}
+              </a>
               <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13.5px] text-muted">
-                {r.buyerName && !hideBuyer ? <span className="truncate">{r.buyerName}</span> : null}
+                {r.buyerName && !hideBuyer ? (
+                  buyerHref ? (
+                    <a href={buyerHref} className="relative z-10 truncate text-muted underline decoration-line-strong underline-offset-2 hover:text-strong">
+                      {r.buyerName}
+                    </a>
+                  ) : (
+                    <span className="truncate">{r.buyerName}</span>
+                  )
+                ) : null}
                 {r.place ? (
                   <span className="inline-flex items-center gap-1">
                     <LuMapPin className="size-3.5" aria-hidden />
@@ -421,12 +438,12 @@ export function TenderRows({
                 {r.estimatedValue ? <span>{fill(t.value, { value: money(locale, r.estimatedValue, r.currency ?? null) })}</span> : null}
               </span>
             </span>
-            <span className="hidden items-center gap-1 text-[14px] font-semibold text-strong sm:inline-flex">
-              {t.see} <LuArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
+            <span aria-hidden="true" className="hidden items-center gap-1 text-[14px] font-semibold text-strong sm:inline-flex">
+              {t.see} <LuArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
             </span>
-          </a>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ol>
   );
 }

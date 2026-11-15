@@ -8,7 +8,8 @@ import { siteShowcase } from '@/domain/tenders/showcase';
 import { industryExpiring } from '@/domain/tenders/expiring';
 import { MethodPage } from '@/ui/pages/method';
 import { BuyerPage } from '@/ui/pages/buyer';
-import { buyerPath, indexableBuyers, orgNumberFromSlug, publicBuyer } from '@/domain/tenders/buyer-page';
+import { buyerIndex, buyerPath, indexableBuyers, orgNumberFromSlug, publicBuyer } from '@/domain/tenders/buyer-page';
+import { BuyersIndexPage } from '@/ui/pages/buyers';
 import { demoReport } from '@/domain/intelligence/demo';
 import { intelligencePdf } from '@/domain/intelligence/pdf';
 import { DemoPage } from '@/ui/pages/demo';
@@ -161,6 +162,18 @@ export function registerPublicRoutes(router: Router): void {
       description: `${b.open === 1 ? '1 åpent anbud' : `${b.open} åpne anbud`} fra ${b.name}, med frister. Se hva de kjøper mest og kontrakter som snart utløper. Oppdateres flere ganger i døgnet fra Doffin og TED.`,
       canonical: b.path,
       noindex: !b.indexable,
+    });
+  });
+
+  // Oversikten over oppdragsgivere (bare norsk): de samme som står i nettstedskartet – ingen tynne sider.
+  router.get('/oppdragsgivere', 'public', async (ctx) => {
+    if (!env.PUBLIC_BUYER_PAGES || ctx.locale !== 'nb') throw new HttpError(404, messages(ctx.locale).errors.notFound);
+    const buyers = await buyerIndex();
+    return render(ctx, <BuyersIndexPage buyers={buyers} />, {
+      title: 'Oppdragsgivere: hvem kjøper hva',
+      description: `${buyers.length} offentlige oppdragsgivere med åpne anbud nå. Se hva hver av dem kjøper mest, åpne anbud og kontrakter som snart utløper. Oppdateres flere ganger i døgnet fra Doffin og TED.`,
+      canonical: '/oppdragsgivere',
+      noindex: buyers.length === 0,
     });
   });
 
@@ -420,6 +433,7 @@ export function registerPublicRoutes(router: Router): void {
       '/eksempel',
       '/metode',
       ...(env.PUBLIC_TOOLS ? ['/prov', '/kalkulator', '/tildeling'] : []),
+      ...(env.PUBLIC_BUYER_PAGES ? ['/oppdragsgivere'] : []),
       '/fylker',
       ...REGIONS.map((r) => regionPath(r.code)),
       ...INDUSTRIES.flatMap((i) => REGIONS.filter((r) => (combos.get(`${i.id}|${r.code}`) ?? 0) >= MIN_OPEN_FOR_INDEXING).map((r) => industryRegionPath(i.id, r.code))),

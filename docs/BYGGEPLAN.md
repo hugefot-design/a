@@ -367,8 +367,8 @@ Oppdater denne når en pakke er ferdig.
 | Pakke | Status | Versjon |
 | --- | --- | --- |
 | 1 Forenkle appen | Ferdig, ikke rullet ut | `90054c6` |
-| 2 Tildelingssimulator | Ferdig, ikke rullet ut. Lineær modell som DFØ (0 poeng ved dobbel pris), ikke et nullpunkt kunden velger | se git-loggen |
-| 3 Følg en oppdragsgiver | Ikke startet | |
+| 2 Tildelingssimulator | Ferdig, ikke rullet ut. Lineær modell som DFØ (0 poeng ved dobbel pris), ikke et nullpunkt kunden velger | `a936e1c` |
+| 3 Følg en oppdragsgiver | Ferdig, ikke rullet ut. Varsel i Admin ved 70 påmeldinger (Resends dagstak er 100) | se git-loggen |
 | 4 Poeng fra tildelingsbrevet | Ikke startet | |
 | 5 ZIP og Excel | Ikke startet | |
 | 6 Kalender | Ikke startet | |

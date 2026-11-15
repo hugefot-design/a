@@ -9,9 +9,9 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 246 av 246 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 15.11.2026 (pakke 2) |
-| Integrasjonstester (ekte database, ekte HTTP) | 254 av 254 bestått – 15.11.2026 (pakke 2) |
-| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 15.11.2026 (pakke 2) |
+| Enhetstester | 246 av 246 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 15.11.2026 (pakke 3) |
+| Integrasjonstester (ekte database, ekte HTTP) | 264 av 264 bestått – 15.11.2026 (pakke 3) |
+| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 15.11.2026 (pakke 3) |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | `npm audit` | 0 sårbarheter – 15.11.2026 |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
@@ -19,6 +19,7 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Etter gjennomgangen: tilgjengelighet, kontrast og bredde for oppdragsgiverside, bransjeside, `/prov` (med og uten treff), `/metode` og lønnsomhetssjekken – 390, 768 og 1440 px, lys og mørk | 42 av 42 kontroller OK – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for oppdragsgiversidene (Statsbygg og Sykehusinnkjøp med utviklingsdataene) og en anbudsside med lenke til oppdragsgiveren – 390, 768 og 1440 px, lys og mørk | 30 av 30 kontroller OK – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for metodesiden og bransjesidene med kontraktsutløp (`/metode`, `/bransjer/bygg-og-anlegg`, med fylke og på engelsk, `/bransjer/renhold`, pluss `/prov` og `/kalkulator` på nytt) – 390, 768 og 1440 px, lys og mørk | 54 av 54 kontroller OK. Rettet underveis: tekstcellene i metodetabellen fikk faste tallbredder fra den felles tabellstilen (luft rundt kolon og punktum) – 15.11.2026 |
+| Tilgjengelighet, kontrast og bredde for pakke 3: `/oppdragsgivere`, en oppdragsgiverside med skjemaet, fylkes- og bransjesider med lenker til oppdragsgiverne, og svarsiden etter påmelding – 390, 768 og 1440 px, lys og mørk | 36 av 36 kontroller OK. Klikk på kortet går til anbudet, klikk på oppdragsgivernavnet til oppdragsgiversiden – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for tildelingssimulatoren (`/tildeling` tom, for et anbud, med resultat og med feil), anbudssiden med den nye boksen, `/metode` og `/kalkulator` – 390, 768 og 1440 px, lys og mørk | 42 av 42 kontroller OK: én h1 per side, etiketter på alle felt, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil – 15.11.2026 |
 | Tilgjengelighet, kontrast og bredde for verktøyene uten konto: forsiden (norsk og engelsk), `/prov` (tom, med treff og uten treff), `/kalkulator` (tom, for et anbud, med resultat og med feil) og `/anbud/<id>` – 390, 768 og 1440 px, lys og mørk | 60 av 60 kontroller OK: én h1 per side, etiketter på alle felt, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: følsomhetstabellen var for bred på mobil – 14.11.2026 |
 | Visuell kontroll av Profit Intelligence-sidene, 1440 px og 390 px | Ingen JavaScript-feil, ingen horisontal rulling |
@@ -429,6 +430,35 @@ Bygget etter [BYGGEPLAN.md](BYGGEPLAN.md) på eiers «ok nå bygg de idene». In
 - Tester: 8 enhetstester med tall regnet for hånd (begge modellene, dyrere og billigere enn konkurrenten, «uansett
   pris», «aldri på pris», bare pris, feil i skjemaet, vektene fra kunngjøringen) og 11 integrasjonstester (visning,
   utregning, feil per felt, forhåndsutfylling, at ingenting lagres, grensen og bryterne).
+
+**Pakke 3 – følg en oppdragsgiver uten konto, og `/oppdragsgivere`**
+- På hver oppdragsgiverside kan besøkende følge oppdragsgiveren på e-post uten konto (skjemaet i høyre kolonne, og en
+  knapp øverst). Samme løsning som ukesbrevet: dobbel bekreftelse, ingen e-post før lenken er trykket, avmelding med ett
+  klikk som sletter adressen, robotfelle og de samme grensene (10 påmeldinger i timen per besøkende, 3 per adresse i
+  døgnet). Lagres i `newsletter_subscribers` med ny kolonne for oppdragsgiver (migrering `0026`, bare tillegg; bransje
+  kan stå tom for slike rader, og hver rad gjelder enten en bransje eller en oppdragsgiver).
+- Egen samtykketekst (`oppdragsgiver-v1`). Personvernerklæringen og `docs/PERSONVERN.md` er oppdatert, og
+  personvernversjonen er økt til 2026-11-15 (teksten er fortsatt et utkast som venter på advokat).
+- E-posten kommer mandag morgen de ukene oppdragsgiveren har lagt ut nye anbud (som ukesbrevet: ingenting nytt, ingen
+  e-post), med de nye anbudene og opptil fem kontrakter som trolig utløper de neste 12 månedene – **uten
+  leverandørnavn**. Stopper når `PUBLIC_BUYER_PAGES` er av.
+- `/oppdragsgivere`: de samme oppdragsgiverne som står i nettstedskartet (minst ett åpent anbud og minst 5 anbud og
+  tildelinger siste 12 måneder – ingen tynne sider), alfabetisk med hopp til forbokstav, antall åpne anbud og sted.
+  Lenke i bunnteksten, og i nettstedskartet. 118 oppdragsgivere med utviklingsdataene.
+- Oppdragsgivernavnet i de offentlige anbudslistene (bransje- og fylkessidene) lenker til oppdragsgiversiden når den
+  finnes (norsk oppdragsgiver med organisasjonsnummer). Kortet er fortsatt klikkbart til anbudet; lenkene ligger ikke
+  inni hverandre.
+- **Varsel i Admin** når e-postlistene (ukesbrev og oppdragsgivere) har 70 eller flere bekreftede påmeldinger: alt
+  sendes mandag morgen, og Resends gratisplan tillater 100 e-poster per dag (sjekket 2.11.2026). En større plan koster
+  penger – avklares med eier. Tallet i produksjonen kjenner jeg ikke (ingen tilgang til produksjonsdatabasen): se
+  Admin → Oversikt etter utrulling.
+- **Funnet underveis:** TED-dataene har av og til plassholdere i stedet for navn og tittel («__NEEDS_TRANSLATION_…»).
+  I utviklingsdataene gjelder det 3 oppdragsgivere og 4 anbud. Slike oppdragsgivere står ikke lenger i oversikten,
+  nettstedskartet eller Google (siden får `noindex`). Selve årsaken ligger i TED-hentingen, som ikke skal endres uten
+  godkjenning – se rapporten.
+- Tester: 10 nye integrasjonstester (skjemaet, påmelding og bekreftelse, innholdet i e-posten uten leverandørnavn, ingen
+  e-post uten nye anbud, avmelding som sletter, feil og grenser, oversikten, lenkene i listene, varselet i Admin,
+  plassholdere og bryteren `PUBLIC_BUYER_PAGES`).
 
 ## Registreringen testet i produksjon (15. november 2026) – rettingene rullet ut 15.11.2026 (`bf8a2d6`)
 

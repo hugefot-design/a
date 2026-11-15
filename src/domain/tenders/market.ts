@@ -16,7 +16,13 @@ export interface BoardRow {
   /** Første fylke kunngjøringen gjelder, eller stedsteksten fra kunngjøringen. */
   place: string | null;
   source: string | null;
+  /** Norsk oppdragsgiver med organisasjonsnummer – har en offentlig side (når PUBLIC_BUYER_PAGES er på). */
+  buyerOrg?: { name: string; orgNumber: string } | null;
 }
+
+/** Oppdragsgiveren med organisasjonsnummer, til lenken til oppdragsgiversiden. */
+const buyerOrgOf = (r: { authorityName: string | null; authorityOrg: string | null }) =>
+  r.authorityName && r.authorityOrg ? { name: r.authorityName, orgNumber: r.authorityOrg } : null;
 
 export interface MarketSnapshot {
   at: Date;
@@ -222,8 +228,10 @@ export async function boardFor(f: BoardFilter): Promise<{ rows: BoardRow[]; open
   const rows = (await sql`
     select t.id, t.title, t.buyer_name, t.deadline_at, t.deadline_time_known, t.region_codes, t.place_text,
       (select s.source from tender_sources s where s.tender_id = t.id and s.removed_at is null
-        order by (s.source = 'doffin') desc, s.fetched_at desc limit 1) as source
+        order by (s.source = 'doffin') desc, s.fetched_at desc limit 1) as source,
+      a.name as authority_name, a.org_number as authority_org
     from tenders t
+    left join authorities a on a.id = t.authority_id and a.country_code = 'NO'
     where not t.is_sample and t.lifecycle in ('competition', 'other') and t.deadline_at > now() ${industry} ${region}
     order by t.deadline_at asc, t.id
     limit 6
@@ -236,6 +244,8 @@ export async function boardFor(f: BoardFilter): Promise<{ rows: BoardRow[]; open
     regionCodes: string[];
     placeText: string | null;
     source: string | null;
+    authorityName: string | null;
+    authorityOrg: string | null;
   }[];
   const value = {
     open: count?.n ?? 0,
@@ -247,6 +257,7 @@ export async function boardFor(f: BoardFilter): Promise<{ rows: BoardRow[]; open
       deadlineTimeKnown: r.deadlineTimeKnown,
       place: (f.region && REGION_NAME.get(f.region)) || (r.regionCodes[0] && REGION_NAME.get(r.regionCodes[0])) || r.placeText || null,
       source: r.source,
+      buyerOrg: buyerOrgOf(r),
     })),
   };
   if (boardCache.size > 500) boardCache.clear();
@@ -281,8 +292,10 @@ export async function industryListing(industryId: string, region: string | null)
   const rows = (await sql`
     select t.id, t.title, t.buyer_name, t.deadline_at, t.deadline_time_known, t.region_codes, t.place_text, t.estimated_value, t.currency,
       (select s.source from tender_sources s where s.tender_id = t.id and s.removed_at is null
-        order by (s.source = 'doffin') desc, s.fetched_at desc limit 1) as source
+        order by (s.source = 'doffin') desc, s.fetched_at desc limit 1) as source,
+      a.name as authority_name, a.org_number as authority_org
     from tenders t
+    left join authorities a on a.id = t.authority_id and a.country_code = 'NO'
     where not t.is_sample and t.lifecycle in ('competition', 'other') and t.deadline_at > now()
       and ${industryId}::text = any(t.industry_ids) ${regionCond}
     order by t.deadline_at asc, t.id
@@ -298,6 +311,8 @@ export async function industryListing(industryId: string, region: string | null)
     estimatedValue: string | number | null;
     currency: string | null;
     source: string | null;
+    authorityName: string | null;
+    authorityOrg: string | null;
   }[];
   const byRegion = new Map(regionCounts.map((r) => [r.code, r.n]));
   const value: IndustryListing = {
@@ -313,6 +328,7 @@ export async function industryListing(industryId: string, region: string | null)
       source: r.source,
       estimatedValue: r.estimatedValue === null ? null : Number(r.estimatedValue),
       currency: r.currency,
+      buyerOrg: buyerOrgOf(r),
     })),
   };
   if (listingCache.size > 500) listingCache.clear();

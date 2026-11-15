@@ -14,6 +14,11 @@ import { CONNECTORS } from '@/connectors';
 import { companyConfigured, companyInfo, contactIsGmail, isPlaceholder } from '@/domain/legal/legal';
 import { platformMetrics } from './admin';
 
+/** Resends gratisplan: e-poster per dag (STATUS.md, priser sjekket 2.11.2026). */
+export const EMAIL_DAILY_CAP = 100;
+/** Varsle i Admin når e-postlistene når denne andelen av dagstaket. */
+const EMAIL_CAP_WARN_SHARE = 0.7;
+
 export type AttentionTone = 'feil' | 'advarsel' | 'info';
 export interface AttentionItem {
   tone: AttentionTone;
@@ -182,7 +187,8 @@ export async function adminOverview(now = new Date()) {
       (select count(*)::int from reports where status = 'open' and kind in ('contact', 'plan_interest')) as open_contact,
       (select count(*)::int from reports where status = 'open' and kind = 'data_error') as open_data_errors,
       (select count(*)::int from users where locked_until > now()) as locked_users,
-      (select count(*)::int from subscriptions where source = 'trial' and trial_ends_at > now() and trial_ends_at < now() + interval '3 days') as trials_ending
+      (select count(*)::int from subscriptions where source = 'trial' and trial_ends_at > now() and trial_ends_at < now() + interval '3 days') as trials_ending,
+      (select count(*)::int from newsletter_subscribers where confirmed_at is not null) as list_subscribers
   `) as unknown as {
     workerSeenAt: Date | null;
     failedJobs: number;
@@ -194,6 +200,7 @@ export async function adminOverview(now = new Date()) {
     openDataErrors: number;
     lockedUsers: number;
     trialsEnding: number;
+    listSubscribers: number;
   }[];
   const o = ops!;
 
@@ -262,6 +269,15 @@ export async function adminOverview(now = new Date()) {
   }
   if (o.trialsEnding > 0) {
     attention.push({ tone: 'info', title: `${o.trialsEnding} prøveperiode${o.trialsEnding === 1 ? '' : 'r'} slutter innen 3 dager`, href: '/admin/organisasjoner' });
+  }
+  // Ukesbrevet og følgingen av oppdragsgivere sendes mandag morgen – alt samme dag. Si fra før dagstaket nås.
+  if (o.listSubscribers >= Math.ceil(EMAIL_DAILY_CAP * EMAIL_CAP_WARN_SHARE)) {
+    attention.push({
+      tone: o.listSubscribers >= EMAIL_DAILY_CAP ? 'advarsel' : 'info',
+      title: `${o.listSubscribers} bekreftede påmeldinger til e-postlistene (ukesbrev og oppdragsgivere)`,
+      detail: `Alle får e-post mandag morgen de ukene det er nytt. Resends gratisplan tillater ${EMAIL_DAILY_CAP} e-poster per dag (sjekket 2.11.2026), også varsler og bekreftelser. En større plan hos Resend koster penger – avklar med eier.`,
+      href: '/admin/epost',
+    });
   }
   if (o.lockedUsers > 0) {
     attention.push({ tone: 'info', title: `${o.lockedUsers} konto${o.lockedUsers === 1 ? '' : 'er'} er midlertidig låst etter feil passord`, href: '/admin/brukere' });

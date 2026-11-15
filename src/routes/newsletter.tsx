@@ -1,10 +1,11 @@
 /**
  * Ukesbrevet «Ukens anbud»: påmelding (/ukesbrev), bekreftelse og avmelding.
+ * Samme skjema og samme lenker brukes for å følge en oppdragsgiver (feltet «oppdragsgiver» med organisasjonsnummeret).
  * Avmelding godtar POST uten CSRF-token (ettklikks-avmelding fra e-postprogrammer, RFC 8058);
  * den signerte lenken er autorisasjonen.
  */
 import { rateLimit } from '@/lib/rate-limit';
-import { confirmSubscription, findSubscription, subscribe, topicName, topicPath, unsubscribe, verifyLink } from '@/domain/newsletter/newsletter';
+import { confirmSubscription, findSubscription, subscribe, subscribeBuyer, subscriptionPath, subscriptionTopic, unsubscribe, verifyLink } from '@/domain/newsletter/newsletter';
 import { HttpError, safeRedirectPath, type RequestContext } from '@/server/http';
 import { render } from '@/server/render';
 import type { Router } from '@/server/router';
@@ -29,13 +30,17 @@ export function registerNewsletterRoutes(router: Router): void {
       });
     // Roboter fyller ut det skjulte feltet: samme svar, men ingenting skjer.
     if (formStr(form, 'nettside', 200)) return done(formStr(form, 'email', 254), 'Ukens anbud');
-    const res = await subscribe({
-      email: formStr(form, 'email', 254),
-      industry: formStr(form, 'bransje', 40),
-      region: formStr(form, 'fylke', 4) || null,
-      sourcePath: back,
-      ipHash: ctx.ipHash,
-    });
+    const orgNumber = formStr(form, 'oppdragsgiver', 20);
+    const res = orgNumber
+      ? await subscribeBuyer({ email: formStr(form, 'email', 254), orgNumber, sourcePath: back, ipHash: ctx.ipHash })
+      : await subscribe({
+          email: formStr(form, 'email', 254),
+          industry: formStr(form, 'bransje', 40),
+          region: formStr(form, 'fylke', 4) || null,
+          sourcePath: back,
+          ipHash: ctx.ipHash,
+        });
+    if (!res.ok && res.status === 404) throw new HttpError(404, 'Siden finnes ikke.');
     if (!res.ok) return page(ctx, 'Påmeldingen ble ikke registrert', 'danger', res.error, res.status, { href: back, label: 'Prøv igjen' });
     return done(res.email, res.topic);
   });
@@ -45,8 +50,9 @@ export function registerNewsletterRoutes(router: Router): void {
     if (!id) return invalidLink(ctx);
     const sub = await confirmSubscription(id);
     if (!sub) return page(ctx, 'Påmeldingen finnes ikke', 'info', 'Påmeldingen er utløpt eller meldt av. Du kan melde deg på igjen på en av bransje- eller fylkessidene.', 404, { href: '/fylker', label: 'Se åpne anbud' });
-    return page(ctx, 'Du er påmeldt', 'ok', `Du får Ukens anbud – ${topicName(sub.industry, sub.region)} – hver mandag morgen. Hver e-post har en lenke for å melde deg av.`, 200, {
-      href: `${topicPath(sub.industry, sub.region)}?utm_source=ukesbrev`,
+    const when = sub.buyer ? 'mandag morgen de ukene det er nye anbud derfra' : 'hver mandag morgen';
+    return page(ctx, 'Du er påmeldt', 'ok', `Du får Ukens anbud – ${subscriptionTopic(sub)} – ${when}. Hver e-post har en lenke for å melde deg av.`, 200, {
+      href: `${subscriptionPath(sub)}?utm_source=ukesbrev`,
       label: 'Se åpne anbud nå',
     });
   });
@@ -57,7 +63,7 @@ export function registerNewsletterRoutes(router: Router): void {
     if (!apply) {
       const sub = await findSubscription(id);
       if (!sub) return page(ctx, 'Du er allerede meldt av', 'info', 'Adressen står ikke lenger på listen for Ukens anbud.');
-      return render(ctx, <NewsletterUnsubscribePage action={`/ukesbrev/avmeld?id=${encodeURIComponent(id)}&t=${encodeURIComponent(ctx.query.get('t') ?? '')}`} topic={topicName(sub.industry, sub.region)} />, {
+      return render(ctx, <NewsletterUnsubscribePage action={`/ukesbrev/avmeld?id=${encodeURIComponent(id)}&t=${encodeURIComponent(ctx.query.get('t') ?? '')}`} topic={subscriptionTopic(sub)} />, {
         title: 'Meld av Ukens anbud',
         noindex: true,
       });
