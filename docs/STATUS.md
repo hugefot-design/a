@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 15. november 2026 (byggeplanens første runde er under arbeid og ikke rullet ut – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 15. november 2026 (byggeplanens pakke 1–4 er rullet ut 15.11 – se under; pakke 5 er under arbeid; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -396,10 +396,29 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
-## Byggeplanen, første runde (15. november 2026) – ikke rullet ut
+## Byggeplanen, første runde (15. november 2026) – pakke 1–4 rullet ut 15.11.2026 (`8ee7818`)
 
-Bygget etter [BYGGEPLAN.md](BYGGEPLAN.md) på eiers «ok nå bygg de idene». Ingenting er rullet ut – det venter på
-«rull ut». Alle commits har `[skip render]`.
+Bygget etter [BYGGEPLAN.md](BYGGEPLAN.md) på eiers «ok nå bygg de idene». Pakke 1–4 ble rullet ut 15.11.2026 kl. 22.42
+UTC etter eiers «rull ut» (Render, `dep-dbt3acec6qcc73ak2j5g`). Pakke 5 (ZIP og Excel) var ikke ferdig og er ikke med.
+Alle commits har `[skip render]`.
+
+**Kontrollert i produksjon etter utrullingen:**
+- Render melder versjon `8ee7818` som «live», helsesjekken er OK, og loggen viser «→ 0026_buyer_follow.sql»,
+  «→ 0027_award_scores.sql», «Ferdig: 2 migrering(er) kjørt» og «App-brukeren kan logge inn i databasen». 0 advarsler
+  og 0 feil i loggen etter oppstart.
+- 27 offentlige sider svarer 200 (også `/tildeling` og `/oppdragsgivere`); `/en/tildeling`, `/en/oppdragsgivere` og
+  `/admin` gir 404 som de skal.
+- Tildelingssimulatoren regner riktig i produksjon (samme tall som i testene: «vinner dere med 1,13 poeng», likt ved
+  1 875 000 kr forholdsmessig og 1 466 667 kr lineært; ugyldige tall gir 422). For et ekte anbud med vekter («Kvalitet
+  70 %, Pris 30 %») vises boksen «Slik velges vinneren» på anbudssiden, og vekten fylles inn og merkes «Fra
+  kunngjøringen».
+- `/oppdragsgivere` viser 77 oppdragsgivere – de samme 77 som i nettstedskartet, ingen plassholdernavn.
+  Oppdragsgiversiden har skjemaet «Følg … på e-post» og knappen øverst. Anbudslistene lenker oppdragsgivernavnene
+  (`/fylker/oslo`: 6 av 6, `/bransjer/renhold`: 24 av 24). Personvernerklæringen viser versjon 2026-11-15.
+- **IKKE VERIFISERT i produksjon:** selve påmeldingen for å følge en oppdragsgiver (den sender en ekte e-post og lagrer
+  en rad – ikke gjort uten eiers ja; dekket av 10 integrasjonstester), og det som ligger bak innlogging: den nye menyen
+  i appen og poengfeltene fra tildelingsbrevet (dekket av nettlesertestene og integrasjonstestene; ingen testbruker ble
+  laget i produksjon denne gangen).
 
 **Pakke 1 – menyen i appen gruppert etter reisen** (`90054c6`)
 - Oversikt og Varsler øverst, så Finn · Vurder og regn · Lever · Lær · Konto. Ingen adresser er endret, ingenting fjernet.

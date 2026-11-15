@@ -31,11 +31,11 @@ Hver pakke skal gjøre minst én av tre ting. Bruk dem når du må velge mellom 
 
 ### Slik står det nå (15.11.2026)
 
-- Nettsiden er anbudradar.com. Versjonen i produksjon er `bf8a2d6`. All kode ligger på grenen
-  `claude/anbudradar-saas-launch-eje0gv`, som er den eneste grenen.
+- Nettsiden er anbudradar.com. Versjonen i produksjon er `8ee7818` (pakke 1–4, rullet ut 15.11.2026 kl. 22.42 UTC).
+  All kode ligger på grenen `claude/anbudradar-saas-launch-eje0gv`, som er den eneste grenen.
 - Ingen betalende kunder. Kortbetaling er ikke åpnet (Stripe mangler nøkler). AI er ikke slått på.
   Firmaopplysningene er ikke lagt inn. Serveren er gratisplanen hos Render, og den sovner.
-- Testene er grønne: 238 enhetstester (1 hoppet over), 243 integrasjonstester og 10 nettlesertester.
+- Testene er grønne: 254 enhetstester (1 hoppet over), 267 integrasjonstester og 10 nettlesertester (etter pakke 4).
 - Les før du begynner: `README.md`, `docs/STATUS.md` (hva som er testet og rullet ut), `docs/TRANSFORMASJON.md`
   (hva som er bygd og hva som blokkerer), `docs/KONKURRENTER.md`, `docs/PRISER.md`, `docs/DRIFT.md` og
   `docs/PERSONVERN.md`.
@@ -366,11 +366,11 @@ Oppdater denne når en pakke er ferdig.
 
 | Pakke | Status | Versjon |
 | --- | --- | --- |
-| 1 Forenkle appen | Ferdig, ikke rullet ut | `90054c6` |
-| 2 Tildelingssimulator | Ferdig, ikke rullet ut. Lineær modell som DFØ (0 poeng ved dobbel pris), ikke et nullpunkt kunden velger | `a936e1c` |
-| 3 Følg en oppdragsgiver | Ferdig, ikke rullet ut. Varsel i Admin ved 70 påmeldinger (Resends dagstak er 100) | `e796fba` |
-| 4 Poeng fra tildelingsbrevet | Ferdig, ikke rullet ut | se git-loggen |
-| 5 ZIP og Excel | Ikke startet | |
+| 1 Forenkle appen | Rullet ut 15.11.2026 | `90054c6` |
+| 2 Tildelingssimulator | Rullet ut 15.11.2026. Lineær modell som DFØ (0 poeng ved dobbel pris), ikke et nullpunkt kunden velger | `a936e1c` |
+| 3 Følg en oppdragsgiver | Rullet ut 15.11.2026. Varsel i Admin ved 70 påmeldinger (Resends dagstak er 100) | `e796fba` |
+| 4 Poeng fra tildelingsbrevet | Rullet ut 15.11.2026 | `8ee7818` |
+| 5 ZIP og Excel | Under arbeid, ikke rullet ut | |
 | 6 Kalender | Ikke startet | |
 | 7 Dokumentskuff | Ikke startet | |
 | 8 Dekningsbevis og statusside | Ikke startet | |
