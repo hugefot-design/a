@@ -24,6 +24,8 @@ export interface UiContextValue {
   legalReviewed: boolean;
   /** Lagres opplastede filer bare midlertidig (serverdisken i produksjon)? Da sier sidene det. */
   storageTemporary: boolean;
+  /** OCR i nettleseren for skannede PDF-er: klientmodulen og mappen med motor, språkdata og pdf.js (null når ikke bygget). */
+  ocrAssets: { module: string; base: string } | null;
   /** Datakilder som er verifisert mot ekte API ("ted", "doffin"). */
   liveSources: string[];
   /** Lengden på gratis prøveperiode (TRIAL_DAYS), så markedsteksten alltid stemmer. */
@@ -55,6 +57,7 @@ export const UiContext = createContext<UiContextValue>({
   publicBuyerPages: false,
   legalReviewed: false,
   storageTemporary: false,
+  ocrAssets: null,
   liveSources: [],
   trialDays: 14,
   locale: 'nb',

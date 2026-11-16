@@ -5,6 +5,8 @@ storage-test/
 public/assets/app*.css
 public/assets/app*.js
 public/assets/manifest.json
+public/assets/ocr*.js
+public/assets/ocr/
 .env
 .env.*
 !.env.example

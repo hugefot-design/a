@@ -85,6 +85,8 @@ test('lagringstidene i personvernerklæringen stemmer med slettejobben', () => {
   assert.deepEqual(
     [...rules.keys()].sort(),
     [
+      // Låser for AI-kall som kjører: bare en hash og et tidspunkt – ingen personopplysninger, så ikke i RETENTION.
+      'ai_inflight',
       'app_errors',
       'audit_logs',
       'doffin_enrichment',

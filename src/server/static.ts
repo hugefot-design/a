@@ -8,6 +8,9 @@ const PUBLIC_DIR = resolve(process.cwd(), 'public');
 const TYPES: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.wasm': 'application/wasm',
+  '.gz': 'application/octet-stream',
   '.map': 'application/json; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
@@ -78,7 +81,9 @@ export function serveStatic(req: IncomingMessage, res: ServerResponse, pathname:
 
   const etag = `W/"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
   const hashed = /\.[0-9a-f]{8,}\.(css|js|woff2?)$/.test(filePath);
-  const cacheControl = hashed && isProd ? 'public, max-age=31536000, immutable' : isProd ? 'public, max-age=3600' : 'no-cache';
+  // OCR-filene (motor, språkdata, pdf.js) ligger i en mappe med versjonene i navnet: kan bufres for alltid.
+  const versioned = pathname.startsWith('/assets/ocr/');
+  const cacheControl = (hashed || versioned) && isProd ? 'public, max-age=31536000, immutable' : isProd ? 'public, max-age=3600' : 'no-cache';
 
   res.setHeader('Content-Type', TYPES[extname(filePath)] ?? 'application/octet-stream');
   res.setHeader('Cache-Control', cacheControl);

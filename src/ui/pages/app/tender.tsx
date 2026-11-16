@@ -58,7 +58,7 @@ export interface TenderPageProps {
     scoreDetails?: unknown;
   } | null;
   match: { score: number; breakdown: MatchBreakdown; excluded: boolean; computedAt: Date } | null;
-  documents: { id: string; title: string; pageCount: number | null; textStatus: string; textError: string | null; orgId: string | null; createdAt: Date; sizeBytes: number | null }[];
+  documents: { id: string; title: string; pageCount: number | null; textStatus: string; textError: string | null; orgId: string | null; createdAt: Date; sizeBytes: number | null; ocrPages?: number }[];
   workspace: { id: string; status: string } | null;
   analysis: StoredTenderAnalysis | null;
   fit: StoredFitAssessment | null;
@@ -1119,6 +1119,8 @@ function AnalysisTeaser({
 }
 
 function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; documents: TenderPageProps['documents']; canUpload: boolean }) {
+  // OCR i nettleseren for skannede PDF-er (filene finnes når klientskriptene er bygget).
+  const { ocrAssets } = useUi();
   return (
     <Panel>
       <div id="dokumenter-for-analyse" className="scroll-mt-24" />
@@ -1136,7 +1138,7 @@ function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; 
                   <p className="truncate font-semibold text-navy-900">{d.title}</p>
                   <p className="text-[12px] text-muted">
                     {d.textStatus === 'extracted'
-                      ? `${d.pageCount ?? '?'} ${d.pageCount === 1 ? 'side' : 'sider'} lest`
+                      ? `${d.pageCount ?? '?'} ${d.pageCount === 1 ? 'side' : 'sider'} lest${d.ocrPages ? ` – ${d.ocrPages} med OCR i nettleseren, kan inneholde lesefeil` : ''}`
                       : d.textStatus === 'failed'
                         ? (d.textError ?? 'Kunne ikke lese teksten')
                         : 'Venter'}
@@ -1158,7 +1160,13 @@ function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; 
       <div className="border-t border-line px-5 py-4">
         {canUpload ? (
           <>
-            <PostForm action={`/app/anbud/${tenderId}/dokumenter`} multipart className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <PostForm
+              action={`/app/anbud/${tenderId}/dokumenter`}
+              multipart
+              className="flex flex-col gap-3 sm:flex-row sm:items-center"
+              data={ocrAssets ? { ocr: ocrAssets.module, 'ocr-base': ocrAssets.base } : undefined}
+            >
+              {ocrAssets ? <input type="hidden" name="ocr" value="" /> : null}
               <input
                 type="file"
                 name="file"
@@ -1172,9 +1180,12 @@ function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; 
                 <LuUpload className="size-4" aria-hidden /> Last opp
               </Button>
             </PostForm>
+            {ocrAssets ? <div data-ocr-status hidden role="status" aria-live="polite" className="mt-3 rounded-lg bg-paper px-3 py-2.5 text-[13px] text-ink" /> : null}
             <p id="dok-filtyper" className="mt-2 text-[12px] text-muted">
-              PDF, Word (.docx), Excel (.xlsx) og tekst – eller hele ZIP-filen fra portalen, så blir hver fil ett dokument. Høyst 10 dokumenter per anbud. Skannede
-              dokumenter (bilder) kan ikke leses ennå.
+              PDF, Word (.docx), Excel (.xlsx) og tekst – eller hele ZIP-filen fra portalen, så blir hver fil ett dokument. Høyst 10 dokumenter per anbud.{' '}
+              {ocrAssets
+                ? 'En skannet PDF leses med OCR her i nettleseren før du laster den opp – dokumentet sendes ikke til noen andre.'
+                : 'Skannede dokumenter (bilder) kan ikke leses ennå.'}
             </p>
           </>
         ) : (

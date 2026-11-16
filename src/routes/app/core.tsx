@@ -21,6 +21,7 @@ import { weeklyOverviewJsonSchema, weeklyOverviewZ } from '@/domain/ai/schemas';
 import { mockWeeklyOverview } from '@/domain/ai/mock';
 import { deleteTenderDocument, uploadTenderDocument, uploadTenderZip } from '@/domain/documents/documents';
 import { zipUploadSummary } from '@/domain/documents/zip';
+import { parseOcrPayload } from '@/domain/documents/ocr';
 import { tenderRequirementScan } from '@/domain/documents/requirements-service';
 import { confirmAwardWin, learningSummary, loadResults, parseResultForm, saveResultFields, tenderResultInfo } from '@/domain/tenders/results';
 import { noticeSignals, screenTender } from '@/domain/matching/screening';
@@ -393,11 +394,13 @@ export function registerCoreAppRoutes(router: Router): void {
         const summary = zipUploadSummary(zip, { ai: aiModeFor(org).configured });
         return redirectWith(ctx, `/app/anbud/${id}#dokumenter-for-analyse`, summary.type, summary.message);
       }
-      const result = await uploadTenderDocument(org, user.id, id, file);
+      // Skannet PDF: teksten nettleseren leste med OCR (Tesseract.js), for sidene uten tekst.
+      const result = await uploadTenderDocument(org, user.id, id, file, parseOcrPayload(form.get('ocr')));
       if (!result.ok) return redirectWith(ctx, `/app/anbud/${id}`, 'error', result.error);
       const pages = `${result.pages} ${result.pages === 1 ? 'side' : 'sider'}`;
+      const ocr = result.ocrPages ? ` ${result.ocrPages} ${result.ocrPages === 1 ? 'side' : 'sider'} er lest med OCR i nettleseren – sjekk viktige tall mot dokumentet.` : '';
       const next = aiModeFor(org).configured ? 'Kjør AI-analysen på nytt for å ta det med.' : 'Sjekken av krav og vilkår har tatt det med.';
-      return redirectWith(ctx, `/app/anbud/${id}`, 'success', `Dokumentet er lest (${pages}). ${next}`);
+      return redirectWith(ctx, `/app/anbud/${id}`, 'success', `Dokumentet er lest (${pages}).${ocr} ${next}`);
     },
     { maxBodyMb: 30 },
   );

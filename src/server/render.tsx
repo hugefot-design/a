@@ -24,6 +24,12 @@ export function asset(name: string): string {
   return `/assets/${manifest()[name] ?? name}`;
 }
 
+/** OCR i nettleseren: klientmodulen og mappen med motor, språkdata og pdf.js – null når de ikke er bygget. */
+export function ocrAssets(): { module: string; base: string } | null {
+  const m = manifest();
+  return m['ocr.js'] && m['ocr-base'] ? { module: `/assets/${m['ocr.js']}`, base: `/assets/${m['ocr-base']}` } : null;
+}
+
 export interface RenderOptions {
   title: string;
   description?: string;
@@ -54,6 +60,7 @@ function uiValue(ctx: RequestContext): UiContextValue {
     publicBuyerPages: env.PUBLIC_BUYER_PAGES,
     legalReviewed: env.LEGAL_PAGES_REVIEWED,
     storageTemporary: storageIsTemporary(),
+    ocrAssets: ocrAssets(),
     liveSources: liveSources(),
     trialDays: env.TRIAL_DAYS,
     locale: ctx.locale,

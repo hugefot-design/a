@@ -87,6 +87,7 @@ export function PostForm({
   confirm,
   multipart,
   id,
+  data,
 }: {
   action: string;
   children: ReactNode;
@@ -94,6 +95,8 @@ export function PostForm({
   confirm?: string;
   multipart?: boolean;
   id?: string;
+  /** Ekstra data-attributter til klientskriptet (f.eks. OCR for skannede PDF-er). */
+  data?: Record<string, string>;
 }) {
   return (
     <form
@@ -102,6 +105,7 @@ export function PostForm({
       action={action}
       className={className}
       encType={multipart ? 'multipart/form-data' : undefined}
+      {...Object.fromEntries(Object.entries(data ?? {}).map(([k, v]) => [`data-${k}`, v]))}
       data-confirm={confirm}
     >
       <CsrfField />

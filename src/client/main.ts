@@ -435,3 +435,18 @@ document.addEventListener('click', (event) => {
   }
   input.focus();
 });
+
+// OCR i nettleseren for skannede PDF-er (src/client/ocr.ts): modulen, motoren og språkdataene lastes først når
+// kunden velger en PDF – andre sider og filer laster ingenting ekstra.
+document.querySelectorAll<HTMLFormElement>('form[data-ocr]').forEach((form) => {
+  const input = form.querySelector<HTMLInputElement>('input[type="file"]');
+  input?.addEventListener('change', () => {
+    const file = input.files?.[0];
+    const field = form.querySelector<HTMLInputElement>('input[name="ocr"]');
+    if (field) field.value = '';
+    if (!file || !(/\.pdf$/i.test(file.name) || file.type === 'application/pdf')) return;
+    import(/* webpackIgnore: true */ form.dataset.ocr!)
+      .then((mod: { ocrIfScanned: (f: HTMLFormElement, file: File, base: string) => Promise<void> }) => mod.ocrIfScanned(form, file, form.dataset.ocrBase!))
+      .catch(() => undefined);
+  });
+});

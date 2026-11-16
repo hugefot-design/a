@@ -7,6 +7,7 @@ import { storage } from '@/lib/storage';
 import type { OrgContext } from '@/server/http';
 import { detectFileType, extractText, type DetectedType } from './extract';
 import { isZipUpload, unpackZip, type SkippedFile } from './zip';
+import { mergeOcrPages, type OcrPayload } from './ocr';
 
 const MIME: Record<string, string> = {
   pdf: 'application/pdf',
@@ -22,7 +23,7 @@ export function cleanFilename(name: string): string {
   return base.replace(/[^\p{L}\p{N}._ -]/gu, '_').slice(0, 150) || 'dokument';
 }
 
-export type UploadResult = { ok: true; documentId: string; pages: number } | { ok: false; error: string };
+export type UploadResult = { ok: true; documentId: string; pages: number; ocrPages: number } | { ok: false; error: string };
 
 /** Antall dokumenter organisasjonen har på anbudet – og om anbudet finnes. */
 async function documentSlots(org: OrgContext, userId: string, tenderId: string): Promise<{ tender: boolean; count: number }> {
@@ -34,15 +35,33 @@ async function documentSlots(org: OrgContext, userId: string, tenderId: string):
 }
 
 /** Leser teksten, lagrer filen privat for organisasjonen og registrerer dokumentet (også når teksten ikke kunne leses). */
-async function storeDocument(org: OrgContext, userId: string, tenderId: string, name: string, buf: Buffer, type: Exclude<DetectedType, null>): Promise<UploadResult> {
+async function storeDocument(
+  org: OrgContext,
+  userId: string,
+  tenderId: string,
+  name: string,
+  buf: Buffer,
+  type: Exclude<DetectedType, null>,
+  ocr: OcrPayload | null = null,
+): Promise<UploadResult> {
   const title = cleanFilename(name);
   const key = `orgs/${org.id}/tenders/${tenderId}/${randomUUID()}.${type}`;
   let extracted: { pages: { page: number; text: string }[]; totalPages: number } | null = null;
   let error: string | null = null;
+  let ocrPages = 0;
   try {
     extracted = await extractText(type, buf);
+    // Skannede sider i en PDF: teksten fra OCR i kundens nettleser brukes for sidene vi ikke fant tekst på.
+    if (type === 'pdf' && ocr) {
+      const merged = mergeOcrPages(extracted, ocr);
+      extracted = { pages: merged.pages, totalPages: extracted.totalPages };
+      ocrPages = merged.ocrPages;
+    }
     if (!extracted.pages.some((p) => p.text.trim().length > 0)) {
-      error = 'Fant ingen tekst i dokumentet. Skannede dokumenter (bilder) støttes ikke ennå.';
+      error =
+        type === 'pdf'
+          ? 'Fant ingen tekst i dokumentet – det ser skannet ut. Last opp PDF-en alene (ikke i ZIP), så leser nettleseren teksten med OCR.'
+          : 'Fant ingen tekst i dokumentet.';
       extracted = null;
     }
   } catch (err) {
@@ -53,9 +72,9 @@ async function storeDocument(org: OrgContext, userId: string, tenderId: string, 
 
   const documentId = await withTenant({ userId, orgId: org.id }, async (tx) => {
     const [doc] = (await tx`
-      insert into tender_documents (tender_id, org_id, title, storage_key, mime_type, size_bytes, page_count, sha256, text_status, text_error, uploaded_by)
+      insert into tender_documents (tender_id, org_id, title, storage_key, mime_type, size_bytes, page_count, sha256, text_status, text_error, uploaded_by, ocr_pages)
       values (${tenderId}, ${org.id}, ${title}, ${key}, ${MIME[type]!}, ${buf.length}, ${extracted?.totalPages ?? null}, ${sha256Hex(buf)},
-              ${extracted ? 'extracted' : 'failed'}, ${error}, ${userId})
+              ${extracted ? 'extracted' : 'failed'}, ${error}, ${userId}, ${extracted ? ocrPages : 0})
       returning id
     `) as unknown as { id: string }[];
     if (extracted) {
@@ -72,11 +91,11 @@ async function storeDocument(org: OrgContext, userId: string, tenderId: string, 
     return doc!.id;
   });
   if (error) return { ok: false, error };
-  return { ok: true, documentId, pages: extracted?.totalPages ?? 0 };
+  return { ok: true, documentId, pages: extracted?.totalPages ?? 0, ocrPages };
 }
 
 /** Laster opp konkurransedokument for analyse. Lagres privat for organisasjonen. */
-export async function uploadTenderDocument(org: OrgContext, userId: string, tenderId: string, file: File): Promise<UploadResult> {
+export async function uploadTenderDocument(org: OrgContext, userId: string, tenderId: string, file: File, ocr: OcrPayload | null = null): Promise<UploadResult> {
   if (!org.entitlements.documentUpload) return { ok: false, error: 'Opplasting av dokumenter er ikke med i planen din.' };
   if (file.size === 0) return { ok: false, error: 'Filen er tom.' };
   if (file.size > env.MAX_UPLOAD_MB * 1024 * 1024) return { ok: false, error: `Filen er større enn ${env.MAX_UPLOAD_MB} MB.` };
@@ -87,7 +106,7 @@ export async function uploadTenderDocument(org: OrgContext, userId: string, tend
   const exists = await documentSlots(org, userId, tenderId);
   if (!exists.tender) return { ok: false, error: 'Fant ikke kunngjøringen.' };
   if (exists.count >= MAX_DOCUMENTS_PER_TENDER) return { ok: false, error: `Maks ${MAX_DOCUMENTS_PER_TENDER} dokumenter per kunngjøring. Slett et dokument først.` };
-  return storeDocument(org, userId, tenderId, file.name, buf, type);
+  return storeDocument(org, userId, tenderId, file.name, buf, type, ocr);
 }
 
 export type ZipUploadResult =

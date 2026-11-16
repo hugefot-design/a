@@ -265,7 +265,7 @@ export async function getTenderExtras(tx: Tx, tenderId: string, orgId: string) {
     }[],
   );
   const documents = (await tx`
-    select id, title, source_url, mime_type, size_bytes, page_count, text_status, text_error, org_id, created_at
+    select id, title, source_url, mime_type, size_bytes, page_count, text_status, text_error, org_id, created_at, ocr_pages
     from tender_documents where tender_id = ${tenderId} order by created_at desc
   `) as unknown as {
     id: string;
