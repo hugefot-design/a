@@ -61,11 +61,11 @@ langt som til lønnsomhet og vurdering.
 | --- | --- | --- | --- |
 | 1 | **Ingen kan betale** | Stripe er ikke satt opp; bare «Meld interesse» | Eier |
 | 2 | **Leverandøren er anonym** | Vilkårene på anbudradar.com/vilkar viser «[selskapsnavn], org.nr. [org.nr.], [adresse]» og en gmail-adresse. Om oss viser verken firmanavn eller organisasjonsnummer. En bedrift som skal betale, sjekker dette | Eier (firmaopplysninger) |
-| 3 | **Første treff bommer for håndverk og spesialiserte tjenester** (5 av 8) | Søket krever at ordet begynner likt: «vakthold» finner ikke «vakttjenester», «elektroinstallasjon» finner ikke «elektriske». Brede bransjer (Bygg og anlegg rommer alle fag). Anbud for «hele landet» havner foran relevante anbud i et annet fylke. Ingeniørtjenester ligger under Bygg og anlegg, ikke Rådgivning | Jeg kan rette (gratis) |
+| 3 | **Første treff bommer for håndverk og spesialiserte tjenester** (5 av 8) | Søket krever at ordet begynner likt: «vakthold» finner ikke «vakttjenester», «elektroinstallasjon» finner ikke «elektriske». Brede bransjer (Bygg og anlegg rommer alle fag). Anbud for «hele landet» havner foran relevante anbud i et annet fylke. Ingeniørtjenester ligger under Bygg og anlegg, ikke Rådgivning | **Rettet i koden 16.11 – ikke rullet ut** (se under). Ingeniør under Rådgivning: din beslutning |
 | 4 | **Vurderingen sier alltid «Avklar først» for en ny kunde** | Datagrunnlag 2–3 av 9 for alle fem | Jeg kan korte ned veien: be om noen få tall (timepris, kostnad) i oppstarten |
 | 5 | **AI er av** | IT og store leverandører forventer dokumentanalyse; konkurrentene selger AI | Eier (nøkkel og utgiftsgrense) |
 | 6 | **Mye tekst i appen** | Oversikt og vurdering 770–840 ord hver | Jeg kan rette (samme regler som nettsiden) |
-| 7 | **Feil beskjed om manglende nøkkelord** | 3 av 5 fikk «verken CPV-koder eller nøkkelord» | Jeg kan rette |
+| 7 | **Feil beskjed om manglende nøkkelord** | 3 av 5 fikk «verken CPV-koder eller nøkkelord» | **Rettet i koden 16.11 – ikke rullet ut** |
 | 8 | **Tynt marked i perioder** (brøyting, skoleskyss) | Ingen åpne anbud nå | Jeg kan vise «kontrakter som snart utløper» når det ikke finnes gode treff (finnes allerede på bransjesidene) |
 | 9 | **Opplastede filer forsvinner** | Fillagring er ikke satt opp (teksten som er lest, blir lagret) | Eier |
 
@@ -92,6 +92,40 @@ varsler – for eksempel at treffene faktisk stemmer (hindring 3). Ingen priser 
    forbruksmateriell): vis «Prøv uten konto» med deres egne ord og lønnsomhetssjekken, og spør hva de ville betalt.
    Ingen annonser – dere tar kontakt selv.
 3. Følg med i Admin → Kundereise (hvor folk faller fra) og på «Meld interesse».
+
+## Rettet etter simuleringen (16. november 2026) – IKKE rullet ut
+
+Eier: «jeg vil ikke sette opp betaling ennå». Det som kunne rettes gratis og uten eiers ja, er rettet i treffmotoren
+(`src/domain/matching/terms.ts` og `engine.ts`). Samme motor brukes i «Prøv uten konto», appen, varsler og eksemplene.
+
+1. **Ordene kunden skriver:** et langt ord (minst 7 bokstaver) teller også inne i sammensatte ord («brøyting» i
+   «snøbrøyting»), og vanlige fagord kjennes igjen i flere former (13 små grupper, f.eks. «vakthold» → «vakttjenester»,
+   «vektertjenester»; «elektroinstallasjon» → «elektriske»). Gruppene er snevre: «vaktmester» er ikke vakt, og
+   «elektronisk» (som i «tilbudet leveres elektronisk») er ikke elektroarbeid.
+2. **Et ord i tittelen gir 10 poeng** (var 8). Samme bransje, eget fylke og ordet i tittelen blir da et godt treff (60+).
+3. **Nytt tak:** har bedriften sagt hva den leverer, og ingen av ordene står i kunngjøringen, er treffet høyst 45 –
+   så et anbud som faktisk nevner det de gjør, går foran (også i et annet fylke). Lik eller nær CPV-kode unntas.
+4. **Riktig beskjed:** «Profilen har verken CPV-koder eller ord for det dere leverer» vises bare når det stemmer.
+
+Metodesiden (/metode#treff) viser de nye reglene automatisk.
+
+**Målt lokalt** (utviklingsdatabasen, samme åtte kundetyper, de fem øverste i «Prøv uten konto»):
+
+| Kundetype | Øverst før | Øverst etter |
+| --- | --- | --- |
+| Vakt, Vestland | Kontroll av slokkeutstyr; vaktanbud på 5. plass | Tre vaktanbud øverst |
+| Elektro, Rogaland | Kloakk, lommepark, kunstgress | Elektrofaglige tjenester og elektriske arbeider |
+| Transport (skoleskyss), Innlandet | Reisebyrå, leasing av biler | Skoleskyss øverst |
+| Rådgivende ingeniør, Agder (Bygg og anlegg) | Totalentreprise, stillas | Byggeledelse og ingeniørtjenester (2 gode treff) |
+| Renhold, Oslo | Renhold øverst | Renhold øverst (1 godt treff, var 0) |
+
+Den lokale databasen har mest engelske titler fra TED, så tallene er ikke de samme som i produksjon (der nesten
+alle titler er norske – 1 av 190 sjekket var engelsk). **Effekten i produksjon er IKKE MÅLT**; det gjøres med de
+samme åtte kundetypene etter utrulling.
+
+**Ikke rettet (krever eier):** ingeniør- og arkitekttjenester ligger under Bygg og anlegg. En rådgivende ingeniør
+som velger «Rådgivning», får fortsatt ingen treff. Å vise dem også under Rådgivning endrer bransjesidene og krever
+enten en endring i produksjonsdata eller at det virker gradvis for nye anbud – din beslutning.
 
 ## Begrensninger
 

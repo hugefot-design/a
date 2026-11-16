@@ -165,6 +165,45 @@ test('/prov rangerer bare norske anbud, og antallet er det ekte', async () => {
   assert.equal(after.ranked, after.open, 'alle åpne er rangert');
 });
 
+test('/prov: elektrikeren finner el-anbudet i nabofylket selv om ordet står i en annen form – kunstgress i eget fylke går ikke foran', async () => {
+  // Fra kundesimuleringen 16.11.2026 (docs/KUNDESIMULERING.md): «elektroinstallasjon» fant ikke «elektriske».
+  const CONSTRUCTION = '45000000';
+  await ingest([
+    makeNotice({
+      sourceNoticeId: 'TOOL-EL',
+      title: 'Kontroll av elektriske fordelinger i formålsbygg (ord-test)',
+      description: 'Fiktiv kunngjøring for automatiske tester. Tilbudet skal leveres elektronisk.',
+      cpvCodes: [CONSTRUCTION],
+      mainCpv: CONSTRUCTION,
+      nutsCodes: ['NO081'],
+      placeText: 'Oslo',
+      buyerCity: 'Oslo',
+      deadlineAt: days(21),
+    }),
+    makeNotice({
+      sourceNoticeId: 'TOOL-GRESS',
+      title: 'Ny kunstgressbane ved skolen (ord-test)',
+      description: 'Fiktiv kunngjøring for automatiske tester. Tilbudet skal leveres elektronisk.',
+      cpvCodes: [CONSTRUCTION],
+      mainCpv: CONSTRUCTION,
+      nutsCodes: ['NO0A1'],
+      placeText: 'Stavanger',
+      buyerCity: 'Stavanger',
+      deadlineAt: days(21),
+    }),
+  ]);
+  resetQuickCache();
+  const r = await quickRanking({ industry: 'construction', region: '11', words: 'elektroinstallasjon og rehabilitering av bygg' });
+  assert.ok(r);
+  const el = r.rows.findIndex((x) => x.title === 'Kontroll av elektriske fordelinger i formålsbygg (ord-test)');
+  const turf = r.rows.findIndex((x) => x.title === 'Ny kunstgressbane ved skolen (ord-test)');
+  assert.ok(el >= 0, `el-anbudet er blant de fem beste: ${r.rows.map((x) => `${x.score} ${x.title}`).join(' | ')}`);
+  assert.ok(turf === -1 || el < turf, 'og står foran kunstgressbanen i eget fylke');
+  assert.ok(r.rows[el]!.reasons.includes('Nøkkelord i tittelen: elektriske'), r.rows[el]!.reasons.join(' | '));
+  const { body } = await page(`/prov?bransje=construction&fylke=11&ord=${encodeURIComponent('elektroinstallasjon og rehabilitering av bygg')}`);
+  assert.match(text(body), /Kontroll av elektriske fordelinger i formålsbygg \(ord-test\)/);
+});
+
 test('/prov begrenses per besøkende', async () => {
   await page('/prov?bransje=telecom');
   await systemSql()`update rate_limits set count = 40 where key like 'prov:%'`;

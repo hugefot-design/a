@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 16. november 2026 (enklere nettside er rullet ut 16.11 (`050a255`) – se under; kostnadsgjennomgangen med OCR, og ærlige varsler, e-postkvote for ukesbrev, beskjed om borte filer og kontroll av sikkerhetskopien er rullet ut 16.11 (`5d6ea1c`) – se under; byggeplanens pakke 1–4 er rullet ut 15.11 og pakke 5 16.11 – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 16. november 2026 (bedre søk etter kundesimuleringen – IKKE rullet ut, se under; enklere nettside er rullet ut 16.11 (`050a255`) – se under; kostnadsgjennomgangen med OCR, og ærlige varsler, e-postkvote for ukesbrev, beskjed om borte filer og kontroll av sikkerhetskopien er rullet ut 16.11 (`5d6ea1c`) – se under; byggeplanens pakke 1–4 er rullet ut 15.11 og pakke 5 16.11 – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -9,9 +9,9 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 275 av 275 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 16.11.2026 (enklere nettside) |
-| Integrasjonstester (ekte database, ekte HTTP) | 291 av 291 bestått – 16.11.2026 (enklere nettside, inkl. grense for synlige ord på 12 sider) |
-| Ende-til-ende i nettleser | 14 av 14 bestått (inkl. «Vis mer» som åpnes fra lenker og holder seg åpen, OCR av en skannet PDF i Chromium, menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 16.11.2026 (enklere nettside) |
+| Enhetstester | 283 av 283 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 16.11.2026 (bedre søk) |
+| Integrasjonstester (ekte database, ekte HTTP) | 292 av 292 bestått – 16.11.2026 (bedre søk, inkl. elektrikeren gjennom «Prøv uten konto») |
+| Ende-til-ende i nettleser | 14 av 14 bestått (inkl. «Vis mer» som åpnes fra lenker og holder seg åpen, OCR av en skannet PDF i Chromium, menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 16.11.2026 (bedre søk) |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | `npm audit` | 0 sårbarheter – 16.11.2026 (nye utviklingsavhengigheter for OCR: `tesseract.js` og norsk/engelsk språkdata – bare ved bygging) |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
@@ -398,6 +398,26 @@ kostnader, ingen endring i Render eller Supabase.
 - Tester: `tests/integration/admin-access.test.ts` (fant at vernet virker: uten privat lagring av simulerte svar feiler
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
+
+## Bedre søk (16. november 2026) – IKKE rullet ut
+
+Etter kundesimuleringen (under): treffmotoren kjenner igjen ordene kundene faktisk skriver. Detaljer og måling i
+[KUNDESIMULERING.md](KUNDESIMULERING.md#rettet-etter-simuleringen-16-november-2026--ikke-rullet-ut).
+
+- Lange ord teller også inne i sammensatte ord, og 13 små grupper med fagord kjennes igjen i flere former
+  («vakthold» → «vakttjenester»). Unntak: «vaktmester» er ikke vakt, «elektronisk» er ikke elektroarbeid.
+- Et ord i tittelen gir 10 poeng (var 8). Nytt tak: samme bransje, men ingen av ordene står i kunngjøringen – maks 45.
+- Riktig beskjed når profilen mangler ord for det bedriften leverer.
+- Samme motor overalt: «Prøv uten konto», appen, varsler (fra 60 poeng, uendret) og eksemplene. Metodesiden viser
+  de nye reglene automatisk.
+- **Tester:** `tests/unit/terms.test.ts` (ny), nye tilfeller i `matching.test.ts` (vaktselskapet i Vestland,
+  elektrikeren i Rogaland, renhold i Oslo, uten ord og med lik CPV-kode), `method.test.ts` (det nye taket), og
+  `tests/integration/tools.test.ts` (elektrikeren gjennom «Prøv uten konto»).
+- **Testkjøring:** typesjekk OK; enhet 283 bestått (1 hoppet over); integrasjon 292 av 292; ende-til-ende 14 av 14;
+  bygg OK.
+- Lagrede treff for kontoer som finnes, regnes på nytt når profilen lagres, når anbudet endres, og daglig for anbud med
+  frist innen 14 dager – ikke alle på én gang ved utrulling. «Prøv uten konto» bruker de nye reglene med en gang.
+- **IKKE MÅLT i produksjon** – gjøres med de samme åtte kundetypene etter utrulling.
 
 ## Kundesimulering (16. november 2026) – bare en rapport, ingen endring i koden
 

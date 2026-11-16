@@ -74,12 +74,13 @@ test('takene på poengsummen er de samme som metodesiden viser', () => {
   check(scoreTender({ ...profile, ...it, keywords: ['programvare'] }, tender, now), 'Ingen faglige treff');
   check(scoreTender({ ...profile, ...it, keywords: ['vakthold'] }, tender, now), 'Bare søkeordtreff, ingen bransje- eller CPV-treff');
   check(scoreTender({ ...profile, industries: [], cpvCodes: ['79000000'], keywords: [] }, tender, now), 'Bare treff på overordnet CPV-gruppe');
+  check(scoreTender({ ...profile, cpvCodes: [], keywords: ['kameraovervåking'] }, tender, now), 'Samme bransje, men ingen av ordene for det dere leverer står i kunngjøringen');
   check(scoreTender({ ...profile, certifications: ['iso9001'] }, tender, now), 'Mulig absolutt krav som ikke er oppfylt');
   check(
     scoreTender({ ...profile, annualRevenue: 1_000_000 }, { ...tender, description: `${tender.description} Leverandøren må ha en årlig omsetning på minst 10 millioner kroner.` }, now),
     'Omsetningskravet er ikke oppfylt',
   );
-  assert.equal(SCORE_CAPS.length, 5);
+  assert.equal(SCORE_CAPS.length, 6);
 });
 
 test('utenfor landene profilen dekker, eller etter fristen: aldri mer enn grensen metodesiden viser', () => {

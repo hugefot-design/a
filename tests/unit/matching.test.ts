@@ -118,6 +118,76 @@ test('forklaring: oppfylte og ikke oppfylte krav, manglende opplysninger og usik
   assert.ok(unknown.breakdown.uncertaintyReasons.includes('Kunngjøringen har lite beskrivende tekst'));
 });
 
+// Fra kundesimuleringen 16.11.2026 (docs/KUNDESIMULERING.md): en ny bedrift beskriver det den leverer med egne ord,
+// slik «Prøv uten konto» og oppstarten gjør (ingen CPV-koder, ingen nøkkelord – bare tjenester).
+const newCompany = (industry: string, region: string, services: string): MatchProfile => ({
+  industries: [industry],
+  cpvCodes: [],
+  keywords: [],
+  services,
+  regions: [region],
+  countries: ['NO'],
+  certifications: [],
+  minContractValue: null,
+  maxContractValue: null,
+  contractTypes: [],
+  excludedCpv: [],
+  excludedKeywords: [],
+  minDaysToDeadline: 3,
+});
+const open = (id: string, title: string, industry: string, region: string, description: string | null = null): MatchTender => ({
+  id,
+  title,
+  description,
+  cpvCodes: [],
+  industryIds: [industry],
+  regionCodes: [region],
+  countryCode: 'NO',
+  estimatedValue: null,
+  currency: null,
+  contractNature: 'services',
+  deadlineAt: new Date('2026-11-25T11:00:00Z'),
+  lifecycle: 'competition',
+});
+
+test('vaktselskap i Vestland: et ekte vaktanbud i et annet fylke går foran sikkerhetsutstyr i eget fylke', () => {
+  const p = newCompany('security', '46', 'vakthold, resepsjon og alarmrespons');
+  const equipment = scoreTender(p, open('a', 'Serviceavtale for årskontroll av sløkkjeutstyr', 'security', '46', 'Årleg kontroll av brannsløkkingsutstyr.'), NOW);
+  const guarding = scoreTender(p, open('b', 'Rammeavtale vakttjenester', 'security', '03', 'Stasjonære vektere og mobile vakttjenester.'), NOW);
+  assert.ok(guarding.score > equipment.score, `vakt ${guarding.score} > utstyr ${equipment.score}`);
+  assert.ok(equipment.score <= 45, `utstyr ${equipment.score}`);
+  assert.ok(equipment.breakdown.caps.some((c) => /ingen av ordene for det dere leverer/.test(c)), equipment.breakdown.caps.join(' | '));
+  assert.ok(guarding.breakdown.reasons.includes('Nøkkelord i tittelen: vakttjenester'), guarding.breakdown.reasons.join(' | '));
+});
+
+test('elektriker: el-anbudet blir et godt treff selv om ordet står i en annen form, kunstgressbanen gjør det ikke', () => {
+  const p = newCompany('construction', '11', 'elektroinstallasjon og rehabilitering av bygg');
+  const el = scoreTender(p, open('e', 'Kartlegging, merking og kontroll av elektriske fordelinger i formålsbygg', 'construction', '11'), NOW);
+  const turf = scoreTender(p, open('k', 'Sandved kunstgressbane', 'construction', '11'), NOW);
+  assert.ok(el.score >= 60, `el ${el.score}`);
+  assert.ok(turf.score <= 45, `kunstgress ${turf.score}`);
+  // «Tilbudet skal leveres elektronisk» står i mange kunngjøringer – det er ikke elektroarbeid.
+  const boiler = scoreTender(p, open('b', 'Uværsskur ved skolen', 'construction', '11', 'Tilbudet skal leveres elektronisk via KGV.'), NOW);
+  assert.ok(boiler.score <= 45, `elektronisk levering: ${boiler.score}`);
+});
+
+test('ordet i tittelen gir 10 poeng: samme bransje, eget fylke og ordet i tittelen er et godt treff', () => {
+  const p = newCompany('cleaning', '03', 'daglig renhold av kontorer og skoler');
+  const r = scoreTender(p, open('r', 'Renhold for Statistisk sentralbyrå i Oslo', 'cleaning', '03'), NOW);
+  assert.equal(r.breakdown.components.keywords, 10);
+  assert.ok(r.score >= 60, `score ${r.score}`);
+  assert.ok(!r.breakdown.uncertaintyReasons.some((u) => /verken CPV-koder/.test(u)), 'tjenestene teller som ord for det de leverer');
+});
+
+test('uten ord i profilen, eller med lik CPV-kode, gjelder ikke det nye taket', () => {
+  const noWords = { ...newCompany('security', '46', ''), services: null };
+  const r = scoreTender(noWords, open('a', 'Serviceavtale for årskontroll av sløkkjeutstyr', 'security', '46'), NOW);
+  assert.ok(r.score > 45, `uten ord: ${r.score}`);
+  assert.ok(r.breakdown.uncertaintyReasons.includes('Profilen har verken CPV-koder eller ord for det dere leverer'));
+  const cpv = scoreTender({ ...newCompany('security', '46', 'kameraovervåking'), cpvCodes: ['79713000'] }, { ...open('b', 'Vakthold ved rådhuset', 'security', '46'), title: 'Bistand ved rådhuset', cpvCodes: ['79713000'] }, NOW);
+  assert.ok(!cpv.breakdown.caps.some((c) => /ingen av ordene/.test(c)), cpv.breakdown.caps.join(' | '));
+});
+
 test('minstekrav til omsetning tolkes fra norsk og engelsk tekst – relative krav tolkes ikke', async () => {
   const { requiredTurnover } = await import('../../src/domain/matching/engine');
   assert.equal(requiredTurnover('The supplier must have had an average annual turnover of at least NOK 300 million for the years 2024 and 2025.'), 300_000_000);

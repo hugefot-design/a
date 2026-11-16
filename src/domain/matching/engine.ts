@@ -11,6 +11,7 @@
  */
 import { CERTIFICATIONS, CERT_BY_ID, INDUSTRY_BY_ID, REGION_BY_CODE } from '@/domain/reference';
 import { containsTerm, cpvPrefixes } from '@/domain/tenders/normalize';
+import { expandTerms, matchedWord, significantWords, stemExclusions } from './terms';
 
 export interface MatchProfile {
   industries: string[];
@@ -58,7 +59,12 @@ export type Uncertainty = 'lav' | 'middels' | 'høy';
  */
 export const SCORE_PARTS = [
   { key: 'cpv', label: 'Fagområde (CPV-kode eller bransje)', max: 40, rule: 'Samme CPV-kode: 40. Nær kode: 10–34 – jo flere like sifre, jo mer. Samme bransje: minst 22.' },
-  { key: 'keywords', label: 'Det dere leverer (ordene i profilen)', max: 15, rule: '8 per ord i tittelen og 3 per ord i beskrivelsen. Maks 10 når fagområdet gir under 20.' },
+  {
+    key: 'keywords',
+    label: 'Det dere leverer (ordene i profilen)',
+    max: 15,
+    rule: '10 per ord i tittelen og 3 per ord i beskrivelsen. Maks 10 når fagområdet gir under 20. Lange ord teller også inne i sammensatte ord («brøyting» i «snøbrøyting»), og vanlige fagord kjennes igjen i flere former («vakthold» finner «vakttjenester»).',
+  },
   { key: 'geography', label: 'Område', max: 15, rule: 'Fylke dere dekker, eller hele landet: 15. Sted ikke oppgitt: 8. Utenfor: 0.' },
   { key: 'value', label: 'Kontraktsverdi', max: 10, rule: 'Innenfor størrelsen dere ønsker (eller ingen grense satt): 10. Ikke oppgitt eller i annen valuta: 5. Under minstegrensen: 4. Over maksgrensen: 2.' },
   { key: 'type', label: 'Kontraktstype', max: 5, rule: 'Typen dere ønsker: 5. Ingen type valgt: 4. Ikke oppgitt i kunngjøringen: 3. En annen type: 0.' },
@@ -76,6 +82,7 @@ export const SCORE_CAPS = [
   { key: 'noFit', max: 25, text: 'Ingen faglige treff' },
   { key: 'keywordsOnly', max: 45, text: 'Bare søkeordtreff, ingen bransje- eller CPV-treff' },
   { key: 'groupOnly', max: 55, text: 'Bare treff på overordnet CPV-gruppe' },
+  { key: 'wordsMissing', max: 45, text: 'Samme bransje, men ingen av ordene for det dere leverer står i kunngjøringen' },
   { key: 'legal', max: 40, text: 'Mulig absolutt krav som ikke er oppfylt' },
   { key: 'turnover', max: 35, text: 'Omsetningskravet er ikke oppfylt' },
 ] as const;
@@ -108,23 +115,24 @@ export interface MatchResult {
   breakdown: MatchBreakdown;
 }
 
-const STOP = new Set(
-  'og i på av for til med som det den de en et er vi oss vår våre har kan skal fra om ved alle innen samt eller både mer leverer levering tjenester tjeneste produkter produkt'.split(' '),
-);
+/** Poeng per ord fra profilen i tittelen og i beskrivelsen (se SCORE_PARTS). */
+export const TITLE_HIT_POINTS = 10;
+export const DESCRIPTION_HIT_POINTS = 3;
 
-/** Termer fra nøkkelord, tjenester og produkter (maks 40). */
+/**
+ * Termer fra nøkkelord, tjenester og produkter (maks 40). Et nøkkelord med flere ord («resepsjon og alarmrespons»)
+ * teller både som uttrykk og ord for ord – ellers ville det bare treffe når hele uttrykket står i kunngjøringen.
+ */
 export function profileTerms(profile: Pick<MatchProfile, 'keywords' | 'services' | 'products'>): string[] {
   const terms = new Set<string>();
   for (const k of profile.keywords) {
     const t = k.trim().toLowerCase();
     if (t.length >= 3) terms.add(t);
+    if (/\s/.test(t)) for (const w of significantWords(t)) terms.add(w);
   }
   for (const text of [profile.services, profile.products]) {
     for (const part of (text ?? '').toLowerCase().split(/[,;\n.]+/)) {
-      for (const word of part.split(/\s+/)) {
-        const w = word.replace(/[^\p{L}\p{N}-]/gu, '');
-        if (w.length >= 5 && !STOP.has(w)) terms.add(w);
-      }
+      for (const w of significantWords(part)) terms.add(w);
     }
   }
   return [...terms].slice(0, 40);
@@ -213,12 +221,28 @@ export function scoreTender(profile: MatchProfile, tender: MatchTender, now = ne
   }
   if (cpv >= 20) fulfilled.push('Fagområdet (bransje/CPV) passer profilen');
 
-  // 2. Søkeord (maks 15, og bare 10 uten faglig treff)
-  const terms = profileTerms(profile);
-  const titleHits = terms.filter((t) => containsTerm(tender.title, t));
-  const descHits = terms.filter((t) => !titleHits.includes(t) && tender.description && containsTerm(tender.description, t));
+  // 2. Søkeord (maks 15, og bare 10 uten faglig treff). Bedriftens egne ord, og ord fra samme faggruppe
+  // («vakthold» → «vakttjenester»), se terms.ts. For ord fra faggruppen vises ordet i kunngjøringen.
+  const ownTerms = profileTerms(profile);
+  const titleHits: string[] = [];
+  const descHits: string[] = [];
+  for (const [term, own] of [...ownTerms.map((t) => [t, true] as const), ...expandTerms(ownTerms).map((t) => [t, false] as const)]) {
+    // Bedriftens egne ord teller som de er; stammer fra faggruppene har unntak («elektr» er ikke «elektronisk»).
+    const not = own ? [] : stemExclusions(term);
+    const inTitle = matchedWord(tender.title, term, not);
+    if (inTitle) {
+      const shown = own ? term : inTitle;
+      if (!titleHits.includes(shown)) titleHits.push(shown);
+      continue;
+    }
+    const inDescription = tender.description ? matchedWord(tender.description, term, not) : null;
+    if (inDescription) {
+      const shown = own ? term : inDescription;
+      if (!descHits.includes(shown) && !titleHits.includes(shown)) descHits.push(shown);
+    }
+  }
   const keywordCap = cpv >= 20 ? 15 : 10;
-  const keywords = Math.min(keywordCap, titleHits.length * 8 + descHits.length * 3);
+  const keywords = Math.min(keywordCap, titleHits.length * TITLE_HIT_POINTS + descHits.length * DESCRIPTION_HIT_POINTS);
   if (titleHits.length) reasons.push(`Nøkkelord i tittelen: ${titleHits.slice(0, 4).join(', ')}`);
   else if (descHits.length) reasons.push(`Nøkkelord i beskrivelsen: ${descHits.slice(0, 4).join(', ')}`);
 
@@ -354,7 +378,8 @@ export function scoreTender(profile: MatchProfile, tender: MatchTender, now = ne
   if (!(tender.selectionCriteria?.length) && tender.lifecycle === 'competition') {
     uncertaintyReasons.push('Kvalifikasjonskravene står trolig i konkurransegrunnlaget, som ikke er vurdert her');
   }
-  if (!profile.cpvCodes.length && !profile.keywords.length) uncertaintyReasons.push('Profilen har verken CPV-koder eller nøkkelord');
+  // Ordene kan stå i nøkkelordene eller i det bedriften skrev om tjenestene sine (oppstarten fyller ut det siste).
+  if (!profile.cpvCodes.length && !ownTerms.length) uncertaintyReasons.push('Profilen har verken CPV-koder eller ord for det dere leverer');
   if (turnover !== null && (profile.annualRevenue === null || profile.annualRevenue === undefined)) uncertaintyReasons.push('Omsetning mangler i profilen');
   const uncertainty: Uncertainty = uncertaintyReasons.length >= 3 ? 'høy' : uncertaintyReasons.length >= 1 ? 'middels' : 'lav';
 
@@ -368,6 +393,10 @@ export function scoreTender(profile: MatchProfile, tender: MatchTender, now = ne
   if (cpv === 0 && keywords === 0) cap('noFit');
   else if (cpv === 0) cap('keywordsOnly');
   else if (cpv <= 10 && titleHits.length === 0) cap('groupOnly');
+  // Samme bransje alene er et svakt tegn – bransjene er brede («Bygg og anlegg» rommer alle fag). Har bedriften sagt
+  // hva den leverer, og ingen av ordene står i kunngjøringen, skal anbudet ikke gå foran et som faktisk nevner det,
+  // heller ikke når det er i eget fylke. Lik eller nær CPV-kode (fire sifre eller mer) er et sterkt tegn og unntas.
+  if (cpv > 0 && ownTerms.length > 0 && titleHits.length === 0 && descHits.length === 0 && cpvHit.score < 28) cap('wordsMissing');
   if (legalMissing) cap('legal');
   if (turnoverShort) cap('turnover');
   if (disqualifiers.some((d) => d.startsWith('Oppdraget er utenfor'))) score = Math.min(score, DISQUALIFIED_MAX);
