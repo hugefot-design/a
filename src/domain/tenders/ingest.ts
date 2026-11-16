@@ -202,9 +202,17 @@ async function findDuplicate(tx: Tx, n: NormalizedNotice, orgNumber: string | nu
   const published = n.publishedAt ? new Date(n.publishedAt) : null;
   const deadline = n.deadlineAt ? new Date(n.deadlineAt) : null;
   const groups = [...new Set(n.cpvCodes.map((c) => c.slice(0, 3)))];
+  // Kandidatene hentes via indeksene først (org.nr. og trigram-indeksen på oppdragsgivernavnet – operatoren % tar
+  // med alt over 0,3 i likhet, standardterskelen i pg_trgm, så alle over 0,6 under er med). Uten dette må databasen
+  // regne likhet for hvert anbud fra landet ved hver import – det vokser med databasen. Samme resultat.
   const rows = (await tx`
     select t.id
     from tenders t
+    join (
+      select id from tenders where ${orgNumber}::text is not null and buyer_org_number = ${orgNumber}
+      union
+      select id from tenders where ${n.buyerName}::text is not null and buyer_name % ${n.buyerName ?? ''}
+    ) candidates on candidates.id = t.id
     where t.country_code = ${n.countryCode}
       and t.is_sample = ${n.source === 'sample'}
       and (

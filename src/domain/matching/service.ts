@@ -22,16 +22,21 @@ async function loadProfiles(orgId?: string): Promise<ProfileRow[]> {
   `) as unknown as ProfileRow[];
 }
 
-async function loadCandidateTenders(tenderIds?: string[]): Promise<MatchTender[]> {
+/** Anbud som kan gi treff: åpne, eller planlagte. */
+const CANDIDATE_CONDITION = (sql: ReturnType<typeof systemSql>) =>
+  sql`(t.lifecycle = 'planned' or (t.lifecycle in ('competition', 'other') and (t.deadline_at > now() or (t.deadline_at is null and t.published_at > now() - interval '60 days'))))`;
+
+async function loadCandidateTenders(tenderIds?: string[], opts: { deadlineWithinDays?: number } = {}): Promise<MatchTender[]> {
   const sql = systemSql();
   return (await sql`
     select id, title, left(description, 8000) as description, cpv_codes, industry_ids, region_codes, country_code,
            estimated_value, currency, contract_nature, deadline_at, lifecycle,
            coalesce((select array_agg(left(x, 2000)) from jsonb_array_elements_text(t.selection_criteria) x), '{}') as selection_criteria
     from tenders t
-    where (t.lifecycle = 'planned' or (t.lifecycle in ('competition', 'other') and (t.deadline_at > now() or (t.deadline_at is null and t.published_at > now() - interval '60 days'))))
+    where ${CANDIDATE_CONDITION(sql)}
       ${isProd ? sql`and t.is_sample = false` : sql``}
       ${tenderIds ? sql`and t.id = any(${tenderIds}::uuid[])` : sql``}
+      ${opts.deadlineWithinDays !== undefined ? sql`and t.deadline_at <= now() + make_interval(days => ${opts.deadlineWithinDays})` : sql``}
   `) as unknown as MatchTender[];
 }
 
@@ -49,6 +54,24 @@ async function storeResults(orgId: string, version: number, results: { tenderId:
       on conflict (org_id, tender_id) do update set
         score = excluded.score, breakdown = excluded.breakdown, excluded = excluded.excluded,
         profile_version = excluded.profile_version, computed_at = now()
+      -- Uendrede treff skrives ikke på nytt (ellers blir hver rad skrevet hver dag: tabellen vokser og basen jobber).
+      where match_results.score is distinct from excluded.score or match_results.excluded is distinct from excluded.excluded
+         or match_results.profile_version is distinct from excluded.profile_version
+         or match_results.breakdown is distinct from excluded.breakdown
+    `;
+  }
+}
+
+/**
+ * Lagrer treffene for et sett anbud for én organisasjon: endrede rader skrives, og anbud fra settet som ikke lenger
+ * gir treff (for lav score), fjernes – ellers ble et gammelt, høyere treff liggende.
+ */
+async function replaceForTenders(orgId: string, version: number, tenderIds: string[], results: { tenderId: string; score: number; excluded: boolean; breakdown: unknown }[]) {
+  await storeResults(orgId, version, results);
+  const kept = results.map((r) => r.tenderId);
+  if (tenderIds.length > kept.length) {
+    await systemSql()`
+      delete from match_results where org_id = ${orgId} and tender_id = any(${tenderIds}::uuid[]) and tender_id <> all(${kept}::uuid[])
     `;
   }
 }
@@ -81,11 +104,46 @@ export async function recomputeMatchesForTenders(tenderIds: string[]): Promise<n
     delete from match_results where tender_id = any(${tenderIds}::uuid[])
       and tender_id <> all(${tenders.map((t) => t.id)}::uuid[])
   `;
+  const ids = tenders.map((t) => t.id);
   for (const p of profiles) {
     const results = tenders.map((t) => ({ tenderId: t.id, ...scoreTender(p, t, now) })).filter((r) => r.score >= MIN_STORED_SCORE);
-    await storeResults(p.orgId, p.version, results);
+    await replaceForTenders(p.orgId, p.version, ids, results);
     stored += results.length;
   }
   log.info('matches_recomputed', { tenders: tenders.length, orgs: profiles.length, stored });
   return stored;
+}
+
+/**
+ * Daglig oppdatering av treffene. Bare tiden endrer et treff fra dag til dag (nye og endrede anbud og endrede
+ * profiler regnes ut med en gang), og tiden virker bare gjennom fristen: «kort frist» (under profilens minimum),
+ * «fristen er om N dager» (de siste 14 dagene) og frist som er passert. Derfor:
+ *  1. treff for anbud som ikke lenger kan gi treff (fristen passert, lukket), fjernes i én spørring;
+ *  2. for hver profil regnes bare anbudene med frist innen max(14, profilens minimum) + 1 dager på nytt –
+ *     resten ville gitt nøyaktig samme resultat – og bare endrede rader skrives.
+ * Før ble alle åpne anbud regnet ut og skrevet for alle organisasjoner hver dag.
+ */
+export async function refreshTimeSensitiveMatches(now = new Date()): Promise<{ removed: number; scored: number; stored: number }> {
+  const sql = systemSql();
+  const removed = (await sql`
+    delete from match_results m using tenders t
+    where t.id = m.tender_id and (not coalesce(${CANDIDATE_CONDITION(sql)}, false) ${isProd ? sql`or t.is_sample` : sql``})
+    returning 1
+  `).length;
+  const profiles = await loadProfiles();
+  if (!profiles.length) return { removed, scored: 0, stored: 0 };
+  const windowFor = (p: ProfileRow) => Math.max(14, p.minDaysToDeadline ?? 0) + 1;
+  const tenders = await loadCandidateTenders(undefined, { deadlineWithinDays: Math.max(...profiles.map(windowFor)) });
+  let scored = 0;
+  let stored = 0;
+  for (const p of profiles) {
+    const limit = now.getTime() + windowFor(p) * 86_400_000;
+    const relevant = tenders.filter((t) => t.deadlineAt && new Date(t.deadlineAt).getTime() <= limit);
+    const results = relevant.map((t) => ({ tenderId: t.id, ...scoreTender(p, t, now) })).filter((r) => r.score >= MIN_STORED_SCORE);
+    await replaceForTenders(p.orgId, p.version, relevant.map((t) => t.id), results);
+    scored += relevant.length;
+    stored += results.length;
+  }
+  log.info('matches_refreshed', { removed, scored, stored, orgs: profiles.length });
+  return { removed, scored, stored };
 }

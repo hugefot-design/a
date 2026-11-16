@@ -8,7 +8,7 @@ import { withTaskLock } from '@/lib/jobs';
 import { runConnector } from '@/connectors';
 import { enrichDoffinXml } from '@/connectors/doffin-enrich';
 import { ingestEinnsyn } from '@/connectors/einnsyn';
-import { recomputeMatchesForTenders } from '@/domain/matching/service';
+import { refreshTimeSensitiveMatches } from '@/domain/matching/service';
 import { reconcileStripeSubscriptions } from '@/domain/billing/stripe';
 import { generateWeeklySummaries, runNotificationCycle } from '@/domain/notifications/engine';
 import { sendWeeklyNewsletters } from '@/domain/newsletter/newsletter';
@@ -99,13 +99,9 @@ async function runUnlocked(task: ScheduledTask, trigger: 'schedule' | 'manual' |
       return reconcileStripeSubscriptions();
     case 'error-digest':
       return sendErrorDigest();
-    case 'refresh-matches': {
-      // Daglig: frister passerer, så åpne anbud må vurderes på nytt.
-      const rows = (await systemSql()`
-        select id from tenders where lifecycle in ('competition', 'planned', 'other') and (deadline_at is null or deadline_at > now() - interval '1 day')
-      `) as unknown as { id: string }[];
-      return { stored: await recomputeMatchesForTenders(rows.map((r) => r.id)) };
-    }
+    case 'refresh-matches':
+      // Daglig: frister passerer og nærmer seg. Bare anbudene der tiden endrer treffet, regnes ut på nytt.
+      return refreshTimeSensitiveMatches();
   }
 }
 
