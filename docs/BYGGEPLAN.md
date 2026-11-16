@@ -31,11 +31,11 @@ Hver pakke skal gjøre minst én av tre ting. Bruk dem når du må velge mellom 
 
 ### Slik står det nå (15.11.2026)
 
-- Nettsiden er anbudradar.com. Versjonen i produksjon er `8ee7818` (pakke 1–4, rullet ut 15.11.2026 kl. 22.42 UTC).
+- Nettsiden er anbudradar.com. Versjonen i produksjon er `7aff724` (pakke 1–5, rullet ut 15.–16.11.2026).
   All kode ligger på grenen `claude/anbudradar-saas-launch-eje0gv`, som er den eneste grenen.
 - Ingen betalende kunder. Kortbetaling er ikke åpnet (Stripe mangler nøkler). AI er ikke slått på.
   Firmaopplysningene er ikke lagt inn. Serveren er gratisplanen hos Render, og den sovner.
-- Testene er grønne: 254 enhetstester (1 hoppet over), 267 integrasjonstester og 10 nettlesertester (etter pakke 4).
+- Testene er grønne: 261 enhetstester (1 hoppet over), 272 integrasjonstester og 10 nettlesertester (etter pakke 5).
 - Les før du begynner: `README.md`, `docs/STATUS.md` (hva som er testet og rullet ut), `docs/TRANSFORMASJON.md`
   (hva som er bygd og hva som blokkerer), `docs/KONKURRENTER.md`, `docs/PRISER.md`, `docs/DRIFT.md` og
   `docs/PERSONVERN.md`.
@@ -370,7 +370,7 @@ Oppdater denne når en pakke er ferdig.
 | 2 Tildelingssimulator | Rullet ut 15.11.2026. Lineær modell som DFØ (0 poeng ved dobbel pris), ikke et nullpunkt kunden velger | `a936e1c` |
 | 3 Følg en oppdragsgiver | Rullet ut 15.11.2026. Varsel i Admin ved 70 påmeldinger (Resends dagstak er 100) | `e796fba` |
 | 4 Poeng fra tildelingsbrevet | Rullet ut 15.11.2026 | `8ee7818` |
-| 5 ZIP og Excel | Ferdig, ikke rullet ut. Word leses nå også med den trygge ZIP-leseren | se git-loggen |
+| 5 ZIP og Excel | Rullet ut 16.11.2026. Word leses nå også med den trygge ZIP-leseren | `7aff724` |
 | 6 Kalender | Ikke startet | |
 | 7 Dokumentskuff | Ikke startet | |
 | 8 Dekningsbevis og statusside | Ikke startet | |

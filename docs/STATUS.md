@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 15. november 2026 (byggeplanens pakke 1–4 er rullet ut 15.11 – se under; pakke 5 er under arbeid; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 16. november 2026 (byggeplanens pakke 1–4 er rullet ut 15.11 og pakke 5 16.11 – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -396,10 +396,11 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
-## Byggeplanen, første runde (15. november 2026) – pakke 1–4 rullet ut 15.11.2026 (`8ee7818`)
+## Byggeplanen, første runde (15.–16. november 2026) – pakke 1–4 rullet ut 15.11.2026 (`8ee7818`), pakke 5 16.11.2026 (`7aff724`)
 
 Bygget etter [BYGGEPLAN.md](BYGGEPLAN.md) på eiers «ok nå bygg de idene». Pakke 1–4 ble rullet ut 15.11.2026 kl. 22.42
-UTC etter eiers «rull ut» (Render, `dep-dbt3acec6qcc73ak2j5g`). Pakke 5 (ZIP og Excel) var ikke ferdig og er ikke med.
+UTC etter eiers «rull ut» (Render, `dep-dbt3acec6qcc73ak2j5g`). Pakke 5 (ZIP og Excel) var ikke ferdig da, og ble rullet
+ut for seg 16.11.2026 kl. 03.55 UTC (`dep-dbt7sme1egvs73fm4oq0`) – se under.
 Alle commits har `[skip render]`.
 
 **Kontrollert i produksjon etter utrullingen:**
@@ -498,7 +499,14 @@ Alle commits har `[skip render]`.
   Resultater – 390, 768 og 1440 px, lys og mørk: 18 av 18 OK. Rettet underveis: kriterienavnene ble kuttet i det smale
   panelet; nå står navnet på egen linje og tallene med synlige etiketter under.
 
-**Pakke 5 – last opp hele pakken (ZIP og Excel)** – ferdig, ikke rullet ut (venter på «rull ut»)
+**Pakke 5 – last opp hele pakken (ZIP og Excel)** – rullet ut 16.11.2026 kl. 03.55 UTC (`7aff724`)
+
+Rullet ut etter eiers «rull ut», da testene på GitHub var grønne for akkurat denne versjonen (CI-kjøring 29). Render
+melder `7aff724` som «live»; helsesjekken er OK, de offentlige sidene svarer som før, opplasting uten innlogging avvises
+(403), og loggen viser 0 advarsler og 0 feil. Ingen databaseendring i denne pakken. **IKKE VERIFISERT i produksjon:**
+selve opplastingen av en ZIP-fil – den ligger bak innlogging, og ingen testbruker ble laget i produksjon (dekket av 5
+integrasjonstester og kontrollen i nettleser mot utviklingsdatabasen).
+
 - Slipp ZIP-filen fra portalen i opplastingen på anbudssiden: den pakkes ut på serveren, og hver PDF-, Word-, Excel- og
   tekstfil blir ett dokument (innenfor grensen på 10 per anbud). Det som hoppes over, står i meldingen med grunn: bilder,
   gamle .doc/.xls, ZIP i ZIP, systemfiler fra Mac/Windows, filer som er for store, og filer der innholdet ikke stemmer
