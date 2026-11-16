@@ -6,7 +6,7 @@
 import { env } from '@/lib/env';
 import { log } from '@/lib/logger';
 import { deliverPendingEmails } from '@/lib/email';
-import { claimJob, claimScheduledTask, completeJob, enqueueJob, failJob, heartbeat, releaseStaleJobs, withTaskLock, type Job } from '@/lib/jobs';
+import { claimJob, claimScheduledTask, completeJob, enqueueJob, failJob, heartbeat, releaseStaleJobs, restWorker, scheduledTaskRuns, wakeWorker, withTaskLock, type Job } from '@/lib/jobs';
 import { runConnector } from '@/connectors';
 import { recomputeMatchesForTenders } from '@/domain/matching/service';
 import { generateWeeklySummaries } from '@/domain/notifications/engine';
@@ -54,22 +54,48 @@ async function handleJob(job: Job): Promise<void> {
   }
 }
 
-async function scheduleTick(): Promise<void> {
-  if (await claimScheduledTask('ingest-ted', env.INGEST_INTERVAL_MINUTES)) await enqueueJob('ingest', { source: 'ted' }, { dedupeKey: 'ingest:ted' });
-  if (await claimScheduledTask('ingest-doffin', env.INGEST_INTERVAL_MINUTES)) await enqueueJob('ingest', { source: 'doffin' }, { dedupeKey: 'ingest:doffin' });
-  if (env.DOFFIN_ENRICH_XML && env.DOFFIN_API_KEY && (await claimScheduledTask('enrich-doffin', env.DOFFIN_ENRICH_INTERVAL_MINUTES))) {
-    await enqueueJob('enrich_doffin', {}, { dedupeKey: 'enrich:doffin', maxAttempts: 1 });
-  }
+/** Planlagte oppgaver: navn i scheduled_task_runs, intervall i minutter, og hva som skal skje. */
+const SCHEDULE: { task: string; minutes: () => number; enabled?: () => boolean; run: () => Promise<unknown> }[] = [
+  { task: 'ingest-ted', minutes: () => env.INGEST_INTERVAL_MINUTES, run: () => enqueueJob('ingest', { source: 'ted' }, { dedupeKey: 'ingest:ted' }) },
+  { task: 'ingest-doffin', minutes: () => env.INGEST_INTERVAL_MINUTES, run: () => enqueueJob('ingest', { source: 'doffin' }, { dedupeKey: 'ingest:doffin' }) },
+  {
+    task: 'enrich-doffin',
+    minutes: () => env.DOFFIN_ENRICH_INTERVAL_MINUTES,
+    enabled: () => Boolean(env.DOFFIN_ENRICH_XML && env.DOFFIN_API_KEY),
+    run: () => enqueueJob('enrich_doffin', {}, { dedupeKey: 'enrich:doffin', maxAttempts: 1 }),
+  },
   // Future Opportunities: politiske saker fra eInnsyn to ganger i døgnet (få, høflige kall).
-  if (await claimScheduledTask('ingest-einnsyn', 12 * 60)) await runScheduledTask('ingest-einnsyn', 'schedule');
-  if (await claimScheduledTask('notifications', 15)) await enqueueJob('generate_notifications', {}, { dedupeKey: 'generate_notifications' });
-  if (await claimScheduledTask('weekly-check', 60)) await runScheduledTask('weekly', 'schedule');
-  if (await claimScheduledTask('refresh-matches', 24 * 60)) await runScheduledTask('refresh-matches', 'schedule');
-  if (await claimScheduledTask('retention', 24 * 60)) await enqueueJob('retention', {}, { dedupeKey: 'retention' });
-  if (await claimScheduledTask('reconcile-stripe', 6 * 60)) await runScheduledTask('reconcile-stripe', 'schedule');
+  { task: 'ingest-einnsyn', minutes: () => 12 * 60, run: () => runScheduledTask('ingest-einnsyn', 'schedule') },
+  { task: 'notifications', minutes: () => 15, run: () => enqueueJob('generate_notifications', {}, { dedupeKey: 'generate_notifications' }) },
+  { task: 'weekly-check', minutes: () => 60, run: () => runScheduledTask('weekly', 'schedule') },
+  { task: 'refresh-matches', minutes: () => 24 * 60, run: () => runScheduledTask('refresh-matches', 'schedule') },
+  { task: 'retention', minutes: () => 24 * 60, run: () => enqueueJob('retention', {}, { dedupeKey: 'retention' }) },
+  { task: 'reconcile-stripe', minutes: () => 6 * 60, run: () => runScheduledTask('reconcile-stripe', 'schedule') },
   // Feilovervåking: én oppsummering i timen til administratoren når det har kommet nye feil.
-  if (await claimScheduledTask('error-digest', 60)) await runScheduledTask('error-digest', 'schedule');
+  { task: 'error-digest', minutes: () => 60, run: () => runScheduledTask('error-digest', 'schedule') },
+];
+
+/**
+ * Kjører oppgavene som er forfalt. Først én lesing av når de sist kjørte; bare forfalte oppgaver forsøkes tatt –
+ * selve «ta» er fortsatt atomisk i databasen (claimScheduledTask), så to prosesser kan ikke kjøre samme oppgave.
+ */
+async function scheduleTick(): Promise<void> {
+  const lastRuns = await scheduledTaskRuns();
+  const now = Date.now();
+  for (const s of SCHEDULE) {
+    if (s.enabled && !s.enabled()) continue;
+    const last = lastRuns.get(s.task);
+    // Litt slingringsmonn for klokkeforskjell mellom appen og databasen.
+    if (last && now - last.getTime() < s.minutes() * 60_000 - 5_000) continue;
+    if (await claimScheduledTask(s.task, s.minutes())) await s.run();
+  }
 }
+
+/** Hvile mellom rundene: 5 s når det er arbeid, opptil 30 s når det er stille (færre spørringer mot databasen). */
+const REST_MIN_MS = 5_000;
+const REST_MAX_MS = 30_000;
+/** Hjerteslag og opprydding av hengende jobber trenger ikke skje oftere enn hvert minutt. */
+const HOUSEKEEPING_MS = 60_000;
 
 async function loop(state: { running: boolean }, mode: 'worker' | 'web'): Promise<void> {
   log.info('worker_started', {
@@ -78,10 +104,16 @@ async function loop(state: { running: boolean }, mode: 'worker' | 'web'): Promis
     doffinXmlEnrichment: env.DOFFIN_ENRICH_XML ? `hvert ${env.DOFFIN_ENRICH_INTERVAL_MINUTES}. min, maks ${env.DOFFIN_ENRICH_MAX_PER_RUN}` : 'av',
   });
   let lastSchedule = 0;
+  let lastHousekeeping = 0;
+  let rest = REST_MIN_MS;
   while (state.running) {
+    let busy = false;
     try {
-      await heartbeat({ pid: process.pid });
-      await releaseStaleJobs();
+      if (Date.now() - lastHousekeeping >= HOUSEKEEPING_MS) {
+        await heartbeat({ pid: process.pid });
+        await releaseStaleJobs();
+        lastHousekeeping = Date.now();
+      }
       if (Date.now() - lastSchedule > 60_000) {
         await scheduleTick();
         lastSchedule = Date.now();
@@ -96,15 +128,16 @@ async function loop(state: { running: boolean }, mode: 'worker' | 'web'): Promis
         }
         if (++processed >= 20) break;
       }
-      await deliverPendingEmails(50);
+      const sent = await deliverPendingEmails(50);
+      busy = processed > 0 || sent > 0;
     } catch (err) {
       log.error('worker_tick_failed', { err });
     }
-    await new Promise((r) => setTimeout(r, 5_000));
+    rest = busy ? REST_MIN_MS : Math.min(REST_MAX_MS, rest * 2);
+    if (state.running) await restWorker(rest);
   }
   log.info('worker_stopped', { mode });
 }
-
 
 /** Starter løkken. `stop()` venter til pågående runde er ferdig (maks ~5 s + pågående jobb). */
 export function startWorker(mode: 'worker' | 'web'): { stop: () => Promise<void> } {
@@ -113,6 +146,8 @@ export function startWorker(mode: 'worker' | 'web'): { stop: () => Promise<void>
   return {
     stop: async () => {
       state.running = false;
+      // Hviler den, skal den ikke vente ut hvilen før den stopper.
+      wakeWorker();
       await done;
     },
   };

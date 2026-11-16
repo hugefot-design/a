@@ -33,7 +33,38 @@ export async function enqueueJob(
     on conflict (dedupe_key) where dedupe_key is not null and status in ('queued', 'running') do nothing
     returning id
   `) as unknown as { id: string }[];
+  // Arbeideren i samme prosess (nettsiden på gratisplanen) vekkes med en gang, selv om den hviler lenger når det er stille.
+  if (rows[0] && (!opts.runAt || opts.runAt.getTime() <= Date.now())) wakeWorker();
   return rows[0]?.id ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Vekking: arbeideren hviler lenger når det ikke er noe å gjøre (færre spørringer mot databasen), men en ny
+// jobb i samme prosess skal ikke vente på det.
+// ---------------------------------------------------------------------------
+let wakeUp: (() => void) | null = null;
+
+/** Hviler i inntil `ms` millisekunder – eller til wakeWorker() kalles. */
+export function restWorker(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, ms);
+    function done() {
+      clearTimeout(timer);
+      if (wakeUp === done) wakeUp = null;
+      resolve();
+    }
+    wakeUp = done;
+  });
+}
+
+export function wakeWorker(): void {
+  wakeUp?.();
+}
+
+/** Når planlagte oppgaver sist kjørte (én spørring – i stedet for ett skriveforsøk per oppgave hvert minutt). */
+export async function scheduledTaskRuns(): Promise<Map<string, Date>> {
+  const rows = (await systemSql()`select task, last_run_at from scheduled_task_runs`) as unknown as { task: string; lastRunAt: Date }[];
+  return new Map(rows.map((r) => [r.task, r.lastRunAt]));
 }
 
 const WORKER_ID = `${hostname()}:${process.pid}`;
