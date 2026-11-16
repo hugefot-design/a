@@ -220,7 +220,7 @@ Every plan change needs your approval. None was made.
 - **Chat speed:** an accepted cheap answer should come faster (smaller model; not measured). A rejected one takes two
   calls and is slower. Warm-cache routing limits that to once per session, and the guard stops it becoming routine.
 - **Worker latency:** with the worker inside the web process (today's setup), new jobs start immediately. With a
-  separate worker service, a job started from the website (e.g. "Hent nå") can start up to 30 s later.
+  separate worker service, a job started from the website (e.g. "Hent nå") can start up to 15 s later.
 
 **Answer quality:**
 - The customer only ever sees an answer that passed the same checks as before: valid format, no refusal, and for chat
