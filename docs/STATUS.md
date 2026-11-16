@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 16. november 2026 (ærlige varsler, e-postkvote for ukesbrev, beskjed om borte filer og kontroll av sikkerhetskopien er bygget og testet, men IKKE rullet ut – se under; byggeplanens pakke 1–4 er rullet ut 15.11 og pakke 5 16.11 – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 16. november 2026 (kostnadsgjennomgangen med OCR, og ærlige varsler, e-postkvote for ukesbrev, beskjed om borte filer og kontroll av sikkerhetskopien er rullet ut 16.11 (`5d6ea1c`) – se under; byggeplanens pakke 1–4 er rullet ut 15.11 og pakke 5 16.11 – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -399,7 +399,19 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
-## Kostnadsgjennomgang (16. november 2026) – IKKE rullet ut
+## Kostnadsgjennomgang (16. november 2026) – rullet ut 16.11.2026 (`5d6ea1c`)
+
+**Utrulling** (eiers «rull ut»), 16.11.2026 kl. 06.44 UTC, sammen med `9874c3c` under:
+- Render melder `5d6ea1c` som «live». Byggeloggen viser «→ 0028_ai_cost.sql», «→ 0029_document_ocr.sql», «Ferdig: 2
+  migrering(er) kjørt» og «App-brukeren kan logge inn i databasen». Server og arbeider startet; loggen etter oppstart
+  har 137 linjer, 0 advarsler og 0 feil.
+- Helsesjekken er OK. Alle offentlige sider svarer 200, admin er skjult (404), og innloggede sider sender til innlogging.
+- OCR-filene (motor, norsk og engelsk språkdata, pdf.js) svarer 200 fra `/assets/ocr/t7.0.0-c7.0.0-p6.5.438-l1.0.0/`
+  med «bufres for alltid». Språkdataene leveres byte for byte (2 490 241 byte for norsk), uten ekstra komprimering
+  underveis.
+- **IKKE VERIFISERT i produksjon:** innloggede deler – OCR-opplasting, Admin → AI-bruk og e-postkvoten. De krever
+  innlogging med totrinn og er dekket av testene. AI er fortsatt av.
+
 
 Full rapport (engelsk): [COST_REPORT.md](COST_REPORT.md). Ingen priser, planer, leverandører eller betalte tjenester er
 endret. AI er av i produksjon, så alle AI-tall er **anslag** fra `scripts/cost-model.ts` (ekte prompter, listepriser).
@@ -426,11 +438,13 @@ endret. AI er av i produksjon, så alle AI-tall er **anslag** fra `scripts/cost-
 - **Migreringer:** `0028` (AI-kostnad) og `0029` (OCR) – bare tillegg.
 - **Tester:** se tabellen øverst.
 
-## Ærlige varsler, e-postkvote, borte filer og kontroll av sikkerhetskopien (16. november 2026) – IKKE rullet ut
+## Ærlige varsler, e-postkvote, borte filer og kontroll av sikkerhetskopien (16. november 2026) – rullet ut 16.11.2026 (`5d6ea1c`)
 
-Bygget på eiers «gjør alle du kan gjøre nå og push ut etter ferdig testet». Commit `9874c3c`, CI grønn. Utrullingen ble
-stoppet av sikkerhetsfilteret i utviklingsmiljøet (Render-kallet ble avvist) – **venter på eiers «rull ut»**. Produksjon
-kjører fortsatt `7aff724`.
+Bygget på eiers «gjør alle du kan gjøre nå og push ut etter ferdig testet». Commit `9874c3c`, CI grønn. Den første
+utrullingen ble stoppet av sikkerhetsfilteret i utviklingsmiljøet. Rullet ut 16.11.2026 på eiers «rull ut», sammen med
+kostnadsgjennomgangen (`5d6ea1c`, se over). Kontrollert som besøkende: `/prov` og bransjesidene lover ikke «med én
+gang» eller «så snart», bransjesiden sier «Hver uke, vanligvis mandag», og oppdragsgiversiden sier «Vanligvis mandag
+morgen, de ukene det kommer nye anbud herfra».
 
 - **Varsler lover ikke «med én gang».** Henting og varsler står stille mens gratistjenesten sover, og vekkingen fra
   GitHub kjører i praksis bare hver 4.–8. time. Valget heter nå «Fortløpende»; ukesbrevet og `/prov` sier «varsel når
