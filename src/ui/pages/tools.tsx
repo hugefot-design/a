@@ -20,7 +20,7 @@ import { Alert, cn, Field, Input, PostForm } from '../components';
 import { useUi } from '../context';
 import { daysUntil, formatDate, formatDateTime } from '../format';
 import { PublicLayout } from '../layouts';
-import { Kicker, NightHero, SignalCta, Wrap } from '../site';
+import { More, NightHero, SignalCta, Wrap } from '../site';
 
 export interface TryValues {
   industry: string;
@@ -121,7 +121,7 @@ export function TryPage({ values, result, limited = false }: { values: TryValues
       <NightHero
         eyebrow="Prøv uten konto"
         title="Se anbudene som passer dere."
-        lead="Velg bransje og fylke, og skriv gjerne hva dere leverer. De åpne anbudene rangeres med de samme reglene som i appen. Ingenting lagres."
+        lead="Velg bransje og fylke, og se de åpne anbudene rangert. Ingenting lagres."
       />
       <section className="bg-cream py-10 sm:py-14">
         <Wrap>
@@ -292,7 +292,7 @@ export function CalculatorPage({
       <NightHero
         eyebrow="Lønnsomhetssjekk – uten konto"
         title="Lønner anbudet seg?"
-        lead="Legg inn egne tall og se selvkost, prisen dere må ta for ønsket margin, og hva dere sitter igjen med. Samme formler som i appen. Ingenting lagres."
+        lead="Legg inn egne tall og se om oppdraget lønner seg. Ingenting lagres."
       />
       <section className="bg-cream py-10 sm:py-14">
         <Wrap className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -494,23 +494,24 @@ export function CalculatorPage({
               </>
             ) : (
               <article className="rounded-3xl border border-dashed border-line-strong bg-surface p-6 sm:p-7">
-                <h2 className="text-[18px] font-[740] text-strong">Dette får dere svar på</h2>
-                <ul className="mt-4 space-y-3 text-[15px] leading-relaxed text-ink">
-                  {[
-                    ['Selvkost', 'prisen der dere går i null – alt under er tap.'],
-                    ['Målpris', 'det dere må ta for å få marginen dere ønsker.'],
-                    ['Ved kontraktsverdien', 'hva dere sitter igjen med hvis dere får det oppdragsgiver anslår.'],
-                    ['Følsomhet', 'hva som skjer hvis kostnadene blir 5, 10 eller 20 % høyere.'],
-                  ].map(([title, text]) => (
-                    <li key={title} className="flex gap-2.5">
-                      <LuCircleCheck className="mt-1 size-4 shrink-0 text-ok" aria-hidden />
-                      <span>
-                        <strong>{title}:</strong> {text}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-5 flex gap-2 text-[13.5px] leading-relaxed text-muted">
+                <More label={<h2 className="text-[18px] font-[740]">Dette får dere svar på</h2>}>
+                  <ul className="space-y-3 text-[15px] leading-relaxed text-ink">
+                    {[
+                      ['Selvkost', 'prisen der dere går i null – alt under er tap.'],
+                      ['Målpris', 'det dere må ta for å få marginen dere ønsker.'],
+                      ['Ved kontraktsverdien', 'hva dere sitter igjen med hvis dere får det oppdragsgiver anslår.'],
+                      ['Følsomhet', 'hva som skjer hvis kostnadene blir 5, 10 eller 20 % høyere.'],
+                    ].map(([title, text]) => (
+                      <li key={title} className="flex gap-2.5">
+                        <LuCircleCheck className="mt-1 size-4 shrink-0 text-ok" aria-hidden />
+                        <span>
+                          <strong>{title}:</strong> {text}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </More>
+                <p className="mt-4 flex gap-2 text-[13.5px] leading-relaxed text-muted">
                   <LuTriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
                   <span>
                     Regnestykket bruker bare tallene dere skriver inn. Det sier ingenting om hvilken pris som vinner – det regner{' '}

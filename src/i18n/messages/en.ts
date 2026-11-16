@@ -307,6 +307,7 @@ export const en: Messages = {
     contactUs: 'Contact us',
     compareEyebrow: 'Details',
     compareTitle: 'Compare plans',
+    allIncluded: 'Show everything included',
     swipe: 'Swipe sideways to see all plans.',
     feature: 'Feature',
     priceMonthly: 'NOK {price}/month',

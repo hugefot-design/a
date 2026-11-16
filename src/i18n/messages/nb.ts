@@ -331,6 +331,7 @@ export const nb = {
     contactUs: 'Kontakt oss',
     compareEyebrow: 'Detaljer',
     compareTitle: 'Sammenlign planer',
+    allIncluded: 'Vis alt som er med',
     swipe: 'Sveip sidelengs for å se alle planene.',
     feature: 'Funksjon',
     priceMonthly: '{price} kr/mnd',

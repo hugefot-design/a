@@ -116,12 +116,14 @@ export function FeaturesPage({ specimen }: { specimen: NoticeSpecimen | null }) 
             {items.map((f, i) => {
               const Icon = FEATURE_ICONS[i] ?? LuRadar;
               return (
-                <li key={f.title} className={cn('reveal card-lift flex flex-col rounded-3xl border border-line bg-surface p-6', i % 4 === 1 && 'delay-1', i % 4 === 2 && 'delay-2', i % 4 === 3 && 'delay-3')}>
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-night text-signal">
-                    <Icon className="size-5" aria-hidden strokeWidth={1.8} />
-                  </span>
-                  <h2 className="mt-5 text-[19px] font-[720] leading-tight tracking-[-0.015em] text-strong">{f.title}</h2>
-                  <p className="mt-2 text-[15px] leading-relaxed text-muted">{f.text}</p>
+                <li key={f.title} className={cn('reveal flex flex-col rounded-3xl border border-line bg-surface p-5 sm:p-6', i % 4 === 1 && 'delay-1', i % 4 === 2 && 'delay-2', i % 4 === 3 && 'delay-3')}>
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-night text-signal">
+                      <Icon className="size-5" aria-hidden strokeWidth={1.8} />
+                    </span>
+                    <h2 className="text-[18px] font-[720] leading-tight tracking-[-0.015em] text-strong">{f.title}</h2>
+                  </div>
+                  <p className="mt-3 text-[15px] leading-relaxed text-muted">{f.text}</p>
                   <More label={t.more} className="mt-3">
                     <Points items={f.points} />
                   </More>
@@ -133,14 +135,12 @@ export function FeaturesPage({ specimen }: { specimen: NoticeSpecimen | null }) 
       </section>
       <CompareSection />
       {specimen ? <NoticeExample s={specimen} /> : null}
-      <section className="night relative overflow-hidden py-20 sm:py-24">
-        <Wrap className="relative grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1.2fr)_auto]">
+      <section className="night relative overflow-hidden py-14 sm:py-20">
+        <Wrap className="relative grid grid-cols-1 items-center gap-6 lg:grid-cols-[minmax(0,1.2fr)_auto] lg:gap-10">
           <div className="reveal max-w-2xl">
             <Kicker dark>{t.enterpriseEyebrow}</Kicker>
-            <H2 dark className="mt-4">
-              {t.enterpriseTitle}
-            </H2>
-            <p className="mt-5 text-[18px] leading-relaxed text-white/70">{t.enterpriseText}</p>
+            <h2 className="mt-3 text-[28px] font-[760] leading-tight tracking-[-0.025em] text-white sm:text-[36px]">{t.enterpriseTitle}</h2>
+            <p className="mt-3 text-[17px] leading-relaxed text-white/70">{t.enterpriseText}</p>
           </div>
           <a href={`${lp('/priser')}#enterprise`} className="btn-ghost-light reveal delay-1 justify-self-start">
             <LuTelescope className="size-4" aria-hidden /> {t.enterpriseCta}
@@ -272,7 +272,13 @@ function PlanCard({ id }: { id: PlanId }) {
       <a href={lp('/registrer')} className={cn('mt-6 w-full', featured ? 'btn-signal' : id === 'free' ? 'btn-outline-dark' : 'btn-dark')}>
         {id === 'free' ? m.pricing.startFree : m.pricing.startTrial}
       </a>
-      <Points items={text.features} dark={featured} className="mt-7" />
+      {/* De tre viktigste punktene; resten bak «Vis mer» (docs/SPRAK.md). */}
+      <Points items={text.features.slice(0, 3)} dark={featured} className="mt-7" />
+      {text.features.length > 3 ? (
+        <More dark={featured} label={m.pricing.allIncluded} className="mt-3">
+          <Points items={text.features.slice(3)} dark={featured} />
+        </More>
+      ) : null}
     </article>
   );
 }
@@ -290,7 +296,7 @@ export function PricingPage() {
           <LuCheck className="size-4 text-signal" aria-hidden /> {fill(t.trial, { days })}
         </p>
       </NightHero>
-      <section className="relative bg-cream pb-20">
+      <section className="relative bg-cream pb-12">
         <Wrap className="relative -top-10">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {CARD_PLANS.map((id) => (
@@ -309,7 +315,9 @@ export function PricingPage() {
               <h2 className="mt-3 text-[26px] font-[760] leading-tight tracking-[-0.025em] text-white">{m.features.enterpriseTitle}</h2>
               <p className="mt-2 text-[15px] text-white/65">{ent.tagline}</p>
             </div>
-            <Points items={ent.features} dark />
+            <More dark label={t.allIncluded}>
+              <Points items={ent.features} dark />
+            </More>
             <div className="lg:text-right">
               <p className="text-[14px] text-white/60">{t.enterpriseFrom}</p>
               <p className="flex items-baseline gap-1.5 lg:justify-end">
@@ -324,54 +332,52 @@ export function PricingPage() {
           </article>
         </Wrap>
       </section>
-      <section className="bg-surface py-20 sm:py-24">
+      <section id="sammenlign" className="scroll-mt-20 bg-surface py-14 sm:py-20">
         <Wrap>
-          <div className="reveal">
-            <Kicker>{t.compareEyebrow}</Kicker>
-            <H2 className="mt-4">{t.compareTitle}</H2>
-          </div>
-          <p className="mt-6 text-[13px] text-muted md:hidden">{t.swipe}</p>
-          <div className="scroll-x mt-4 overflow-hidden rounded-3xl border border-line bg-surface md:mt-10">
-            <table className="w-full min-w-[820px] text-[14px]">
-              <thead>
-                <tr className="border-b border-line bg-cream text-left">
-                  <th className="sticky left-0 z-10 bg-cream px-5 py-4 font-semibold text-strong">{t.feature}</th>
-                  {COMPARE.map((id) => (
-                    <th key={id} className={cn('px-4 py-4 text-center font-semibold', id === 'professional' ? 'bg-night text-white' : 'text-strong')}>
-                      {m.plans[id].name}
-                      <span className={cn('num block text-[12px] font-normal', id === 'professional' ? 'text-white/60' : 'text-muted')}>
-                        {PLANS[id].priceNok ? fill(t.priceMonthly, { price: int(locale, PLANS[id].priceNok!) }) : t.priceFree}
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {MATRIX.map(([key, fn]) => (
-                  <tr key={key} className="border-b border-line last:border-0">
-                    <td className="sticky left-0 z-10 max-w-[11rem] bg-surface px-5 py-3.5 text-ink shadow-[1px_0_0_var(--color-line)] sm:max-w-none">
-                      {t.matrix[key]}
-                      {!aiReal && mentionsAi(t.matrix[key]) ? (
-                        <span className="ml-1.5 inline-block rounded-full border border-line-strong px-2 py-px text-[11.5px] font-semibold leading-snug text-muted">{t.aiPending}</span>
-                      ) : null}
-                    </td>
+          {/* Hele tabellen (som må sveipes på mobil) ligger bak «Vis mer». */}
+          <More label={<h2 className="text-[22px] font-[760] tracking-[-0.02em] sm:text-[26px]">{t.compareTitle}</h2>}>
+            <p className="mt-2 text-[13px] text-muted md:hidden">{t.swipe}</p>
+            <div className="scroll-x mt-4 overflow-hidden rounded-3xl border border-line bg-surface">
+              <table className="w-full min-w-[820px] text-[14px]">
+                <thead>
+                  <tr className="border-b border-line bg-cream text-left">
+                    <th className="sticky left-0 z-10 bg-cream px-5 py-4 font-semibold text-strong">{t.feature}</th>
                     {COMPARE.map((id) => (
-                      <td key={id} className={cn('num px-4 py-3.5 text-center text-strong', id === 'professional' && 'bg-signal/[0.07] font-semibold')}>
-                        {fn(PLANS[id].entitlements, m, locale)}
-                      </td>
+                      <th key={id} className={cn('px-4 py-4 text-center font-semibold', id === 'professional' ? 'bg-night text-white' : 'text-strong')}>
+                        {m.plans[id].name}
+                        <span className={cn('num block text-[12px] font-normal', id === 'professional' ? 'text-white/60' : 'text-muted')}>
+                          {PLANS[id].priceNok ? fill(t.priceMonthly, { price: int(locale, PLANS[id].priceNok!) }) : t.priceFree}
+                        </span>
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {MATRIX.map(([key, fn]) => (
+                    <tr key={key} className="border-b border-line last:border-0">
+                      <td className="sticky left-0 z-10 max-w-[11rem] bg-surface px-5 py-3.5 text-ink shadow-[1px_0_0_var(--color-line)] sm:max-w-none">
+                        {t.matrix[key]}
+                        {!aiReal && mentionsAi(t.matrix[key]) ? (
+                          <span className="ml-1.5 inline-block rounded-full border border-line-strong px-2 py-px text-[11.5px] font-semibold leading-snug text-muted">{t.aiPending}</span>
+                        ) : null}
+                      </td>
+                      {COMPARE.map((id) => (
+                        <td key={id} className={cn('num px-4 py-3.5 text-center text-strong', id === 'professional' && 'bg-signal/[0.07] font-semibold')}>
+                          {fn(PLANS[id].entitlements, m, locale)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </More>
         </Wrap>
       </section>
-      <section className="border-t border-line bg-cream py-20 sm:py-24">
-        <Wrap className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-          <div className="reveal">
-            <Kicker>{t.faqEyebrow}</Kicker>
-            <H2 className="mt-4">{t.faqTitle}</H2>
+      <section className="border-t border-line bg-cream py-16 sm:py-24">
+        <Wrap className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+          <div>
+            <H2>{t.faqTitle}</H2>
             <p className="mt-4 text-[17px] text-muted">{rich(t.faqLead, { contact: <a href={lp('/kontakt')}>{t.contactUs}</a> })}</p>
           </div>
           <FaqList items={faqItems(m, { days, sources: sourcesText(m, liveSources, true), aiReal, paymentsOpen })} />

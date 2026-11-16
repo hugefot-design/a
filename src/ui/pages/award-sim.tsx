@@ -14,7 +14,7 @@ import { Alert, cn, Field, Input, PostForm } from '../components';
 import { useUi } from '../context';
 import { formatDateTime } from '../format';
 import { PublicLayout } from '../layouts';
-import { NightHero, SignalCta, Wrap } from '../site';
+import { More, NightHero, SignalCta, Wrap } from '../site';
 
 const OUTCOME_TONE = { vinner: 'ok', taper: 'warning', likt: 'info' } as const;
 
@@ -86,7 +86,7 @@ export function AwardSimPage({
       <NightHero
         eyebrow="Tildelingssimulator – uten konto"
         title="Hvor mye dyrere kan dere være?"
-        lead="Legg inn vekten på pris, prisene og kvalitetspoengene, og se hvem som vinner – og prisen der dere står likt med konkurrenten. DFØs to prismodeller, utregningen vises. Ingenting lagres."
+        lead="Se hvem som vinner når pris og kvalitet vektes – og prisen der dere står likt. Ingenting lagres."
       />
       <section className="bg-cream py-10 sm:py-14">
         <Wrap className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -288,23 +288,24 @@ export function AwardSimPage({
               </>
             ) : (
               <article className="rounded-3xl border border-dashed border-line-strong bg-surface p-6 sm:p-7">
-                <h2 className="text-[18px] font-[740] text-strong">Dette får dere svar på</h2>
-                <ul className="mt-4 space-y-3 text-[15px] leading-relaxed text-ink">
-                  {[
-                    ['Hvem som vinner', 'prispoeng og kvalitetspoeng lagt sammen med vektene.'],
-                    ['Prisen der dere står likt', 'hvor mye dyrere dere kan være – eller hvor mye billigere dere må være.'],
-                    ['Hva kvalitet er verdt', 'hvor mye ett kvalitetspoeng mer flytter den prisen, i kroner.'],
-                    ['Utregningen', 'steg for steg, med DFØs formler og kilde.'],
-                  ].map(([title, text]) => (
-                    <li key={title} className="flex gap-2.5">
-                      <LuCircleCheck className="mt-1 size-4 shrink-0 text-ok" aria-hidden />
-                      <span>
-                        <strong>{title}:</strong> {text}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-5 flex gap-2 text-[13.5px] leading-relaxed text-muted">
+                <More label={<h2 className="text-[18px] font-[740]">Dette får dere svar på</h2>}>
+                  <ul className="space-y-3 text-[15px] leading-relaxed text-ink">
+                    {[
+                      ['Hvem som vinner', 'prispoeng og kvalitetspoeng lagt sammen med vektene.'],
+                      ['Prisen der dere står likt', 'hvor mye dyrere dere kan være – eller hvor mye billigere dere må være.'],
+                      ['Hva kvalitet er verdt', 'hvor mye ett kvalitetspoeng mer flytter den prisen, i kroner.'],
+                      ['Utregningen', 'steg for steg, med DFØs formler og kilde.'],
+                    ].map(([title, text]) => (
+                      <li key={title} className="flex gap-2.5">
+                        <LuCircleCheck className="mt-1 size-4 shrink-0 text-ok" aria-hidden />
+                        <span>
+                          <strong>{title}:</strong> {text}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </More>
+                <p className="mt-4 flex gap-2 text-[13.5px] leading-relaxed text-muted">
                   <LuTriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
                   Konkurrentens pris og poeng er deres egne antakelser. Simulatoren vet ikke hva andre byr.
                 </p>

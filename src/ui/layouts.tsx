@@ -232,17 +232,20 @@ function PublicFooter() {
               : []),
           ]}
         />
-        <FooterNav
-          title={m.footer.company}
-          links={[
-            ...['/om', '/kontakt'].map((href) => ({ href: lp(href), label: labels[href]! })),
-            // Metodesiden finnes bare på norsk.
-            ...(locale === 'nb' ? [{ href: '/metode', label: 'Slik regner vi' }] : []),
-          ]}
-        />
-        <div className="space-y-2">
-          <FooterNav title={m.footer.legal} links={LEGAL_DOCS.map((d) => ({ href: d.href, label: legal[d.href.slice(1)] ?? d.label }))} />
-          {m.footer.legalNote ? <p className="pt-1 text-[12px] text-white/45">{m.footer.legalNote}</p> : null}
+        {/* På mobil står Selskap og Juridisk under hverandre i høyre kolonne (kortere bunntekst); på PC er de egne kolonner. */}
+        <div className="space-y-8 lg:contents">
+          <FooterNav
+            title={m.footer.company}
+            links={[
+              ...['/om', '/kontakt'].map((href) => ({ href: lp(href), label: labels[href]! })),
+              // Metodesiden finnes bare på norsk.
+              ...(locale === 'nb' ? [{ href: '/metode', label: 'Slik regner vi' }] : []),
+            ]}
+          />
+          <div className="space-y-2">
+            <FooterNav title={m.footer.legal} links={LEGAL_DOCS.map((d) => ({ href: d.href, label: legal[d.href.slice(1)] ?? d.label }))} />
+            {m.footer.legalNote ? <p className="pt-1 text-[12px] text-white/45">{m.footer.legalNote}</p> : null}
+          </div>
         </div>
       </div>
       <div className="border-t border-white/10">

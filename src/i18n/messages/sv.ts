@@ -298,6 +298,7 @@ export const sv: Messages = {
     contactUs: 'Kontakta oss',
     compareEyebrow: 'Detaljer',
     compareTitle: 'Jämför planer',
+    allIncluded: 'Visa allt som ingår',
     swipe: 'Svep åt sidan för att se alla planer.',
     feature: 'Funktion',
     priceMonthly: '{price} NOK/mån',

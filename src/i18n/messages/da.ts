@@ -298,6 +298,7 @@ export const da: Messages = {
     contactUs: 'Kontakt os',
     compareEyebrow: 'Detaljer',
     compareTitle: 'Sammenlign planer',
+    allIncluded: 'Vis alt, der er med',
     swipe: 'Stryg til siden for at se alle planer.',
     feature: 'Funktion',
     priceMonthly: '{price} NOK/md.',

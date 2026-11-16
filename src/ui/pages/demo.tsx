@@ -46,7 +46,7 @@ export function DemoPage({ demo }: { demo: DemoReport | null }) {
       <NightHero
         eyebrow="Eksempel på en vurdering"
         title="Et ekte anbud, vurdert før dere bruker tid på det."
-        lead="Under er en åpen kunngjøring, vurdert med de samme reglene som i appen: passer det, hva kan gi avvisning, hva kan koste penger, og hva lignende kontrakter faktisk ble tildelt for. Ingen AI er brukt, og ingenting er fylt inn."
+        lead="En åpen kunngjøring, vurdert med de samme reglene som i appen. Ingen AI er brukt, og ingenting er fylt inn."
       >
         <div className="mt-9 flex flex-wrap items-center gap-3">
           <a href={mine} className="btn-signal">
@@ -123,7 +123,7 @@ export function DemoPage({ demo }: { demo: DemoReport | null }) {
       <section className="bg-cream pb-16 sm:pb-20">
         <Wrap>
           <AppHrefProvider value={app}>
-            <IntelligenceBody report={r} />
+            <IntelligenceBody report={r} fold="Vis hele vurderingen" />
           </AppHrefProvider>
           <div className="mt-8 flex flex-col items-start gap-4 rounded-3xl bg-night p-6 text-white sm:flex-row sm:items-center sm:justify-between sm:p-7">
             <p className="flex max-w-2xl gap-2.5 text-[16px] leading-relaxed text-white/80">

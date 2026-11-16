@@ -36,6 +36,7 @@ import { useUi } from '../../context';
 import { daysUntil, formatDate, formatDateTime } from '../../format';
 import { compactNumber } from '@/i18n/format';
 import { AppShell } from '../../layouts';
+import { More } from '../../site';
 
 /** Fargen på merket følger grunnformen; teksten kommer fra basisLabel (presisert med kilden). */
 const BASIS_TONE: Record<Basis, 'ok' | 'info' | 'ai'> = { fact: 'ok', calculation: 'info', ai: 'ai' };
@@ -939,7 +940,31 @@ export function IntelligencePage({ report: r }: { report: IntelligenceReport }) 
  * Selve vurderingen: merking, anbefaling, nøkkeltall, de fem delene og metoden. Brukes i appen og i det offentlige
  * eksempelet (der lenkene inn i appen går via registrering – se AppHrefProvider).
  */
-export function IntelligenceBody({ report: r }: { report: IntelligenceReport }) {
+/**
+ * Hele vurderingen. Med `fold` (bare det offentlige eksempelet, /eksempel): svaret først – beslutningen og nøkkeltallene –
+ * og resten bak «Vis mer» (docs/SPRAK.md). Appen viser alt som før.
+ */
+export function IntelligenceBody({ report: r, fold }: { report: IntelligenceReport; fold?: string }) {
+  const rest = (
+    <>
+      <UncertaintyPanel r={r} />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-5 lg:order-2">
+          <div className="lg:sticky lg:top-24">
+            <PlanPanel r={r} />
+          </div>
+        </div>
+        <div className="min-w-0 space-y-5 lg:order-1">
+          <FitSection r={r} />
+          <RiskSection r={r} />
+          <ProfitSection r={r} />
+          <CompetitionSection r={r} />
+          <LearningSection r={r} />
+          <Method r={r} />
+        </div>
+      </div>
+    </>
+  );
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
@@ -953,22 +978,13 @@ export function IntelligenceBody({ report: r }: { report: IntelligenceReport }) 
       <div className="space-y-5">
         <DecisionHero r={r} />
         <Tiles r={r} />
-        <UncertaintyPanel r={r} />
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="space-y-5 lg:order-2">
-            <div className="lg:sticky lg:top-24">
-              <PlanPanel r={r} />
-            </div>
-          </div>
-          <div className="min-w-0 space-y-5 lg:order-1">
-            <FitSection r={r} />
-            <RiskSection r={r} />
-            <ProfitSection r={r} />
-            <CompetitionSection r={r} />
-            <LearningSection r={r} />
-            <Method r={r} />
-          </div>
-        </div>
+        {fold ? (
+          <More label={fold}>
+            <div className="space-y-5">{rest}</div>
+          </More>
+        ) : (
+          rest
+        )}
       </div>
     </>
   );
