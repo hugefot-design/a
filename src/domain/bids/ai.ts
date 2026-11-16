@@ -14,7 +14,7 @@ import {
   bidStructureJsonSchema,
   bidStructureZ,
 } from '@/domain/ai/schemas';
-import { buildSourceBlock, checkRef, refsQualityIssue, sanitizeSourceText, verifyAllRefs, type AnalysisSource } from '@/domain/ai/sources';
+import { buildSourceBlock, checkRef, compactForAi, refsQualityIssue, sanitizeSourceText, verifyAllRefs, type AnalysisSource } from '@/domain/ai/sources';
 import { mockBidDraft, mockBidReview, mockBidStructure } from '@/domain/ai/mock';
 import { getProfile, profileFactsForAi } from '@/domain/profile/profile';
 import { invalidateApproval } from './bids';
@@ -28,7 +28,7 @@ async function context(org: OrgContext, userId: string, workspaceId: string) {
     const docs = await loadDocumentSources(tx, ws.tenderId);
     const analysis = await getLatestTenderAnalysis(tx, ws.tenderId, org.id);
     const profile = await getProfile(tx, org.id);
-    return { ws, tender, sources: [noticeSource(tender), ...docs] as AnalysisSource[], analysis, profile };
+    return { ws, tender, sources: compactForAi([noticeSource(tender), ...docs]), analysis, profile };
   });
 }
 

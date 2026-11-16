@@ -17,7 +17,7 @@ import {
   tenderAnalysisZ,
   type FitAssessment,
 } from './schemas';
-import { buildSourceBlock, sanitizeSourceText, verifyAllRefs, type AnalysisSource, type RefCheck, type SourceCoverage } from './sources';
+import { buildSourceBlock, compactForAi, sanitizeSourceText, verifyAllRefs, type AnalysisSource, type RefCheck, type SourceCoverage } from './sources';
 
 export function noticeSource(t: TenderDetail): AnalysisSource {
   const lines: (string | null)[] = [
@@ -150,7 +150,7 @@ export async function runTenderAnalysis(
     const tender = await getTender(tx, tenderId);
     if (!tender) return null;
     const docs = level === 'full' ? await loadDocumentSources(tx, tenderId) : [];
-    return { tender, sources: [noticeSource(tender), ...docs] };
+    return { tender, sources: compactForAi([noticeSource(tender), ...docs]) };
   });
   if (!prepared) return { ok: false, code: 'invalid_output', error: 'Fant ikke kunngjøringen.' };
   const { block, coverage } = buildSourceBlock(prepared.sources);
@@ -248,7 +248,7 @@ export async function runFitAssessment(org: OrgContext, userId: string, tenderId
     const tender = await getTender(tx, tenderId);
     if (!tender) return null;
     const docs = org.entitlements.documentUpload ? await loadDocumentSources(tx, tenderId) : [];
-    return { tender, sources: [noticeSource(tender), ...docs], profile: await getProfile(tx, org.id) };
+    return { tender, sources: compactForAi([noticeSource(tender), ...docs]), profile: await getProfile(tx, org.id) };
   });
   if (!prepared) return { ok: false, code: 'invalid_output', error: 'Fant ikke kunngjøringen.' };
   if (!prepared.profile) return { ok: false, code: 'invalid_output', error: 'Fyll ut bedriftsprofilen først.' };

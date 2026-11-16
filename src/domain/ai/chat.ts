@@ -19,7 +19,7 @@ import { GUARDRAILS } from './prompts';
 import type { JsonSchema } from './provider';
 import { runAi, type RunAiResult } from './runner';
 import { sourceRefZ } from './schemas';
-import { buildSourceBlock, checkRef, type AnalysisSource, type RefCheck } from './sources';
+import { buildSourceBlock, checkRef, compactForAi, type AnalysisSource, type RefCheck } from './sources';
 
 export const MAX_QUESTION = 500;
 
@@ -136,7 +136,7 @@ async function sourcesFor(tx: Tx, org: OrgContext, tenderId: string): Promise<An
   if (!tender) return null;
   // Dokumentene leses når planen har full analyse (samme regel som AI-analysen).
   const docs = org.entitlements.aiFullAnalysis ? await loadDocumentSources(tx, tenderId) : [];
-  return [noticeSource(tender), ...docs];
+  return compactForAi([noticeSource(tender), ...docs]);
 }
 
 export async function askTender(org: OrgContext, userId: string, tenderId: string, question: string): Promise<RunAiResult> {

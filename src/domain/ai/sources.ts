@@ -5,6 +5,7 @@
  * markørene fjernes fra selve teksten, og modellen instrueres om å ignorere
  * instruksjoner i kildene. Svaret kan uansett bare være strukturert JSON som valideres.
  */
+import { createHash } from 'node:crypto';
 import { env } from '@/lib/env';
 
 export interface AnalysisSourcePage {
@@ -45,6 +46,61 @@ export function sanitizeSourceText(text: string): string {
 
 function escapeAttr(value: string): string {
   return value.replace(/["<>]/g, '');
+}
+
+// ---------------------------------------------------------------------------
+// Færre tokens uten tap av innhold: det samme står ikke flere ganger i det AI-en leser.
+// ---------------------------------------------------------------------------
+/** Linjer som bare er et sidetall («12», «Side 3 av 40», «Page 2/9»). */
+const PAGE_NUMBER_LINE = /^(?:side|sida|page|s\.)?\s*\d{1,4}(?:\s*(?:av|of|\/)\s*\d{1,4})?\.?$/i;
+/** Prikk- og strekledere i innholdsfortegnelser og skjemaer («Kvalifikasjonskrav ........ 7»). */
+const LEADER = /(?:[.·•_…]\s?){5,}|(?:-\s?){8,}/g;
+const lineKey = (line: string) => line.toLowerCase().replace(/\d+/g, '#').replace(/\s+/g, ' ').trim();
+
+/**
+ * Kompakter dokumentene før de sendes til AI – teksten blir kortere, innholdet det samme:
+ * - topp- og bunntekst som går igjen på de fleste sidene (f.eks. «Konkurransegrunnlag – Kommunen – side 3 av 40»),
+ *   står bare på første side;
+ * - linjer som bare er et sidetall, fjernes, og prikkledere blir «…»;
+ * - en side som er ordrett lik en side tidligere (samme dokument lastet opp som både PDF og Word), erstattes med en
+ *   henvisning dit.
+ * Kunngjøringen endres ikke. Sidetallene beholdes, så kildehenvisningene stemmer. Den samme kompakte teksten brukes
+ * både til AI og til kontrollen av sitatene.
+ */
+export function compactForAi(sources: AnalysisSource[]): AnalysisSource[] {
+  const seenPages = new Map<string, string>();
+  return sources.map((source) => {
+    if (source.kind !== 'document' || !source.pages.length) return source;
+    const edges = (text: string) => {
+      const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+      return [...lines.slice(0, 2), ...lines.slice(-2)];
+    };
+    const counts = new Map<string, number>();
+    if (source.pages.length >= 3) {
+      for (const p of source.pages) {
+        // Bare korte linjer kan være topp- eller bunntekst (lange linjer er brødtekst, selv om de ligner).
+        for (const key of new Set(edges(p.text).filter((l) => l.length <= 120).map(lineKey))) if (key.length >= 3) counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    }
+    const minRepeats = Math.max(3, Math.ceil(source.pages.length * 0.6));
+    const repeated = new Set([...counts].filter(([, n]) => n >= minRepeats).map(([k]) => k));
+    const pages = source.pages.map((p, i) => {
+      const lines = p.text
+        .split('\n')
+        .filter((l) => !(i > 0 && l.trim().length <= 120 && repeated.has(lineKey(l))))
+        .filter((l) => !PAGE_NUMBER_LINE.test(l.trim()));
+      let text = lines.join('\n').replace(LEADER, ' … ').replace(/[ \t]+/g, ' ');
+      const normalized = text.toLowerCase().replace(/\s+/g, ' ').trim();
+      if (normalized.length >= 200) {
+        const hash = createHash('sha256').update(normalized).digest('hex');
+        const first = seenPages.get(hash);
+        if (first) text = `[Samme tekst som ${first}]`;
+        else seenPages.set(hash, `${source.id}${p.page !== null ? ` side ${p.page}` : ''}`);
+      }
+      return { ...p, text };
+    });
+    return { ...source, pages };
+  });
 }
 
 /** Bygger kildeblokken innenfor et tegnbudsjett. Returnerer også hva som faktisk ble tatt med. */

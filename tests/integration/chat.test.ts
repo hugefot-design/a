@@ -60,8 +60,10 @@ test('spørsmål og svar er private: en annen organisasjon ser dem ikke', async 
   await ca.post(`${page}/sporsmal`, { question: 'Hemmelig spørsmål om befaring' }, { from: page });
   const b = await clientFor(server.base, await createAccount({ plan: 'professional' }));
   assert.doesNotMatch(text((await b.get(page)).body), /Hemmelig spørsmål om befaring/);
-  const [row] = (await systemSql()`select org_id from ai_analyses where kind = 'tender_chat' and result->>'question' = 'Hemmelig spørsmål om befaring'`) as unknown as { orgId: string }[];
-  assert.equal(row?.orgId, a.orgId, 'lagret med organisasjonen, ikke delt');
+  const rows = (await systemSql()`
+    select org_id from ai_analyses where kind = 'tender_chat' and result->>'question' = 'Hemmelig spørsmål om befaring' and created_by = ${a.user.id}
+  `) as unknown as { orgId: string | null }[];
+  assert.deepEqual(rows.map((r) => r.orgId), [a.orgId], 'lagret med organisasjonen, ikke delt');
 });
 
 test('tomt eller for kort spørsmål avvises uten AI-kall', async () => {

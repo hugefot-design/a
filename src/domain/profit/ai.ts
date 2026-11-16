@@ -23,7 +23,7 @@ import { GUARDRAILS } from '@/domain/ai/prompts';
 import { runAi, type RunAiResult } from '@/domain/ai/runner';
 import { sourceRefZ } from '@/domain/ai/schemas';
 import type { JsonSchema } from '@/domain/ai/provider';
-import { buildSourceBlock, checkRef, verifyAllRefs, type AnalysisSource, type RefCheck, type SourceCoverage } from '@/domain/ai/sources';
+import { buildSourceBlock, checkRef, compactForAi, verifyAllRefs, type AnalysisSource, type RefCheck, type SourceCoverage } from '@/domain/ai/sources';
 import { COST_CATEGORIES, type CostCategory } from './calculator';
 import { scanContractTerms, type TermCategory } from './terms-scan';
 
@@ -519,7 +519,7 @@ export async function runProfitAnalysis(org: OrgContext, userId: string, tenderI
     const tender = await getTender(tx, tenderId);
     if (!tender) return null;
     const docs = org.entitlements.documentUpload ? await loadDocumentSources(tx, tenderId) : [];
-    return { sources: [noticeSource(tender), ...docs] };
+    return { sources: compactForAi([noticeSource(tender), ...docs]) };
   });
   if (!prepared) return { ok: false, code: 'invalid_output', error: 'Fant ikke kunngjøringen.' };
   const { block, coverage } = buildSourceBlock(prepared.sources);
