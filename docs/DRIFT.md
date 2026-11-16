@@ -241,6 +241,16 @@ selv at det kan ta fra noen dager til noen uker, og at ikonet ikke er garantert.
 (filen `google89c7bd88….html` serveres av `src/server/static.ts`). **Ikke fjern den** – da mister eieren
 bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
 
+
+## 6c2. Opplasting av konkurransegrunnlag (PDF, Word, Excel, tekst og ZIP)
+
+- Én fil eller hele ZIP-pakken fra portalen. ZIP pakkes ut på serveren (`src/domain/documents/zip.ts`), og hver PDF-,
+  Word-, Excel- og tekstfil blir ett dokument. Grenser: 10 dokumenter per anbud og organisasjon, `MAX_UPLOAD_MB` per fil
+  (standard 25 MB, også utpakket), 500 filer i ZIP-filen og 200 MB utpakket til sammen.
+- ZIP-, Word- og Excel-filer leses med `src/domain/documents/zip-reader.ts` (bare Node/zlib): hardt tak ved utpakking
+  uansett hva filen oppgir, sjekksum, avvisning av krypterte filer og ZIP64. Farlige filnavn hoppes over, og lagringsstien
+  lages alltid av appen (`orgs/<org>/tenders/<anbud>/<uuid>.<type>`).
+- Meldingen etter opplasting nevner AI bare når AI er slått på.
 ## 6d. Vekst: Google-sider, ukesbrev, besøkstelling og LinkedIn
 
 - **Norske adresser og fylkessider.** Bransjesidene ligger på `/bransjer/renhold`, `/bransjer/vakthold` osv. (gamle

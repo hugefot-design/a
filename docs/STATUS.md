@@ -9,11 +9,11 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 254 av 254 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 15.11.2026 (pakke 4) |
-| Integrasjonstester (ekte database, ekte HTTP) | 267 av 267 bestått – 15.11.2026 (pakke 4) |
-| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 15.11.2026 (pakke 4) |
+| Enhetstester | 261 av 261 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 16.11.2026 (pakke 5) |
+| Integrasjonstester (ekte database, ekte HTTP) | 272 av 272 bestått – 16.11.2026 (pakke 5) |
+| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 16.11.2026 (pakke 5) |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
-| `npm audit` | 0 sårbarheter – 15.11.2026 |
+| `npm audit` | 0 sårbarheter – 16.11.2026 (pakke 5, ingen nye avhengigheter) |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
 | Tilgjengelighet, kontrast og bredde: forsiden (norsk og engelsk), `/eksempel`, `/anbud/<id>`, priser, funksjoner, registrering, bransjeside, Oversikt, Abonnement, anbudssiden, samlet vurdering og oppstartsskjemaet – 390, 768 og 1440 px, lys og mørk | Én h1 per side, `<main>`, etiketter på alle felt, navn på alle knapper og lenker, ingen doble id-er, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: filfeltene for opplasting manglet etikett – 14.11.2026 |
 | Etter gjennomgangen: tilgjengelighet, kontrast og bredde for oppdragsgiverside, bransjeside, `/prov` (med og uten treff), `/metode` og lønnsomhetssjekken – 390, 768 og 1440 px, lys og mørk | 42 av 42 kontroller OK – 15.11.2026 |
@@ -497,6 +497,33 @@ Alle commits har `[skip render]`.
 - Tilgjengelighet, kontrast og bredde: anbudssiden (tapt med poeng, og levert med kriteriene fra kunngjøringen) og
   Resultater – 390, 768 og 1440 px, lys og mørk: 18 av 18 OK. Rettet underveis: kriterienavnene ble kuttet i det smale
   panelet; nå står navnet på egen linje og tallene med synlige etiketter under.
+
+**Pakke 5 – last opp hele pakken (ZIP og Excel)** – ferdig, ikke rullet ut (venter på «rull ut»)
+- Slipp ZIP-filen fra portalen i opplastingen på anbudssiden: den pakkes ut på serveren, og hver PDF-, Word-, Excel- og
+  tekstfil blir ett dokument (innenfor grensen på 10 per anbud). Det som hoppes over, står i meldingen med grunn: bilder,
+  gamle .doc/.xls, ZIP i ZIP, systemfiler fra Mac/Windows, filer som er for store, og filer der innholdet ikke stemmer
+  med filtypen. Selve ZIP-filen lagres ikke – bare dokumentene.
+- Excel (.xlsx) leses som tekst – hvert ark med navn, hver rad med cellene – så krav og vilkår i regneark blir med i
+  sjekken av krav og vilkår. Kan også lastes opp alene.
+- **Sikkerhet:** ny ZIP-leser bare med det Node har innebygd (ingen ny avhengighet, `npm audit` ren). Hver fil pakkes ut
+  med et hardt tak, uansett hvilken størrelse filen oppgir («zip-bombe»), og innholdet kontrolleres mot sjekksummen.
+  Grenser: 500 filer i ZIP-filen, 200 MB utpakket til sammen, `MAX_UPLOAD_MB` (25 MB) per fil. Filnavn som peker ut av
+  mappen («../», absolutt sti, stasjonsbokstav) hoppes over; lagringsstien lages alltid av oss. Krypterte ZIP-filer og
+  ZIP64 avvises med en forståelig melding. Filene pakkes ut og lagres én og én, så minnebruken er én fil om gangen.
+- **Funnet underveis og rettet:** Word-filer ble pakket ut med en størrelsessjekk som stolte på størrelsen filen selv
+  oppga – en laget fil kunne pakkes ut til mange GB og felle serveren. Word og Excel leses nå med den nye leseren med hardt
+  tak. (JSZip brukes fortsatt i Doffin-hentingen, som er uendret.)
+- **Rettet i samme slengen:** meldingen etter opplasting ba om å «kjøre AI-analysen på nytt» også når AI ikke er slått på
+  (som i produksjon). Nå står det bare når AI er på; ellers at sjekken av krav og vilkår har tatt dokumentene med.
+  «1 sider lest» heter nå «1 side lest».
+- Tester: 7 enhetstester (hardt tak også når filen lyver om størrelsen, sjekksum, farlige navn, norske Windows-navn med
+  æøå, utpakking med grunner, Excel, Word, meldingen) og 5 integrasjonstester (vanlig ZIP med PDF, Word og Excel; Excel
+  alene; farlige filnavn; kryptert, tom, for stor utpakket og «zip-bombe»; grensen på 10 dokumenter og plan uten
+  opplasting).
+- Tilgjengelighet, kontrast og bredde: anbudssiden før og etter opplasting av en ekte ZIP-fil gjennom skjemaet – 390, 768
+  og 1440 px, lys og mørk: 12 av 12 OK.
+- **Merk:** grensen på 10 dokumenter per anbud kan være lav for hele pakker (mange konkurransegrunnlag har 15–30 filer).
+  Det er eiers valg om den skal heves – det påvirker lagring og AI-kostnad.
 
 ## Registreringen testet i produksjon (15. november 2026) – rettingene rullet ut 15.11.2026 (`bf8a2d6`)
 

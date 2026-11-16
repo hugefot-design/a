@@ -1,8 +1,12 @@
 /**
  * Tekstuttrekk fra opplastede dokumenter med sidetall (PDF), slik at AI-svar kan
  * henvise til riktig side. Kjører med sikre innstillinger (ingen eval, ingen nettverk).
+ * Word og Excel er ZIP-filer og pakkes ut med den trygge ZIP-leseren (zip-reader.ts).
  */
-export type DetectedType = 'pdf' | 'docx' | 'txt' | null;
+import { xlsxToText } from './xlsx';
+import { zipFileReader, ZipError } from './zip-reader';
+
+export type DetectedType = 'pdf' | 'docx' | 'xlsx' | 'txt' | null;
 
 /** Maks utpakket størrelse på teksten i en Word-fil (60 MB). */
 export const MAX_DOCX_XML_BYTES = 60 * 1024 * 1024;
@@ -11,7 +15,9 @@ export const MAX_DOCX_XML_BYTES = 60 * 1024 * 1024;
 export function detectFileType(buf: Buffer, filename: string): DetectedType {
   if (buf.subarray(0, 5).toString('latin1') === '%PDF-') return 'pdf';
   const lower = filename.toLowerCase();
-  if (buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04 && lower.endsWith('.docx')) return 'docx';
+  const zip = buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04;
+  if (zip && lower.endsWith('.docx')) return 'docx';
+  if (zip && lower.endsWith('.xlsx')) return 'xlsx';
   if (lower.endsWith('.txt')) {
     const sample = buf.subarray(0, 4000);
     if (!sample.includes(0)) return 'txt';
@@ -57,21 +63,19 @@ export async function extractPdfPages(data: Buffer, maxPages = 300): Promise<{ p
   return { pages, totalPages: total };
 }
 
-/** DOCX: henter tekst fra word/document.xml. Word-filer har ikke faste sider, så teksten deles i avsnitt. */
+/**
+ * DOCX: henter tekst fra word/document.xml. Word-filer har ikke faste sider, så teksten deles i avsnitt.
+ * Pakkes ut med den trygge ZIP-leseren: høyst MAX_DOCX_XML_BYTES, uansett hva filen påstår («zip-bomber»).
+ */
 export async function extractDocxSections(data: Buffer): Promise<{ pages: ExtractedPage[]; totalPages: number }> {
-  const { default: JSZip } = (await import('jszip')) as unknown as {
-    default: { loadAsync(d: Buffer): Promise<{ file(n: string): { async(t: 'string'): Promise<string>; _data?: { uncompressedSize?: number } } | null }> };
-  };
-  const zip = await JSZip.loadAsync(data);
-  const entry = zip.file('word/document.xml');
-  if (!entry) throw new Error('Fant ikke dokumentinnhold i Word-filen.');
-  // Vern mot «zip-bomber»: en liten fil som pakkes ut til enorme mengder data.
-  const declared = entry._data?.uncompressedSize;
-  if (typeof declared !== 'number' || declared > MAX_DOCX_XML_BYTES) {
-    throw new Error('Word-filen er for stor eller har ukjent størrelse når den pakkes ut.');
+  let xml: string | null;
+  try {
+    xml = zipFileReader(data, { maxEntries: 5000, maxTotalBytes: MAX_DOCX_XML_BYTES })('word/document.xml');
+  } catch (err) {
+    if (err instanceof ZipError && err.code === 'too_large') throw new Error('Word-filen er for stor når den pakkes ut.');
+    throw err;
   }
-  const xml = await entry.async('string');
-  if (xml.length > MAX_DOCX_XML_BYTES) throw new Error('Word-filen er for stor når den pakkes ut.');
+  if (!xml) throw new Error('Fant ikke dokumentinnhold i Word-filen.');
   const text = xml
     .replace(/<w:p[ >][\s\S]*?<\/w:p>/g, (p) => p.replace(/<w:tab\/>/g, '\t').replace(/<[^>]+>/g, '') + '\n')
     .replace(/<[^>]+>/g, '')
@@ -81,6 +85,16 @@ export async function extractDocxSections(data: Buffer): Promise<{ pages: Extrac
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'");
   return chunkText(text);
+}
+
+/** Excel: hvert ark og hver rad som tekst (se xlsx.ts), delt i sider som Word. */
+export function extractXlsxSections(data: Buffer): { pages: ExtractedPage[]; totalPages: number } {
+  try {
+    return chunkText(xlsxToText(data, MAX_DOCX_XML_BYTES));
+  } catch (err) {
+    if (err instanceof ZipError && err.code === 'too_large') throw new Error('Excel-filen er for stor når den pakkes ut.');
+    throw err;
+  }
 }
 
 export function chunkText(text: string, size = 3500): { pages: ExtractedPage[]; totalPages: number } {
@@ -101,5 +115,6 @@ export function chunkText(text: string, size = 3500): { pages: ExtractedPage[]; 
 export async function extractText(type: Exclude<DetectedType, null>, data: Buffer) {
   if (type === 'pdf') return extractPdfPages(data);
   if (type === 'docx') return extractDocxSections(data);
+  if (type === 'xlsx') return extractXlsxSections(data);
   return chunkText(data.toString('utf8'));
 }

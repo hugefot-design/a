@@ -19,7 +19,8 @@ import { runAi } from '@/domain/ai/runner';
 import { WEEKLY_OVERVIEW_SYSTEM } from '@/domain/ai/prompts';
 import { weeklyOverviewJsonSchema, weeklyOverviewZ } from '@/domain/ai/schemas';
 import { mockWeeklyOverview } from '@/domain/ai/mock';
-import { deleteTenderDocument, uploadTenderDocument } from '@/domain/documents/documents';
+import { deleteTenderDocument, uploadTenderDocument, uploadTenderZip } from '@/domain/documents/documents';
+import { zipUploadSummary } from '@/domain/documents/zip';
 import { tenderRequirementScan } from '@/domain/documents/requirements-service';
 import { confirmAwardWin, learningSummary, loadResults, parseResultForm, saveResultFields, tenderResultInfo } from '@/domain/tenders/results';
 import { noticeSignals, screenTender } from '@/domain/matching/screening';
@@ -385,9 +386,18 @@ export function registerCoreAppRoutes(router: Router): void {
       const form = await ctx.form();
       const file = form.get('file');
       if (!(file instanceof File)) return redirectWith(ctx, `/app/anbud/${id}`, 'error', 'Velg en fil å laste opp.');
+      // Hele pakken fra portalen: hver fil i ZIP-filen blir ett dokument, og det som hoppes over, står i meldingen.
+      if (file.name.toLowerCase().endsWith('.zip')) {
+        const zip = await uploadTenderZip(org, user.id, id, file);
+        if (!zip.ok) return redirectWith(ctx, `/app/anbud/${id}#dokumenter-for-analyse`, 'error', zip.error);
+        const summary = zipUploadSummary(zip, { ai: aiModeFor(org).configured });
+        return redirectWith(ctx, `/app/anbud/${id}#dokumenter-for-analyse`, summary.type, summary.message);
+      }
       const result = await uploadTenderDocument(org, user.id, id, file);
       if (!result.ok) return redirectWith(ctx, `/app/anbud/${id}`, 'error', result.error);
-      return redirectWith(ctx, `/app/anbud/${id}`, 'success', `Dokumentet er lest (${result.pages} sider). Kjør AI-analysen på nytt for å ta det med.`);
+      const pages = `${result.pages} ${result.pages === 1 ? 'side' : 'sider'}`;
+      const next = aiModeFor(org).configured ? 'Kjør AI-analysen på nytt for å ta det med.' : 'Sjekken av krav og vilkår har tatt det med.';
+      return redirectWith(ctx, `/app/anbud/${id}`, 'success', `Dokumentet er lest (${pages}). ${next}`);
     },
     { maxBodyMb: 30 },
   );

@@ -370,7 +370,7 @@ Oppdater denne når en pakke er ferdig.
 | 2 Tildelingssimulator | Rullet ut 15.11.2026. Lineær modell som DFØ (0 poeng ved dobbel pris), ikke et nullpunkt kunden velger | `a936e1c` |
 | 3 Følg en oppdragsgiver | Rullet ut 15.11.2026. Varsel i Admin ved 70 påmeldinger (Resends dagstak er 100) | `e796fba` |
 | 4 Poeng fra tildelingsbrevet | Rullet ut 15.11.2026 | `8ee7818` |
-| 5 ZIP og Excel | Under arbeid, ikke rullet ut | |
+| 5 ZIP og Excel | Ferdig, ikke rullet ut. Word leses nå også med den trygge ZIP-leseren | se git-loggen |
 | 6 Kalender | Ikke startet | |
 | 7 Dokumentskuff | Ikke startet | |
 | 8 Dekningsbevis og statusside | Ikke startet | |

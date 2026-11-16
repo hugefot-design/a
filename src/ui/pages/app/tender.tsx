@@ -1124,7 +1124,7 @@ function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; 
       <div id="dokumenter-for-analyse" className="scroll-mt-24" />
       <PanelHeader
         title="Dokumenter for analyse"
-        description="Last opp konkurransegrunnlaget for en grundigere analyse med sidehenvisninger. Dokumentene er private for organisasjonen."
+        description="Last opp konkurransegrunnlaget for en grundigere analyse med sidehenvisninger – gjerne hele ZIP-filen fra portalen. Dokumentene er private for organisasjonen."
       />
       {documents.length ? (
         <ul className="divide-y divide-line">
@@ -1136,7 +1136,7 @@ function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; 
                   <p className="truncate font-semibold text-navy-900">{d.title}</p>
                   <p className="text-[12px] text-muted">
                     {d.textStatus === 'extracted'
-                      ? `${d.pageCount ?? '?'} sider lest`
+                      ? `${d.pageCount ?? '?'} ${d.pageCount === 1 ? 'side' : 'sider'} lest`
                       : d.textStatus === 'failed'
                         ? (d.textError ?? 'Kunne ikke lese teksten')
                         : 'Venter'}
@@ -1157,19 +1157,26 @@ function DocumentsPanel({ tenderId, documents, canUpload }: { tenderId: string; 
       ) : null}
       <div className="border-t border-line px-5 py-4">
         {canUpload ? (
-          <PostForm action={`/app/anbud/${tenderId}/dokumenter`} multipart className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <input
-              type="file"
-              name="file"
-              required
-              aria-label="Velg konkurransedokument (PDF, DOCX eller TXT)"
-              accept=".pdf,.docx,.txt,application/pdf"
-              className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-surface file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900"
-            />
-            <Button size="sm" variant="secondary" busyLabel="Leser dokumentet …">
-              <LuUpload className="size-4" aria-hidden /> Last opp
-            </Button>
-          </PostForm>
+          <>
+            <PostForm action={`/app/anbud/${tenderId}/dokumenter`} multipart className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                type="file"
+                name="file"
+                required
+                aria-label="Velg konkurransedokument (PDF, Word, Excel, tekst eller ZIP)"
+                aria-describedby="dok-filtyper"
+                accept=".pdf,.docx,.xlsx,.txt,.zip,application/pdf,application/zip"
+                className="block w-full text-[13px] file:mr-3 file:min-h-9 file:rounded-md file:border file:border-line-strong file:bg-surface file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-navy-900"
+              />
+              <Button size="sm" variant="secondary" busyLabel="Leser dokumentene …">
+                <LuUpload className="size-4" aria-hidden /> Last opp
+              </Button>
+            </PostForm>
+            <p id="dok-filtyper" className="mt-2 text-[12px] text-muted">
+              PDF, Word (.docx), Excel (.xlsx) og tekst – eller hele ZIP-filen fra portalen, så blir hver fil ett dokument. Høyst 10 dokumenter per anbud. Skannede
+              dokumenter (bilder) kan ikke leses ennå.
+            </p>
+          </>
         ) : (
           <p className="text-[13px] text-muted">
             Opplasting av dokumenter er med i Profesjonell. <a href="/app/abonnement">Se planer</a>

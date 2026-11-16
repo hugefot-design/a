@@ -5,13 +5,17 @@ import { sha256Hex } from '@/lib/crypto';
 import { log } from '@/lib/logger';
 import { storage } from '@/lib/storage';
 import type { OrgContext } from '@/server/http';
-import { detectFileType, extractText } from './extract';
+import { detectFileType, extractText, type DetectedType } from './extract';
+import { isZipUpload, unpackZip, type SkippedFile } from './zip';
 
 const MIME: Record<string, string> = {
   pdf: 'application/pdf',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   txt: 'text/plain; charset=utf-8',
 };
+/** Høyst så mange dokumenter per anbud og organisasjon. */
+export const MAX_DOCUMENTS_PER_TENDER = 10;
 
 export function cleanFilename(name: string): string {
   const base = name.split(/[\\/]/).pop() ?? 'dokument';
@@ -20,24 +24,18 @@ export function cleanFilename(name: string): string {
 
 export type UploadResult = { ok: true; documentId: string; pages: number } | { ok: false; error: string };
 
-/** Laster opp konkurransedokument for analyse. Lagres privat for organisasjonen. */
-export async function uploadTenderDocument(org: OrgContext, userId: string, tenderId: string, file: File): Promise<UploadResult> {
-  if (!org.entitlements.documentUpload) return { ok: false, error: 'Opplasting av dokumenter er ikke med i planen din.' };
-  if (file.size === 0) return { ok: false, error: 'Filen er tom.' };
-  if (file.size > env.MAX_UPLOAD_MB * 1024 * 1024) return { ok: false, error: `Filen er større enn ${env.MAX_UPLOAD_MB} MB.` };
-  const buf = Buffer.from(await file.arrayBuffer());
-  const type = detectFileType(buf, file.name);
-  if (!type) return { ok: false, error: 'Filtypen støttes ikke. Last opp PDF, Word (.docx) eller tekstfil (.txt).' };
-
-  const exists = await withTenant({ userId, orgId: org.id }, async (tx) => {
+/** Antall dokumenter organisasjonen har på anbudet – og om anbudet finnes. */
+async function documentSlots(org: OrgContext, userId: string, tenderId: string): Promise<{ tender: boolean; count: number }> {
+  return withTenant({ userId, orgId: org.id }, async (tx) => {
     const t = await tx`select 1 from tenders where id = ${tenderId}`;
     const [count] = (await tx`select count(*)::int as n from tender_documents where tender_id = ${tenderId} and org_id = ${org.id}`) as unknown as { n: number }[];
     return { tender: t.length > 0, count: count?.n ?? 0 };
   });
-  if (!exists.tender) return { ok: false, error: 'Fant ikke kunngjøringen.' };
-  if (exists.count >= 10) return { ok: false, error: 'Maks 10 dokumenter per kunngjøring. Slett et dokument først.' };
+}
 
-  const title = cleanFilename(file.name);
+/** Leser teksten, lagrer filen privat for organisasjonen og registrerer dokumentet (også når teksten ikke kunne leses). */
+async function storeDocument(org: OrgContext, userId: string, tenderId: string, name: string, buf: Buffer, type: Exclude<DetectedType, null>): Promise<UploadResult> {
+  const title = cleanFilename(name);
   const key = `orgs/${org.id}/tenders/${tenderId}/${randomUUID()}.${type}`;
   let extracted: { pages: { page: number; text: string }[]; totalPages: number } | null = null;
   let error: string | null = null;
@@ -75,6 +73,52 @@ export async function uploadTenderDocument(org: OrgContext, userId: string, tend
   });
   if (error) return { ok: false, error };
   return { ok: true, documentId, pages: extracted?.totalPages ?? 0 };
+}
+
+/** Laster opp konkurransedokument for analyse. Lagres privat for organisasjonen. */
+export async function uploadTenderDocument(org: OrgContext, userId: string, tenderId: string, file: File): Promise<UploadResult> {
+  if (!org.entitlements.documentUpload) return { ok: false, error: 'Opplasting av dokumenter er ikke med i planen din.' };
+  if (file.size === 0) return { ok: false, error: 'Filen er tom.' };
+  if (file.size > env.MAX_UPLOAD_MB * 1024 * 1024) return { ok: false, error: `Filen er større enn ${env.MAX_UPLOAD_MB} MB.` };
+  const buf = Buffer.from(await file.arrayBuffer());
+  const type = detectFileType(buf, file.name);
+  if (!type) return { ok: false, error: 'Filtypen støttes ikke. Last opp PDF, Word (.docx), Excel (.xlsx), tekstfil (.txt) eller hele ZIP-filen fra portalen.' };
+
+  const exists = await documentSlots(org, userId, tenderId);
+  if (!exists.tender) return { ok: false, error: 'Fant ikke kunngjøringen.' };
+  if (exists.count >= MAX_DOCUMENTS_PER_TENDER) return { ok: false, error: `Maks ${MAX_DOCUMENTS_PER_TENDER} dokumenter per kunngjøring. Slett et dokument først.` };
+  return storeDocument(org, userId, tenderId, file.name, buf, type);
+}
+
+export type ZipUploadResult =
+  | { ok: true; added: { name: string; pages: number }[]; failed: { name: string; error: string }[]; skipped: SkippedFile[] }
+  | { ok: false; error: string };
+
+/**
+ * Hele pakken fra portalen som én ZIP-fil: hver PDF-, Word-, Excel- og tekstfil blir ett dokument (så langt det er
+ * plass til innenfor grensen per anbud). Det som hoppes over eller ikke kan leses, kommer tilbake med grunn.
+ */
+export async function uploadTenderZip(org: OrgContext, userId: string, tenderId: string, file: File): Promise<ZipUploadResult> {
+  if (!org.entitlements.documentUpload) return { ok: false, error: 'Opplasting av dokumenter er ikke med i planen din.' };
+  if (file.size === 0) return { ok: false, error: 'Filen er tom.' };
+  if (file.size > env.MAX_UPLOAD_MB * 1024 * 1024) return { ok: false, error: `Filen er større enn ${env.MAX_UPLOAD_MB} MB.` };
+  const buf = Buffer.from(await file.arrayBuffer());
+  if (!isZipUpload(buf, file.name)) return { ok: false, error: 'Filen er ikke en ZIP-fil.' };
+  const exists = await documentSlots(org, userId, tenderId);
+  if (!exists.tender) return { ok: false, error: 'Fant ikke kunngjøringen.' };
+  const room = MAX_DOCUMENTS_PER_TENDER - exists.count;
+  if (room <= 0) return { ok: false, error: `Maks ${MAX_DOCUMENTS_PER_TENDER} dokumenter per kunngjøring. Slett et dokument først.` };
+
+  const added: { name: string; pages: number }[] = [];
+  const failed: { name: string; error: string }[] = [];
+  // Én fil om gangen: pakkes ut, leses og lagres før neste – så minnebruken er én fil, ikke hele pakken.
+  const unpacked = await unpackZip(buf, { maxFiles: room, maxFileBytes: env.MAX_UPLOAD_MB * 1024 * 1024 }, async (f) => {
+    const res = await storeDocument(org, userId, tenderId, f.name, f.data, f.type);
+    if (res.ok) added.push({ name: f.name, pages: res.pages });
+    else failed.push({ name: f.name, error: res.error });
+  });
+  if (!unpacked.ok) return unpacked;
+  return { ok: true, added, failed, skipped: unpacked.skipped };
 }
 
 export async function deleteTenderDocument(org: OrgContext, userId: string, documentId: string): Promise<boolean> {
