@@ -1,6 +1,6 @@
 # Markedsføring: påstander og hva de bygger på
 
-Oppdatert 8. november 2026 (forsiden selger det som skiller AnbudRadar ut – rullet ut samme dag, versjon `3801c2e`). Hver påstand på nettsiden skal kunne spores til en funksjon som finnes, og
+Oppdatert 16. november 2026 (enklere nettside: de samme påstandene, kortere – detaljene bak «Vis mer»; tidligere 8. november 2026, versjon `3801c2e`). Hver påstand på nettsiden skal kunne spores til en funksjon som finnes, og
 til en test eller kontroll. Endrer du markedsteksten, oppdater tabellen.
 
 ## Posisjonering
@@ -31,6 +31,10 @@ kapasitet og tilbudsarbeid.
 | Data lagres i EU (Frankfurt og Irland), deles ikke uten at kunden velger det, selges aldri. Også på innloggingssiden: «Sikker innlogging med totrinn og passkey · Dataene lagres i EU» (fra 8.11.2026) | Render Frankfurt, Supabase Irland, RLS, partnerprofil er frivillig | – | Aktiv. **Slås sikkerhetskopien via GitHub på, behandles databasen også på GitHubs maskiner (kan være i USA) – oppdater da teksten og underleverandørlisten** | Underleverandørlisten, `tests/integration/tenancy.test.ts` |
 
 ## Kundereisen på forsiden – ekte data
+
+Fra 16.11.2026 står de seks stegene som korte titler på forsiden; eksemplene med ekte data ligger bak «Se stegene med
+ekte eksempler» (fortsatt i siden). De åtte fordelene som gjentok funksjonslisten, er fjernet fra forsiden – de samme
+funksjonene står på Funksjoner.
 
 De seks stegene vises med ekte, offentlige data (`src/domain/tenders/showcase.ts`, `src/ui/showcase.tsx`):
 treff for en **eksempelprofil** (bransje og fylke fra et ekte anbud – merket som eksempel), krav og vilkår ordrett fra en
@@ -69,14 +73,17 @@ Tester: `tests/unit/showcase.test.ts`, `tests/integration/showcase.test.ts`.
   ennå» til en ekte AI-leverandør er satt opp (simulert AI i test og admin teller ikke). Planene (som ikke er endret)
   nevner AI-analyser – prissiden sier at de ikke er slått på. **Før dere tar betalt: slå på AI eller endre
   planbeskrivelsene (din beslutning).**
-- **OCR:** skannede PDF-er kan ikke leses – står på forsiden.
+- **OCR:** skannede PDF-er leses med OCR i kundens nettleser (fra 16.11.2026). Dokumentet merkes «kan inneholde
+  lesefeil», og PDF-er inne i en ZIP leses ikke med OCR. Forsiden sier ikke lenger at skannede PDF-er ikke kan leses
+  (testen avviser den setningen).
 - **Andre land:** bare offentlige anbud i Norge. De engelske, svenske og danske sidene sier i tillegg at appen er på norsk.
 - **Integrasjoner** med konkurransegjennomføringsverktøy: ingen.
 - **Kundetall, omtaler, besparelser, «vinn flere anbud»:** ingen slike påstander. Testen avviser stjerner og
   «fornøyde kunder».
-- **Konkurrenter:** sammenligningen gjelder søk og varsling som *funksjon*, ikke en bestemt tjeneste, og sier det. Nettsiden
-  selger det som skiller AnbudRadar ut ved å beskrive våre egne funksjoner – ingen tjenester nevnes ved navn, og vi sier
-  ikke hva andre mangler (testen avviser konkurrentnavn på forsiden).
+- **Konkurrenter:** sammenligningen gjelder søk og varsling som *funksjon*, ikke en bestemt tjeneste, og sier det. Den står
+  på Funksjoner (bak «Se sammenligningen») fra 16.11.2026. Nettsiden selger det som skiller AnbudRadar ut ved å beskrive
+  våre egne funksjoner – ingen tjenester nevnes ved navn, og vi sier ikke hva andre mangler (testene avviser
+  konkurrentnavn på forsiden og funksjonssiden).
 - **Kostnaden av dagbøter og betalingsfrist** (maks dagbot, bundet kapital) regnes bare ut fra AI-analysen i Lønnsomhet.
   AI er av, så dette markedsføres ikke.
 

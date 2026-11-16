@@ -203,7 +203,7 @@ test('lenker: anbudssiden (offentlig og i appen), kalkulatoren, metodesiden, bun
   // Kalkulatoren, metodesiden, bunnteksten og nettstedskartet.
   assert.match((await page('/kalkulator')).body, /href="\/tildeling"[^>]*>tildelingssimulatoren/);
   const method = await page('/metode');
-  assert.match(method.body, /<section id="tildeling"/);
+  assert.match(method.body, /<details id="tildeling"/, "temaet (sammenfoldet) har samme id");
   assert.match(text(method.body), /Forholdsmessig 10 × laveste pris ÷ tilbudets pris\. Ingen får 0 eller minuspoeng\./);
   assert.ok(method.body.includes('href="https://www.anskaffelser.no/veileder-i-evaluering-av-tilbud/regne-om-pris-til-poeng"'));
   assert.match(method.body, /href="\/tildeling"[^>]*>Prøv tildelingssimulatoren/);

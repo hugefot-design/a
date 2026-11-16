@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 16. november 2026 (kostnadsgjennomgangen med OCR, og ærlige varsler, e-postkvote for ukesbrev, beskjed om borte filer og kontroll av sikkerhetskopien er rullet ut 16.11 (`5d6ea1c`) – se under; byggeplanens pakke 1–4 er rullet ut 15.11 og pakke 5 16.11 – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 16. november 2026 (enklere nettside – IKKE rullet ut, se under; kostnadsgjennomgangen med OCR, og ærlige varsler, e-postkvote for ukesbrev, beskjed om borte filer og kontroll av sikkerhetskopien er rullet ut 16.11 (`5d6ea1c`) – se under; byggeplanens pakke 1–4 er rullet ut 15.11 og pakke 5 16.11 – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -9,9 +9,9 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 275 av 275 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 16.11.2026 (kostnadsgjennomgang) |
-| Integrasjonstester (ekte database, ekte HTTP) | 288 av 288 bestått – 16.11.2026 (kostnadsgjennomgang) |
-| Ende-til-ende i nettleser | 12 av 12 bestått (inkl. OCR av en skannet PDF i Chromium, menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 16.11.2026 (kostnadsgjennomgang) |
+| Enhetstester | 275 av 275 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 16.11.2026 (enklere nettside) |
+| Integrasjonstester (ekte database, ekte HTTP) | 291 av 291 bestått – 16.11.2026 (enklere nettside, inkl. grense for synlige ord på 12 sider) |
+| Ende-til-ende i nettleser | 14 av 14 bestått (inkl. «Vis mer» som åpnes fra lenker og holder seg åpen, OCR av en skannet PDF i Chromium, menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 16.11.2026 (enklere nettside) |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
 | `npm audit` | 0 sårbarheter – 16.11.2026 (nye utviklingsavhengigheter for OCR: `tesseract.js` og norsk/engelsk språkdata – bare ved bygging) |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
@@ -398,6 +398,44 @@ kostnader, ingen endring i Render eller Supabase.
 - Tester: `tests/integration/admin-access.test.ts` (fant at vernet virker: uten privat lagring av simulerte svar feiler
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
+
+## Enklere nettside (16. november 2026) – IKKE rullet ut
+
+Eier: «alt for komplisert med så mange tekster … bedre metode å gjøre det enkelt å forstå?» – valgte «hele nettsiden».
+Reglene står i [SPRAK.md](SPRAK.md) («Enkelt å forstå»): én side én oppgave, svaret først, korte setninger, ingen
+gjentakelser, detaljer bak «Vis mer» (ingenting fjernet – det ligger fortsatt i siden, også for søkemotorer).
+
+**Målt på mobil (390 px, samme data, synlige ord = det som vises uten å åpne «Vis mer»):**
+
+| Side | Synlige ord før → nå | Mobilskjermer før → nå |
+| --- | --- | --- |
+| Forsiden | 1 177 → 337 | 15,5 → 6,3 |
+| Forsiden på engelsk | 1 316 → 384 | 16 → 6,6 |
+| Funksjoner | 600 → 278 | 9,1 → 6,0 |
+| Priser | 539 → 296 | 9,3 → 6,2 |
+| Slik regner vi | 1 255 → 81 | 12,5 → 2,9 |
+| Oppdragsgivere | 765 → 106 | 13,7 → 2,6 |
+| Lønnsomhetssjekk / tildelingssimulator | 204 / 256 → 142 / 194 | 4,0 / 4,4 → 3,5 / 3,8 |
+
+- **Forsiden:** én kort setning og tre korte punkter øverst; «Prøv uten konto»; slik fungerer det i seks korte steg
+  (eksemplene med ekte data bak «Vis mer»); fire korte punkter om hva dere får (begrensningene bak «Vis mer»); bransjene
+  som små knapper; spørsmål og svar. De åtte fordelene (som gjentok funksjonslisten) er fjernet, sammenligningen er
+  flyttet til Funksjoner, og den løpende raden med oppdragsgivernavn er fjernet.
+- **Rettet feil påstand:** forsiden sa at skannede PDF-er ikke kan leses – OCR finnes nå.
+- **Funksjoner:** tittel og én linje per funksjon; punktene, sammenligningen og den markerte kunngjøringen bak «Vis mer».
+- **Priser:** de tre viktigste punktene per plan, resten bak «Vis alt som er med»; tabellen bak «Sammenlign planer».
+  Ingen priser eller grenser er endret.
+- **Eksempel:** beslutningen og nøkkeltallene først, resten bak «Vis hele vurderingen» (appen er uendret).
+- **Slik regner vi:** hvert tema er en overskrift som kan åpnes; /metode#treff åpner temaet.
+- **Oppdragsgivere, bransjer, fylker:** de 12 største oppdragsgiverne først (hele listen A–Å bak «Vis mer»); de 8
+  nærmeste fristene, resten bak «Vis alle N»; bransjer og fylker som små knapper.
+- **Bunnteksten:** kortere på mobil.
+- **Tester:** `tests/integration/simple-pages.test.ts` (grense for synlige ord på 12 sider, og at innholdet i «Vis mer»
+  fortsatt er i siden), `tests/e2e/more.test.ts` (lenke åpner et sammenfoldet tema; «Vis mer» lukkes ikke av klikk
+  andre steder), forsiden under 450 synlige ord.
+- **Kontrollert:** 17 sider, lys og mørk, 390/768/1440 px, sammenfoldet og åpnet – 204 kontroller, 0 funn.
+- **Testkjøring:** typesjekk OK; enhet 275 bestått (1 hoppet over); integrasjon 291 av 291; ende-til-ende 14 av 14;
+  bygg OK; `npm audit` 0 sårbarheter.
 
 ## Kostnadsgjennomgang (16. november 2026) – rullet ut 16.11.2026 (`5d6ea1c`)
 
