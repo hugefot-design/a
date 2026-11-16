@@ -6,8 +6,10 @@
  *
  * Modellvalg etter oppgave (kostnad mot kvalitet):
  *  - 'quality': full anbudsanalyse, egnethetsvurdering og tilbudstekst – her teller presisjon.
- *  - 'fast':    korte sammendrag og ukesoversikt – en billig modell holder.
- * Er det ikke satt en egen rask modell, brukes kvalitetsmodellen til alt.
+ *  - 'fast':    korte sammendrag, spørsmål om anbudet og disposisjon – en billig modell holder, og svaret
+ *               kontrolleres (runner.ts): holder det ikke, lages det på nytt med kvalitetsmodellen.
+ * Hos Anthropic er den billige modellen Claude Haiku 5.5 når ANTHROPIC_MODEL_FAST ikke er satt (sett den lik
+ * ANTHROPIC_MODEL for å bruke én modell til alt). Hos OpenAI brukes kvalitetsmodellen uten egen rask modell.
  */
 import { env } from '@/lib/env';
 import { anthropicProvider } from './providers/anthropic';
@@ -72,18 +74,24 @@ export const mockProvider: AIProvider = {
   },
 };
 
-let override: AIProvider | null = null;
-/** Brukes i tester for å simulere feil eller spesifikke svar. */
-export function setProviderOverride(p: AIProvider | null): void {
+type ProviderOverride = AIProvider | ((tier: ModelTier) => AIProvider);
+let override: ProviderOverride | null = null;
+/** Brukes i tester for å simulere feil eller spesifikke svar – én leverandør, eller én per modellnivå. */
+export function setProviderOverride(p: ProviderOverride | null): void {
   override = p;
 }
+
+/** Billig modell hos Anthropic for enkle oppgaver, når ANTHROPIC_MODEL_FAST ikke er satt ($0,10/$0,50 per million tokens). */
+export const DEFAULT_ANTHROPIC_FAST_MODEL = 'claude-haiku-5-5';
 
 export function modelFor(tier: ModelTier): string | null {
   switch (env.AI_PROVIDER) {
     case 'openai':
       return (tier === 'fast' ? env.OPENAI_MODEL_FAST : null) ?? env.OPENAI_MODEL ?? null;
     case 'anthropic':
-      return (tier === 'fast' ? env.ANTHROPIC_MODEL_FAST : null) ?? env.ANTHROPIC_MODEL ?? null;
+      // Uten hovedmodell er AI ikke satt opp – heller ikke den billige.
+      if (!env.ANTHROPIC_MODEL) return null;
+      return tier === 'fast' ? (env.ANTHROPIC_MODEL_FAST ?? DEFAULT_ANTHROPIC_FAST_MODEL) : env.ANTHROPIC_MODEL;
     case 'mock':
       return 'mock-1';
     default:
@@ -110,7 +118,7 @@ export function aiModeFor(org: { adminAccess?: boolean } | null | undefined): { 
 }
 
 export function getProvider(tier: ModelTier = 'quality'): AIProvider | null {
-  if (override) return override;
+  if (override) return typeof override === 'function' ? override(tier) : override;
   const model = modelFor(tier);
   switch (env.AI_PROVIDER) {
     case 'openai':
@@ -156,7 +164,8 @@ export const KNOWN_MODEL_PRICES: Record<string, ModelPrice> = {
 };
 
 export function priceFor(model: string): ModelPrice {
-  const isFast = model === (env.ANTHROPIC_MODEL_FAST ?? env.OPENAI_MODEL_FAST) && model !== (env.ANTHROPIC_MODEL ?? env.OPENAI_MODEL);
+  // Den billige modellen (også standardmodellen Haiku 5.5) prises med AI_FAST_*-overstyringene, alt annet med AI_*.
+  const isFast = model === modelFor('fast') && model !== modelFor('quality');
   const envInput = isFast ? env.AI_FAST_INPUT_PRICE_PER_MTOK_USD : env.AI_INPUT_PRICE_PER_MTOK_USD;
   const envOutput = isFast ? env.AI_FAST_OUTPUT_PRICE_PER_MTOK_USD : env.AI_OUTPUT_PRICE_PER_MTOK_USD;
   const known = KNOWN_MODEL_PRICES[model];

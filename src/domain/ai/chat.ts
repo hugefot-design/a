@@ -157,7 +157,9 @@ export async function askTender(org: OrgContext, userId: string, tenderId: strin
     cacheablePrefix: block,
     // Normalisert (små bokstaver), så samme spørsmål med annen skrivemåte treffer hurtigbufferen og ikke koster på nytt.
     user: `<spørsmål>\n${q.toLowerCase()}\n</spørsmål>`,
-    tier: 'quality',
+    // Spørsmål og svar med ordrette sitater: den billige modellen først. Står et sitat ikke ordrett i kilden, eller
+    // mangler svaret kilder, lages det på nytt med kvalitetsmodellen (chatQualityIssue).
+    tier: 'fast',
     effort: 'low',
     schemaName: 'tender_chat',
     schemaDescription: 'Svar på et spørsmål om anbudet, med kildehenvisninger',
@@ -167,7 +169,17 @@ export async function askTender(org: OrgContext, userId: string, tenderId: strin
     mockHint: () => mockTenderChat(q, sources),
     hashExtra: `chat:${q.toLowerCase()}`,
     enrich: (data) => ({ question: q, coverage, checked: checkClaims(data, sources) }),
+    qualityCheck: (data) => chatQualityIssue(data, sources),
   });
+}
+
+/** Holder svaret? Hvert «fra kilden»-sitat må stå ordrett i kilden, og et svar som ikke sier «står ikke», må ha kilder. */
+export function chatQualityIssue(data: TenderChat, sources: AnalysisSource[]): string | null {
+  const checked = checkClaims(data, sources);
+  const unverified = checked.filter((c) => c.basis === 'kilde' && !c.verified).length;
+  if (unverified) return `${unverified} sitat${unverified === 1 ? '' : 'er'} står ikke ordrett i kilden`;
+  if (!data.not_in_sources && !data.claims.length) return 'svaret mangler kildehenvisninger';
+  return null;
 }
 
 export interface ChatEntry {

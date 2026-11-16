@@ -14,7 +14,7 @@ import {
   bidStructureJsonSchema,
   bidStructureZ,
 } from '@/domain/ai/schemas';
-import { buildSourceBlock, checkRef, sanitizeSourceText, type AnalysisSource } from '@/domain/ai/sources';
+import { buildSourceBlock, checkRef, refsQualityIssue, sanitizeSourceText, verifyAllRefs, type AnalysisSource } from '@/domain/ai/sources';
 import { mockBidDraft, mockBidReview, mockBidStructure } from '@/domain/ai/mock';
 import { getProfile, profileFactsForAi } from '@/domain/profile/profile';
 import { invalidateApproval } from './bids';
@@ -43,7 +43,8 @@ export async function generateChecklist(org: OrgContext, userId: string, workspa
     userId,
     tenderId: c.tender.id,
     workspaceId,
-    isPrivate: true,
+    // Sjekklisten bygger bare på kildene. Er alle kildene offentlige, er svaret likt for alle – og deles.
+    isPrivate: c.sources.some((s) => s.isPrivate),
     system: BID_CHECKLIST_SYSTEM,
     cacheablePrefix: block,
     user: 'Lag sjekklisten.',
@@ -197,11 +198,13 @@ export async function generateStructure(org: OrgContext, userId: string, workspa
     userId,
     tenderId: c.tender.id,
     workspaceId,
-    isPrivate: true,
+    // Bygger bare på kildene: deles når alle kildene er offentlige.
+    isPrivate: c.sources.some((s) => s.isPrivate),
     system: BID_STRUCTURE_SYSTEM,
     cacheablePrefix: block,
     user: 'Foreslå disposisjonen for tilbudet.',
-    tier: 'quality',
+    // En disposisjon er en enkel oppgave: billig modell først, kvalitetsmodellen hvis en kildehenvisning ikke holder.
+    tier: 'fast',
     effort: 'low',
     schemaName: 'bid_structure',
     schemaDescription: 'Disposisjon for tilbudet',
@@ -209,6 +212,7 @@ export async function generateStructure(org: OrgContext, userId: string, workspa
     validator: bidStructureZ,
     maxOutputTokens: 8000,
     mockHint: () => mockBidStructure(c.sources),
+    qualityCheck: (data) => refsQualityIssue(verifyAllRefs(data, c.sources)),
   });
   if (!result.ok) return result;
   const sections = (result.result.data as { sections: { title: string; purpose: string; requirements_covered: string[] }[] }).sections;

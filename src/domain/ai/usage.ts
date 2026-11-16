@@ -47,12 +47,26 @@ export async function usageSummary(tx: Tx, org: OrgContext): Promise<UsageSummar
 
 export async function recordUsage(
   tx: Tx,
-  input: { orgId: string; userId: string; kind: AiUsageKind; inputTokens: number; outputTokens: number; costUsd: number; cached: boolean },
+  input: {
+    orgId: string;
+    userId: string;
+    kind: AiUsageKind;
+    inputTokens: number;
+    outputTokens: number;
+    costUsd: number;
+    cached: boolean;
+    /** Teller mot kvoten (1), eller ikke (0: et billig modellforsøk som ble forkastet og kjørt på nytt). */
+    quantity?: 0 | 1;
+    /** Ved treff i hurtigbufferen: hva analysen som ble gjenbrukt, kostet å lage. */
+    savedUsd?: number;
+    analysisId?: string | null;
+    escalated?: boolean;
+  },
 ): Promise<void> {
   await tx`
-    insert into usage_records (org_id, user_id, kind, quantity, input_tokens, output_tokens, cost_usd, cached, period)
-    values (${input.orgId}, ${input.userId}, ${input.kind}, 1, ${input.inputTokens}, ${input.outputTokens}, ${input.costUsd},
-            ${input.cached}, ${currentPeriod()})
+    insert into usage_records (org_id, user_id, kind, quantity, input_tokens, output_tokens, cost_usd, cached, period, saved_usd, analysis_id, escalated)
+    values (${input.orgId}, ${input.userId}, ${input.kind}, ${input.quantity ?? 1}, ${input.inputTokens}, ${input.outputTokens}, ${input.costUsd},
+            ${input.cached}, ${currentPeriod()}, ${input.savedUsd ?? 0}, ${input.analysisId ?? null}, ${input.escalated ?? false})
   `;
 }
 

@@ -38,6 +38,8 @@ import {
 import { Badge, Button, PostForm } from '@/ui/components';
 import { formatDateTime } from '@/ui/format';
 import { formStr, param } from './helpers';
+import { aiCostSummary } from '@/domain/ai/costs';
+import { AiCostPanels } from '@/ui/pages/admin-ai';
 
 async function sourceRows() {
   const rows = (await systemSql()`select id, name, enabled, verified_live, last_success_at, last_error, notes from data_sources order by id`) as unknown as {
@@ -195,12 +197,14 @@ export function registerAdminRoutes(router: Router): void {
       orgName: string | null;
       shared: boolean;
     }[];
+    const costs = await aiCostSummary();
     return render(
       ctx,
       <AdminListPage
         title="AI-bruk"
         description="Siste 100 AI-kall. Delte analyser (fra offentlig kunngjøringstekst) gjenbrukes av alle kunder uten ny kostnad."
         head={['Tid', 'Type', 'Status', 'Leverandør / modell', 'Tokens inn/ut', 'Kostnad (USD)', 'Tid', 'Organisasjon', 'Feil']}
+        children={<AiCostPanels s={costs} />}
         rows={rows.map((r) => [
           formatDateTime(r.createdAt),
           r.kind,

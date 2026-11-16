@@ -126,6 +126,20 @@ export function checkRef(ref: { source_id: string; page: number | null; quote: s
   };
 }
 
+/**
+ * Holder kildehenvisningene i et svar? En grunn når en henvisning peker på en kilde som ikke finnes, eller et sitat
+ * (minst 8 tegn – kortere kan ikke kontrolleres) ikke står ordrett i kilden. Brukes til å avgjøre om svaret fra den
+ * billige modellen må lages på nytt med kvalitetsmodellen.
+ */
+export function refsQualityIssue(checks: Record<string, RefCheck>): string | null {
+  const all = Object.values(checks);
+  const missing = all.filter((c) => !c.sourceExists).length;
+  if (missing) return `${missing} henvisning${missing === 1 ? '' : 'er'} til kilder som ikke finnes`;
+  const unverified = all.filter((c) => c.quote !== null && c.quote.trim().length >= 8 && !c.quoteVerified).length;
+  if (unverified) return `${unverified} sitat${unverified === 1 ? '' : 'er'} står ikke ordrett i kilden`;
+  return null;
+}
+
 /** Går gjennom et vilkårlig AI-resultat og kontrollerer alle felt som heter "source". */
 export function verifyAllRefs(value: unknown, sources: AnalysisSource[], path = ''): Record<string, RefCheck> {
   const out: Record<string, RefCheck> = {};
