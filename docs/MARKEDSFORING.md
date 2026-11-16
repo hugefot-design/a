@@ -1,6 +1,6 @@
 # Markedsføring: påstander og hva de bygger på
 
-Oppdatert 16. november 2026 (enklere nettside: de samme påstandene, kortere – detaljene bak «Vis mer»; tidligere 8. november 2026, versjon `3801c2e`). Hver påstand på nettsiden skal kunne spores til en funksjon som finnes, og
+Oppdatert 16. november 2026 (enklere nettside, rullet ut samme dag, versjon `050a255`: de samme påstandene, kortere – detaljene bak «Vis mer»; tidligere 8. november 2026, versjon `3801c2e`). Hver påstand på nettsiden skal kunne spores til en funksjon som finnes, og
 til en test eller kontroll. Endrer du markedsteksten, oppdater tabellen.
 
 ## Posisjonering

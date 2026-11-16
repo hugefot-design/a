@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 16. november 2026 (enklere nettside – IKKE rullet ut, se under; kostnadsgjennomgangen med OCR, og ærlige varsler, e-postkvote for ukesbrev, beskjed om borte filer og kontroll av sikkerhetskopien er rullet ut 16.11 (`5d6ea1c`) – se under; byggeplanens pakke 1–4 er rullet ut 15.11 og pakke 5 16.11 – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 16. november 2026 (enklere nettside er rullet ut 16.11 (`050a255`) – se under; kostnadsgjennomgangen med OCR, og ærlige varsler, e-postkvote for ukesbrev, beskjed om borte filer og kontroll av sikkerhetskopien er rullet ut 16.11 (`5d6ea1c`) – se under; byggeplanens pakke 1–4 er rullet ut 15.11 og pakke 5 16.11 – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -399,7 +399,34 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
-## Enklere nettside (16. november 2026) – IKKE rullet ut
+## Enklere nettside (16. november 2026) – rullet ut 16.11.2026 (`050a255`)
+
+**Utrulling** (eiers «rull ut»), 16.11.2026 kl. 11.02 UTC, etter grønn CI på GitHub for `050a255`:
+- Render melder `050a255` som «live». Ingen migreringer i denne versjonen (bare nettsiden). Loggen etter oppstart har
+  75 linjer, 0 advarsler og 0 feil.
+- Helsesjekken er OK. 27 offentlige sider svarer 200 (også engelsk, svensk og dansk), admin er skjult (404), og
+  innloggede sider sender til innlogging. Den nye teksten er på plass, den gamle OCR-påstanden er borte, og forsiden og
+  prissiden sier fortsatt at AI ikke er slått på.
+- I nettleser (Chromium, 390 px, lys og mørk, 11 sider): ingen vannrett rulling og ingen JavaScript-feil.
+  /metode#treff åpner temaet, en lenke etter lasting åpner et annet, «Sammenlign planer» holder seg åpen etter klikk
+  et annet sted, og «Vis alt som er med» viser resten av punktene.
+- **Målt i produksjon** (samme måling før og etter, 390 px, ekte data):
+
+  | Side | Synlige ord før → etter | Mobilskjermer før → etter |
+  | --- | --- | --- |
+  | Forsiden | 1 431 → 330 | 18,1 → 6,3 |
+  | Forsiden på engelsk | 1 573 → 377 | 18,6 → 6,6 |
+  | Eksempel | 1 032 → 364 | 11,1 → 5,3 |
+  | Slik regner vi | 1 257 → 81 | 12,5 → 2,9 |
+  | Oppdragsgivere | 565 → 103 | 10,5 → 2,6 |
+  | Funksjoner | 579 → 278 | 9,0 → 6,0 |
+  | Priser | 539 → 296 | 9,3 → 6,2 |
+  | Bransjeside (renhold) | 513 → 221 | 7,2 → 3,9 |
+  | Oppdragsgiverside | 609 → 284 | 7,9 → 4,4 |
+
+- **IKKE VERIFISERT i produksjon:** innloggede deler. I appen og admin er bare én hjelpetekst i admin endret, og
+  vurderingen i appen vises som før (dekket av testene).
+
 
 Eier: «alt for komplisert med så mange tekster … bedre metode å gjøre det enkelt å forstå?» – valgte «hele nettsiden».
 Reglene står i [SPRAK.md](SPRAK.md) («Enkelt å forstå»): én side én oppgave, svaret først, korte setninger, ingen
