@@ -83,6 +83,10 @@ Ved registrering lagres hvilken versjon av vilkårene og databehandleravtalen br
 | Stripe | Betaling | Organisasjonsnavn, e-post, betalingsinfo (behandles av Stripe) |
 | Anthropic eller OpenAI | AI-analyse | Kunngjøringstekst, opplastede dokumenter, bedriftsprofil ved egnethetsvurdering og tilbudsutkast. Lønnsomhetsanalysen sender **ikke** bedriftens kostnader, marginer eller bemanning |
 
+Skannede PDF-er leses med OCR i kundens egen nettleser (Tesseract.js – motor og språkdata serveres fra vår server). Bare
+teksten fra sidene uten tekst sendes med opplastingen og lagres som resten av dokumentet. Ingen ny underleverandør, og
+dokumentet sendes ikke til noen OCR-tjeneste.
+
 Merk: AI-leverandørene behandler data i USA. Kontroller deres databehandleravtale, standard personvernbestemmelser og innstillinger for at API-data ikke brukes til trening, og opplys kundene om dette før de laster opp dokumenter.
 
 ## Sikkerhetstiltak

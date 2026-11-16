@@ -261,6 +261,42 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
   uansett hva filen oppgir, sjekksum, avvisning av krypterte filer og ZIP64. Farlige filnavn hoppes over, og lagringsstien
   lages alltid av appen (`orgs/<org>/tenders/<anbud>/<uuid>.<type>`).
 - Meldingen etter opplasting nevner AI bare når AI er slått på.
+- **Skannede PDF-er (OCR i nettleseren, ingen kostnad per side):** når kunden velger en PDF, finner pdf.js i nettleseren
+  sidene uten tekst. De leses med Tesseract.js (norsk og engelsk), én side om gangen med fremdrift og «Avbryt», høyst 60
+  sider. Teksten sendes med opplastingen, og serveren bruker den bare for sider der vår egen lesing ikke fant tekst
+  (`src/domain/documents/ocr.ts`, høyst 20 000 tegn per side). Dokumentet merkes «N sider lest med OCR … kan inneholde
+  lesefeil» (`tender_documents.ocr_pages`). Kjente svakheter: tall og bokstaver kan forveksles (målt: «ISO» ble «150»),
+  og PDF-er inne i en ZIP leses ikke med OCR (last opp PDF-en alene – meldingen sier det).
+- OCR-filene (motor, norsk og engelsk språkdata, pdf.js – ca. 20 MB) kopieres fra npm-pakkene ved bygging
+  (`scripts/build.ts`) til `public/assets/ocr/<versjoner>/` og serveres fra oss med «bufres for alltid» – ingenting hentes
+  fra andre nettsteder, og dokumentet sendes ikke til noen andre. Pakkene er utviklingsavhengigheter (`tesseract.js`,
+  `@tesseract.js-data/nor`, `@tesseract.js-data/eng`); byggkommandoen `npm ci --include=dev` på Render tar dem med.
+  Første OCR laster ca. 11 MB i kundens nettleser, deretter brukes nettleserens kopi. Ny versjon: oppdater pakkene –
+  mappenavnet følger versjonene. Sidens sikkerhetsregler (CSP) er uendret: arbeideren lastes fra vår adresse, ikke blob:.
+
+## 6c3. AI: modellvalg og kostnad
+
+- `ANTHROPIC_MODEL` er kvalitetsmodellen (full analyse, egnethet, lønnsomhet, sjekkliste, utkast og gjennomgang).
+  `ANTHROPIC_MODEL_FAST` er valgfri; uten den brukes **Claude Haiku 5.5** for enkle oppgaver. Vil du bruke én modell
+  til alt, sett `ANTHROPIC_MODEL_FAST` lik `ANTHROPIC_MODEL`.
+- **Billig modell først** (kort sammendrag, ukesoversikt, «Spør om anbudet», disposisjon for tilbud): svaret
+  kontrolleres (format, avslag, og for chat og disposisjon at sitatene står ordrett i kildene). Holder det ikke, lages
+  det på nytt med kvalitetsmodellen; det forkastede forsøket koster, men teller ikke mot kundens kvote. To regler hindrer
+  at dette blir dyrere enn før (`src/domain/ai/routing.ts`): har kvalitetsmodellen svart på nøyaktig de samme kildene for
+  under 5 minutter siden (samme organisasjon for private spørsmål), går neste spørsmål rett dit – kildene ligger da i
+  leverandørens buffer; og forkastes mer enn halvparten av de billige svarene for en funksjon (minst 20 forsøk siste 7
+  dager), brukes kvalitetsmodellen direkte for den funksjonen til andelen faller.
+- **Gjenbruk:** samme forespørsel gir samme lagrede svar uten nytt kall. Analyser av bare offentlig tekst (også
+  sjekkliste og disposisjon uten egne dokumenter) deles mellom kunder; alt med egne dokumenter eller bedriftsdata lagres
+  bare for organisasjonen. Samme forespørsel samtidig (to kunder, dobbeltklikk) gir ett kall (`ai_inflight`).
+- **Admin → AI-bruk** viser kostnad og sparing per funksjon og organisasjon denne måneden, andel gjenbrukt, andel
+  inn-tokens lest fra leverandørens buffer, og status for «billig modell først» per funksjon. Tallene er fra
+  leverandørens svar (tokens) og listeprisene i `src/domain/ai/provider.ts` (`AI_*_PRICE_PER_MTOK_USD` overstyrer).
+- **Anslag uten AI-kall:** `npx tsx scripts/cost-model.ts` bygger de ekte promptene for ekte kunngjøringer og regner pris
+  per kall og per kunde med antakelsene øverst i filen (se `docs/COST_REPORT.md`). Når AI er på, er Admin → AI-bruk
+  fasiten.
+- Hard grense per organisasjon: `AI_MONTHLY_COST_LIMIT_USD_PER_ORG` (40 USD i `render.yaml`), i tillegg til kvotene.
+
 ## 6d. Vekst: Google-sider, ukesbrev, besøkstelling og LinkedIn
 
 - **Norske adresser og fylkessider.** Bransjesidene ligger på `/bransjer/renhold`, `/bransjer/vakthold` osv. (gamle
@@ -353,7 +389,14 @@ Sikkerhetskopi 3–5 minutter per natt (ca. 150) – til sammen innenfor gratisk
   og høyst én gang i døgnet for feil som fortsetter. «Merk som løst» når feilen er rettet; kommer den tilbake, varsles
   den igjen. Løste feil slettes etter 90 dager. Ingen ny leverandør.
 - **Admin → Systemhelse**: arbeiderens siste livstegn, jobbkø, e-postkø, feilede jobber, databasestørrelse og hvor mange
-  opplastede dokumenter som ikke kunne leses (grunnlag for å vurdere OCR).
+  opplastede dokumenter som ikke kunne leses (f.eks. skannet uten OCR eller inne i en ZIP).
+- **Arbeideren hviler når det er stille:** inntil 15 s mellom rundene uten arbeid (før 5 s), livstegn og opprydding av
+  hengende jobber hvert minutt, og planlagte oppgaver forsøkes bare når de er forfalt. Hvilen holdes under tidsavbruddet
+  for ledige databasetilkoblinger (20 s, `POOL_IDLE_TIMEOUT_S`): med 30 s hvile ble arbeideren koblet til på nytt hver
+  runde og sendte 8,6 ganger så mange byte fra databasen. En ny jobb i samme prosess vekker den med en gang
+  (`RUN_WORKER_IN_WEB=true`); med egen arbeider-tjeneste kan en jobb fra nettsiden (f.eks. «Hent nå») starte inntil 15 s
+  senere. Målt lokalt gjennom et telle-relé, 180 s uten arbeid: 219 → 57 transaksjoner, 0 nye tilkoblinger, 6 069 → 3 250
+  byte fra databasen og 15 060 → 4 667 byte til den.
 
 ## Logger og feilsøking
 

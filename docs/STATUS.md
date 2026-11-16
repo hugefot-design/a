@@ -9,11 +9,11 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 264 av 264 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 16.11.2026 (ærlige varsler og e-postkvote) |
-| Integrasjonstester (ekte database, ekte HTTP) | 277 av 277 bestått – 16.11.2026 (ærlige varsler og e-postkvote) |
-| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 16.11.2026 (ærlige varsler og e-postkvote) |
+| Enhetstester | 275 av 275 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 16.11.2026 (kostnadsgjennomgang) |
+| Integrasjonstester (ekte database, ekte HTTP) | 288 av 288 bestått – 16.11.2026 (kostnadsgjennomgang) |
+| Ende-til-ende i nettleser | 12 av 12 bestått (inkl. OCR av en skannet PDF i Chromium, menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 16.11.2026 (kostnadsgjennomgang) |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
-| `npm audit` | 0 sårbarheter – 16.11.2026 (ingen nye avhengigheter) |
+| `npm audit` | 0 sårbarheter – 16.11.2026 (nye utviklingsavhengigheter for OCR: `tesseract.js` og norsk/engelsk språkdata – bare ved bygging) |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
 | Tilgjengelighet, kontrast og bredde: forsiden (norsk og engelsk), `/eksempel`, `/anbud/<id>`, priser, funksjoner, registrering, bransjeside, Oversikt, Abonnement, anbudssiden, samlet vurdering og oppstartsskjemaet – 390, 768 og 1440 px, lys og mørk | Én h1 per side, `<main>`, etiketter på alle felt, navn på alle knapper og lenker, ingen doble id-er, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: filfeltene for opplasting manglet etikett – 14.11.2026 |
 | Etter gjennomgangen: tilgjengelighet, kontrast og bredde for oppdragsgiverside, bransjeside, `/prov` (med og uten treff), `/metode` og lønnsomhetssjekken – 390, 768 og 1440 px, lys og mørk | 42 av 42 kontroller OK – 15.11.2026 |
@@ -69,7 +69,9 @@ Fremgangsmåte for hver: [INTEGRASJONER.md](INTEGRASJONER.md).
 ## Kjente begrensninger
 
 - **Konkurransedokumenter hentes ikke automatisk.** Kunngjøringen og lenken importeres; vedlegg lastes opp av brukeren for full analyse og kontraktsrisiko.
-- **Skannede PDF-er** (bilder uten tekst) kan ikke leses – brukeren får beskjed. OCR er ikke bygget.
+- **Skannede PDF-er** leses med OCR i kundens nettleser (Tesseract.js, norsk og engelsk, høyst 60 sider). OCR kan
+  forveksle tegn (målt: «ISO» ble «150»), så dokumentet merkes «kan inneholde lesefeil». PDF-er inne i en ZIP leses ikke
+  med OCR. Testet i Chromium lokalt – **IKKE VERIFISERT i produksjon**.
 - **Kommune** filtreres på stedstekst, ikke kommunenummer. Fylke utledes fra NUTS 2024-koder.
 - **CPV-listen** har hovedgrupper og et utvalg koder; full liste lastes med `npm run import:cpv`.
 - **Naturlig språk-søket** er regelbasert. Tolkningen vises alltid.
@@ -93,19 +95,19 @@ Fremgangsmåte for hver: [INTEGRASJONER.md](INTEGRASJONER.md).
 
 **Anslått (ikke kontrollert hos leverandøren):** Render 25 USD for webapp 1 CPU/2 GB og 7 USD for arbeider 0,5 CPU/512 MB, fra tredjepartskilder oktober 2026 ([MakerKit](https://makerkit.dev/pricing-calculator/render), [Activepieces](https://www.activepieces.com/blog/render-pricing-2026-free-tier-workers-total-cost.md)). Render endret planene i 2026, og en arbeidsområdeavgift kan komme i tillegg – Blueprint-forhåndsvisningen viser riktig pris før du bekrefter.
 
-**Antakelser (anslag):** kundemiks 30 % Start, 50 % Profesjonell, 20 % Bedrift. AI-analyse med dokumenter ca. 35 000 tokens inn og 4 000 ut (ca. 0,11 USD med Sonnet 5.5), uten dokumenter ca. 0,04 USD, kort sammendrag med Haiku ca. 0,001 USD, tilbudsutkast ca. 0,04 USD. «Vanlig» bruk = 30 % av kvoten; «maks» = hele kvoten med dokumenter. Delte analyser av offentlige kunngjøringer (som koster én gang for alle kunder) er ikke trukket fra – tallene er forsiktige.
+**Antakelser (anslag, oppdatert 16.11.2026 med dagens priser 299/699/1 490 kr):** kundemiks 30 % Start, 50 % Profesjonell, 20 % Bedrift. AI-tallene kommer fra `scripts/cost-model.ts`, som bygger de ekte promptene og priser dem med listeprisene: full analyse med dokumenter ca. 0,13 USD, uten dokumenter ca. 0,04 USD, kort sammendrag ca. 0,0006 USD, spørsmål om anbudet ca. 0,03 USD, tilbudsutkast ca. 0,12 USD. «Vanlig» bruk = 30 % av kvoten fordelt på funksjonene (1,51 USD per kunde i snitt med dagens modellvalg); «maks» = hele kvoten på full analyse med dokumenter og utkast (9,21 USD). Delte analyser av offentlige kunngjøringer (som koster én gang for alle kunder) er ikke trukket fra – tallene er forsiktige. Detaljer, før/etter og usikkerhet: [COST_REPORT.md](COST_REPORT.md).
 
 | | 10 kunder | 50 kunder | 100 kunder | 500 kunder |
 | --- | --- | --- | --- | --- |
-| Inntekt (eks. mva.) | 5 090 kr | 25 450 kr | 50 900 kr | 254 500 kr |
+| Inntekt (eks. mva.) | 7 372 kr | 36 860 kr | 73 720 kr | 368 600 kr |
 | Drift: Supabase + Render + Resend | 527 kr (57 USD) | 712 kr (77 USD) | 759 kr (82 USD) | 1 915 kr (207 USD) ¹ |
-| AI, vanlig bruk | 278 kr | 1 391 kr | 2 781 kr | 13 907 kr |
-| AI, maks (hele kvoten) | 927 kr | 4 636 kr | 9 271 kr | 46 356 kr |
-| Stripe-gebyrer ² | 178 kr | 889 kr | 1 778 kr | 8 890 kr |
-| **Sum, vanlig bruk** | **983 kr (19 %)** | **2 992 kr (12 %)** | **5 318 kr (10 %)** | **24 712 kr (10 %)** |
-| **Sum, maks AI** | **1 632 kr (32 %)** | **6 237 kr (25 %)** | **11 808 kr (23 %)** | **57 161 kr (22 %)** |
+| AI, vanlig bruk | 140 kr | 699 kr | 1 399 kr | 6 993 kr |
+| AI, maks (hele kvoten) | 852 kr | 4 260 kr | 8 519 kr | 42 596 kr |
+| Stripe-gebyrer ² | 249 kr | 1 243 kr | 2 485 kr | 12 427 kr |
+| **Sum, vanlig bruk** | **915 kr (12 %)** | **2 654 kr (7 %)** | **4 643 kr (6 %)** | **21 335 kr (6 %)** |
+| **Sum, maks AI** | **1 627 kr (22 %)** | **6 214 kr (17 %)** | **11 764 kr (16 %)** | **56 938 kr (15 %)** |
 
-¹ Ved 500 kunder: Small-kapasitet i Supabase, PITR (100 USD) og to webapp-instanser. ² Per betaling: Start 8,17 kr, Profesjonell 17,47 kr, Bedrift 32,97 kr. Norske selskaper betaler 25 % mva. på Stripe-gebyrer (fradragsberettiget når selskapet er mva.-registrert).
+¹ Ved 500 kunder: Small-kapasitet i Supabase, PITR (100 USD) og to webapp-instanser. ² Per betaling (2,4 % + 2 kr og Billing 0,7 %): Start 11,27 kr, Profesjonell 23,67 kr, Bedrift 48,19 kr. Norske selskaper betaler 25 % mva. på Stripe-gebyrer (fradragsberettiget når selskapet er mva.-registrert). Tabellen før 16.11.2026 brukte de gamle prisene (199/499/999 kr).
 
 Ikke med: lønn, regnskap, advokat, markedsføring, domene, feilovervåking og eventuell arbeidsområdeavgift hos Render. De faste driftskostnadene dekkes av to kunder på Profesjonell. Kostnadstaket `AI_MONTHLY_COST_LIMIT_USD_PER_ORG` (40 USD i `render.yaml`) hindrer at én kunde gir uventet høy AI-kostnad.
 
@@ -117,7 +119,7 @@ Se [LANSERING.md](LANSERING.md) for sjekkliste og rekkefølge. Kort:
 2. **Juridisk gjennomgang** av personvernerklæring, vilkår, samtykketekst for partnerprofiler og konkurranserettslig veiledning; databehandleravtaler.
 3. **Sikkerhetskopi, døgnåpen drift og overvåking** – forslag med pris i [FORSLAG.md](FORSLAG.md) (krever eiers godkjenning).
 4. **Pilot med 3–5 bedrifter i én bransje** (f.eks. vinterdrift/maskin eller renhold) – mål om de finner anbud de ellers ville gått glipp av, om kravsjekken og forhåndsvurderingen treffer, og om lønnsomhetskalkylen og markedsprisen stemmer med egne tall.
-5. **Etter pilot:** flere land via TED, OCR og dokumentinnhenting (se [FORSLAG.md](FORSLAG.md)), varsel om kontrakter som nærmer seg utløp.
+5. **Etter pilot:** flere land via TED og dokumentinnhenting (se [FORSLAG.md](FORSLAG.md)), varsel om kontrakter som nærmer seg utløp.
 6. **Utrulling av veikartpunkt 1–11:** Render → tjenesten → *Manual Deploy* → *Deploy latest commit*. Migreringene 0018–0021 kjøres automatisk og endrer ingen eksisterende data.
 
 ## Abonnement og gratisplan (3.11.2026)
@@ -366,7 +368,8 @@ kostnader, ingen endring i Render eller Supabase.
   forsvinner). I produksjon i dag: serverdisken – oppsett i [DRIFT.md](DRIFT.md) §2.
 - **Flere land via TED:** dry-run per land med volum og plassbehov (`--country SWE`); lagring av andre land er sperret.
   Målt mot TED 7.11.2026: Sverige 2 341 kunngjøringer per måned (Norge 1 144). Test: `tests/integration/ted-country.test.ts`.
-- **OCR:** ikke bygget – Admin → Systemhelse teller nå opplastede dokumenter som ikke kan leses, som grunnlag.
+- **OCR:** bygget 16.11.2026 som OCR i kundens nettleser (se «Kostnadsgjennomgang» under og DRIFT.md §6c2). Admin →
+  Systemhelse teller fortsatt opplastede dokumenter som ikke kan leses.
 - **GitHub Actions** oppdatert til `checkout@v5`, `setup-node@v5` og `github-script@v8` (Node 24).
 - **Rullet ut til produksjon 7.11.2026 kl. 10:55 UTC** (versjon `5fe650c`, eiers ja): migreringene 0018–0022 kjørt i
   byggesteget uten feil; server og bakgrunnsjobber startet; ingen advarsler eller feil i loggen etter oppstart; helsesjekk
@@ -395,6 +398,33 @@ kostnader, ingen endring i Render eller Supabase.
 - Tester: `tests/integration/admin-access.test.ts` (fant at vernet virker: uten privat lagring av simulerte svar feiler
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
+
+## Kostnadsgjennomgang (16. november 2026) – IKKE rullet ut
+
+Full rapport (engelsk): [COST_REPORT.md](COST_REPORT.md). Ingen priser, planer, leverandører eller betalte tjenester er
+endret. AI er av i produksjon, så alle AI-tall er **anslag** fra `scripts/cost-model.ts` (ekte prompter, listepriser).
+
+- **AI:** ett kall når samme forespørsel kommer samtidig (`ai_inflight`); billig modell (Claude Haiku 5.5) først for
+  «Spør om anbudet» og disposisjon, med kontroll av format, avslag og sitater og kvalitetsmodellen som reserve; har
+  kvalitetsmodellen nettopp svart på de samme kildene, går neste spørsmål rett dit (kildene ligger i leverandørens
+  buffer), og en vakt slår av den billige modellen for en funksjon som forkastes mer enn halvparten av gangene;
+  sjekkliste og disposisjon deles når kildene er offentlige; mindre input (gjentatt topp-/bunntekst, sidetall, like
+  sider); kostnad, sparing og status i Admin → AI-bruk. **Anslått:** ca. 7 % lavere AI-kostnad ved vanlig bruk (3–13 %
+  avhengig av hvor ofte den billige modellen forkastes) – ca. 12 / 116 / 1 160 USD i måneden ved 100 / 1 000 / 10 000
+  kunder. Full analyse med dokumenter er bevisst uendret. Hvor ofte Haiku forkastes, og om svarene er like nyttige, er
+  **IKKE VERIFISERT** – krever en liten betalt test når AI slås på.
+- **Funnet og rettet i eget arbeid:** uten varm-buffer-regelen kunne oppfølgingsspørsmål i chat bli dyrere enn før
+  (et eskalert kall starter kaldt, mens kvalitetsmodellen leser kilder den nylig har lest til 5 % av prisen); og
+  arbeiderens hvile (se under).
+- **OCR i nettleseren** for skannede PDF-er – ingen kostnad per side og ingen ny underleverandør (DRIFT.md §6c2).
+- **Database (målt lokalt):** duplikatsøk 13,6 → 4,2 ms; daglig treff-oppdatering 69 % færre par og ingen omskriving
+  av uendrede rader; arbeideren 74 % færre transaksjoner og 62 % færre byte når den hviler (målt nøyaktig gjennom et
+  telle-relé). **Funnet ved måling og rettet:** min første versjon hvilte 30 s – lenger enn databasetilkoblingene holdes
+  åpne (20 s) – og koblet til på nytt hver runde, med 8,6 ganger så mye data fra databasen som før. Nå 15 s.
+- **Krever godkjenning (ikke gjort):** AI i produksjon og et lite testbudsjett; trimming av rådata (sletter data);
+  planendringer hos Supabase, Render og Resend; utrulling.
+- **Migreringer:** `0028` (AI-kostnad) og `0029` (OCR) – bare tillegg.
+- **Tester:** se tabellen øverst.
 
 ## Ærlige varsler, e-postkvote, borte filer og kontroll av sikkerhetskopien (16. november 2026) – IKKE rullet ut
 
