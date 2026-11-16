@@ -162,7 +162,7 @@ export function TryPage({ values, result, limited = false }: { values: TryValues
                 </p>
               ) : (
                 <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-muted">
-                  Nye anbud kommer fortløpende. Med konto får dere beskjed så snart det kommer noe som passer.
+                  Nye anbud kommer fortløpende. Med konto får dere varsel på e-post når det kommer noe som passer.
                 </p>
               )}
 

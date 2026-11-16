@@ -8,6 +8,8 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { closeDb, systemSql } from '../../src/lib/db';
+import { env } from '../../src/lib/env';
+import { storage } from '../../src/lib/storage';
 import { INVITES_PER_RECIPIENT_PER_DAY, INVITES_PER_USER_PER_HOUR } from '../../src/domain/org/org';
 import { clientFor, createAccount, enableTestMfa, ingest, makeNotice, startServer, tenderIdFor, testTotpCode, uniqueEmail } from '../helpers';
 
@@ -126,6 +128,40 @@ test('tilbudsdokumenter: filtypen settes av serveren og filen lastes alltid ned'
   html.append('file', new File(['<h1>hei</h1>'], 'side.html', { type: 'text/html' }));
   const bad = await c.postMultipart(`/app/tilbud/${workspaceId}/dokumenter`, html, `/app/tilbud/${workspaceId}`);
   assert.match(await flashText(c, bad.location!), /Filtypen støttes ikke/);
+});
+
+test('tilbudsdokument som er borte fra lagringen: tydelig beskjed i stedet for feilside, og ærlig merknad når lagringen er midlertidig', async () => {
+  const acc = await createAccount({ plan: 'business' });
+  const notice = makeNotice();
+  await ingest([notice]);
+  const tenderId = await tenderIdFor('manual', notice.sourceNoticeId);
+  const c = await clientFor(server.base, acc);
+  const workspaceId = (await c.post('/app/tilbud', { tenderId }, { from: `/app/anbud/${tenderId}` })).location!.split('/').pop()!;
+  const form = new FormData();
+  form.append('file', new File(['Referanseliste'], 'Referanser.txt', { type: 'text/plain' }));
+  form.append('category', 'referanse');
+  assert.equal((await c.postMultipart(`/app/tilbud/${workspaceId}/dokumenter`, form, `/app/tilbud/${workspaceId}`)).status, 303);
+  const [doc] = (await systemSql()`select id, storage_key from bid_documents where workspace_id = ${workspaceId}`) as unknown as { id: string; storageKey: string }[];
+
+  // Filen forsvinner fra lagringen (som serverdisken på gratisplanen etter ny versjon eller dvale).
+  await storage().remove([doc!.storageKey]);
+  const dl = await c.get(`/app/tilbud/${workspaceId}/dokumenter/${doc!.id}`);
+  assert.equal(dl.status, 303, 'ingen feilside');
+  assert.equal(dl.location, `/app/tilbud/${workspaceId}`);
+  assert.match(await flashText(c, dl.location!), /Filen «Referanser\.txt» er ikke lenger lagret hos oss\. Last den opp på nytt\./);
+
+  // Merknaden om midlertidig lagring vises bare når filene ligger på serverdisken i produksjon.
+  const NOTE = 'Filene lagres foreløpig bare midlertidig hos oss';
+  assert.ok(!(await flashText(c, `/app/tilbud/${workspaceId}`)).includes(NOTE), 'ikke i utvikling og test');
+  const saved = { mode: env.NODE_ENV, driver: env.STORAGE_DRIVER };
+  try {
+    Object.assign(env, { NODE_ENV: 'production', STORAGE_DRIVER: 'local' });
+    assert.ok((await flashText(c, `/app/tilbud/${workspaceId}`)).includes(NOTE), 'produksjon med serverdisk');
+    Object.assign(env, { STORAGE_DRIVER: 'supabase' });
+    assert.ok(!(await flashText(c, `/app/tilbud/${workspaceId}`)).includes(NOTE), 'produksjon med varig lagring');
+  } finally {
+    Object.assign(env, { NODE_ENV: saved.mode, STORAGE_DRIVER: saved.driver });
+  }
 });
 
 test('planlagte jobber: feil nøkkel gir 401, og mange forsøk fra samme sted stoppes', async () => {

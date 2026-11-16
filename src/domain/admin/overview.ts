@@ -6,18 +6,16 @@
  * Bruker systemrollen (på tvers av organisasjoner); tilgangen kontrolleres i ruteren.
  */
 import { systemSql } from '@/lib/db';
-import { checkSupabaseBucket } from '@/lib/storage';
+import { checkBackups, checkSupabaseBucket } from '@/lib/storage';
 import { openErrorCount } from '@/domain/ops/errors';
 import { env, integrationStatus } from '@/lib/env';
-import { BLOCKED_BY_ALLOWLIST, BLOCKED_TEST_DOMAIN } from '@/lib/email';
+import { BLOCKED_BY_ALLOWLIST, BLOCKED_TEST_DOMAIN, NEWSLETTER_KINDS, NEWSLETTER_MAX_WAIT_DAYS, newsletterAllowance } from '@/lib/email';
 import { CONNECTORS } from '@/connectors';
 import { companyConfigured, companyInfo, contactIsGmail, isPlaceholder } from '@/domain/legal/legal';
 import { platformMetrics } from './admin';
 
-/** Resends gratisplan: e-poster per dag (STATUS.md, priser sjekket 2.11.2026). */
-export const EMAIL_DAILY_CAP = 100;
-/** Varsle i Admin når e-postlistene når denne andelen av dagstaket. */
-const EMAIL_CAP_WARN_SHARE = 0.7;
+/** Varsle som advarsel når ukesbrevene må fordeles over flere døgn enn dette. */
+const NEWSLETTER_WARN_DAYS = 3;
 
 export type AttentionTone = 'feil' | 'advarsel' | 'info';
 export interface AttentionItem {
@@ -188,7 +186,8 @@ export async function adminOverview(now = new Date()) {
       (select count(*)::int from reports where status = 'open' and kind = 'data_error') as open_data_errors,
       (select count(*)::int from users where locked_until > now()) as locked_users,
       (select count(*)::int from subscriptions where source = 'trial' and trial_ends_at > now() and trial_ends_at < now() + interval '3 days') as trials_ending,
-      (select count(*)::int from newsletter_subscribers where confirmed_at is not null) as list_subscribers
+      (select count(*)::int from newsletter_subscribers where confirmed_at is not null) as list_subscribers,
+      (select count(*)::int from email_outbox where status = 'pending' and kind = any(${NEWSLETTER_KINDS}::text[])) as letters_waiting
   `) as unknown as {
     workerSeenAt: Date | null;
     failedJobs: number;
@@ -201,6 +200,7 @@ export async function adminOverview(now = new Date()) {
     lockedUsers: number;
     trialsEnding: number;
     listSubscribers: number;
+    lettersWaiting: number;
   }[];
   const o = ops!;
 
@@ -270,12 +270,15 @@ export async function adminOverview(now = new Date()) {
   if (o.trialsEnding > 0) {
     attention.push({ tone: 'info', title: `${o.trialsEnding} prøveperiode${o.trialsEnding === 1 ? '' : 'r'} slutter innen 3 dager`, href: '/admin/organisasjoner' });
   }
-  // Ukesbrevet og følgingen av oppdragsgivere sendes mandag morgen – alt samme dag. Si fra før dagstaket nås.
-  if (o.listSubscribers >= Math.ceil(EMAIL_DAILY_CAP * EMAIL_CAP_WARN_SHARE)) {
+  // Ukesbrevet og følgingen av oppdragsgivere lages mandag morgen og sendes innenfor sin andel av døgnkvoten
+  // (lib/email.ts) – resten dagen etter. Si fra når brevene må fordeles, og advar når det tar mer enn tre døgn.
+  const lettersPerDay = newsletterAllowance(env.EMAIL_DAILY_LIMIT, 0);
+  if (o.listSubscribers >= lettersPerDay) {
+    const days = Math.ceil(o.listSubscribers / Math.max(1, lettersPerDay));
     attention.push({
-      tone: o.listSubscribers >= EMAIL_DAILY_CAP ? 'advarsel' : 'info',
+      tone: days > NEWSLETTER_WARN_DAYS ? 'advarsel' : 'info',
       title: `${o.listSubscribers} bekreftede påmeldinger til e-postlistene (ukesbrev og oppdragsgivere)`,
-      detail: `Alle får e-post mandag morgen de ukene det er nytt. Resends gratisplan tillater ${EMAIL_DAILY_CAP} e-poster per dag (sjekket 2.11.2026), også varsler og bekreftelser. En større plan hos Resend koster penger – avklar med eier.`,
+      detail: `Ukesbrevene fordeles over opptil ${days} døgn: høyst ${lettersPerDay} per døgn, så det alltid er plass til innlogging, bekreftelser og varsler. E-postkvoten er ${env.EMAIL_DAILY_LIMIT} per døgn (Resends gratisplan, sjekket 2.11.2026). ${o.lettersWaiting ? `${o.lettersWaiting} ukesbrev venter nå. ` : ''}Brev som venter mer enn ${NEWSLETTER_MAX_WAIT_DAYS} døgn, sendes ikke. En større plan hos Resend koster penger – avklar med eier.`,
       href: '/admin/epost',
     });
   }
@@ -297,6 +300,8 @@ export async function adminOverview(now = new Date()) {
   const i = integrationStatus();
   // Ekte kontroll av fillagringen (finnes bøtta, og er den privat?) – ikke bare om nøklene er satt.
   const storageCheck = await checkSupabaseBucket();
+  // Finnes det en fersk sikkerhetskopi? Supabase sin gratisplan tar ingen selv.
+  const backupCheck = await checkBackups(now);
   const appUrl = new URL(env.APP_URL);
   const ownDomain = appUrl.protocol === 'https:' && !/(^|\.)(onrender\.com|localhost)$|^127\.0\.0\.1$/.test(appUrl.hostname);
   const fromAddress = (/<([^>]+)>/.exec(env.EMAIL_FROM)?.[1] ?? env.EMAIL_FROM).trim();
@@ -350,6 +355,12 @@ export async function adminOverview(now = new Date()) {
       label: 'Lagring av dokumenter',
       state: storageCheck.state === 'ok' ? 'klar' : 'mangler',
       detail: storageCheck.detail,
+    },
+    {
+      id: 'sikkerhetskopi',
+      label: 'Sikkerhetskopi av databasen',
+      state: backupCheck.state === 'ok' ? 'klar' : 'mangler',
+      detail: backupCheck.detail,
     },
     {
       id: 'firma',

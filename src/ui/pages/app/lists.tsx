@@ -155,7 +155,7 @@ export function SavedSearchesPage({ rows, limit, alertsLevel }: { rows: SavedSea
                     </div>
                     <p className="mt-1.5 text-[12px] text-muted">
                       {s.ownerName ? `Laget av ${s.ownerName}. ` : ''}
-                      {s.alertEnabled ? `Varsel ${s.alertFrequency === 'instant' ? 'med en gang' : s.alertFrequency === 'daily' ? 'daglig' : 'ukentlig'}.` : 'Ingen varsel.'}
+                      {s.alertEnabled ? `Varsel ${s.alertFrequency === 'instant' ? 'fortløpende' : s.alertFrequency === 'daily' ? 'daglig' : 'ukentlig'}.` : 'Ingen varsel.'}
                     </p>
                   </div>
                   <PostForm action={`/app/sok/${s.id}/slett`} confirm={`Slette søket «${s.name}»?`}>
@@ -171,7 +171,7 @@ export function SavedSearchesPage({ rows, limit, alertsLevel }: { rows: SavedSea
                   <Field label="E-postvarsel" htmlFor={`a-${s.id}`}>
                     <Select id={`a-${s.id}`} name="alert" defaultValue={s.alertEnabled ? s.alertFrequency : 'off'} disabled={alertsLevel === 'none'}>
                       <option value="off">Ingen varsel</option>
-                      {alertsLevel === 'full' ? <option value="instant">Med en gang</option> : null}
+                      {alertsLevel === 'full' ? <option value="instant">Fortløpende</option> : null}
                       <option value="daily">Daglig</option>
                       <option value="weekly">Ukentlig</option>
                     </Select>
@@ -281,7 +281,7 @@ export function NotificationsPage({ rows, prefs, alertsLevel }: { rows: Notifica
           <PostForm action="/app/varsler/innstillinger" className="space-y-4 p-5">
             <Field label="Hvor ofte vil du ha e-post?" htmlFor="freq">
               <Select id="freq" name="emailFrequency" defaultValue={prefs.emailFrequency}>
-                <option value="instant">Med en gang</option>
+                <option value="instant">Fortløpende</option>
                 <option value="daily">Daglig sammendrag</option>
                 <option value="weekly">Ukentlig sammendrag</option>
                 <option value="off">Ingen e-post (bare i appen)</option>

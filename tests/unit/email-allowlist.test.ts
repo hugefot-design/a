@@ -22,3 +22,13 @@ test('reserverte testdomener får aldri ekte e-post', () => {
     assert.equal(isReservedTestAddress(a), false, a);
   }
 });
+
+test('ukesbrevene får høyst 70 % av døgnkvoten – resten er alltid ledig for innlogging, bekreftelser og varsler', async () => {
+  const { newsletterAllowance } = await import('../../src/lib/email');
+  assert.equal(newsletterAllowance(100, 0), 70, 'Resends gratisplan: 70 ukesbrev når ingenting annet er sendt');
+  assert.equal(newsletterAllowance(100, 25), 45, 'det som er sendt siste døgn, trekkes fra');
+  assert.equal(newsletterAllowance(100, 70), 0);
+  assert.equal(newsletterAllowance(100, 95), 0, 'aldri negativt');
+  assert.equal(newsletterAllowance(3, 0), 2, 'rundes ned');
+  assert.equal(newsletterAllowance(50_000, 100), 34_900, 'større plan: EMAIL_DAILY_LIMIT');
+});

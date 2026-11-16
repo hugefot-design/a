@@ -4,12 +4,14 @@
  * - Vanlige spørsmål om betaling og AI følger det som er slått på.
  * - Tomme AI-paneler vises ikke for kunder når AI er av.
  * - Påminnelsen før prøveperioden slutter nevner bare det som stopper, og tallene er ekte.
+ * - Varsler lover ikke «med én gang»: tjenesten henter nye anbud med jevne mellomrom, ikke kontinuerlig.
  */
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { closeDb, systemSql } from '../../src/lib/db';
 import { env } from '../../src/lib/env';
 import { generateTrialReminders } from '../../src/domain/notifications/engine';
+import { weeklyNewsletterTemplate } from '../../src/domain/email/templates';
 import { adminClientFor, clientFor, createAccount, ingest, makeAdmin, makeNotice, startServer, tenderIdFor } from '../helpers';
 
 function text(html: string): string {
@@ -211,4 +213,24 @@ test('påminnelse før prøveperioden slutter: ekte tall, og bare det som faktis
   assert.match(mail.textBody, /Kortbetaling er ikke åpnet ennå/);
   assert.match(mail.textBody, /Meld interesse: http/);
   assert.doesNotMatch(mail.textBody, /Velg plan/);
+});
+
+test('varsler: ingen løfter om «med én gang» – nye anbud hentes med jevne mellomrom, ikke kontinuerlig', async () => {
+  const c = await clientFor(server.base, await createAccount()); // prøveperiode: alle varselvalg
+  const alerts = (await c.get('/app/varsler')).body;
+  assert.match(alerts, /<option value="instant"[^>]*>Fortløpende<\/option>/);
+  for (const path of ['/app/varsler', '/app/sok']) {
+    assert.ok(!/med en gang|med én gang/i.test(text((await c.get(path)).body)), `${path} lover ikke varsel med en gang`);
+  }
+  const letter = weeklyNewsletterTemplate({
+    topic: 'Renhold',
+    week: 47,
+    items: [{ title: 'Renhold av skoler', url: 'https://anbudradar.com/anbud/x', meta: 'Frist 1. des.' }],
+    moreCount: 0,
+    listUrl: 'https://anbudradar.com/bransjer/renhold',
+    signupUrl: 'https://anbudradar.com/registrer',
+    unsubscribeUrl: 'https://anbudradar.com/ukesbrev/avmeld',
+  });
+  assert.ok(!/med én gang|med en gang|så snart/i.test(letter.html + letter.text), 'ukesbrevet lover ikke varsel med en gang');
+  assert.match(letter.html, /e-postvarsel når det kommer nye/);
 });

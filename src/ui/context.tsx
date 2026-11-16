@@ -22,6 +22,8 @@ export interface UiContextValue {
   /** Offentlige oppdragsgiversider (/oppdragsgiver/<navn>-<orgnr> og /oppdragsgivere) er slått på. */
   publicBuyerPages: boolean;
   legalReviewed: boolean;
+  /** Lagres opplastede filer bare midlertidig (serverdisken i produksjon)? Da sier sidene det. */
+  storageTemporary: boolean;
   /** Datakilder som er verifisert mot ekte API ("ted", "doffin"). */
   liveSources: string[];
   /** Lengden på gratis prøveperiode (TRIAL_DAYS), så markedsteksten alltid stemmer. */
@@ -52,6 +54,7 @@ export const UiContext = createContext<UiContextValue>({
   publicTools: false,
   publicBuyerPages: false,
   legalReviewed: false,
+  storageTemporary: false,
   liveSources: [],
   trialDays: 14,
   locale: 'nb',

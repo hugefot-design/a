@@ -108,7 +108,7 @@ test('oppdragsgiversiden har skjemaet for å følge uten konto, og knappen øver
   assert.doesNotMatch(body, /name="bransje"/, 'ingen bransje på oppdragsgiversiden');
   const t = text(body);
   assert.match(t, /Følg Følgeby kommune \(følg-test\) på e-post/);
-  assert.match(t, /Mandag morgen de ukene det kommer nye anbud herfra – med kontraktene som snart utløper\./);
+  assert.match(t, /Vanligvis mandag morgen, de ukene det kommer nye anbud herfra – med kontraktene som snart utløper\./);
   assert.match(t, /Adressen brukes bare til disse e-postene\./);
   assert.match(body, /<label for="nl-epost"[^>]*>E-postadresse<\/label>/);
   assert.match(body, /href="#folg"[^>]*>[\s\S]*?Følg på e-post uten konto/);
@@ -128,7 +128,7 @@ test('påmelding: bekreftelse på e-post, ingen utsending før lenken er trykket
   assert.equal(r.confirmedAt, null);
   const [confirm] = await mails(email, 'newsletter_confirm');
   assert.equal(confirm?.subject, 'Bekreft påmeldingen til Ukens anbud');
-  assert.match(confirm!.textBody, /Ukens anbud – Følgeby kommune \(følg-test\) på e-post de mandagene det er nye anbud derfra, med kontrakter som snart utløper\./);
+  assert.match(confirm!.textBody, /Ukens anbud – Følgeby kommune \(følg-test\) på e-post de ukene det er nye anbud derfra \(vanligvis mandag\), med kontrakter som snart utløper\./);
 
   await sendWeeklyNewsletters(MONDAY, true);
   assert.equal((await mails(email, 'newsletter_buyer')).length, 0, 'ikke bekreftet: ingen e-post');
@@ -137,7 +137,7 @@ test('påmelding: bekreftelse på e-post, ingen utsending før lenken er trykket
   assert.equal(ok.status, 200);
   const okText = text(clean(ok.body));
   assert.match(okText, /Du er påmeldt/);
-  assert.match(okText, /Du får Ukens anbud – Følgeby kommune \(følg-test\) – mandag morgen de ukene det er nye anbud derfra\./);
+  assert.match(okText, /Du får Ukens anbud – Følgeby kommune \(følg-test\) – de ukene det er nye anbud derfra, vanligvis mandag morgen\./);
   assert.ok(clean(ok.body).includes(`href="${PATH}?utm_source=ukesbrev"`), 'lenke tilbake til oppdragsgiversiden');
   assert.ok((await row(email))?.confirmedAt);
 });

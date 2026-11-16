@@ -50,7 +50,7 @@ export function registerNewsletterRoutes(router: Router): void {
     if (!id) return invalidLink(ctx);
     const sub = await confirmSubscription(id);
     if (!sub) return page(ctx, 'Påmeldingen finnes ikke', 'info', 'Påmeldingen er utløpt eller meldt av. Du kan melde deg på igjen på en av bransje- eller fylkessidene.', 404, { href: '/fylker', label: 'Se åpne anbud' });
-    const when = sub.buyer ? 'mandag morgen de ukene det er nye anbud derfra' : 'hver mandag morgen';
+    const when = sub.buyer ? 'de ukene det er nye anbud derfra, vanligvis mandag morgen' : 'hver uke, vanligvis mandag morgen';
     return page(ctx, 'Du er påmeldt', 'ok', `Du får Ukens anbud – ${subscriptionTopic(sub)} – ${when}. Hver e-post har en lenke for å melde deg av.`, 200, {
       href: `${subscriptionPath(sub)}?utm_source=ukesbrev`,
       label: 'Se åpne anbud nå',

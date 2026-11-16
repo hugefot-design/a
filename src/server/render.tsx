@@ -6,6 +6,7 @@ import { env, isDev, isProd, paymentsOpen } from '@/lib/env';
 import { UiContext, type UiContextValue } from '@/ui/context';
 import type { RequestContext } from './http';
 import { liveSources } from '@/domain/tenders/source-status';
+import { storageIsTemporary } from '@/lib/storage';
 import { aiModeFor } from '@/domain/ai/provider';
 import { LOCALE_INFO, LOCALES, localePath, MARKETING_PATHS, messages, preferredLocale } from '@/i18n';
 
@@ -52,6 +53,7 @@ function uiValue(ctx: RequestContext): UiContextValue {
     publicTools: env.PUBLIC_TOOLS,
     publicBuyerPages: env.PUBLIC_BUYER_PAGES,
     legalReviewed: env.LEGAL_PAGES_REVIEWED,
+    storageTemporary: storageIsTemporary(),
     liveSources: liveSources(),
     trialDays: env.TRIAL_DAYS,
     locale: ctx.locale,

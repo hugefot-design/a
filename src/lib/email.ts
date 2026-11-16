@@ -19,6 +19,31 @@ export interface EmailMessage {
   headers?: Record<string, string>;
 }
 
+/** Ukesbrevene (ukens anbud og oppdragsgivere): de eneste e-postene som venter når døgnkvoten er brukt. */
+export const NEWSLETTER_KINDS = ['newsletter_weekly', 'newsletter_buyer'];
+/**
+ * Ukesbrevene får bruke høyst denne andelen (prosent) av døgnkvoten hos e-postleverandøren (EMAIL_DAILY_LIMIT).
+ * Resten holdes av til innlogging, bekreftelser og varsler, som aldri venter på ukesbrevene.
+ */
+export const NEWSLETTER_SHARE_PCT = 70;
+/** Ukesbrev som har ventet så lenge på plass i kvoten, sendes ikke – neste ukes brev er på vei. */
+export const NEWSLETTER_MAX_WAIT_DAYS = 6;
+/** Feilteksten i utboksen for ukesbrev som ventet for lenge. */
+export const NEWSLETTER_EXPIRED = `Ikke sendt: ukesbrevet ventet mer enn ${NEWSLETTER_MAX_WAIT_DAYS} døgn på plass i e-postkvoten.`;
+
+/** Hvor mange ukesbrev som kan sendes nå: andelen av døgnkvoten minus alt som er sendt siste 24 timer. */
+export function newsletterAllowance(dailyLimit: number, sentLast24h: number): number {
+  return Math.max(0, Math.floor((dailyLimit * NEWSLETTER_SHARE_PCT) / 100) - sentLast24h);
+}
+
+/** E-post levert til leverandøren siste 24 timer, alle typer – det døgnkvoten teller (logget e-post i utvikling teller ikke). */
+export async function emailsSentLast24h(): Promise<number> {
+  const [row] = (await systemSql()`
+    select count(*)::int as n from email_outbox where status = 'sent' and sent_at > now() - interval '24 hours'
+  `) as unknown as { n: number }[];
+  return row?.n ?? 0;
+}
+
 /**
  * Legger e-post i utboksen. Sendes av arbeideren (eller straks via sendEmailSoon).
  * Returnerer null hvis en e-post med samme dedupeKey allerede finnes.
@@ -59,6 +84,8 @@ interface SendResult {
   permanent?: boolean;
   /** Stoppet av testlisten – ikke sendt til leverandøren. */
   blocked?: boolean;
+  /** Leverandørens kvote eller fartsgrense (HTTP 429): prøves igjen lenger enn vanlige feil. */
+  rateLimited?: boolean;
 }
 
 interface OutboxRow {
@@ -119,7 +146,7 @@ async function sendViaProvider(row: OutboxRow): Promise<SendResult> {
       if (!res.ok) {
         // 4xx (unntatt 408/429) prøves ikke på nytt i det uendelige – f.eks. ugyldig mottaker.
         const permanent = res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429;
-        return { ok: false, provider: 'resend', error: `HTTP ${res.status}: ${body.message ?? body.name ?? 'ukjent feil'}`, permanent };
+        return { ok: false, provider: 'resend', error: `HTTP ${res.status}: ${body.message ?? body.name ?? 'ukjent feil'}`, permanent, rateLimited: res.status === 429 };
       }
       return { ok: true, provider: 'resend', messageId: body.id };
     } catch (err) {
@@ -149,7 +176,9 @@ export async function deliverEmail(id: string): Promise<void> {
       where id = ${id}
     `;
   } else {
-    const failed = result.permanent || row.attempts >= 5;
+    // Kvoten eller fartsgrensen hos leverandøren (429): prøv igjen i omtrent et døgn (30 forsøk, høyst en time mellom)
+    // i stedet for å gi opp etter fem forsøk på en halvtime.
+    const failed = result.permanent || row.attempts >= (result.rateLimited ? 30 : 5);
     await sql`
       update email_outbox set status = ${failed ? 'failed' : 'pending'}, provider = ${result.provider},
         last_error = ${result.error ?? null},
@@ -161,14 +190,37 @@ export async function deliverEmail(id: string): Promise<void> {
   }
 }
 
+/**
+ * Sender det som ligger klart i utboksen. Innlogging, bekreftelser, varsler og kvitteringer går først. Ukesbrevene
+ * sendes bare innenfor sin andel av døgnkvoten (newsletterAllowance); resten venter til det er plass – i praksis
+ * dagen etter – så en stor mandag aldri stopper e-post som brukerne venter på.
+ */
 export async function deliverPendingEmails(limit = 50): Promise<number> {
   const sql = systemSql();
-  const rows = (await sql`
-    select id from email_outbox where status = 'pending' and next_attempt_at <= now()
+  const urgent = (await sql`
+    select id from email_outbox where status = 'pending' and next_attempt_at <= now() and kind <> all(${NEWSLETTER_KINDS}::text[])
     order by created_at limit ${limit}
   `) as unknown as { id: string }[];
-  for (const r of rows) await deliverEmail(r.id);
-  return rows.length;
+  for (const r of urgent) await deliverEmail(r.id);
+
+  // Ukesbrev: bare når noen venter (løkken går hvert 5. sekund – kvoten telles ikke unødvendig).
+  const [waiting] = (await sql`
+    select exists (select 1 from email_outbox where status = 'pending' and next_attempt_at <= now() and kind = any(${NEWSLETTER_KINDS}::text[])) as any
+  `) as unknown as { any: boolean }[];
+  if (!waiting?.any) return urgent.length;
+  await sql`
+    update email_outbox set status = 'failed', last_error = ${NEWSLETTER_EXPIRED}
+    where status = 'pending' and kind = any(${NEWSLETTER_KINDS}::text[])
+      and created_at < now() - make_interval(days => ${NEWSLETTER_MAX_WAIT_DAYS})
+  `;
+  const room = Math.min(limit - urgent.length, newsletterAllowance(env.EMAIL_DAILY_LIMIT, await emailsSentLast24h()));
+  if (room <= 0) return urgent.length;
+  const letters = (await sql`
+    select id from email_outbox where status = 'pending' and next_attempt_at <= now() and kind = any(${NEWSLETTER_KINDS}::text[])
+    order by created_at limit ${room}
+  `) as unknown as { id: string }[];
+  for (const r of letters) await deliverEmail(r.id);
+  return urgent.length + letters.length;
 }
 
 /** Legg i kø og prøv å sende med en gang uten å blokkere forespørselen. */

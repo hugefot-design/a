@@ -288,7 +288,7 @@ export function DiscoverPage(props: DiscoverProps) {
                 <Field label="E-postvarsel" htmlFor="ss-alert">
                   <select id="ss-alert" name="alert" className="field-input" defaultValue={org?.entitlements.alerts === 'full' ? 'daily' : 'daily'}>
                     <option value="off">Ingen varsel</option>
-                    {org?.entitlements.alerts === 'full' ? <option value="instant">Med en gang</option> : null}
+                    {org?.entitlements.alerts === 'full' ? <option value="instant">Fortløpende</option> : null}
                     <option value="daily">Daglig</option>
                     <option value="weekly">Ukentlig</option>
                   </select>

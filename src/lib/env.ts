@@ -85,6 +85,8 @@ const schema = z.object({
   /** Testperiode: bare disse mottakerne får e-post (komma-separert; «@firma.no» gir hele domenet). Tom = alle. */
   EMAIL_ALLOWED_RECIPIENTS: optionalString,
   EMAIL_FROM: z.string().default('AnbudRadar <varsler@example.com>'),
+  /** Hvor mange e-poster leverandøren tillater per døgn (Resends gratisplan: 100, sjekket 2.11.2026). Ukesbrevene får 70 % av dette. */
+  EMAIL_DAILY_LIMIT: z.coerce.number().int().positive().default(100),
   EMAIL_REPLY_TO: optionalString,
   ADMIN_NOTIFICATION_EMAIL: optionalString,
 

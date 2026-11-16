@@ -39,14 +39,14 @@ export function NewsletterSignup({
         <>
           <p className="mt-2 text-[18px] font-[720] leading-snug text-strong [overflow-wrap:anywhere]">Følg {buyer.name} på e-post</p>
           <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
-            Mandag morgen de ukene det kommer nye anbud herfra – med kontraktene som snart utløper. Meld deg av med ett klikk.
+            Vanligvis mandag morgen, de ukene det kommer nye anbud herfra – med kontraktene som snart utløper. Meld deg av med ett klikk.
           </p>
         </>
       ) : (
         <>
           <p className="mt-2 text-[18px] font-[720] leading-snug text-strong">Få ukens nye anbud på e-post</p>
           <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
-            Hver mandag: nye offentlige anbud{topic ? ` – ${topic}` : ''}. Meld deg av med ett klikk.
+            Hver uke, vanligvis mandag: nye offentlige anbud{topic ? ` – ${topic}` : ''}. Meld deg av med ett klikk.
           </p>
         </>
       )}

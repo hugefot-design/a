@@ -68,6 +68,12 @@ filene lagres nå («Filer»). Gratisplanen hos Supabase har 1 GB fillagring; in
 4. Kontroll: Admin → Oversikt skal vise «Filer: Klar» (appen sjekker at bøtta finnes og at den er privat; en offentlig
    bøtte gir rød advarsel).
 
+Til dette er gjort (16.11.2026): konkurransegrunnlag trenger ikke selve filen etter opplasting – teksten ligger i
+databasen, så ordsøket og sjekkene virker også når filen er borte. Tilbudsvedlegg kan derimot lastes ned igjen. Derfor
+viser tilbudsarbeidet kundene en merknad om at filene foreløpig lagres midlertidig, og en fil som er borte gir en tydelig
+beskjed («ikke lenger lagret – last den opp på nytt») i stedet for en feilside. Merknaden forsvinner av seg selv når
+`STORAGE_DRIVER=supabase` er satt.
+
 ## 3. Webapp og arbeider (Render)
 
 **Enklest: Blueprint.** Repoet har `render.yaml` med webapp og arbeider i Frankfurt. Filen oppretter ingenting av seg selv – i Render velger du *New → Blueprint*, kobler til repoet, ser over tjenestene og prisen, og limer inn hemmelighetene Render ber om (`sync: false`). `SESSION_SECRET` og `CRON_SECRET` genereres av Render og deles mellom webapp og arbeider (avmeldingslenker i e-post signeres med `SESSION_SECRET`, så verdien må være lik). *Blueprint-filen er ikke prøvd mot Render ennå – kontroller forhåndsvisningen før du bekrefter.*
@@ -144,7 +150,11 @@ hver natt kl. 02:23 UTC:
    Feiler noe, åpnes GitHub-saken «Driftsvarsel: sikkerhetskopi feilet» (GitHub sender e-post); den lukkes av seg selv
    neste gang kopien går bra.
 
-Til hemmelighetene er lagt inn, hopper jobben over med en advarsel. Repoet er offentlig, derfor legges kopien aldri som
+Til hemmelighetene er lagt inn, hopper jobben over med en advarsel (bare i loggen – jobben blir grønn). **Admin →
+Oversikt → Klar for lansering** viser derfor «Sikkerhetskopi av databasen»: klar når det finnes en kopi fra de siste
+48 timene i bøtta, ellers hvor gammel den siste er, eller at ingen finnes. Uten `SUPABASE_URL` og
+`SUPABASE_SERVICE_ROLE_KEY` i appen står det at det ikke kan kontrolleres herfra (appen gjetter ikke). Kontrollen leser
+bare filnavn og tidspunkt i bøtta. Repoet er offentlig, derfor legges kopien aldri som
 GitHub-artefakt, og loggen viser bare filnavn, størrelse og antall tabeller/migreringer – ikke antall kunder eller brukere.
 
 **Før du slår den på – personvern:** kopien lages og prøves på GitHub sine maskiner (GitHub/Microsoft, kan være i USA).
@@ -257,16 +267,22 @@ bekreftelsen. Forsiden er indeksert, og ny indeksering er bedt om.
   `/bransjer/cleaning` sendes videre med 301). Hvert fylke har `/fylker/<fylke>`, og hver bransje i hvert fylke
   `/bransjer/<bransje>/<fylke>`. Sider med færre enn 3 åpne anbud har `noindex` og står ikke i `sitemap.xml`
   (`MIN_OPEN_FOR_INDEXING` i `src/domain/slugs.ts`). De engelske, svenske og danske sidene er uendret.
-- **Ukesbrevet «Ukens anbud».** Påmelding uten konto på bransje- og fylkessidene, dobbel bekreftelse, sendes mandag fra
-  kl. 07 med nye anbud siste uke (oppgaven `weekly`), ettklikks-avmelding som sletter adressen. Resend gratis tillater
-  et begrenset antall e-poster per dag; med mange påmeldte må planen hos Resend vurderes (koster penger – avklar med eier).
+- **Ukesbrevet «Ukens anbud».** Påmelding uten konto på bransje- og fylkessidene, dobbel bekreftelse, lages mandag fra
+  kl. 07 med nye anbud siste uke (oppgaven `weekly`), ettklikks-avmelding som sletter adressen. Sendes innenfor e-postkvoten
+  (se «E-postkvoten» under); med mange påmeldte må planen hos Resend vurderes (koster penger – avklar med eier).
 - **Følg en oppdragsgiver.** Samme påmelding fra skjemaet på oppdragsgiversidene (feltet `oppdragsgiver`), samme
   tabell og samme utsending: mandag morgen de ukene oppdragsgiveren har nye anbud, med kontrakter som snart utløper
   (uten leverandørnavn). Av når `PUBLIC_BUYER_PAGES=false`. Oversikten `/oppdragsgivere` viser de samme
   oppdragsgiverne som nettstedskartet.
-- **Dagstaket for e-post.** Admin → Oversikt varsler når e-postlistene har 70 eller flere bekreftede påmeldinger
-  (`EMAIL_DAILY_CAP` = 100 i `src/domain/admin/overview.ts`, Resends gratisplan sjekket 2.11.2026). Alt sendes mandag
-  morgen, så taket nås samme dag.
+- **E-postkvoten (`EMAIL_DAILY_LIMIT`, standard 100 = Resends gratisplan, sjekket 2.11.2026).** Kvoten gjelder all
+  e-post – også innlogging, bekreftelser og varsler. Derfor sendes ukesbrevene (ukens anbud og oppdragsgivere) etter alt
+  annet og bare innenfor 70 % av kvoten de siste 24 timene (`src/lib/email.ts`); resten venter til det er plass, i
+  praksis dagen etter. Brev som har ventet mer enn 6 døgn, sendes ikke (står som «failed» med forklaring i utboksen).
+  Svar 429 (kvote eller fartsgrense hos Resend) prøves igjen i omtrent et døgn i stedet for å gis opp etter fem forsøk.
+  Admin → Oversikt sier fra når brevene må fordeles (70 eller flere bekreftede påmeldinger) og advarer når det tar mer
+  enn tre døgn. Med en større plan hos Resend: sett `EMAIL_DAILY_LIMIT` til den nye grensen.
+- **Varsler «fortløpende».** Valget het tidligere «Med en gang». Tjenesten henter nye anbud med jevne mellomrom mens
+  den er våken, og den sover på gratisplanen, så nettsiden og e-postene lover ikke varsel «med én gang».
 - **Besøk (Admin → Besøk).** Teller sidevisninger på offentlige sider uten informasjonskapsler og uten IP: dato, side og
   kilde. Innloggede brukere og roboter telles ikke. Lenker med `utm_source=…` vises med det navnet.
 - **LinkedIn (Admin → LinkedIn).** Ferdig tekst med ukens største nye anbud for valgt bransje/fylke, med lenke

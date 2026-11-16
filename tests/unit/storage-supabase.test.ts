@@ -6,7 +6,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { SupabaseStorage } from '../../src/lib/storage';
+import { StoredFileMissing, SupabaseStorage } from '../../src/lib/storage';
 
 const KEY = 'test-tjenestenokkel';
 const files = new Map<string, { data: Buffer; type: string }>();
@@ -65,7 +65,8 @@ test('Supabase Storage: lagre, hente og slette med tjenestenøkkel og «upsert»
   assert.equal(upload.path, '/storage/v1/object/privat/org-1/tilbud/abc.pdf', 'riktig adresse (ingen dobbel skråstrek)');
   assert.equal(upload.upsert, 'true');
   await s.remove(['org-1/tilbud/abc.pdf']);
-  await assert.rejects(s.get('org-1/tilbud/abc.pdf'), /Henting feilet/);
+  // En fil som ikke finnes, gir en egen feil (så appen kan si «last den opp på nytt» i stedet for en feilside).
+  await assert.rejects(s.get('org-1/tilbud/abc.pdf'), (err: unknown) => err instanceof StoredFileMissing && /Filen finnes ikke i lagringen \(abc\.pdf\)/.test(err.message));
   await s.remove([]); // ingen kall
 });
 

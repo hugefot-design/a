@@ -5,8 +5,9 @@
  *   lenken i bekreftelses-e-posten er trykket (samtykke etter markedsføringsloven § 15).
  * - Lenkene (bekreft og avmeld) er signert med SESSION_SECRET; ingen tokens lagres.
  * - Avmelding sletter raden. Ubekreftede påmeldinger slettes etter 7 dager (applyRetention).
- * - Sendes mandag fra kl. 07 (norsk tid) med nye åpne anbud fra siste uke. Ingen e-post om det
- *   ikke er noe nytt.
+ * - Lages mandag fra kl. 07 (norsk tid) med nye åpne anbud fra siste uke. Ingen e-post om det
+ *   ikke er noe nytt. Brevene sendes innenfor sin andel av e-postkvoten (lib/email.ts); når det er flere
+ *   mottakere enn kvoten rekker, går resten dagen etter.
  * - En påmelding gjelder enten en bransje (og eventuelt et fylke) eller én oppdragsgiver («følg en oppdragsgiver»,
  *   fra oppdragsgiversiden). For en oppdragsgiver tas også kontraktene som trolig utløper med – uten leverandørnavn.
  *   Følgingen finnes bare når de offentlige oppdragsgiversidene er slått på (PUBLIC_BUYER_PAGES).
@@ -232,8 +233,9 @@ async function tendersFor(industry: string, region: string | null): Promise<{ ro
 }
 
 /**
- * Sender ukesbrevet til alle bekreftede som ikke har fått det denne uken. Kjøres hver time av
+ * Legger ukesbrevet i utboksen for alle bekreftede som ikke har fått det denne uken. Kjøres hver time av
  * arbeideren; gjør bare noe mandag fra kl. 07. Samme tema hentes én gang, uansett antall mottakere.
+ * Utboksen sender brevene innenfor e-postkvoten (deliverPendingEmails) – resten dagen etter.
  */
 export async function sendWeeklyNewsletters(now = new Date(), force = false): Promise<number> {
   const { hour, weekday } = osloParts(now);

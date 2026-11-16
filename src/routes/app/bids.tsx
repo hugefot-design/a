@@ -231,6 +231,9 @@ export function registerBidRoutes(router: Router): void {
     const { org, user } = requireOrg(ctx);
     const doc = await getBidDocument(org, user.id, param(ctx, 'docId'));
     if (!doc) throw new HttpError(404, 'Fant ikke dokumentet.');
+    if ('missing' in doc) {
+      return redirectWith(ctx, `/app/tilbud/${param(ctx, 'id')}`, 'error', `Filen «${doc.name}» er ikke lenger lagret hos oss. Last den opp på nytt.`);
+    }
     return new Response(new Uint8Array(doc.data), {
       headers: {
         'Content-Type': doc.mimeType,

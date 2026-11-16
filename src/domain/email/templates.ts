@@ -156,13 +156,13 @@ export function securityNoticeTemplate(opts: {
 export function newsletterConfirmTemplate(topic: string, confirmUrl: string, opts: { buyer?: boolean } = {}): Rendered {
   const subject = 'Bekreft påmeldingen til Ukens anbud';
   // Følger en oppdragsgiver: e-posten kommer bare de ukene oppdragsgiveren har lagt ut nye anbud.
-  const what = opts.buyer ? 'på e-post de mandagene det er nye anbud derfra, med kontrakter som snart utløper' : 'på e-post hver mandag';
+  const what = opts.buyer ? 'på e-post de ukene det er nye anbud derfra (vanligvis mandag), med kontrakter som snart utløper' : 'på e-post hver uke (vanligvis mandag)';
   const html = layout(
     subject,
     `<p>Du (eller noen som skrev inn adressen din) ba om å få <strong>Ukens anbud – ${esc(topic)}</strong> ${what}.</p>
      ${button(confirmUrl, 'Bekreft påmeldingen')}
      ${note('Ba du ikke om dette? Da kan du se bort fra e-posten – du blir ikke påmeldt, og adressen slettes etter 7 dager.')}`,
-    { preheader: 'Ett klikk, så får du ukens nye anbud hver mandag.', footer: 'Du får denne e-posten fordi adressen ble skrevet inn på anbudradar.com.' },
+    { preheader: 'Ett klikk, så får du ukens nye anbud på e-post hver uke.', footer: 'Du får denne e-posten fordi adressen ble skrevet inn på anbudradar.com.' },
   );
   const text = `Du (eller noen som skrev inn adressen din) ba om å få Ukens anbud – ${topic} ${what}.\n\nBekreft her:\n${confirmUrl}\n\nBa du ikke om dette, kan du se bort fra e-posten. Du blir ikke påmeldt.${textFooter()}`;
   return { subject, html, text };
@@ -198,7 +198,7 @@ export function weeklyNewsletterTemplate(opts: {
     `<p>${esc(intro)}${opts.moreCount ? ` Her er de ${opts.items.length} med nærmest frist.` : ''}</p>
      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
      ${button(opts.listUrl, 'Se alle åpne anbud')}
-     <p style="margin:8px 0 0"><strong>Få bare anbudene som passer bedriften</strong> – rangert, med krav, risiko og lønnsomhet for hvert anbud, og varsel med én gang de kommer.
+     <p style="margin:8px 0 0"><strong>Få bare anbudene som passer bedriften</strong> – rangert, med krav, risiko og lønnsomhet for hvert anbud, og e-postvarsel når det kommer nye.
        <a href="${esc(opts.signupUrl)}" style="color:${C.accent};font-weight:700">Prøv AnbudRadar gratis</a>.</p>`,
     {
       preheader: intro,

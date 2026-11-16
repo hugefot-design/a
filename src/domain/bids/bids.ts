@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { first, withTenant, type Tx } from '@/lib/db';
 import { env } from '@/lib/env';
 import { audit } from '@/lib/audit';
-import { storage } from '@/lib/storage';
+import { storage, StoredFileMissing } from '@/lib/storage';
 import type { OrgContext, OrgRole } from '@/server/http';
 import { cleanFilename } from '@/domain/documents/documents';
 
@@ -300,7 +300,13 @@ export async function getBidDocument(org: OrgContext, userId: string, documentId
   if (!row) return null;
   // Eldre rader kan ha typen nettleseren oppga; bruk filendelsen.
   const ext = row.name.split('.').pop()?.toLowerCase() ?? '';
-  return { name: row.name, mimeType: BID_MIME[ext] ?? 'application/octet-stream', data: await storage().get(row.storageKey) };
+  try {
+    return { name: row.name, mimeType: BID_MIME[ext] ?? 'application/octet-stream', data: await storage().get(row.storageKey) };
+  } catch (err) {
+    // Filen er borte fra lagringen (serverdisken tømmes uten varig lagring): si det, i stedet for en feilside.
+    if (err instanceof StoredFileMissing) return { name: row.name, missing: true as const };
+    throw err;
+  }
 }
 
 export async function deleteBidDocument(org: OrgContext, userId: string, documentId: string): Promise<boolean> {
