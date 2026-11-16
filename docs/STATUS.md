@@ -1,6 +1,6 @@
 # Status, begrensninger og kostnader
 
-Sist oppdatert 16. november 2026 (byggeplanens pakke 1–4 er rullet ut 15.11 og pakke 5 16.11 – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
+Sist oppdatert 16. november 2026 (ærlige varsler, e-postkvote for ukesbrev, beskjed om borte filer og kontroll av sikkerhetskopien er bygget og testet, men IKKE rullet ut – se under; byggeplanens pakke 1–4 er rullet ut 15.11 og pakke 5 16.11 – se under; verktøyene uten konto, kontraktsutløp, metodesiden og oppdragsgiversidene er rullet ut 15.11 – se under; produktløftet 13.–14.11 er rullet ut 14.11; Intelligence og ny salgstekst på nettsiden er rullet ut 8.11; veikartpunkt 1–11, og gratis drift for punkt 12–15 – se [VEIKART.md](VEIKART.md) og [FORSLAG.md](FORSLAG.md)).
 
 ## Testresultater
 
@@ -9,11 +9,11 @@ Kjørt i utviklingsmiljøet mot PostgreSQL 16 og Chromium (Playwright). Samme se
 | Del | Resultat |
 | --- | --- |
 | Typesjekk (TypeScript strict) | Ingen feil |
-| Enhetstester | 261 av 261 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 16.11.2026 (pakke 5) |
-| Integrasjonstester (ekte database, ekte HTTP) | 272 av 272 bestått – 16.11.2026 (pakke 5) |
-| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 16.11.2026 (pakke 5) |
+| Enhetstester | 264 av 264 bestått (1 hoppet over: DFØs eksempelfiler, kjøres når SDK-et finnes lokalt) – 16.11.2026 (ærlige varsler og e-postkvote) |
+| Integrasjonstester (ekte database, ekte HTTP) | 277 av 277 bestått – 16.11.2026 (ærlige varsler og e-postkvote) |
+| Ende-til-ende i nettleser | 10 av 10 bestått (inkl. menyen i appen gruppert etter reisen på PC og telefon, oppstartsskjemaet og lys/mørk modus) – 16.11.2026 (ærlige varsler og e-postkvote) |
 | Produksjonsbygg (`npm run build`) og bygget migrering (`node dist/migrate.js`) | OK |
-| `npm audit` | 0 sårbarheter – 16.11.2026 (pakke 5, ingen nye avhengigheter) |
+| `npm audit` | 0 sårbarheter – 16.11.2026 (ingen nye avhengigheter) |
 | CI på GitHub for produktløftet (`53fc092`) | Grønn – 14.11.2026 |
 | Tilgjengelighet, kontrast og bredde: forsiden (norsk og engelsk), `/eksempel`, `/anbud/<id>`, priser, funksjoner, registrering, bransjeside, Oversikt, Abonnement, anbudssiden, samlet vurdering og oppstartsskjemaet – 390, 768 og 1440 px, lys og mørk | Én h1 per side, `<main>`, etiketter på alle felt, navn på alle knapper og lenker, ingen doble id-er, ingen tekst under WCAG-kontrast, ingen sidelengs rulling, ingen JavaScript-feil. Rettet underveis: filfeltene for opplasting manglet etikett – 14.11.2026 |
 | Etter gjennomgangen: tilgjengelighet, kontrast og bredde for oppdragsgiverside, bransjeside, `/prov` (med og uten treff), `/metode` og lønnsomhetssjekken – 390, 768 og 1440 px, lys og mørk | 42 av 42 kontroller OK – 15.11.2026 |
@@ -395,6 +395,52 @@ kostnader, ingen endring i Render eller Supabase.
 - Tester: `tests/integration/admin-access.test.ts` (fant at vernet virker: uten privat lagring av simulerte svar feiler
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
+
+## Ærlige varsler, e-postkvote, borte filer og kontroll av sikkerhetskopien (16. november 2026) – IKKE rullet ut
+
+Bygget på eiers «gjør alle du kan gjøre nå og push ut etter ferdig testet». Commit `9874c3c`, CI grønn. Utrullingen ble
+stoppet av sikkerhetsfilteret i utviklingsmiljøet (Render-kallet ble avvist) – **venter på eiers «rull ut»**. Produksjon
+kjører fortsatt `7aff724`.
+
+- **Varsler lover ikke «med én gang».** Henting og varsler står stille mens gratistjenesten sover, og vekkingen fra
+  GitHub kjører i praksis bare hver 4.–8. time. Valget heter nå «Fortløpende»; ukesbrevet og `/prov` sier «varsel når
+  det kommer nye». Ukesbrevet: «hver uke, vanligvis mandag».
+- **E-postkvoten (`EMAIL_DAILY_LIMIT`, standard 100 = Resend gratis).** Ukesbrevene sendes etter all annen e-post og bare
+  innenfor 70 % av kvoten siste 24 timer, resten dagen etter; brev som venter over 6 døgn, sendes ikke. Svar 429 prøves
+  igjen i omtrent et døgn. Admin sier fra når brevene må fordeles, og advarer over tre døgn.
+- **Tilbudsvedlegg som er borte fra serverdisken** gir en tydelig beskjed («last den opp på nytt») i stedet for feilside,
+  og tilbudsarbeidet sier ærlig at filene lagres midlertidig så lenge `STORAGE_DRIVER` ikke er `supabase`.
+  Konkurransegrunnlag påvirkes ikke: teksten ligger i databasen.
+- **Admin → Klar for lansering: «Sikkerhetskopi av databasen».** Klar når det finnes en kopi fra siste 48 timer i bøtta;
+  ellers hvor gammel den siste er, at ingen finnes, eller at det ikke kan kontrolleres (appen mangler Supabase-nøklene).
+- **E-post-DNS sjekket via DNS over HTTPS:** DKIM, SPF og MX for `send.`, og DMARC (`v=DMARC1; p=none;`) er på plass.
+  SPF-posten for videresending på selve domenet (`TXT @ v=spf1 include:spf.efwd.registrar-servers.com ~all`, se
+  DRIFT.md) finnes ikke lenger – liten betydning (gjelder bare videresendingen hos Namecheap).
+- Tester: 2 nye enhetstester (kvoteandel, kontroll av sikkerhetskopi), 3 nye integrasjonstester i `email-quota.test.ts`,
+  og nye kontroller i `honesty`, `security-hardening`, `buyer-follow` og `storage-supabase`.
+
+**Produksjonstest (på `7aff724`, testmottaker `delivered+…@resend.dev`, testbrukeren slettet med appens «Slett kontoen»):**
+ZIP-opplasting virker (3 dokumenter, 5 sider, bildet hoppet over med grunn, meldingen nevner ikke AI, ordsøket fant
+teksten fra Word-filen, 2,8–8,4 s på gratisserveren). Poeng fra tildelingsbrevet lagres og regnes ut («Dere tapte på
+pris: 1,60 poeng bak på pris, +0,60 på de andre kriteriene»), og vises i Resultater. «Følg en oppdragsgiver» gir
+«Sjekk e-posten din» (påmeldingene er ubekreftet og slettes automatisk etter 7 dager). Innlogging avvist etter sletting.
+«Fortløpende» er ikke ute ennå (kommer med `9874c3c`).
+
+**Rydd opp: én testkonto ble ikke slettet.** Første kjøring stoppet i oppstartsskjemaet (skriptet var skrevet for det
+gamle skjemaet), og oppryddingen ventet på feil side. Passordet ble laget tilfeldig og ikke lagret, så kontoen kan ikke
+slettes i appen. Den har ingen opplastede filer. Slett den i Supabase → SQL Editor (samme som appens «Slett kontoen»:
+organisasjonen der den er eneste medlem, så brukeren):
+
+```sql
+delete from organizations where id in (
+  select m.org_id from organization_members m join users u on u.id = m.user_id
+  where u.email = 'delivered+anbudradar-test-1794803952494@resend.dev'
+    and (select count(*) from organization_members x where x.org_id = m.org_id) = 1);
+delete from users where email = 'delivered+anbudradar-test-1794803952494@resend.dev';
+```
+
+Skriptet er rettet (klikker valgene, venter på serverens svar, og tar vare på testpassordet i en privat fil til kontoen
+er slettet) og har kjørt to ganger etterpå med full opprydding.
 
 ## Byggeplanen, første runde (15.–16. november 2026) – pakke 1–4 rullet ut 15.11.2026 (`8ee7818`), pakke 5 16.11.2026 (`7aff724`)
 
