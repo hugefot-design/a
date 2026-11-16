@@ -196,7 +196,7 @@ test('eksempelsiden: tydelig merket, lenker via registrering, PDF og nettstedska
 
 test('forsiden: tre budskap som lenker dit de kan prøves, «Se et ekte eksempel» og spørsmål og svar med strukturerte data', async () => {
   const body = (await (await fetch(`${server.base}/`)).text()).replaceAll('<!-- -->', '');
-  for (const t of ['Finn riktige anbud', 'Oppdag krav, risiko og problemer før du byr', 'Finn ut om kontrakten faktisk er lønnsom']) assert.ok(body.includes(t), t);
+  for (const t of ['Finn anbudene som passer', 'Se krav og risiko før dere byr', 'Regn ut om det lønner seg']) assert.ok(body.includes(t), t);
   // Budskapene lenker dit de kan prøves: «Prøv uten konto» på forsiden, eksempelet og lønnsomhetssjekken.
   for (const href of ['#prov', '/eksempel#risiko', '/kalkulator']) assert.ok(body.includes(`href="${href}"`), href);
   assert.match(body, /<a href="\/eksempel" class="btn-ghost-light">Se et ekte eksempel<\/a>/);
@@ -210,6 +210,6 @@ test('forsiden: tre budskap som lenker dit de kan prøves, «Se et ekte eksempel
   assert.ok(faq.mainEntity.some((q) => q.name === 'Hvordan betaler vi?'));
   // Den engelske forsiden har de tre budskapene på engelsk.
   const en = (await (await fetch(`${server.base}/en`)).text()).replaceAll('<!-- -->', '');
-  assert.ok(en.includes('Spot requirements, risks and problems before you bid'));
+  assert.ok(en.includes('See requirements and risks before you bid'));
   assert.match(en, /See a real example/);
 });

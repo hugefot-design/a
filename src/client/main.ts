@@ -93,6 +93,19 @@ document.addEventListener('click', (event) => {
   });
 });
 
+// «Vis mer» (<details>): en lenke til noe som ligger sammenfoldet, åpner det og viser det (f.eks. /metode#treff).
+function openHashTarget(): void {
+  const id = decodeURIComponent(location.hash.slice(1));
+  if (!id) return;
+  const target = document.getElementById(id);
+  const details = target?.closest('details');
+  if (!target || !details || details.open) return;
+  details.open = true;
+  target.scrollIntoView();
+}
+window.addEventListener('hashchange', openHashTarget);
+openHashTarget();
+
 // Kopier til utklippstavle. Har knappen et ikon, byttes bare teksten i [data-label].
 document.addEventListener('click', async (event) => {
   const btn = (event.target as HTMLElement).closest<HTMLElement>('[data-copy]');

@@ -96,8 +96,7 @@ export function TryBand() {
       <Wrap>
         <div className="reveal rounded-3xl border border-line bg-surface p-6 shadow-[0_24px_60px_-45px_rgba(6,14,27,0.5)] sm:p-8">
           <div className="max-w-3xl">
-            <Kicker>{t.eyebrow}</Kicker>
-            <h2 className="mt-3 text-[26px] font-[760] leading-tight tracking-[-0.025em] text-strong sm:text-[32px]">{t.title}</h2>
+            <h2 className="text-[26px] font-[760] leading-tight tracking-[-0.025em] text-strong sm:text-[32px]">{t.title}</h2>
             <p className="mt-2 text-[16px] leading-relaxed text-muted">{t.lead}</p>
           </div>
           <div className="mt-6">

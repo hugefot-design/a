@@ -24,3 +24,17 @@ registrering og glemt passord. **Ikke oversatt:** appen etter innlogging, e-post
 2. Kjør `npm run test:unit`. Testen sier nøyaktig hva som mangler.
 3. Oversettelsene er laget med hjelp av AI og bør leses av noen som har språket som morsmål før betalt markedsføring.
    Svensk og dansk er skrevet ferdig; flere språk ble satt på vent 6. november 2026 etter ønske fra eier.
+
+## Enkelt å forstå (regler for de offentlige sidene, 16.11.2026)
+
+Eier: «alt for komplisert med så mange tekster». Reglene:
+
+1. **Én side, én oppgave.** Siden svarer på ett spørsmål (Hva er det? Hva koster det? Passer anbudet?).
+2. **Svaret først:** overskrift, én kort setning og én hovedknapp øverst.
+3. **Korte setninger og vanlige ord.** Helst under 15 ord per setning. Fagord forklares eller unngås.
+4. **Ikke gjenta.** Det samme står ett sted: funksjonene på Funksjoner, prisene på Priser, reglene på Slik regner vi.
+5. **Detaljer bak «Vis mer»** (`More` i `src/ui/site.tsx`). Ingenting fjernes – det foldes sammen, ligger fortsatt i
+   siden (også for søkemotorer), og en lenke til innholdet åpner det.
+6. **Vis heller enn å forklare:** ekte tall og eksempler i stedet for avsnitt.
+7. **Målt:** forsiden har under 450 synlige ord (`tests/integration/public-pages.test.ts`), og de andre sidene har
+   egne grenser i `tests/integration/simple-pages.test.ts`. «Synlige» betyr det som vises uten å åpne «Vis mer».

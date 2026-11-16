@@ -4,7 +4,7 @@
  */
 import { industrySlugNb } from '@/domain/slugs';
 import type { ReactNode } from 'react';
-import { LuArrowRight, LuBell, LuFileText } from 'react-icons/lu';
+import { LuArrowRight, LuBell, LuChevronDown, LuFileText } from 'react-icons/lu';
 import type { BoardRow, MarketSnapshot } from '@/domain/tenders/market';
 import { fill, int, plural, rich, shortDate, timeUntil } from '@/i18n/format';
 import { cn } from './components';
@@ -27,6 +27,28 @@ export function Kicker({ children, dark = false }: { children: ReactNode; dark?:
 
 export function H2({ children, dark = false, className }: { children: ReactNode; dark?: boolean; className?: string }) {
   return <h2 className={cn('text-[34px] font-[760] leading-[1.04] tracking-[-0.03em] sm:text-[52px]', dark ? 'text-white' : 'text-strong', className)}>{children}</h2>;
+}
+
+/**
+ * «Vis mer»: detaljer som ikke trengs for å forstå siden, men som skal være der for dem som vil lese – og for søkemotorer.
+ * Vanlig <details>: virker uten JavaScript, med tastatur og skjermleser. Lukkes ikke når man klikker andre steder på
+ * siden (data-keep-open), og en lenke til id-en (eller noe inni) åpner den (src/client/main.ts).
+ */
+export function More({ label, children, id, dark = false, className }: { label: ReactNode; children: ReactNode; id?: string; dark?: boolean; className?: string }) {
+  return (
+    <details id={id} data-keep-open="true" className={cn('group/more scroll-mt-24', className)}>
+      <summary
+        className={cn(
+          'inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[15.5px] font-semibold [&::-webkit-details-marker]:hidden',
+          dark ? 'text-signal hover:text-white' : 'text-navy-700 hover:text-strong',
+        )}
+      >
+        {label}
+        <LuChevronDown className="size-4 shrink-0 transition-transform group-open/more:rotate-180" aria-hidden />
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
+  );
 }
 
 export function ExampleTag({ children }: { children: ReactNode }) {
@@ -137,33 +159,6 @@ export function TenderPing({ t, delay = 0, className }: { t: BoardRow & { indust
 }
 
 /** Rullende rad med oppdragsgivere som har åpne anbud akkurat nå. */
-export function BuyerTicker({ buyers }: { buyers: string[] }) {
-  const { m } = useUi();
-  if (buyers.length < 6) return null;
-  const row = (hidden: boolean) => (
-    <ul className="flex shrink-0 items-center gap-10 pr-10" aria-hidden={hidden || undefined}>
-      {buyers.map((b) => (
-        <li key={b} className="whitespace-nowrap text-[15px] font-medium text-white/60">
-          {b}
-        </li>
-      ))}
-    </ul>
-  );
-  return (
-    <section className="border-y border-white/10 bg-night-800 py-6 text-white">
-      <Wrap className="flex flex-col gap-4 md:flex-row md:items-center md:gap-8">
-        <p className="shrink-0 text-[12px] font-semibold uppercase tracking-[0.14em] text-white/45">{m.home.buyers}</p>
-        <div className="marquee min-w-0 flex-1">
-          <div className="marquee-track">
-            {row(false)}
-            {row(true)}
-          </div>
-        </div>
-      </Wrap>
-    </section>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Bransjer med antall åpne anbud
 // ---------------------------------------------------------------------------

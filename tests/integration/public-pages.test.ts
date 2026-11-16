@@ -33,49 +33,44 @@ test('alle offentlige sider svarer og har nøyaktig én h1', async () => {
   }
 });
 
-test('forsiden: tydelig posisjonering, ekte data og ingen AI-løfter når AI er av', async () => {
+test('forsiden: tydelig posisjonering, ekte data og ingen AI-løfter når AI er av – og enkel å lese', async () => {
   const page = await get('/');
   assert.match(page.body, /<h1[^>]*>[\s\S]*Ikke bare finn anbudet\.[\s\S]*Finn ut om det er verdt å vinne\.[\s\S]*<\/h1>/);
-  for (const section of ['Det som skiller AnbudRadar ut', 'Slik fungerer det', 'Forskjellen', 'Åpenhet']) assert.ok(page.body.includes(section), section);
-  // Åtte fordeler – det som skiller AnbudRadar ut først – hver med planen den finnes i (regnet ut fra planene).
-  for (const t of [
-    'Go/No-Go med kilde på alt',
-    'Lønnsomhet med egne kostnader',
-    'Deres pris mot markedet',
-    'Norske krav og kostbare vilkår',
-    'Kapasitet måned for måned',
-    'Læring fra egne resultater',
-    'Intelligent anbudsmatching',
-    'Hvem vinner, og hva som utløper',
-  ]) {
-    assert.ok(page.body.includes(t), t);
-  }
-  assert.match(page.body, /med kilde på alt, fra/);
-  assert.match(page.body, /Go\/No-Go per anbud, med grunner og kilde/);
+  // (Bransjene vises bare når det finnes åpne anbud – se showcase.test.ts.)
+  for (const section of ['Slik fungerer det', 'Dette får dere – og dette får dere ikke.', 'Vanlige spørsmål']) assert.ok(page.body.includes(section), section);
+  assert.match(page.body.replaceAll('<!-- -->', ''), /Ekte anbud fra [^<]+ – vurdert for deres bedrift, med kilde på alt\./);
+  for (const pillar of ['Finn anbudene som passer', 'Se krav og risiko før dere byr', 'Regn ut om det lønner seg']) assert.ok(page.body.includes(pillar), pillar);
   // Vi selger våre egne funksjoner – ingen konkurrenter nevnes ved navn.
   assert.doesNotMatch(page.body, /Mercell|Tendium|Stotles|anbudsradar\.no/i);
-  assert.match(page.body.replaceAll('<!-- -->', ''), /Med i Profesjonell og høyere/);
   // Testmiljøet bruker simulert AI: den skal ikke markedsføres som ekte – og det skal stå at AI ikke er slått på.
   assert.doesNotMatch(page.body, /AI leser kunngjøringen/);
   assert.match(page.body, /AI-sammendrag og AI-utkast er ikke slått på ennå/);
-  // Sammenligningen sier ingenting om bestemte tjenester.
-  assert.match(page.body, /ikke en bestemt tjeneste/);
+  // OCR finnes nå – siden sier ikke lenger at skannede PDF-er ikke kan leses.
+  assert.doesNotMatch(page.body, /Skannede PDF-er kan ikke leses/);
   assert.match(page.body, /role="img" aria-label="Åpne anbud per fylke/);
   assert.doesNotMatch(page.body.replaceAll('<!-- -->', ''), />null/);
-  // Forsiden skal være lett å lese: korte tekster (detaljene står på undersidene).
+  // Detaljene ligger bak «Vis mer» (<details>), ikke i veien – og de er der.
+  assert.match(page.body, /<details[^>]*data-keep-open="true"[\s\S]*?<summary[^>]*>[\s\S]*?Dette gjør vi ikke \(ennå\)/);
+  // Forsiden skal være lett å lese: under 450 synlige ord (eier 16.11.2026: «alt for komplisert med så mange tekster»).
+  // Synlig = det som vises uten å åpne «Vis mer»: innholdet i <details> telles ikke, bare overskriften (summary).
   const text = (page.body.match(/<main[^>]*>([\s\S]*)<\/main>/)?.[1] ?? '')
     .replace(/<(script|style|svg)[^>]*>[\s\S]*?<\/\1>/g, ' ')
     .replace(/<details[\s\S]*?<summary[^>]*>([\s\S]*?)<\/summary>[\s\S]*?<\/details>/g, ' $1 ')
     // Valgene i nedtrekkslistene (bransjer og fylker i «Prøv uten konto») er ikke tekst som leses.
     .replace(/<select[\s\S]*?<\/select>/g, ' ')
-    // Den skjulte kopien av navnelisten (bare for at den løpende raden skal gå rundt) leses ikke.
-    .replace(/<ul[^>]*aria-hidden="true"[^>]*>[\s\S]*?<\/ul>/g, ' ')
     .replace(/<[^>]+>/g, ' ');
   const words = text.split(/\s+/).filter((w) => /\p{L}|\d/u.test(w)).length;
-  // Eier ba 7.11.2026 om fordeler, kundereise, sammenligning og åpenhet på forsiden – hver tekst skal likevel være kort.
-  assert.ok(words < 1300, `forsiden har ${words} synlige ord – hold den kort`);
+  assert.ok(words < 450, `forsiden har ${words} synlige ord – hold den kort (docs/SPRAK.md)`);
   // Ingen påstander om kunder eller omtaler vi ikke kan dokumentere.
   assert.doesNotMatch(page.body, /fornøyde kunder|kundene våre sier|★/i);
+});
+
+test('funksjonssiden: sammenligningen med søk og varsling (flyttet fra forsiden) sier ingenting om bestemte tjenester', async () => {
+  const page = await get('/funksjoner');
+  assert.match(page.body, /Forskjellen fra vanlig søk og varsling/);
+  assert.match(page.body, /Go\/No-Go per anbud, med grunner og kilde/);
+  assert.match(page.body, /ikke en bestemt tjeneste/);
+  assert.doesNotMatch(page.body, /Mercell|Tendium|Stotles|anbudsradar\.no/i);
 });
 
 test('prøveperioden i markedsteksten følger TRIAL_DAYS', async () => {

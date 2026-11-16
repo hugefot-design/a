@@ -20,6 +20,7 @@ import {
   LuListChecks,
   LuMail,
   LuMapPin,
+  LuMinus,
   LuRadar,
   LuSearch,
   LuShieldCheck,
@@ -42,7 +43,7 @@ import { NewsletterSignup } from '../newsletter';
 import { sourcesText, type Locale, type Messages } from '@/i18n';
 import { clockTime, dayOfMonth, fill, int, money, monthShort, monthYear, plural, pluralTemplate, rich } from '@/i18n/format';
 import { FaqList, faqItems, INDUSTRY_ICONS } from '../marketing';
-import { H2, IndustryTiles, Kicker, NightHero, SignalCta, Wrap } from '../site';
+import { H2, IndustryTiles, Kicker, More, NightHero, SignalCta, Wrap } from '../site';
 import { NoticeExample } from './notice-example';
 
 export { HomePage } from './home';
@@ -109,7 +110,7 @@ export function FeaturesPage({ specimen }: { specimen: NoticeSpecimen | null }) 
           </a>
         </div>
       </NightHero>
-      <section className="bg-surface py-24 sm:py-28">
+      <section className="bg-surface py-16 sm:py-24">
         <Wrap>
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((f, i) => {
@@ -121,13 +122,16 @@ export function FeaturesPage({ specimen }: { specimen: NoticeSpecimen | null }) 
                   </span>
                   <h2 className="mt-5 text-[19px] font-[720] leading-tight tracking-[-0.015em] text-strong">{f.title}</h2>
                   <p className="mt-2 text-[15px] leading-relaxed text-muted">{f.text}</p>
-                  <Points items={f.points} className="mt-5" />
+                  <More label={t.more} className="mt-3">
+                    <Points items={f.points} />
+                  </More>
                 </li>
               );
             })}
           </ul>
         </Wrap>
       </section>
+      <CompareSection />
       {specimen ? <NoticeExample s={specimen} /> : null}
       <section className="night relative overflow-hidden py-20 sm:py-24">
         <Wrap className="relative grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1.2fr)_auto]">
@@ -150,6 +154,68 @@ export function FeaturesPage({ specimen }: { specimen: NoticeSpecimen | null }) 
         secondary={{ href: lp('/priser'), label: m.home.seePrices }}
       />
     </PublicLayout>
+  );
+}
+
+/**
+ * Forskjellen fra søk og varsling (flyttet fra forsiden) – bare funksjoner vi har. Sier ingenting om andre tjenester.
+ * Tabellen ligger bak «Vis mer».
+ */
+const SEARCH_HAS = 2; // De to første radene er det søk og varsling som funksjon dekker.
+
+function CompareSection() {
+  const { m } = useUi();
+  const t = m.features.compare;
+  const mark = (yes: boolean) =>
+    yes ? (
+      <span className="inline-flex size-7 items-center justify-center rounded-full bg-ok-soft text-ok">
+        <LuCheck className="size-4" strokeWidth={3} aria-hidden />
+        <span className="sr-only">{t.yes}</span>
+      </span>
+    ) : (
+      <span className="inline-flex size-7 items-center justify-center rounded-full bg-paper text-muted">
+        <LuMinus className="size-4" aria-hidden />
+        <span className="sr-only">{t.no}</span>
+      </span>
+    );
+  return (
+    <section className="border-t border-line bg-cream py-16 sm:py-20">
+      <Wrap>
+        <h2 className="max-w-3xl text-[28px] font-[760] leading-tight tracking-[-0.025em] text-strong sm:text-[36px]">{t.title}</h2>
+        <p className="mt-3 max-w-3xl text-[17px] leading-relaxed text-muted">{t.lead}</p>
+        <More label={t.show} className="mt-4">
+          <div className="overflow-hidden rounded-3xl border border-line bg-surface">
+            <table className="w-full border-collapse text-left [font-variant-numeric:normal]">
+              <thead>
+                <tr className="border-b border-line">
+                  <th scope="col" className="px-4 py-4 sm:px-6">
+                    <span className="sr-only">{t.title}</span>
+                  </th>
+                  <th scope="col" className="w-[24%] px-2 py-4 text-center text-[13px] font-semibold text-muted sm:w-[20%] sm:text-[14px]">
+                    {t.colSearch}
+                  </th>
+                  <th scope="col" className="night w-[24%] px-2 py-4 text-center text-[13px] font-semibold text-white sm:w-[20%] sm:text-[14px]">
+                    {t.colUs}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {t.rows.map((row, i) => (
+                  <tr key={row} className="border-b border-line last:border-b-0">
+                    <th scope="row" className="px-4 py-3.5 text-[14.5px] font-medium leading-snug text-ink sm:px-6 sm:text-[15.5px]">
+                      {row}
+                    </th>
+                    <td className="px-2 py-3.5 text-center">{mark(i < SEARCH_HAS)}</td>
+                    <td className="bg-navy-50/60 px-2 py-3.5 text-center">{mark(true)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-4 max-w-3xl text-[13.5px] leading-relaxed text-muted">{t.note}</p>
+        </More>
+      </Wrap>
+    </section>
   );
 }
 

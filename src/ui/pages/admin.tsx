@@ -370,7 +370,7 @@ export function AdminHealthPage({
           <Table head={['Status', 'Antall']} rows={h.emails.map((e) => [e.status, e.n])} empty="Ingen e-post." />
           <PanelHeader
             title="Opplastede dokumenter siste 90 dager"
-            description="Dokumenter uten lesbar tekst er som regel skannede PDF-er. Tallet avgjør om tekstgjenkjenning (OCR) lønner seg."
+            description="Dokumenter uten lesbar tekst: som regel skannede PDF-er lastet opp i en ZIP-fil, eller der OCR i nettleseren ble avbrutt eller ikke kunne kjøres."
           />
           <Table
             head={['Lastet opp', 'Kunne ikke leses']}
