@@ -216,7 +216,7 @@ test('/oppdragsgivere: bare de med nok innhold, i alfabetisk rekkefølge – i b
   assert.match(body, new RegExp(`href="${PATH}"[^>]*>Følgeby kommune \\(følg-test\\)</a>`));
   assert.ok(!body.includes(buyerPath(QUIET, QUIET_ORG)), 'tynne sider er ikke med');
   assert.match(text(body), /Følgeby kommune \(følg-test\) Molde 4 åpne/);
-  assert.match(body, /<h2 id="bokstav-f"/);
+  assert.match(body, /<h3 id="bokstav-f"/, "bokstavene i hele listen (bak «Vis mer»)");
   assert.doesNotMatch(body, /noindex/);
   assert.ok(body.includes(`<link rel="canonical" href="${new URL(env.APP_URL).origin}/oppdragsgivere"`));
   assert.match((await page('/')).body, /href="\/oppdragsgivere"[^>]*>Oppdragsgivere<\/a>/, 'bunnteksten');

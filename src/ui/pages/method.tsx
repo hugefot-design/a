@@ -6,7 +6,7 @@
  * testene sjekker at beskrivelsen stemmer med motoren. Ingen nye påstander: står det her, gjør koden det.
  */
 import type { ReactNode } from 'react';
-import { LuArrowRight } from 'react-icons/lu';
+import { LuArrowRight, LuChevronDown } from 'react-icons/lu';
 import { BASIS_LEGEND } from '@/domain/intelligence/basis';
 import { QUICK_GOOD } from '@/domain/matching/quick';
 import { DISQUALIFIED_MAX, SCORE_CAPS, SCORE_PARTS } from '@/domain/matching/engine';
@@ -32,15 +32,22 @@ const PARTS: [id: string, title: string][] = [
   ['vet-ikke', 'Det vi ikke vet'],
 ];
 
+/**
+ * Ett tema. Sammenfoldet (docs/SPRAK.md): siden er en liste med overskrifter som kan åpnes, og en lenke til temaet
+ * (/metode#treff) åpner det (src/client/main.ts).
+ */
 function Part({ id, children }: { id: string; children: ReactNode }) {
   const title = PARTS.find(([p]) => p === id)![1];
   return (
-    <section id={id} aria-labelledby={`${id}-tittel`} className="scroll-mt-24 border-t border-line pt-10 first:border-0 first:pt-0">
-      <h2 id={`${id}-tittel`} className="text-[24px] font-[760] leading-tight tracking-[-0.02em] text-strong sm:text-[28px]">
-        {title}
-      </h2>
-      <div className="mt-4 space-y-4 text-[16px] leading-relaxed text-ink">{children}</div>
-    </section>
+    <details id={id} data-keep-open="true" className="group/part scroll-mt-24 border-b border-line">
+      <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 py-3 [&::-webkit-details-marker]:hidden">
+        <h2 id={`${id}-tittel`} className="text-[20px] font-[740] leading-tight tracking-[-0.02em] text-strong sm:text-[24px]">
+          {title}
+        </h2>
+        <LuChevronDown className="size-5 shrink-0 text-muted transition-transform group-open/part:rotate-180" aria-hidden />
+      </summary>
+      <div className="space-y-4 pb-8 pt-1 text-[16px] leading-relaxed text-ink">{children}</div>
+    </details>
   );
 }
 
@@ -55,24 +62,11 @@ export function MethodPage() {
       <NightHero
         eyebrow="Åpen metode"
         title="Slik regner vi."
-        lead="Alt AnbudRadar viser, bygger på offentlige kunngjøringer, publiserte tildelinger og tallene dere selv legger inn. Her er reglene – de samme for alle."
+        lead="Alt bygger på offentlige kunngjøringer, publiserte tildelinger og tallene dere selv legger inn. Trykk på et tema for å lese reglene."
       />
       <section className="bg-surface py-14 sm:py-20">
-        <Wrap className="grid grid-cols-1 gap-10 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-14">
-          <nav aria-label="Innhold" className="h-fit lg:sticky lg:top-24">
-            <p className="text-[12.5px] font-semibold uppercase tracking-[0.12em] text-muted">Innhold</p>
-            <ol className="mt-3 flex flex-wrap gap-2 lg:block lg:space-y-1.5">
-              {PARTS.map(([id, title]) => (
-                <li key={id}>
-                  <a href={`#${id}`} className="block rounded-full border border-line px-3 py-1.5 text-[14px] font-medium text-strong no-underline hover:border-strong lg:rounded-lg lg:border-0 lg:px-0 lg:py-0.5 lg:hover:underline">
-                    {title}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
-
-          <div className="min-w-0 max-w-3xl space-y-10">
+        <Wrap>
+          <div className="mx-auto max-w-3xl border-t border-line">
             <Part id="kilder">
               <p>
                 Kunngjøringene kommer fra {sources} og hentes flere ganger i døgnet. Tildelingene – hvem som vant og hva kontrakten ble tildelt for – kommer fra de samme

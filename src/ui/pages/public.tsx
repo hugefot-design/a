@@ -43,7 +43,7 @@ import { NewsletterSignup } from '../newsletter';
 import { sourcesText, type Locale, type Messages } from '@/i18n';
 import { clockTime, dayOfMonth, fill, int, money, monthShort, monthYear, plural, pluralTemplate, rich } from '@/i18n/format';
 import { FaqList, faqItems, INDUSTRY_ICONS } from '../marketing';
-import { H2, IndustryTiles, Kicker, More, NightHero, SignalCta, Wrap } from '../site';
+import { CountChips, H2, IndustryTiles, Kicker, More, NightHero, SignalCta, Wrap } from '../site';
 import { NoticeExample } from './notice-example';
 
 export { HomePage } from './home';
@@ -435,41 +435,53 @@ export function signupWith(lp: (href: string) => string, next: string): string {
 /** Alle 15 fylker med antall åpne anbud, som lenker til fylkessidene (bare norsk). */
 export function CountyGrid({ regions }: { regions: MarketSnapshot['regions'] }) {
   return (
-    <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {regions.map((r) => (
-        <li key={r.code}>
-          <a
-            href={regionPath(r.code)}
-            className="card-lift group flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 text-strong no-underline sm:p-5"
-          >
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-night text-signal">
-              <LuMapPin className="size-5" aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[16px] font-semibold">{r.name}</span>
-              <span className="block text-[14px] text-muted">{r.n === 1 ? '1 åpent anbud' : `${r.n.toLocaleString('nb-NO')} åpne anbud`}</span>
-            </span>
-            <LuArrowRight className="size-5 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-strong" aria-hidden />
-          </a>
-        </li>
-      ))}
-    </ul>
+    <div className="mt-8">
+      <CountChips
+        items={regions.map((r) => ({
+          href: regionPath(r.code),
+          label: r.name,
+          n: r.n,
+          ariaLabel: `${r.name}: ${r.n === 1 ? '1 åpent anbud' : `${r.n.toLocaleString('nb-NO')} åpne anbud`}`,
+        }))}
+      />
+    </div>
   );
 }
 
-/** Liste over åpne anbud med frist, oppdragsgiver og sted (bransje- og fylkessidene). */
+/** Så mange anbud vises i listene på bransje-, fylkes- og oppdragsgiversidene før «Vis alle». */
+export const SHOW_ROWS = 8;
+
+/** Liste over åpne anbud med frist, oppdragsgiver og sted (bransje-, fylkes- og oppdragsgiversidene). */
 export function TenderRows({
   rows,
   hideBuyer = false,
+  show,
 }: {
   rows: (BoardRow & { estimatedValue?: number | null; currency?: string | null })[];
   /** Oppdragsgiversiden: navnet står allerede øverst. */
   hideBuyer?: boolean;
+  /** Så mange vises; resten ligger bak «Vis alle» (docs/SPRAK.md). */
+  show?: number;
 }) {
+  const { m } = useUi();
+  if (show && rows.length > show) {
+    return (
+      <>
+        <TenderRowList rows={rows.slice(0, show)} hideBuyer={hideBuyer} />
+        <More label={fill(m.industries.showAll, { n: String(rows.length) })} className="mt-3">
+          <TenderRowList rows={rows.slice(show)} hideBuyer={hideBuyer} className="mt-0" />
+        </More>
+      </>
+    );
+  }
+  return <TenderRowList rows={rows} hideBuyer={hideBuyer} />;
+}
+
+function TenderRowList({ rows, hideBuyer, className }: { rows: Parameters<typeof TenderRows>[0]['rows']; hideBuyer: boolean; className?: string }) {
   const { user, m, lp, locale, publicTenderPages, publicBuyerPages } = useUi();
   const t = m.industries;
   return (
-    <ol className="mt-5 space-y-3">
+    <ol className={cn('mt-5 space-y-3', className)}>
       {rows.map((r) => {
         // Oppdragsgivernavnet lenker til oppdragsgiversiden når den finnes (norsk oppdragsgiver med organisasjonsnummer).
         const buyerHref = publicBuyerPages && r.buyerOrg ? buyerPath(r.buyerOrg.name, r.buyerOrg.orgNumber) : null;
@@ -573,29 +585,32 @@ export function IndustryPage({
       <section className="bg-surface py-14 sm:py-20">
         <Wrap className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="min-w-0">
-            <nav aria-label={m.home.radar} className="flex flex-wrap gap-2">
-              <a
-                href={base}
-                className={cn('rounded-full border px-3.5 py-1.5 text-[14px] font-semibold no-underline', !region ? 'border-strong bg-strong text-surface' : 'border-line bg-surface text-strong hover:border-strong')}
-              >
-                {t.allRegions}
-              </a>
-              {listing.regions.map((r) => (
+            {/* Fylkene (15 knapper) bak «Vis mer» – listen med anbud kommer først (docs/SPRAK.md). */}
+            <More label={`${m.home.try.region}: ${county ?? t.allRegions}`}>
+              <nav aria-label={m.home.radar} className="flex flex-wrap gap-2">
                 <a
-                  key={r.code}
-                  href={regionHref(r.code)}
-                  className={cn(
-                    'rounded-full border px-3.5 py-1.5 text-[14px] font-semibold no-underline',
-                    region === r.code ? 'border-strong bg-strong text-surface' : 'border-line bg-surface text-strong hover:border-strong',
-                  )}
+                  href={base}
+                  className={cn('rounded-full border px-3.5 py-1.5 text-[14px] font-semibold no-underline', !region ? 'border-strong bg-strong text-surface' : 'border-line bg-surface text-strong hover:border-strong')}
                 >
-                  {r.name} <span className={cn('font-normal', region === r.code ? 'text-white/60' : 'text-muted')}>{int(locale, r.n)}</span>
+                  {t.allRegions}
                 </a>
-              ))}
-            </nav>
-            <h2 className="mt-10 text-[22px] font-[740] tracking-[-0.02em] text-strong">{t.listTitle}</h2>
+                {listing.regions.map((r) => (
+                  <a
+                    key={r.code}
+                    href={regionHref(r.code)}
+                    className={cn(
+                      'rounded-full border px-3.5 py-1.5 text-[14px] font-semibold no-underline',
+                      region === r.code ? 'border-strong bg-strong text-surface' : 'border-line bg-surface text-strong hover:border-strong',
+                    )}
+                  >
+                    {r.name} <span className={cn('font-normal', region === r.code ? 'text-white/60' : 'text-muted')}>{int(locale, r.n)}</span>
+                  </a>
+                ))}
+              </nav>
+            </More>
+            <h2 className="mt-6 text-[22px] font-[740] tracking-[-0.02em] text-strong">{t.listTitle}</h2>
             {listing.rows.length ? (
-              <TenderRows rows={listing.rows} />
+              <TenderRows rows={listing.rows} show={SHOW_ROWS} />
             ) : (
               <p className="mt-5 rounded-2xl border border-dashed border-line-strong p-6 text-[15px] text-muted">{t.none}</p>
             )}
@@ -609,11 +624,6 @@ export function IndustryPage({
             {expiring?.rows.length ? <ExpiringContracts expiring={expiring} /> : null}
           </div>
           <aside className="h-fit space-y-4 lg:sticky lg:top-24">
-            <div className="rounded-3xl bg-cream p-6">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">{t.cpvGroups}</p>
-              <p className="mt-2 font-mono text-[15px] text-strong">{ref.cpvPrefixes.join(' · ')}</p>
-              <p className="mt-5 text-[14px] leading-relaxed text-muted">{fill(t.keywords, { words: ref.keywords.slice(0, 8).join(', ') })}</p>
-            </div>
             <div className="night rounded-3xl p-6">
               <p className="text-[18px] font-[720] leading-snug text-white">{t.ctaTitle}</p>
               <a href={alertHref} className="btn-signal mt-5 w-full">
@@ -624,6 +634,10 @@ export function IndustryPage({
             {locale === 'nb' ? (
               <NewsletterSignup industry={industryId} region={region} sourcePath={region ? industryRegionPath(industryId, region) : `/bransjer/${industrySlugNb(industryId)}`} />
             ) : null}
+            <More label={t.cpvGroups} className="rounded-3xl bg-cream px-6 py-2">
+              <p className="font-mono text-[15px] text-strong">{ref.cpvPrefixes.join(' · ')}</p>
+              <p className="mt-3 pb-3 text-[14px] leading-relaxed text-muted">{fill(t.keywords, { words: ref.keywords.slice(0, 8).join(', ') })}</p>
+            </More>
           </aside>
         </Wrap>
       </section>
@@ -676,7 +690,9 @@ export function ExpiringContracts({ expiring, hideBuyer = false }: { expiring: I
           );
         })}
       </ul>
-      <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-muted">{t.expiringNote}</p>
+      <More label={t.expiringHow} className="mt-2">
+        <p className="max-w-2xl text-[13.5px] leading-relaxed text-muted">{t.expiringNote}</p>
+      </More>
       {/* Radaren er med i Bedrift. Besøkende sendes til prisene – ikke gjennom registreringen til en låst side.
           Innloggede går rett inn (appen sier selv fra om planen mangler). */}
       <p className="mt-4 text-[15px] text-ink">

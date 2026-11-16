@@ -2,15 +2,14 @@
  * Fylkessidene (bare norsk): /fylker (alle fylker) og /fylker/<fylke> (åpne anbud i ett fylke,
  * fordelt på bransjer, med frister og de største oppdragsgiverne). Alt er ekte tall fra databasen.
  */
-import { LuArrowRight, LuBellRing, LuBuilding2, LuMapPin } from 'react-icons/lu';
-import { INDUSTRY_ICONS } from '../marketing';
+import { LuBellRing, LuMapPin } from 'react-icons/lu';
 import type { CountyOverview, MarketSnapshot } from '@/domain/tenders/market';
 import { industryRegionPath, MIN_OPEN_FOR_INDEXING } from '@/domain/slugs';
 import { REGION_BY_CODE } from '@/domain/reference';
 import { useUi } from '../context';
 import { PublicLayout } from '../layouts';
-import { NightHero, SignalCta, Wrap } from '../site';
-import { CountyGrid, signupWith, TenderRows } from './public';
+import { CountChips, NightHero, SignalCta, Wrap } from '../site';
+import { CountyGrid, SHOW_ROWS, signupWith, TenderRows } from './public';
 import { NewsletterSignup } from '../newsletter';
 import { regionPath } from '@/domain/slugs';
 import type { ReactNode } from 'react';
@@ -37,7 +36,7 @@ export function CountiesPage({ regions, open }: { regions: MarketSnapshot['regio
           </a>
         }
         title="Offentlige anbud per fylke"
-        lead="Åpne anbud fra kommuner, fylkeskommuner, statlige etater og andre offentlige oppdragsgivere – sortert etter hvor oppdraget skal utføres. Hentet fra Doffin og TED flere ganger i døgnet."
+        lead="Åpne offentlige anbud, sortert etter hvor oppdraget skal utføres. Fra Doffin og TED."
       >
         <div className="mt-8">
           <LivePill>
@@ -81,7 +80,7 @@ export function CountyPage({ region, overview }: { region: string; overview: Cou
             Offentlige anbud i {name}
           </span>
         }
-        lead={`Åpne anbud der oppdraget skal utføres i ${name}, fra kommuner, statlige etater og andre offentlige oppdragsgivere. Hentet fra Doffin og TED flere ganger i døgnet.`}
+        lead={`Åpne anbud der oppdraget skal utføres i ${name}. Fra Doffin og TED.`}
       >
         <div className="mt-8 flex flex-wrap items-center gap-4">
           <LivePill>
@@ -98,7 +97,7 @@ export function CountyPage({ region, overview }: { region: string; overview: Cou
           <div className="min-w-0">
             <h2 className="text-[22px] font-[740] tracking-[-0.02em] text-strong">Nærmeste frister i {name}</h2>
             {overview.rows.length ? (
-              <TenderRows rows={overview.rows} />
+              <TenderRows rows={overview.rows} show={SHOW_ROWS} />
             ) : (
               <p className="mt-5 rounded-2xl border border-dashed border-line-strong p-6 text-[15px] text-muted">Ingen åpne anbud i {name} akkurat nå.</p>
             )}
@@ -106,29 +105,17 @@ export function CountyPage({ region, overview }: { region: string; overview: Cou
             {overview.industries.length ? (
               <>
                 <h2 className="mt-12 text-[22px] font-[740] tracking-[-0.02em] text-strong">Bransjer i {name}</h2>
-                <ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {overview.industries.map((i) => {
-                    const Icon = INDUSTRY_ICONS[i.id] ?? LuBuilding2;
-                    return (
-                      <li key={i.id}>
-                        <a
-                          href={industryRegionPath(i.id, region)}
-                          className="card-lift group flex items-center gap-3.5 rounded-2xl border border-line bg-surface p-4 text-strong no-underline"
-                          rel={i.n < MIN_OPEN_FOR_INDEXING ? 'nofollow' : undefined}
-                        >
-                          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-night text-signal">
-                            <Icon className="size-5" aria-hidden strokeWidth={1.7} />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[15px] font-semibold">{i.name}</span>
-                            <span className="block text-[13.5px] text-muted">{count(i.n)}</span>
-                          </span>
-                          <LuArrowRight className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-strong" aria-hidden />
-                        </a>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="mt-5">
+                  <CountChips
+                    items={overview.industries.map((i) => ({
+                      href: industryRegionPath(i.id, region),
+                      label: i.name,
+                      n: i.n,
+                      ariaLabel: `${i.name}: ${count(i.n)}`,
+                      rel: i.n < MIN_OPEN_FOR_INDEXING ? 'nofollow' : undefined,
+                    }))}
+                  />
+                </div>
               </>
             ) : null}
           </div>

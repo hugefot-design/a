@@ -8,7 +8,6 @@
  */
 import type { ReactNode } from 'react';
 import { LuArrowRight, LuCalculator, LuCheck, LuMinus, LuShieldAlert, LuTarget } from 'react-icons/lu';
-import { industrySlugNb } from '@/domain/slugs';
 import { PAID_PLANS, PLANS } from '@/domain/billing/plans';
 import type { MarketSnapshot } from '@/domain/tenders/market';
 import type { Showcase } from '@/domain/tenders/showcase';
@@ -18,7 +17,7 @@ import { clockTime, fill, int, osloDay, plural, pluralTemplate, rich, weekdaySho
 import { useUi } from '../context';
 import { cn } from '../components';
 import { PublicLayout } from '../layouts';
-import { FinalCta, H2, More, Radar, TenderPing, Wrap } from '../site';
+import { FinalCta, H2, IndustryTiles, More, Radar, TenderPing, Wrap } from '../site';
 import { JOURNEY_VISUALS } from '../showcase';
 import { FaqList, faqItems } from '../marketing';
 import { TryBand } from './tools';
@@ -211,32 +210,19 @@ function Openness() {
 
 /** Bransjene som små knapper med antall åpne anbud – flere på Bransjer. */
 function Industries({ market }: { market: MarketSnapshot }) {
-  const { m, lp, locale } = useUi();
+  const { m, lp } = useUi();
   const t = m.home.industries;
   if (!market.industries.length) return null;
   return (
     <section className="bg-cream py-16 sm:py-24">
       <Wrap>
         <H2>{t.title}</H2>
-        <ul className="mt-8 flex flex-wrap gap-2">
-          {market.industries.slice(0, 9).map((i) => (
-            <li key={i.id}>
-              <a
-                href={lp(`/bransjer/${industrySlugNb(i.id)}`)}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-2 text-[15px] font-semibold text-strong no-underline hover:border-strong"
-                aria-label={`${m.industries.names[i.id]?.name ?? i.name}: ${plural(locale, t.open, i.n)}`}
-              >
-                {m.industries.names[i.id]?.name ?? i.name}
-                <span className="num rounded-full bg-strong/5 px-2 py-0.5 text-[13px] font-semibold text-muted">{int(locale, i.n)}</span>
-              </a>
-            </li>
-          ))}
-          <li>
-            <a href={lp('/bransjer')} className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 py-2 text-[15px] font-semibold">
-              {t.all} <LuArrowRight className="size-4" aria-hidden />
-            </a>
-          </li>
-        </ul>
+        <div className="mt-8">
+          <IndustryTiles industries={market.industries} limit={9} />
+        </div>
+        <a href={lp('/bransjer')} className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-[15px] font-semibold">
+          {t.all} <LuArrowRight className="size-4" aria-hidden />
+        </a>
       </Wrap>
     </section>
   );

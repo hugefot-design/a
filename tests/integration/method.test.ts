@@ -44,7 +44,8 @@ test('metodesiden viser reglene med tallene fra koden', async () => {
   assert.match(body, /Slik regner vi\./);
   assert.match(body, /<link rel="canonical" href="[^"]+\/metode"/);
   assert.doesNotMatch(body, /noindex/);
-  for (const id of ['kilder', 'treff', 'grunnlag', 'krav', 'markedspris', 'kalkyle', 'utlop', 'ai', 'vet-ikke']) assert.match(body, new RegExp(`<section id="${id}"`), id);
+  // Hvert tema er en sammenfoldet del (<details>) med samme id – lenker som /metode#treff åpner den (docs/SPRAK.md).
+  for (const id of ['kilder', 'treff', 'grunnlag', 'krav', 'markedspris', 'kalkyle', 'utlop', 'ai', 'vet-ikke']) assert.match(body, new RegExp(`<details id="${id}"`), id);
   const t = text(body);
   // Treffpoeng: hver del med maks, summen 100 og takene.
   for (const p of SCORE_PARTS) assert.ok(t.includes(`${p.label} ${p.max} ${p.rule}`), p.key);

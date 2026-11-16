@@ -4,12 +4,11 @@
  */
 import { industrySlugNb } from '@/domain/slugs';
 import type { ReactNode } from 'react';
-import { LuArrowRight, LuBell, LuChevronDown, LuFileText } from 'react-icons/lu';
+import { LuArrowRight, LuBell, LuChevronDown } from 'react-icons/lu';
 import type { BoardRow, MarketSnapshot } from '@/domain/tenders/market';
 import { fill, int, plural, rich, shortDate, timeUntil } from '@/i18n/format';
 import { cn } from './components';
 import { useUi } from './context';
-import { INDUSTRY_ICONS } from './marketing';
 
 export function Wrap({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn('mx-auto w-full max-w-7xl px-4 sm:px-6', className)}>{children}</div>;
@@ -159,6 +158,28 @@ export function TenderPing({ t, delay = 0, className }: { t: BoardRow & { indust
 }
 
 /** Rullende rad med oppdragsgivere som har åpne anbud akkurat nå. */
+/** Lenker som små knapper med antall (bransjer, fylker) – korte og lette å skanne (docs/SPRAK.md). */
+export function CountChips({ items }: { items: { href: string; label: string; n: number; ariaLabel: string; rel?: string }[] }) {
+  const { locale } = useUi();
+  return (
+    <ul className="flex flex-wrap gap-2">
+      {items.map((x) => (
+        <li key={x.href}>
+          <a
+            href={x.href}
+            rel={x.rel}
+            aria-label={x.ariaLabel}
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-2 text-[15px] font-semibold text-strong no-underline hover:border-strong"
+          >
+            {x.label}
+            <span className="num rounded-full bg-strong/5 px-2 py-0.5 text-[13px] font-semibold text-muted">{int(locale, x.n)}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Bransjer med antall åpne anbud
 // ---------------------------------------------------------------------------
@@ -166,28 +187,12 @@ export function IndustryTiles({ industries, limit }: { industries: MarketSnapsho
   const { m, locale, lp } = useUi();
   const list = limit ? industries.slice(0, limit) : industries;
   return (
-    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {list.map((i, idx) => {
-        const Icon = INDUSTRY_ICONS[i.id] ?? LuFileText;
-        return (
-          <li key={i.id} className={cn('reveal', idx % 3 === 1 && 'delay-1', idx % 3 === 2 && 'delay-2')}>
-            <a
-              href={lp(`/bransjer/${industrySlugNb(i.id)}`)}
-              className="card-lift group flex h-full items-center gap-4 rounded-2xl border border-line bg-surface p-4 text-strong no-underline sm:p-5"
-            >
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-night text-signal">
-                <Icon className="size-6" aria-hidden strokeWidth={1.7} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[16px] font-semibold">{m.industries.names[i.id]?.name ?? i.name}</span>
-                <span className="block text-[14px] text-muted">{plural(locale, m.home.industries.open, i.n)}</span>
-              </span>
-              <LuArrowRight className="size-5 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-strong" aria-hidden />
-            </a>
-          </li>
-        );
+    <CountChips
+      items={list.map((i) => {
+        const name = m.industries.names[i.id]?.name ?? i.name;
+        return { href: lp(`/bransjer/${industrySlugNb(i.id)}`), label: name, n: i.n, ariaLabel: `${name}: ${plural(locale, m.home.industries.open, i.n)}` };
       })}
-    </ul>
+    />
   );
 }
 

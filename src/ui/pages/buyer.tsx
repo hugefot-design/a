@@ -9,7 +9,7 @@ import { useUi } from '../context';
 import { PublicLayout } from '../layouts';
 import { NewsletterSignup } from '../newsletter';
 import { NightHero, Wrap } from '../site';
-import { ExpiringContracts, signupWith, TenderRows } from './public';
+import { ExpiringContracts, SHOW_ROWS, signupWith, TenderRows } from './public';
 
 /** «971278374» → «971 278 374». */
 export const formatOrgNumber = (n: string) => n.replace(/^(\d{3})(\d{3})(\d{3})$/, '$1 $2 $3');
@@ -30,11 +30,6 @@ export function BuyerPage({ b }: { b: PublicBuyer }) {
               <strong className="font-semibold text-white">{b.open.toLocaleString('nb-NO')}</strong> {b.open === 1 ? 'åpent anbud' : 'åpne anbud'} akkurat nå
             </span>
           </span>
-          <span className="glass inline-flex items-center rounded-full px-3.5 py-2 text-[14px] text-white/90">
-            <span>
-              <strong className="font-semibold text-white">{b.notices12m.toLocaleString('nb-NO')}</strong> anbud og tildelinger siste 12 måneder
-            </span>
-          </span>
           <a href={user ? search : signupWith(lp, search)} className="btn-signal">
             <LuBellRing className="size-4" aria-hidden /> Få varsel om nye anbud herfra
           </a>
@@ -51,7 +46,7 @@ export function BuyerPage({ b }: { b: PublicBuyer }) {
           <div className="min-w-0">
             <h2 className="text-[22px] font-[740] tracking-[-0.02em] text-strong">Åpne anbud</h2>
             {b.rows.length ? (
-              <TenderRows rows={b.rows} hideBuyer />
+              <TenderRows rows={b.rows} hideBuyer show={SHOW_ROWS} />
             ) : (
               <p className="mt-5 rounded-2xl border border-dashed border-line-strong p-6 text-[15px] text-muted">
                 Ingen åpne anbud fra {b.name} akkurat nå. Med varsel får dere beskjed når neste kommer.
@@ -75,7 +70,7 @@ export function BuyerPage({ b }: { b: PublicBuyer }) {
             {b.divisions.length ? (
               <div className="rounded-3xl bg-cream p-6">
                 <h2 className="text-[17px] font-semibold text-strong">Dette kjøper de mest</h2>
-                <p className="mt-1 text-[13px] text-muted">Anbud og tildelinger siste 12 måneder, etter CPV-hovedgruppe. Et anbud kan ha koder i flere grupper.</p>
+                <p className="mt-1 text-[13px] text-muted">{b.notices12m.toLocaleString('nb-NO')} anbud og tildelinger siste 12 måneder.</p>
                 <ul className="mt-4 space-y-2.5">
                   {b.divisions.map((d) => (
                     <li key={d.code} className="flex items-baseline justify-between gap-3 text-[14.5px]">

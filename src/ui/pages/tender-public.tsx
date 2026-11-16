@@ -14,7 +14,7 @@ import { daysUntil, formatDate, formatDateTime } from '../format';
 import { PublicLayout } from '../layouts';
 import { NewsletterSignup } from '../newsletter';
 import { Chip, KIND_TONE, Quote } from '../showcase';
-import { SignalCta, Wrap } from '../site';
+import { More, SignalCta, Wrap } from '../site';
 import { WeightChips } from './award-sim';
 import { signupWith } from './public';
 
@@ -216,7 +216,10 @@ export function PublicTenderPage({ t, origin }: { t: PublicTender; origin: strin
                 <p className="mt-1 text-[13px] text-muted">
                   {t.publishedAt ? `Publisert ${formatDate(t.publishedAt)}. ` : ''}E-postadresser og telefonnumre er skjult her – de står i originalen.
                 </p>
-                <div className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-ink [overflow-wrap:anywhere]">{t.text}</div>
+                {/* Kunngjøringsteksten er ofte lang – den ligger bak «Vis mer» (docs/SPRAK.md). */}
+                <More label="Vis teksten fra kunngjøringen" className="mt-2">
+                  <div className="whitespace-pre-line text-[15px] leading-relaxed text-ink [overflow-wrap:anywhere]">{t.text}</div>
+                </More>
                 {source?.url ? (
                   <a href={source.url} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-1 text-[14px] font-semibold">
                     {t.textClipped ? 'Les hele kunngjøringen' : 'Kunngjøringen'} hos {SOURCE_NAME[source.source] ?? source.source} <LuArrowUpRight className="size-4" aria-hidden />
