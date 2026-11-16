@@ -4,6 +4,8 @@
  * mye av inn-tokens leverandøren leste fra sin egen buffer (prompt caching). Bare tall – ingen innhold fra kundene.
  */
 import { systemSql } from '@/lib/db';
+import { getProvider } from './provider';
+import { CHEAP_FIRST_KINDS, ESCALATION_GUARD, cheapFirstStats, type CheapFirstStats } from './routing';
 import { currentPeriod } from './usage';
 
 export interface AiCostRow {
@@ -26,7 +28,17 @@ export interface AiCostSummary {
   byOrg: AiCostRow[];
   /** Fra AI-kallene denne måneden: hvor stor del av inn-tokens som ble lest fra leverandørens buffer. */
   promptCache: { inputTokens: number; cacheReadTokens: number; cacheWriteTokens: number; readShare: number | null };
+  /** Billig modell først (siste 7 dager): hvor ofte svaret måtte lages på nytt, og om vakten har satt den på pause.
+   *  null når det ikke er satt opp en egen billig modell. */
+  cheapFirst: { fastModel: string; qualityModel: string; guard: typeof ESCALATION_GUARD; rows: (CheapFirstStats & { label: string })[] } | null;
 }
+
+const CHEAP_FIRST_LABELS: Record<(typeof CHEAP_FIRST_KINDS)[number], string> = {
+  tender_analysis: 'Kort sammendrag',
+  tender_chat: 'Spør om anbudet',
+  bid_structure: 'Disposisjon for tilbud',
+  weekly_overview: 'Ukesoversikt',
+};
 
 const FEATURE_LABELS: Record<string, string> = {
   ai_tender_analysis: 'Anbudsanalyse',
@@ -80,5 +92,14 @@ export async function aiCostSummary(period = currentPeriod()): Promise<AiCostSum
       cacheWriteTokens: cache?.cacheWriteTokens ?? 0,
       readShare: cache && cache.inputTokens > 0 ? cache.cacheReadTokens / cache.inputTokens : null,
     },
+    cheapFirst: await cheapFirstOverview(),
   };
+}
+
+async function cheapFirstOverview(): Promise<AiCostSummary['cheapFirst']> {
+  const fastModel = getProvider('fast')?.model ?? null;
+  const qualityModel = getProvider('quality')?.model ?? null;
+  if (!fastModel || !qualityModel || fastModel === qualityModel) return null;
+  const rows = await Promise.all(CHEAP_FIRST_KINDS.map(async (kind) => ({ ...(await cheapFirstStats(kind, fastModel)), label: CHEAP_FIRST_LABELS[kind] })));
+  return { fastModel, qualityModel, guard: ESCALATION_GUARD, rows };
 }

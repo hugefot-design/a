@@ -41,6 +41,24 @@ export function AiCostPanels({ s }: { s: AiCostSummary }) {
         <PanelHeader title="Per organisasjon (de 15 dyreste)" />
         <Table head={head} rows={rows(s.byOrg)} />
       </Panel>
+      {s.cheapFirst && (
+        <Panel>
+          <PanelHeader
+            title="Billig modell først (siste 7 dager)"
+            description={`${s.cheapFirst.fastModel} prøves først, og svaret kontrolleres. Holder det ikke, lages det med ${s.cheapFirst.qualityModel}. Har ${s.cheapFirst.qualityModel} nettopp svart på de samme kildene (under 5 minutter siden), går neste spørsmål rett dit – kildene ligger da i leverandørens buffer. Forkastes mer enn ${Math.round(s.cheapFirst.guard.maxRejectedShare * 100)} % av svarene for en funksjon (minst ${s.cheapFirst.guard.minAttempts} forsøk), settes den billige modellen på pause for funksjonen til andelen faller – da er ett kall billigere enn to.`}
+          />
+          <Table
+            head={['', 'Forsøk', 'Laget på nytt', 'Andel', 'Status']}
+            rows={s.cheapFirst.rows.map((r) => [
+              r.label,
+              String(r.attempts),
+              String(r.rejected),
+              pct(r.rejectedShare),
+              r.paused ? 'På pause – kvalitetsmodellen brukes direkte' : r.attempts < s.cheapFirst!.guard.minAttempts ? 'Prøves først (for få forsøk til å vurdere)' : 'Prøves først',
+            ])}
+          />
+        </Panel>
+      )}
     </div>
   );
 }

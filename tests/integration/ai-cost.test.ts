@@ -5,7 +5,9 @@
  * - private svar (bedriftsdata, egne dokumenter, egne spørsmål) deles aldri mellom organisasjoner;
  * - den billige modellen prøves først der det passer; holder ikke svaret (format, avslag eller kvalitetskontroll),
  *   lages det på nytt med kvalitetsmodellen – og det forkastede forsøket teller ikke mot kundens kvote;
- * - «Spør om anbudet» kontrollerer sitatene og eskalerer når et sitat ikke står i kilden;
+ * - «Spør om anbudet» kontrollerer sitatene og eskalerer når et sitat ikke står i kilden, og neste spørsmål om de samme
+ *   kildene går rett til kvalitetsmodellen mens den har dem i bufferen (per organisasjon);
+ * - vakten: forkastes mer enn halvparten av de billige svarene for en funksjon, brukes kvalitetsmodellen direkte;
  * - sjekklisten for tilbud deles når kildene er offentlige.
  */
 import { after, afterEach, before, test } from 'node:test';
@@ -17,6 +19,7 @@ import { AIError, setProviderOverride, type AIProvider, type ModelTier } from '.
 import { runAi, type RunAiInput } from '../../src/domain/ai/runner';
 import { askTender } from '../../src/domain/ai/chat';
 import { aiCostSummary } from '../../src/domain/ai/costs';
+import { resetRoutingMemory } from '../../src/domain/ai/routing';
 import { generateChecklist } from '../../src/domain/bids/ai';
 import { loadOrgContext } from '../../src/domain/org/org';
 import type { OrgContext } from '../../src/server/http';
@@ -192,7 +195,7 @@ test('eskalerer også når den billige modellen gir feil format eller avslår', 
   assert.ok(!noTarget.ok && noTarget.code === 'invalid_output');
 });
 
-test('«Spør om anbudet» bruker den billige modellen og eskalerer når et sitat ikke står ordrett i kilden', async () => {
+test('«Spør om anbudet»: billig modell først, eskalerer når et sitat ikke står ordrett i kilden, og blir hos kvalitetsmodellen mens den har kildene i bufferen', async () => {
   const n = makeNotice({ title: 'Vakthold ved rådhuset (kostnad-test)', description: 'Vakthold og resepsjon. Det er obligatorisk befaring 2. desember kl. 10.00.' });
   await ingest([n]);
   const tenderId = await tenderIdFor('manual', n.sourceNoticeId);
@@ -204,25 +207,74 @@ test('«Spør om anbudet» bruker den billige modellen og eskalerer når et sita
     claims: [{ text: 'Obligatorisk befaring 2. desember.', basis: 'kilde', source: { source_id: 'S0', page: null, quote } }],
     not_in_sources: false,
   });
-  setProviderOverride(
-    tiers(
-      fakeProvider('claude-haiku-5-5', calls, answer('Befaringen er frivillig og holdes i januar')),
-      fakeProvider('claude-sonnet-5-5', calls, answer('obligatorisk befaring 2. desember')),
-    ),
-  );
+  const wrong = 'Befaringen er frivillig og holdes i januar';
+  const right = 'obligatorisk befaring 2. desember';
+
+  // 1. Riktig sitat: den billige modellen holder.
+  setProviderOverride(tiers(fakeProvider('claude-haiku-5-5', calls, answer(right)), fakeProvider('claude-sonnet-5-5', calls, answer('x'))));
+  const cheap = await askTender(org, acc.user.id, tenderId, 'Når er befaringen?');
+  assert.ok(cheap.ok && cheap.result.model === 'claude-haiku-5-5');
+  assert.deepEqual(calls, ['claude-haiku-5-5']);
+
+  // 2. Oppdiktet sitat: laget på nytt med kvalitetsmodellen.
+  setProviderOverride(tiers(fakeProvider('claude-haiku-5-5', calls, answer(wrong)), fakeProvider('claude-sonnet-5-5', calls, answer(right))));
   const r = await askTender(org, acc.user.id, tenderId, 'Er det befaring?');
-  assert.ok(r.ok);
-  assert.deepEqual(calls, ['claude-haiku-5-5', 'claude-sonnet-5-5'], 'oppdiktet sitat: laget på nytt med kvalitetsmodellen');
+  assert.ok(r.ok && r.result.model === 'claude-sonnet-5-5');
+  assert.deepEqual(calls.slice(1), ['claude-haiku-5-5', 'claude-sonnet-5-5'], 'oppdiktet sitat: laget på nytt med kvalitetsmodellen');
   const checked = r.result.checked as { verified: boolean }[];
   assert.ok(checked.every((c) => c.verified), 'svaret kunden får, har kontrollerte sitater');
 
-  // Med et riktig sitat holder den billige modellen.
-  setProviderOverride(
-    tiers(fakeProvider('claude-haiku-5-5', calls, answer('obligatorisk befaring 2. desember')), fakeProvider('claude-sonnet-5-5', calls, answer('x'))),
-  );
-  const cheap = await askTender(org, acc.user.id, tenderId, 'Når er befaringen?');
-  assert.ok(cheap.ok && cheap.result.model === 'claude-haiku-5-5');
-  assert.equal(calls.length, 3);
+  // 3. Neste spørsmål om de samme kildene (innen 5 minutter): rett til kvalitetsmodellen, som har kildene i
+  //    leverandørens buffer – ett billig kall (bufret) i stedet for to der det andre starter kaldt.
+  const next = await askTender(org, acc.user.id, tenderId, 'Hvem er oppdragsgiver?');
+  assert.ok(next.ok && next.result.model === 'claude-sonnet-5-5');
+  assert.deepEqual(calls.slice(3), ['claude-sonnet-5-5'], 'den billige modellen ble ikke prøvd');
+  const [direct] = (await systemSql()`select escalated_from from ai_analyses where id = ${next.analysisId}`) as unknown as { escalatedFrom: string | null }[];
+  assert.equal(direct!.escalatedFrom, null, 'ikke en eskalering – et direkte valg');
+
+  // 4. Private spørsmål: en annen kunde som spør om samme anbud, påvirkes ikke – den billige modellen prøves først.
+  const other = await createAccount();
+  const theirs = await askTender(await orgOf(other), other.user.id, tenderId, 'Er det befaring?');
+  assert.ok(theirs.ok);
+  assert.deepEqual(calls.slice(4), ['claude-haiku-5-5', 'claude-sonnet-5-5']);
+});
+
+test('vakten: forkastes mer enn halvparten av de billige svarene for en funksjon, brukes kvalitetsmodellen direkte', async () => {
+  resetRoutingMemory();
+  const acc = await createAccount();
+  const org = await orgOf(acc);
+  const calls: string[] = [];
+  setProviderOverride(tiers(fakeProvider('claude-haiku-5-5', calls, () => ({ answer: 'billig' })), fakeProvider('claude-sonnet-5-5', calls, () => ({ answer: 'grundig' }))));
+  // Historikk siste 7 dager for disposisjonen: 30 svar laget på nytt og 10 billige svar som holdt (75 % forkastet).
+  const seed = (count: number, rejected: boolean) => systemSql()`
+    insert into ai_analyses (kind, input_hash, prompt_version, provider, model, status, escalated_from, created_at)
+    select 'bid_structure', 'vakt-test-' || g || '-' || ${String(rejected)}, 'test', 'anthropic', ${rejected ? 'claude-sonnet-5-5' : 'claude-haiku-5-5'},
+           'completed', ${rejected ? 'claude-haiku-5-5' : null}, now() - interval '1 day'
+    from generate_series(1, ${count}::int) g
+  `;
+  try {
+    await seed(30, true);
+    await seed(10, false);
+    const req = input(org, acc.user.id, { kind: 'bid_structure', usageKind: 'ai_bid_structure', tier: 'fast', isPrivate: true, qualityCheck: () => null });
+    const paused = await runAi(req);
+    assert.ok(paused.ok && paused.result.model === 'claude-sonnet-5-5');
+    assert.deepEqual(calls, ['claude-sonnet-5-5'], 'den billige modellen ble ikke prøvd');
+    const admin = (await aiCostSummary()).cheapFirst!;
+    assert.deepEqual([admin.fastModel, admin.qualityModel], ['claude-haiku-5-5', 'claude-sonnet-5-5']);
+    const row = admin.rows.find((x) => x.kind === 'bid_structure')!;
+    assert.ok(row.paused && row.attempts >= 40 && row.rejectedShare! > 0.5, JSON.stringify(row));
+    assert.equal(admin.rows.find((x) => x.kind === 'tender_chat')!.paused, false, 'gjelder bare funksjonen');
+
+    // Holder den billige modellen igjen (andelen faller under halvparten), prøves den først igjen.
+    await seed(60, false);
+    resetRoutingMemory();
+    const resumed = await runAi(input(org, acc.user.id, { kind: 'bid_structure', usageKind: 'ai_bid_structure', tier: 'fast', isPrivate: true, qualityCheck: () => null }));
+    assert.ok(resumed.ok && resumed.result.model === 'claude-haiku-5-5');
+    assert.deepEqual(calls, ['claude-sonnet-5-5', 'claude-haiku-5-5']);
+  } finally {
+    await systemSql()`delete from ai_analyses where input_hash like 'vakt-test-%'`;
+    resetRoutingMemory();
+  }
 });
 
 test('sjekklisten for tilbud deles mellom organisasjoner når kildene er offentlige', async () => {

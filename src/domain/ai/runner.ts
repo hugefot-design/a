@@ -8,6 +8,7 @@ import { env } from '@/lib/env';
 import { AIError, aiFor, estimateCostUsd, type AIProvider, type Effort, type JsonSchema, type ModelTier } from './provider';
 import { PROMPT_VERSION } from './prompts';
 import { currentPeriod, quotaFor, recordUsage, usageSummary, ANALYSIS_KINDS, type AiUsageKind } from './usage';
+import { rememberAnswer, skipCheapFirst, sourcesKey } from './routing';
 
 export type AiKind =
   | 'tender_analysis'
@@ -135,9 +136,15 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
       if (hit) return hit;
     }
     const started = Date.now();
-    let attempt = await attemptWith(provider, input);
+    // Rett til kvalitetsmodellen når den har nøyaktig disse kildene i leverandørens buffer, eller når den billige
+    // modellen for ofte ikke holder for funksjonen – da er ett kall billigere enn to (routing.ts).
+    const routeKey = escalateTo && input.cacheablePrefix ? sourcesKey(input.system, input.cacheablePrefix, shared ? null : input.org.id) : null;
+    const direct = escalateTo ? await skipCheapFirst(input.kind, routeKey, provider.model, escalateTo.model) : null;
+    if (direct) log.info('ai_route_quality', { kind: input.kind, reason: direct });
+    let current = direct && escalateTo ? escalateTo : provider;
+    let attempt = await attemptWith(current, input);
     let escalatedFrom: string | null = null;
-    if (escalateTo) {
+    if (escalateTo && !direct) {
       const reason = !attempt.ok ? attempt.detail : input.qualityCheck ? input.qualityCheck(attempt.data) : null;
       if (reason) {
         // Det billige forsøket koster, men teller ikke mot kvoten (kunden ba om ett svar).
@@ -147,11 +154,12 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
           recordUsage(tx, { orgId: input.org.id, userId: input.userId, kind: input.usageKind, inputTokens: attempt.totalInput, outputTokens: attempt.response?.outputTokens ?? 0, costUsd: attempt.costUsd, cached: false, quantity: 0, escalated: true }),
         );
         escalatedFrom = attempt.response?.model ?? provider.model;
+        current = escalateTo;
         attempt = await attemptWith(escalateTo, input);
       }
     }
     if (!attempt.ok) {
-      await storeFailure(input, inputHash, attempt.response?.provider ?? provider.name, attempt.response?.model ?? (escalateTo && escalatedFrom ? escalateTo.model : provider.model), attempt.detail, Date.now() - started, attempt.totalInput, attempt.response?.outputTokens ?? 0, attempt.costUsd);
+      await storeFailure(input, inputHash, attempt.response?.provider ?? current.name, attempt.response?.model ?? current.model, attempt.detail, Date.now() - started, attempt.totalInput, attempt.response?.outputTokens ?? 0, attempt.costUsd);
       if (attempt.response) {
         await withTenant(ctx, (tx) =>
           recordUsage(tx, { orgId: input.org.id, userId: input.userId, kind: input.usageKind, inputTokens: attempt.totalInput, outputTokens: attempt.response!.outputTokens, costUsd: attempt.costUsd, cached: false, escalated: Boolean(escalatedFrom) }),
@@ -162,6 +170,8 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult> {
     }
 
     const { response, data, costUsd, totalInput } = attempt;
+    // Modellen som svarte, har nå kildene i bufferen hos leverandøren (brukes av neste forespørsel, routing.ts).
+    if (routeKey) rememberAnswer(routeKey, current.model);
     const result: Record<string, unknown> = {
       data,
       provider: response.provider,
