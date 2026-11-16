@@ -6,7 +6,22 @@
 import { env } from '@/lib/env';
 import { log } from '@/lib/logger';
 import { deliverPendingEmails } from '@/lib/email';
-import { claimJob, claimScheduledTask, completeJob, enqueueJob, failJob, heartbeat, releaseStaleJobs, restWorker, scheduledTaskRuns, wakeWorker, withTaskLock, type Job } from '@/lib/jobs';
+import {
+  claimJob,
+  claimScheduledTask,
+  completeJob,
+  enqueueJob,
+  failJob,
+  heartbeat,
+  releaseStaleJobs,
+  restWorker,
+  scheduledTaskRuns,
+  wakeWorker,
+  withTaskLock,
+  WORKER_REST_MAX_MS,
+  WORKER_REST_MIN_MS,
+  type Job,
+} from '@/lib/jobs';
 import { runConnector } from '@/connectors';
 import { recomputeMatchesForTenders } from '@/domain/matching/service';
 import { generateWeeklySummaries } from '@/domain/notifications/engine';
@@ -91,9 +106,6 @@ async function scheduleTick(): Promise<void> {
   }
 }
 
-/** Hvile mellom rundene: 5 s når det er arbeid, opptil 30 s når det er stille (færre spørringer mot databasen). */
-const REST_MIN_MS = 5_000;
-const REST_MAX_MS = 30_000;
 /** Hjerteslag og opprydding av hengende jobber trenger ikke skje oftere enn hvert minutt. */
 const HOUSEKEEPING_MS = 60_000;
 
@@ -105,7 +117,7 @@ async function loop(state: { running: boolean }, mode: 'worker' | 'web'): Promis
   });
   let lastSchedule = 0;
   let lastHousekeeping = 0;
-  let rest = REST_MIN_MS;
+  let rest = WORKER_REST_MIN_MS;
   while (state.running) {
     let busy = false;
     try {
@@ -133,7 +145,7 @@ async function loop(state: { running: boolean }, mode: 'worker' | 'web'): Promis
     } catch (err) {
       log.error('worker_tick_failed', { err });
     }
-    rest = busy ? REST_MIN_MS : Math.min(REST_MAX_MS, rest * 2);
+    rest = busy ? WORKER_REST_MIN_MS : Math.min(WORKER_REST_MAX_MS, rest * 2);
     if (state.running) await restWorker(rest);
   }
   log.info('worker_stopped', { mode });

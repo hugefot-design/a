@@ -13,10 +13,17 @@ export type Sql = postgres.Sql<Record<string, unknown>>;
 export type Tx = postgres.TransactionSql<Record<string, unknown>>;
 export type Db = Sql | Tx;
 
+/**
+ * Sekunder en ledig tilkobling holdes åpen. Arbeiderens hvile må være kortere (WORKER_REST_MAX_MS i src/lib/jobs.ts):
+ * ellers kobles den til på nytt hver runde – innlogging, TLS i produksjon og nye forberedte spørringer, altså mer
+ * trafikk mot databasen, ikke mindre.
+ */
+export const POOL_IDLE_TIMEOUT_S = 20;
+
 function createPool(url: string, name: string): Sql {
   return postgres(url, {
     max: env.DATABASE_POOL_SIZE,
-    idle_timeout: 20,
+    idle_timeout: POOL_IDLE_TIMEOUT_S,
     connect_timeout: 10,
     max_lifetime: 60 * 30,
     ssl: env.DATABASE_SSL === 'require' ? 'require' : false,

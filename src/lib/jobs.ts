@@ -1,5 +1,5 @@
 import { hostname } from 'node:os';
-import { systemSql, toJson } from './db';
+import { POOL_IDLE_TIMEOUT_S, systemSql, toJson } from './db';
 import { log } from './logger';
 
 /**
@@ -45,6 +45,14 @@ export async function enqueueJob(
 let wakeUp: (() => void) | null = null;
 
 /** Hviler i inntil `ms` millisekunder – eller til wakeWorker() kalles. */
+/**
+ * Hvile mellom arbeiderens runder: 5 s når det er arbeid, økende til 15 s når det er stille. Taket ligger under
+ * tidsavbruddet for ledige databasetilkoblinger (POOL_IDLE_TIMEOUT_S), så tilkoblingen gjenbrukes. Målt: med 30 s
+ * hvile ble arbeideren koblet til på nytt hver runde og sendte flere byte enn før, ikke færre.
+ */
+export const WORKER_REST_MIN_MS = 5_000;
+export const WORKER_REST_MAX_MS = (POOL_IDLE_TIMEOUT_S - 5) * 1000;
+
 export function restWorker(ms: number): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(done, ms);
