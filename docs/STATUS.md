@@ -399,6 +399,13 @@ kostnader, ingen endring i Render eller Supabase.
   testen), `tests/integration/journey.test.ts`, `tests/unit/journey.test.ts`. Visuell kontroll av Kundereise,
   Produkter og appen med admin-tilgang på 1280 px og iPhone 13: ingen JavaScript-feil, ingen vannrett rulling.
 
+## Kundesimulering (16. november 2026) – bare en rapport, ingen endring i koden
+
+Åtte typiske kunder simulert mot den ekte nettsiden og appen (ikke kundedata): se [KUNDESIMULERING.md](KUNDESIMULERING.md).
+Kort: renhold, IT og medisinsk forbruksmateriell får gode første treff; elektro, vakt, transport, rådgivende ingeniør og
+brøyting får det ikke. De største hindringene er at ingen kan betale, at leverandøren er anonym i vilkårene, og at
+søket bare kjenner igjen ord som begynner likt.
+
 ## Enklere nettside (16. november 2026) – rullet ut 16.11.2026 (`050a255`)
 
 **Utrulling** (eiers «rull ut»), 16.11.2026 kl. 11.02 UTC, etter grønn CI på GitHub for `050a255`:
